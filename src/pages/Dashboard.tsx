@@ -7,16 +7,18 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { useFinancialSummary } from '@/hooks/useFinancialSummary';
 
 export default function Dashboard() {
   const { gameState, advanceDay } = useGame();
   const navigate = useNavigate();
-  
+  const financialSummary = useFinancialSummary();
+
   const upcomingEvents = gameState.events
     .filter(e => e.status === 'planned' || e.status === 'available')
     .sort((a, b) => a.date.getTime() - b.date.getTime())
     .slice(0, 3);
-  
+
   const activeCrew = gameState.crew.filter(c => !c.assignedTo).length;
   const recentEvents = gameState.events
     .filter(e => e.status === 'completed')
@@ -26,19 +28,12 @@ export default function Dashboard() {
     ? recentEvents.reduce((sum, e) => sum + (e.clientSatisfaction || 0), 0) / recentEvents.length
     : 0;
 
-  const thirtyDaysAgo = new Date(gameState.currentDate);
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const recentTransactions = [...gameState.finances.transactions]
-    .sort((a, b) => b.date.getTime() - a.date.getTime())
-    .slice(0, 5);
-
-  const lastThirty = gameState.finances.transactions.filter(t => t.date >= thirtyDaysAgo);
-  const lastThirtyNet = lastThirty.reduce(
-    (sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount),
-    0
-  );
-  const lastThirtyIncome = lastThirty.filter(t => t.type === 'income').length;
-  const lastThirtyExpenses = lastThirty.filter(t => t.type === 'expense').length;
+  const lastThirtyNet = financialSummary.thirtyDay.net;
+  const lastThirtyIncome = financialSummary.thirtyDay.incomeCount;
+  const lastThirtyExpenses = financialSummary.thirtyDay.expenseCount;
+  const recentTransactions = financialSummary.sortedTransactions.slice(0, 5);
+  const financeAlerts = financialSummary.alerts.filter(alert => alert.key !== 'bankrupt');
+  const topCategories = financialSummary.categorySummary.slice(0, 2);
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -76,7 +71,13 @@ export default function Dashboard() {
             value={`$${gameState.company.balance.toLocaleString()}`}
             icon={DollarSign}
             iconClassName="text-success"
-            trend={{ value: '+12% from last month', positive: true }}
+            trend={{
+              value:
+                lastThirtyNet >= 0
+                  ? 'Positive cash flow this month'
+                  : 'Negative cash flow this month',
+              positive: lastThirtyNet >= 0,
+            }}
           />
           <StatCard
             title="Reputation"
@@ -108,6 +109,18 @@ export default function Dashboard() {
             iconClassName="text-accent"
           />
         </div>
+
+        {financeAlerts.length > 0 && (
+          <div className="space-y-2">
+            {financeAlerts.map(alert => (
+              <Alert key={alert.key} variant={alert.variant}>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>{alert.title}</AlertTitle>
+                <AlertDescription>{alert.description}</AlertDescription>
+              </Alert>
+            ))}
+          </div>
+        )}
 
         {/* Main Content Grid */}
         <div className="grid gap-6 md:grid-cols-2">
@@ -177,13 +190,13 @@ export default function Dashboard() {
         </div>
 
         {/* Recent Activity */}
-        {(recentEvents.length > 0 || recentTransactions.length > 0) && (
+        {(recentEvents.length > 0 || recentTransactions.length > 0 || topCategories.length > 0) && (
           <Card>
             <CardHeader>
               <CardTitle>Recent Activity</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid gap-4 lg:grid-cols-2">
+              <div className="grid gap-4 lg:grid-cols-3">
                 {recentEvents.length > 0 && (
                   <div className="space-y-2">
                     <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wide">
@@ -231,6 +244,27 @@ export default function Dashboard() {
                     <Button variant="ghost" className="w-full" onClick={() => navigate('/finances')}>
                       Open Finances
                     </Button>
+                  </div>
+                )}
+
+                {topCategories.length > 0 && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold uppercase text-muted-foreground tracking-wide">
+                      Cashflow Highlights
+                    </h3>
+                    {topCategories.map(category => (
+                      <div key={category.category} className="p-3 border rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <span className="font-medium capitalize">{category.category}</span>
+                          <span className={`font-semibold ${category.net >= 0 ? 'text-success' : 'text-destructive'}`}>
+                            {category.net >= 0 ? '+' : '-'}${Math.abs(category.net).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="text-xs text-muted-foreground mt-1">
+                          +${category.income.toLocaleString()} / -${category.expenses.toLocaleString()}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
