@@ -71,3 +71,14 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Sector Pro Simulator Documentation
+
+The following design documents outline the core vision for the Sector Pro Simulator experience:
+
+- [Game Concept Document](docs/sector-pro-simulator-game-concept.md)
+- [Game Design Document](docs/sector-pro-simulator-gdd.md)
+- [Core Gameplay Loop Diagram](docs/sector-pro-simulator-gameplay-loop.md)
+- [Feature Roadmap](docs/sector-pro-simulator-roadmap.md)
+
+These files capture the narrative, systems design, and production milestones that guide future development of the simulation.
