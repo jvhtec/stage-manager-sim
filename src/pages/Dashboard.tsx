@@ -1,7 +1,7 @@
 import { useGame } from '@/contexts/GameContext';
 import { StatCard } from '@/components/StatCard';
 import { EventCard } from '@/components/EventCard';
-import { DollarSign, TrendingUp, Users, Calendar, Play, AlertTriangle, Wrench } from 'lucide-react';
+import { DollarSign, TrendingUp, Users, Calendar, Play, AlertTriangle, Wrench, Megaphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -9,11 +9,31 @@ import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useFinancialSummary } from '@/hooks/useFinancialSummary';
 import { Badge } from '@/components/ui/badge';
+import { CompanyOnboardingDialog } from '@/components/CompanyOnboardingDialog';
+import type { Company, MarketNewsTone } from '@/types/game';
 
 export default function Dashboard() {
-  const { gameState, advanceDay } = useGame();
+  const { gameState, advanceDay, completeCompanyOnboarding } = useGame();
   const navigate = useNavigate();
   const financialSummary = useFinancialSummary();
+
+  const specializationLabels: Record<Company['specialization'], string> = {
+    audio: 'Audio Specialist',
+    lighting: 'Lighting Studio',
+    video: 'Video Studio',
+    stage: 'Stage Ops',
+    balanced: 'Balanced Studio',
+  };
+  const marketToneClasses: Record<MarketNewsTone, string> = {
+    info: 'bg-muted text-muted-foreground',
+    positive: 'bg-success/10 text-success',
+    warning: 'bg-warning/10 text-warning',
+  };
+  const marketToneLabels: Record<MarketNewsTone, string> = {
+    info: 'Update',
+    positive: 'Positive',
+    warning: 'Watch',
+  };
 
   const upcomingEvents = gameState.events
     .filter(e => e.status === 'planned' || e.status === 'available')
@@ -46,6 +66,28 @@ export default function Dashboard() {
 
   const latestReportEvent = completedReports[0];
   const latestReport = latestReportEvent?.postEventReport;
+  const competitorSnapshots = [...gameState.competitors].sort(
+    (a, b) => b.reputation - a.reputation,
+  );
+  const marketHighlights = [...gameState.marketNews]
+    .sort((a, b) => b.date.getTime() - a.date.getTime())
+    .slice(0, 5);
+  const onboardingInitialValues = {
+    name: gameState.company.name,
+    brandColor: gameState.company.brandColor,
+    accentColor: gameState.company.accentColor,
+    specialization: gameState.company.specialization,
+    tagline: gameState.company.tagline,
+  };
+  const specializationLabel = specializationLabels[gameState.company.specialization];
+  const brandBadgeStyle = {
+    backgroundColor: gameState.company.brandColor,
+    color: '#fff',
+    borderColor: 'transparent',
+  } as const;
+  const taglineStyle = {
+    color: gameState.company.accentColor,
+  } as const;
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -54,23 +96,48 @@ export default function Dashboard() {
     }).format(value);
 
   return (
-    <div className="min-h-screen bg-background p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">{gameState.company.name}</h1>
-            <p className="text-muted-foreground">
-              {format(gameState.currentDate, 'EEEE, MMMM dd, yyyy')}
-            </p>
+    <>
+      <CompanyOnboardingDialog
+        open={!gameState.hasCompletedOnboarding}
+        initialValues={onboardingInitialValues}
+        onComplete={completeCompanyOnboarding}
+        disableClose={!gameState.hasCompletedOnboarding}
+      />
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          {/* Header */}
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-3">
+                <h1 className="text-3xl font-bold" style={{ color: gameState.company.brandColor }}>
+                  {gameState.company.name}
+                </h1>
+                <Badge style={brandBadgeStyle}>{specializationLabel}</Badge>
+              </div>
+              {gameState.company.tagline && gameState.company.tagline.length > 0 && (
+                <p className="text-sm font-medium" style={taglineStyle}>
+                  {gameState.company.tagline}
+                </p>
+              )}
+              <p className="text-muted-foreground">
+                {format(gameState.currentDate, 'EEEE, MMMM dd, yyyy')}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={advanceDay}
+                variant="outline"
+                disabled={gameState.isBankrupt || !gameState.hasCompletedOnboarding}
+              >
+                <Play className="mr-2 h-4 w-4" />
+                {gameState.isBankrupt
+                  ? 'Resolve Bankruptcy'
+                  : gameState.hasCompletedOnboarding
+                    ? 'Next Day'
+                    : 'Finish Setup'}
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={advanceDay} variant="outline" disabled={gameState.isBankrupt}>
-              <Play className="mr-2 h-4 w-4" />
-              {gameState.isBankrupt ? 'Resolve Bankruptcy' : 'Next Day'}
-            </Button>
-          </div>
-        </div>
 
         {gameState.isBankrupt && (
           <Alert variant="destructive">
@@ -211,6 +278,122 @@ export default function Dashboard() {
                 <DollarSign className="mr-2 h-4 w-4" />
                 Review Finances
               </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Competitor Landscape</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Rival studios currently scouting the same market.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {competitorSnapshots.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  No competitors have surfaced yet. Progress a few days to reveal the field.
+                </p>
+              ) : (
+                competitorSnapshots.map(competitor => {
+                  const rateDelta = Math.round((competitor.baseRateModifier - 1) * 100);
+                  const rateBadge =
+                    rateDelta === 0
+                      ? 'Market rate bids'
+                      : rateDelta > 0
+                        ? `~+${rateDelta}% premium`
+                        : `${rateDelta}% below market`;
+                  const bookedCount = competitor.scheduledEvents.filter(
+                    event => event.status === 'booked',
+                  ).length;
+
+                  return (
+                    <div
+                      key={competitor.id}
+                      className="rounded-lg border p-4 shadow-sm"
+                      style={{ borderLeft: `4px solid ${competitor.brandColor}` }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <h4 className="text-base font-semibold" style={{ color: competitor.brandColor }}>
+                            {competitor.name}
+                          </h4>
+                          <p className="text-xs text-muted-foreground">
+                            Reputation {competitor.reputation}% • Reliability {competitor.reliability}%
+                          </p>
+                        </div>
+                        <Badge
+                          variant="outline"
+                          className="text-xs"
+                          style={{ borderColor: competitor.brandColor, color: competitor.brandColor }}
+                        >
+                          {rateBadge}
+                        </Badge>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {competitor.specialties.map(dept => (
+                          <Badge key={`${competitor.id}-${dept}`} variant="secondary" className="capitalize">
+                            {dept}
+                          </Badge>
+                        ))}
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
+                        <span>Active bids: {competitor.activeBids.length}</span>
+                        <span>Booked shows: {bookedCount}</span>
+                      </div>
+                      {competitor.scoutingNotes.length > 0 && (
+                        <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
+                          {competitor.scoutingNotes.slice(0, 2).map(note => (
+                            <li key={`${competitor.id}-note-${note}`}>• {note}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-start justify-between space-y-0">
+              <div>
+                <CardTitle>Market Activity</CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Signals from the booking scene over the past few days.
+                </p>
+              </div>
+              <div className="rounded-full bg-primary/10 p-2 text-primary">
+                <Megaphone className="h-5 w-5" />
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {marketHighlights.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  No notable headlines yet. Close events or advance time to populate the ticker.
+                </p>
+              ) : (
+                marketHighlights.map(item => (
+                  <div key={item.id} className="rounded-lg border p-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <h4 className="font-semibold leading-snug">{item.title}</h4>
+                        <p className="text-xs text-muted-foreground">
+                          {format(item.date, 'MMM dd, yyyy')}
+                        </p>
+                      </div>
+                      <Badge
+                        variant="outline"
+                        className={`border-0 ${marketToneClasses[item.tone]} px-2 py-1`}
+                      >
+                        {marketToneLabels[item.tone]}
+                      </Badge>
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">{item.summary}</p>
+                  </div>
+                ))
+              )}
             </CardContent>
           </Card>
         </div>
@@ -381,5 +564,6 @@ export default function Dashboard() {
         )}
       </div>
     </div>
+    </>
   );
 }

@@ -9,6 +9,8 @@ import {
   Department,
   EquipmentItem,
   CrisisPrompt,
+  Company,
+  MarketNewsItem,
 } from '@/types/game';
 import {
   generateInitialCrew,
@@ -39,6 +41,17 @@ import {
   evaluateCrisisOutcomes,
   CrisisOutcome,
 } from '@/lib/crisis';
+import {
+  createInitialMarketNews,
+  generateInitialCompetitors,
+} from '@/lib/competitors';
+
+type CompanyIdentityInput = Pick<
+  Company,
+  'name' | 'brandColor' | 'accentColor' | 'specialization'
+> & {
+  tagline?: string;
+};
 
 interface EventCompletionSummary {
   eventId: string;
@@ -105,6 +118,10 @@ interface GameContextType {
     promptId: string,
     choiceId: string,
   ) => { success: boolean; reason?: string };
+  completeCompanyOnboarding: (identity: CompanyIdentityInput) => void;
+  updateCompanyIdentity: (
+    updates: Partial<Pick<Company, 'brandColor' | 'accentColor' | 'tagline'>>,
+  ) => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -123,6 +140,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     const company = createInitialCompany();
     const equipment = generateInitialEquipmentInventory(now);
+    const competitors = generateInitialCompetitors(company);
+    const marketNews = createInitialMarketNews(competitors, company, now);
 
     return {
       company,
@@ -146,6 +165,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       },
       isBankrupt: false,
       crises: [],
+      competitors,
+      marketNews,
+      hasCompletedOnboarding: false,
     } as GameState;
   });
 
@@ -225,6 +247,66 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     });
 
     return prompts;
+  };
+
+  const specializationLabels: Record<Company['specialization'], string> = {
+    audio: 'audio specialists',
+    lighting: 'lighting design experts',
+    video: 'video innovators',
+    stage: 'stagecraft veterans',
+    balanced: 'full-service crews',
+  };
+
+  const updateCompanyIdentity = (
+    updates: Partial<Pick<Company, 'brandColor' | 'accentColor' | 'tagline'>>,
+  ) => {
+    setGameState(prev => ({
+      ...prev,
+      company: {
+        ...prev.company,
+        ...updates,
+      },
+    }));
+  };
+
+  const completeCompanyOnboarding = (identity: CompanyIdentityInput) => {
+    setGameState(prev => {
+      const updatedCompany: Company = {
+        ...prev.company,
+        ...identity,
+      };
+
+      const updatedCompetitors = prev.competitors.map(competitor => ({
+        ...competitor,
+        scoutingNotes: competitor.scoutingNotes.map(note =>
+          note.includes(prev.company.name)
+            ? note.replace(prev.company.name, identity.name)
+            : note,
+        ),
+      }));
+
+      const launchStory: MarketNewsItem = {
+        id: `market-${Date.now()}-launch`,
+        date: new Date(),
+        title: `${identity.name} enters the circuit`,
+        summary: `${identity.name} launches with ${specializationLabels[identity.specialization]} and a refreshed brand palette.`,
+        tone: 'positive',
+      };
+
+      const filteredNews = prev.marketNews.filter(
+        item => !item.title.toLowerCase().includes('prepares to launch'),
+      );
+
+      const nextNews = [launchStory, ...filteredNews].slice(0, 8);
+
+      return {
+        ...prev,
+        company: updatedCompany,
+        competitors: updatedCompetitors,
+        marketNews: nextNews,
+        hasCompletedOnboarding: true,
+      };
+    });
   };
 
   const getRequiredEquipmentCount = (event: Event, department: Department) => {
@@ -1202,6 +1284,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       scheduleEquipmentMaintenance,
       rentEquipment,
       respondToCrisisPrompt,
+      completeCompanyOnboarding,
+      updateCompanyIdentity,
     }}>
       {children}
     </GameContext.Provider>

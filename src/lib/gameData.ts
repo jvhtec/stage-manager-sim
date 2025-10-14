@@ -15,6 +15,68 @@ import {
 const firstNames = ['Alex', 'Jordan', 'Sam', 'Riley', 'Casey', 'Morgan', 'Taylor', 'Jamie', 'Chris', 'Avery'];
 const lastNames = ['Chen', 'Smith', 'Johnson', 'Martinez', 'Brown', 'Davis', 'Wilson', 'Moore', 'Taylor', 'Anderson'];
 
+export interface BrandingPreset {
+  id: string;
+  label: string;
+  description: string;
+  brandColor: string;
+  accentColor: string;
+  specialization: Company['specialization'];
+  tagline: string;
+}
+
+const brandingPresets: BrandingPreset[] = [
+  {
+    id: 'audio-vanguard',
+    label: 'Audio Vanguard',
+    description: 'Top-tier FOH mixes and detail-oriented engineers.',
+    brandColor: '#1d4ed8',
+    accentColor: '#60a5fa',
+    specialization: 'audio',
+    tagline: 'Mixing legends into every room.',
+  },
+  {
+    id: 'lighting-sculptors',
+    label: 'Lighting Sculptors',
+    description: 'Precision lighting rigs with signature atmospheres.',
+    brandColor: '#f59e0b',
+    accentColor: '#fbbf24',
+    specialization: 'lighting',
+    tagline: 'Crafting light that tells the story.',
+  },
+  {
+    id: 'video-cascade',
+    label: 'Video Cascade',
+    description: 'Immersive visuals and rock-solid video systems.',
+    brandColor: '#7c3aed',
+    accentColor: '#c4b5fd',
+    specialization: 'video',
+    tagline: 'Visual stories without a dropped frame.',
+  },
+  {
+    id: 'stage-forge',
+    label: 'Stage Forge',
+    description: 'Resilient builds, fast changeovers, and safe decks.',
+    brandColor: '#0f766e',
+    accentColor: '#5eead4',
+    specialization: 'stage',
+    tagline: 'Building stages that never blink.',
+  },
+  {
+    id: 'balanced-studio',
+    label: 'Balanced Studio',
+    description: 'Well-rounded crews focused on reliability and rapport.',
+    brandColor: '#6b21a8',
+    accentColor: '#d946ef',
+    specialization: 'balanced',
+    tagline: 'Every department, perfectly in sync.',
+  },
+];
+
+export function getBrandingPresets(): BrandingPreset[] {
+  return brandingPresets;
+}
+
 export function generateCrewMember(department: Department, skillLevel: number = 5): CrewMember {
   const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
   const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
@@ -110,13 +172,21 @@ export function generateInitialEquipmentInventory(currentDate: Date = new Date()
   return generateInitialEquipment(currentDate);
 }
 
-export function createInitialCompany(): Company {
-  return {
+export function createInitialCompany(overrides: Partial<Company> = {}): Company {
+  const basePreset = brandingPresets.find(preset => preset.id === 'balanced-studio') ?? brandingPresets[0];
+
+  const baseCompany: Company = {
     name: 'Sector Pro Productions',
     balance: 15000,
     reputation: 50,
     level: 1,
+    brandColor: basePreset.brandColor,
+    accentColor: basePreset.accentColor,
+    specialization: basePreset.specialization,
+    tagline: basePreset.tagline,
   };
+
+  return { ...baseCompany, ...overrides };
 }
 
 export function calculateEventCost(event: Event): number {
