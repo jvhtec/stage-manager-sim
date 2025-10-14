@@ -24,6 +24,8 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useFinancialSummary } from '@/hooks/useFinancialSummary';
 import { MAX_OVERDRAFT_DAYS } from '@/lib/finance';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 
 export default function Finances() {
   const { gameState, updateBalance } = useGame();
@@ -37,7 +39,29 @@ export default function Finances() {
     thirtyDay,
     categorySummary,
     alerts,
+    balanceTrend,
   } = summary;
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    }).format(value);
+
+  const chartData = balanceTrend.map(point => ({
+    date: format(point.date, 'MMM dd'),
+    balance: point.balance,
+  }));
+
+  const positiveDays = balanceTrend.filter(point => point.net >= 0).length;
+  const negativeDays = balanceTrend.length - positiveDays;
+  const peakBalance = balanceTrend.length
+    ? Math.max(...balanceTrend.map(point => point.balance))
+    : gameState.company.balance;
+  const lowestBalance = balanceTrend.length
+    ? Math.min(...balanceTrend.map(point => point.balance))
+    : gameState.company.balance;
 
   const handleEmergencyLoan = () => {
     updateBalance(5000, {
@@ -197,6 +221,87 @@ export default function Finances() {
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>30-Day Balance Trend</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Track how cash on hand evolves as income and expenses land each day.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {chartData.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-8">
+                Complete a few contracts to build up balance history.
+              </p>
+            ) : (
+              <>
+                <ChartContainer
+                  config={{
+                    balance: {
+                      label: 'Ending Balance',
+                      theme: {
+                        light: 'hsl(var(--primary))',
+                        dark: 'hsl(var(--primary))',
+                      },
+                    },
+                  }}
+                  className="h-[260px]"
+                >
+                  <AreaChart data={chartData} margin={{ left: 12, right: 12, top: 10, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="balanceGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="var(--color-balance)" stopOpacity={0.45} />
+                        <stop offset="95%" stopColor="var(--color-balance)" stopOpacity={0.05} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-border/60" />
+                    <XAxis dataKey="date" tickLine={false} axisLine={false} interval={3} />
+                    <YAxis
+                      tickLine={false}
+                      axisLine={false}
+                      tickFormatter={value => formatCurrency(value as number)}
+                      width={80}
+                    />
+                    <ChartTooltip
+                      cursor={{ strokeDasharray: '4 4', stroke: 'var(--border)' }}
+                      content={
+                        <ChartTooltipContent
+                          formatter={value => [formatCurrency(value as number), 'Ending Balance']}
+                        />
+                      }
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="balance"
+                      stroke="var(--color-balance)"
+                      strokeWidth={2}
+                      fill="url(#balanceGradient)"
+                      isAnimationActive={false}
+                    />
+                  </AreaChart>
+                </ChartContainer>
+
+                <div className="grid gap-4 sm:grid-cols-3 text-sm">
+                  <div>
+                    <div className="text-muted-foreground">Peak Balance</div>
+                    <div className="font-semibold">{formatCurrency(peakBalance)}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Lowest Balance</div>
+                    <div className="font-semibold">{formatCurrency(lowestBalance)}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Winning Days</div>
+                    <div className="font-semibold">
+                      {positiveDays} positive / {negativeDays} negative
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
 
         <Card>
           <CardHeader>

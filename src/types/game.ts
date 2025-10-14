@@ -119,6 +119,25 @@ export interface CrisisPrompt {
   createdAt: Date;
 }
 
+export interface PostEventEquipmentReport {
+  equipmentId: string;
+  name: string;
+  conditionBefore: number;
+  conditionAfter: number;
+}
+
+export interface EventPostReport {
+  completedOn: Date;
+  satisfaction: number;
+  financial: {
+    income: number;
+    expense: number;
+    net: number;
+    balanceAfter: number;
+  };
+  equipment: PostEventEquipmentReport[];
+}
+
 export interface Event {
   id: string;
   name: string;
@@ -147,6 +166,7 @@ export interface Event {
   teardownHours: number;
   travelHours: number;
   clientSatisfaction?: number; // 0-100
+  postEventReport?: EventPostReport;
 }
 
 export interface Company {
