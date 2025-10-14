@@ -49,14 +49,14 @@ Open up the event variety described in the GDD.
 - Harden simulation determinism, autosaves, and accessibility options.
 
 ## Immediate Next Steps
-1. Build first-pass equipment management (inventory, rentals, maintenance timers).
-2. Introduce the planning/execution crisis prompts scoped for the MVP.
-3. Expand financial reporting with trend charts and alerts once core systems stabilize.
+1. Introduce the planning/execution crisis prompts scoped for the MVP.
+2. Expand financial reporting with trend charts and alerts once core systems stabilize.
+3. Tie equipment condition into risk triggers and post-show reporting once the crisis system is in place.
 
 ## Progress Snapshot
 - ✅ Scheduling pressure (travel buffers, recovery locks, fatigue safeguards).
 - ✅ Crew progression (experience, certifications, morale drift, post-show feedback).
-- ⏳ Equipment management foundations.
+- ✅ Equipment management foundations.
 - ⏳ Risk & crisis prompt system.
 
 This staged plan ensures every iteration honors the authentic backstage management fantasy while keeping scope sustainable for a solo developer.

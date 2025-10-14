@@ -6,6 +6,16 @@ export type EventStatus = 'available' | 'planned' | 'in-progress' | 'completed' 
 
 export type TransactionType = 'income' | 'expense';
 
+export type EquipmentType =
+  | 'pa-system'
+  | 'monitor-rig'
+  | 'lighting-rig'
+  | 'led-wall'
+  | 'stage-deck'
+  | 'power-dist';
+
+export type EquipmentStatus = 'available' | 'assigned' | 'maintenance';
+
 export type FinancialCategory =
   | 'contracts'
   | 'payroll'
@@ -27,6 +37,33 @@ export interface FinancesState {
   transactions: FinancialTransaction[];
   creditLimit: number;
   overdraftDays: number;
+}
+
+export interface EquipmentRequirement {
+  id: string;
+  type: EquipmentType;
+  quantity: number;
+  description: string;
+  allowsRental: boolean;
+}
+
+export interface EquipmentItem {
+  id: string;
+  name: string;
+  type: EquipmentType;
+  department: Department;
+  owned: boolean;
+  condition: number; // 0-100
+  status: EquipmentStatus;
+  maintenanceDue: Date;
+  maintenanceCompleteOn?: Date;
+  lastServicedOn: Date;
+  assignedToEvent?: string;
+  rentalInfo?: {
+    provider: string;
+    returnDate: Date;
+    dailyCost: number;
+  };
 }
 
 export interface CrewMember {
@@ -65,12 +102,14 @@ export interface Event {
     video: number;
     stage: number;
   };
+  equipmentRequirements: Record<Department, EquipmentRequirement[]>;
   assignedCrew: {
     audio: CrewMember[];
     lighting: CrewMember[];
     video: CrewMember[];
     stage: CrewMember[];
   };
+  assignedEquipment: Record<Department, string[]>;
   setupHours: number;
   eventHours: number;
   teardownHours: number;
@@ -88,6 +127,7 @@ export interface Company {
 export interface GameState {
   company: Company;
   crew: CrewMember[];
+  equipment: EquipmentItem[];
   events: Event[];
   currentDate: Date;
   selectedEvent?: string;

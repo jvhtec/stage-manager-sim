@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CrewMemberCard } from '@/components/CrewMemberCard';
+import { EquipmentCard } from '@/components/EquipmentCard';
 import { DepartmentBadge } from '@/components/DepartmentBadge';
 import { ArrowLeft, Calendar, MapPin, DollarSign, Clock, CheckCircle2, AlertCircle, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
@@ -13,14 +14,24 @@ import {
   getCrewRecoveryDays,
   getEventTimeWindow,
   isEventFullyStaffed,
+  isEventEquipmentReady,
 } from '@/lib/gameData';
-import { CrewMember, Department } from '@/types/game';
+import { getEquipmentDefinition } from '@/lib/equipment';
+import { CrewMember, Department, EquipmentItem } from '@/types/game';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function EventDetail() {
   const { id } = useParams();
-  const { gameState, assignCrewToEvent, unassignCrewFromEvent, acceptEvent, completeEvent } = useGame();
+  const {
+    gameState,
+    assignCrewToEvent,
+    unassignCrewFromEvent,
+    assignEquipmentToEvent,
+    unassignEquipmentFromEvent,
+    acceptEvent,
+    completeEvent,
+  } = useGame();
   const navigate = useNavigate();
   
   const event = gameState.events.find(e => e.id === id);
@@ -45,7 +56,16 @@ export default function EventDetail() {
   const cost = calculateEventCost(event);
   const profit = calculateEventProfit(event);
   const isStaffed = isEventFullyStaffed(event);
+  const equipmentReady = isEventEquipmentReady(event);
+  const readyToAccept = isStaffed && equipmentReady;
   const availableCrew = gameState.crew.filter(c => !c.assignedTo);
+  const equipmentByDepartment = gameState.equipment.reduce<Record<Department, EquipmentItem[]>>(
+    (acc, item) => {
+      acc[item.department].push(item);
+      return acc;
+    },
+    { audio: [], lighting: [], video: [], stage: [] },
+  );
 
   const { setupStart, eventStart, teardownComplete } = getEventTimeWindow(event);
   const recoveryDays = getCrewRecoveryDays(event);
@@ -59,6 +79,16 @@ export default function EventDetail() {
     }
     if (crew.fatigue >= fatigueThreshold) {
       return 'Fatigue too high';
+    }
+    return undefined;
+  };
+
+  const getEquipmentHelperText = (equipment: EquipmentItem) => {
+    if (equipment.maintenanceDue < eventStart) {
+      return 'Maintenance due before show';
+    }
+    if (equipment.rentalInfo && equipment.rentalInfo.returnDate < eventStart) {
+      return `Rental returns ${format(equipment.rentalInfo.returnDate, 'MMM dd')}`;
     }
     return undefined;
   };
@@ -78,6 +108,12 @@ export default function EventDetail() {
     if (!isStaffed) {
       toast.error('Cannot accept event', {
         description: 'Please assign all required crew members first',
+      });
+      return;
+    }
+    if (!equipmentReady) {
+      toast.error('Cannot accept event', {
+        description: 'Reserve the required equipment before confirming.',
       });
       return;
     }
@@ -119,6 +155,14 @@ export default function EventDetail() {
       }
     });
 
+    result?.equipmentResults.forEach(equipment => {
+      if (equipment.conditionAfter <= 40) {
+        toast.warning(`${equipment.name} is wearing down`, {
+          description: `Condition is at ${equipment.conditionAfter}%. Schedule maintenance soon.`,
+        });
+      }
+    });
+
     if (result?.financial.isBankrupt) {
       toast.error('Bankruptcy triggered', {
         description: 'Balance fell below the credit limit. Visit Finances to resolve.',
@@ -148,6 +192,22 @@ export default function EventDetail() {
   const handleUnassignCrew = (crewId: string) => {
     unassignCrewFromEvent(event.id, crewId);
     toast.success('Crew unassigned');
+  };
+
+  const handleAssignEquipment = (equipmentId: string, department: Department) => {
+    const result = assignEquipmentToEvent(event.id, equipmentId, department);
+    if (!result.success) {
+      toast.error('Unable to reserve equipment', {
+        description: result.reason,
+      });
+      return;
+    }
+    toast.success('Equipment reserved');
+  };
+
+  const handleUnassignEquipment = (equipmentId: string, department: Department) => {
+    unassignEquipmentFromEvent(event.id, equipmentId, department);
+    toast.success('Equipment released');
   };
 
   return (
@@ -184,8 +244,8 @@ export default function EventDetail() {
           </div>
           <div className="flex gap-2">
             {event.status === 'available' && (
-              <Button onClick={handleAcceptEvent} disabled={!isStaffed}>
-                {isStaffed ? (
+              <Button onClick={handleAcceptEvent} disabled={!readyToAccept}>
+                {readyToAccept ? (
                   <>
                     <CheckCircle2 className="mr-2 h-4 w-4" />
                     Accept Event
@@ -193,7 +253,7 @@ export default function EventDetail() {
                 ) : (
                   <>
                     <AlertCircle className="mr-2 h-4 w-4" />
-                    Assign All Crew
+                    {!isStaffed ? 'Assign Crew' : 'Reserve Equipment'}
                   </>
                 )}
               </Button>
@@ -409,6 +469,122 @@ export default function EventDetail() {
                 </CardContent>
               </Card>
             )}
+          </div>
+        </div>
+
+        {/* Equipment Planning */}
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-4">
+            <h2 className="text-2xl font-bold">Equipment Requirements</h2>
+
+            {(['audio', 'lighting', 'video', 'stage'] as Department[]).map(dept => {
+              const requirements = event.equipmentRequirements[dept];
+              if (!requirements || requirements.length === 0) return null;
+
+              const requiredCount = requirements.reduce((sum, req) => sum + req.quantity, 0);
+              const assignedItems = event.assignedEquipment[dept]
+                .map(id => gameState.equipment.find(item => item.id === id))
+                .filter((item): item is EquipmentItem => Boolean(item));
+
+              return (
+                <Card key={`equipment-${dept}`}>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <DepartmentBadge department={dept} />
+                      <span
+                        className={`text-sm ${
+                          assignedItems.length >= requiredCount ? 'text-success' : 'text-warning'
+                        }`}
+                      >
+                        {assignedItems.length} / {requiredCount} reserved
+                      </span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="space-y-1 text-xs text-muted-foreground">
+                      {requirements.map(req => {
+                        const definition = getEquipmentDefinition(req.type);
+                        return (
+                          <div
+                            key={req.id}
+                            className="flex items-center justify-between gap-2 rounded border px-2 py-1"
+                          >
+                            <span className="font-medium text-foreground">{definition.name}</span>
+                            <span>{req.quantity}×</span>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {assignedItems.length > 0 ? (
+                      <div className="space-y-2">
+                        {assignedItems.map(item => (
+                          <EquipmentCard
+                            key={item.id}
+                            equipment={item}
+                            helperText={`Condition ${item.condition}%`}
+                            onRemove={() => handleUnassignEquipment(item.id, dept)}
+                            removeLabel="Release"
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground text-center py-2">
+                        No equipment reserved
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Available Equipment</h2>
+              <Button variant="outline" size="sm" onClick={() => navigate('/inventory')}>
+                Manage Inventory
+              </Button>
+            </div>
+
+            {(['audio', 'lighting', 'video', 'stage'] as Department[]).map(dept => {
+              const requirements = event.equipmentRequirements[dept];
+              if (!requirements || requirements.length === 0) return null;
+
+              const availableItems = equipmentByDepartment[dept].filter(item => item.status === 'available');
+              if (availableItems.length === 0) {
+                return (
+                  <div key={`available-${dept}`} className="space-y-2">
+                    <DepartmentBadge department={dept} />
+                    <p className="text-sm text-muted-foreground">
+                      No idle inventory. Visit the inventory view to rent additional gear.
+                    </p>
+                  </div>
+                );
+              }
+
+              return (
+                <div key={`available-${dept}`} className="space-y-2">
+                  <DepartmentBadge department={dept} />
+                  <div className="grid gap-2">
+                    {availableItems.map(item => {
+                      const helperText = getEquipmentHelperText(item);
+                      const isDisabled = Boolean(helperText);
+                      return (
+                        <EquipmentCard
+                          key={item.id}
+                          equipment={item}
+                          onSelect={() => handleAssignEquipment(item.id, dept)}
+                          helperText={helperText}
+                          disabled={isDisabled}
+                          actionLabel="Reserve"
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
