@@ -5,6 +5,7 @@ import { CrewMember } from '@/types/game';
 import { DepartmentBadge } from './DepartmentBadge';
 import { User, Battery, Heart, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
+import { getExperienceThresholdForLevel } from '@/lib/crewProgression';
 
 interface CrewMemberCardProps {
   crew: CrewMember;
@@ -17,6 +18,15 @@ interface CrewMemberCardProps {
 
 export function CrewMemberCard({ crew, onSelect, compact, showAssignment, disabled, helperText }: CrewMemberCardProps) {
   const skillStars = '★'.repeat(crew.skillLevel) + '☆'.repeat(10 - crew.skillLevel);
+  const experienceThreshold = getExperienceThresholdForLevel(crew.skillLevel);
+  const experiencePercent =
+    experienceThreshold === Infinity
+      ? 100
+      : Math.min(100, Math.round((crew.experience / experienceThreshold) * 100));
+  const xpLabel =
+    experienceThreshold === Infinity
+      ? 'Max level'
+      : `${experiencePercent}% to next level`;
 
   if (compact) {
     return (
@@ -37,7 +47,8 @@ export function CrewMemberCard({ crew, onSelect, compact, showAssignment, disabl
               <User className="h-4 w-4 text-muted-foreground" />
               <div>
                 <div className="font-medium">{crew.name}</div>
-                <div className="text-xs text-muted-foreground">{skillStars}</div>
+                <div className="text-xs text-muted-foreground">Lvl {crew.skillLevel}</div>
+                <div className="text-[10px] text-muted-foreground">{xpLabel}</div>
                 {helperText && (
                   <div className="text-[10px] text-muted-foreground/80 mt-1">{helperText}</div>
                 )}
@@ -71,6 +82,22 @@ export function CrewMemberCard({ crew, onSelect, compact, showAssignment, disabl
                 {crew.name}
               </h4>
               <div className="text-xs text-muted-foreground mt-1">{skillStars}</div>
+              <div className="mt-2">
+                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                  <span>XP Progress</span>
+                  <span>{experienceThreshold === Infinity ? 'MAX' : `${experiencePercent}%`}</span>
+                </div>
+                <Progress
+                  value={experienceThreshold === Infinity ? 100 : experiencePercent}
+                  className="h-2"
+                />
+                {crew.certifications.length > 0 && (
+                  <div className="text-xs text-muted-foreground mt-2">
+                    <span className="font-medium text-foreground">Certifications:</span>{' '}
+                    {crew.certifications.join(', ')}
+                  </div>
+                )}
+              </div>
             </div>
             <DepartmentBadge department={crew.department} />
           </div>
@@ -115,6 +142,25 @@ export function CrewMemberCard({ crew, onSelect, compact, showAssignment, disabl
           {helperText && (
             <div className="text-xs text-muted-foreground/80 pt-1 border-t mt-2">
               {helperText}
+            </div>
+          )}
+
+          {crew.recentMoraleShift && (
+            <div
+              className={`mt-3 rounded-md border px-2 py-1 text-xs ${
+                crew.recentMoraleShift.type === 'positive'
+                  ? 'bg-success/10 text-success border-success/20'
+                  : 'bg-destructive/10 text-destructive border-destructive/30'
+              }`}
+            >
+              <div className="font-medium">
+                {crew.recentMoraleShift.description}
+              </div>
+              <div className="text-[10px] text-muted-foreground">
+                {crew.recentMoraleShift.delta > 0 ? '+' : ''}
+                {crew.recentMoraleShift.delta} morale •{' '}
+                {format(crew.recentMoraleShift.date, 'MMM dd')}
+              </div>
             </div>
           )}
         </div>

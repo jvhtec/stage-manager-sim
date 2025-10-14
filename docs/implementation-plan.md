@@ -32,7 +32,7 @@ Once the loop is stable, layer in depth aligned with the GDD and gameplay loop.
 **Key Additions**
 - **Scheduling Pressure**: Multiple concurrent events, travel buffers, and fatigue to force trade-offs.
 - ✅ Implemented event time windows, travel buffers, and crew recovery locks to make overlapping gigs harder to staff.
-- **Crew Progression**: Experience gains, certifications, and morale events that feed narrative choices.
+- ✅ Crew Progression: Track experience gains, grant certifications, and surface morale shifts that influence roster decisions.
 - **Equipment Management**: Inventory ownership vs. rental, maintenance timers, and breakdown risks.
 - **Risk & Crisis System**: Light-weight crisis prompts during planning/execution tied to preparation quality.
 
@@ -49,8 +49,14 @@ Open up the event variety described in the GDD.
 - Harden simulation determinism, autosaves, and accessibility options.
 
 ## Immediate Next Steps
-1. Implement the financial tracker and bankruptcy checks called out in the MVP scope.
-2. Connect post-event completion to income/expense transactions and surface them in a dedicated Finances view.
-3. Expose ledger data on the dashboard so the player can react to budget trends without leaving the core loop.
+1. Build first-pass equipment management (inventory, rentals, maintenance timers).
+2. Introduce the planning/execution crisis prompts scoped for the MVP.
+3. Expand financial reporting with trend charts and alerts once core systems stabilize.
+
+## Progress Snapshot
+- ✅ Scheduling pressure (travel buffers, recovery locks, fatigue safeguards).
+- ✅ Crew progression (experience, certifications, morale drift, post-show feedback).
+- ⏳ Equipment management foundations.
+- ⏳ Risk & crisis prompt system.
 
 This staged plan ensures every iteration honors the authentic backstage management fantasy while keeping scope sustainable for a solo developer.

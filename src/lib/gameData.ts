@@ -1,4 +1,5 @@
 import { CrewMember, Event, Company, Department } from '@/types/game';
+import { initializeCrewProgression } from './crewProgression';
 
 const firstNames = ['Alex', 'Jordan', 'Sam', 'Riley', 'Casey', 'Morgan', 'Taylor', 'Jamie', 'Chris', 'Avery'];
 const lastNames = ['Chen', 'Smith', 'Johnson', 'Martinez', 'Brown', 'Davis', 'Wilson', 'Moore', 'Taylor', 'Anderson'];
@@ -6,7 +7,8 @@ const lastNames = ['Chen', 'Smith', 'Johnson', 'Martinez', 'Brown', 'Davis', 'Wi
 export function generateCrewMember(department: Department, skillLevel: number = 5): CrewMember {
   const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
   const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-  
+  const progression = initializeCrewProgression(department, skillLevel);
+
   return {
     id: `crew-${Date.now()}-${Math.random()}`,
     name: `${firstName} ${lastName}`,
@@ -16,6 +18,8 @@ export function generateCrewMember(department: Department, skillLevel: number = 
     fatigue: Math.floor(Math.random() * 30),
     morale: 70 + Math.floor(Math.random() * 30),
     availableOn: new Date(),
+    experience: progression.experience,
+    certifications: progression.certifications,
   };
 }
 
