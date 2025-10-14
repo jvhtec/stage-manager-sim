@@ -17,7 +17,12 @@ import {
   isEventEquipmentReady,
 } from '@/lib/gameData';
 import { getEquipmentDefinition } from '@/lib/equipment';
-import { CrewMember, Department, EquipmentItem } from '@/types/game';
+import {
+  CrewMember,
+  Department,
+  EquipmentItem,
+  CrisisSeverity,
+} from '@/types/game';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -31,6 +36,7 @@ export default function EventDetail() {
     unassignEquipmentFromEvent,
     acceptEvent,
     completeEvent,
+    respondToCrisisPrompt,
   } = useGame();
   const navigate = useNavigate();
   
@@ -96,7 +102,38 @@ export default function EventDetail() {
   const totalHours = event.setupHours + event.eventHours + event.teardownHours;
   const crewReadyDate = new Date(event.date);
   crewReadyDate.setDate(crewReadyDate.getDate() + recoveryDays);
-  
+
+  const crisisPrompts = gameState.crises.filter(prompt => prompt.eventId === event.id);
+
+  const severityStyles: Record<CrisisSeverity, string> = {
+    low: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300',
+    medium: 'bg-amber-500/10 text-amber-600 dark:text-amber-300',
+    high: 'bg-destructive/10 text-destructive',
+  };
+
+  const stageLabels = {
+    planning: 'Planning',
+    execution: 'Execution',
+  } as const;
+
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    }).format(value);
+
+  const handleResolveCrisis = (promptId: string, choiceId: string) => {
+    const result = respondToCrisisPrompt(promptId, choiceId);
+    if (!result.success) {
+      toast.error('Unable to lock response', {
+        description: result.reason,
+      });
+      return;
+    }
+    toast.success('Contingency locked in');
+  };
+
   const handleAcceptEvent = () => {
     if (gameState.isBankrupt) {
       toast.error('Unable to accept contract', {
@@ -133,12 +170,18 @@ export default function EventDetail() {
 
     // Simplified completion - in full game this would be based on actual execution
     const baseSatisfaction = 75;
-    const crewQualityBonus = Math.min(15, Object.values(event.assignedCrew).flat().reduce((sum, c) => sum + c.skillLevel, 0) / 2);
-    const satisfaction = Math.min(100, baseSatisfaction + crewQualityBonus);
-    
-    const result = completeEvent(event.id, satisfaction);
+    const crewQualityBonus = Math.min(
+      15,
+      Object.values(event.assignedCrew)
+        .flat()
+        .reduce((sum, c) => sum + c.skillLevel, 0) / 2,
+    );
+    const provisionalSatisfaction = Math.min(100, baseSatisfaction + crewQualityBonus);
+
+    const result = completeEvent(event.id, provisionalSatisfaction);
+    const finalSatisfaction = result?.satisfaction ?? provisionalSatisfaction;
     toast.success('Event completed!', {
-      description: `Client satisfaction: ${satisfaction}%`,
+      description: `Client satisfaction: ${finalSatisfaction}%`,
     });
 
     result?.crewResults.forEach(outcome => {
@@ -159,6 +202,28 @@ export default function EventDetail() {
       if (equipment.conditionAfter <= 40) {
         toast.warning(`${equipment.name} is wearing down`, {
           description: `Condition is at ${equipment.conditionAfter}%. Schedule maintenance soon.`,
+        });
+      }
+    });
+
+    result?.crisisOutcomes.forEach(outcome => {
+      const hasPenalty = outcome.satisfactionDelta < 0 || outcome.financialDelta > 0;
+      const message = `${outcome.title} (${stageLabels[outcome.stage]})`;
+      const financialImpact =
+        outcome.financialDelta !== 0
+          ? ` • Financial impact: ${formatCurrency(Math.abs(outcome.financialDelta))} ${
+              outcome.financialDelta > 0 ? 'expense' : 'savings'
+            }`
+          : '';
+      const description = `${outcome.resolution}. ${outcome.notes ?? ''}${financialImpact}`;
+
+      if (hasPenalty) {
+        toast.warning(message, {
+          description,
+        });
+      } else {
+        toast.success(message, {
+          description,
         });
       }
     });
@@ -372,6 +437,86 @@ export default function EventDetail() {
             <p className="text-xs text-muted-foreground mt-4">
               Crew cannot be reassigned until after recovery. High fatigue or overlapping travel windows will block assignments.
             </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Risk & Crisis Preparation</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Resolve risks ahead of load-in. Your choices affect client satisfaction and surprise costs.
+            </p>
+          </CardHeader>
+          <CardContent>
+            {crisisPrompts.length === 0 ? (
+              <div className="rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
+                No active risks detected. Keep confirming call sheets and checklists.
+              </div>
+            ) : (
+              <div className="space-y-5">
+                {crisisPrompts.map(prompt => {
+                  const selectedChoice = prompt.selectedChoiceId
+                    ? prompt.choices.find(choice => choice.id === prompt.selectedChoiceId)
+                    : undefined;
+                  const recommended = prompt.recommendedActions.join(' • ');
+                  const baseImpact = `Potential impact: -${prompt.baseSatisfactionPenalty} satisfaction${
+                    prompt.baseFinancialPenalty
+                      ? `, ${formatCurrency(prompt.baseFinancialPenalty)} expense`
+                      : ''
+                  }`;
+                  const canResolve = event.status === 'planned' || event.status === 'in-progress';
+
+                  return (
+                    <div key={prompt.id} className="rounded-lg border border-border p-4">
+                      <div className="flex flex-wrap items-start justify-between gap-3">
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge className={severityStyles[prompt.severity]}>
+                              {prompt.severity.toUpperCase()}
+                            </Badge>
+                            <Badge variant="outline">{stageLabels[prompt.stage]}</Badge>
+                          </div>
+                          <h3 className="text-lg font-semibold">{prompt.title}</h3>
+                          <p className="text-sm text-muted-foreground">{prompt.description}</p>
+                          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            {baseImpact}
+                          </p>
+                          <p className="text-xs text-muted-foreground">Recommended: {recommended}</p>
+                        </div>
+                        {prompt.resolved && selectedChoice && (
+                          <Badge className="bg-primary/10 text-primary">{selectedChoice.label}</Badge>
+                        )}
+                      </div>
+
+                      {!prompt.resolved && (
+                        <div className="mt-4 grid gap-3 md:grid-cols-2">
+                          {prompt.choices.map(choice => (
+                            <Button
+                              key={choice.id}
+                              variant="outline"
+                              className="justify-start text-left"
+                              disabled={!canResolve}
+                              onClick={() => handleResolveCrisis(prompt.id, choice.id)}
+                            >
+                              <div>
+                                <div className="font-semibold">{choice.label}</div>
+                                <div className="text-xs text-muted-foreground">{choice.description}</div>
+                              </div>
+                            </Button>
+                          ))}
+                        </div>
+                      )}
+
+                      {prompt.resolved && selectedChoice && (
+                        <p className="mt-3 text-xs text-muted-foreground">
+                          Resolution locked: {selectedChoice.description}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
 

@@ -6,6 +6,10 @@ export type EventStatus = 'available' | 'planned' | 'in-progress' | 'completed' 
 
 export type TransactionType = 'income' | 'expense';
 
+export type CrisisStage = 'planning' | 'execution';
+
+export type CrisisSeverity = 'low' | 'medium' | 'high';
+
 export type EquipmentType =
   | 'pa-system'
   | 'monitor-rig'
@@ -87,6 +91,34 @@ export interface CrewMember {
   };
 }
 
+export interface CrisisChoice {
+  id: string;
+  label: string;
+  description: string;
+  cost?: number;
+  transactionCategory?: FinancialCategory;
+  satisfactionModifier?: number;
+  financialModifier?: number;
+  notes?: string;
+}
+
+export interface CrisisPrompt {
+  id: string;
+  eventId: string;
+  stage: CrisisStage;
+  severity: CrisisSeverity;
+  title: string;
+  description: string;
+  impact: string;
+  recommendedActions: string[];
+  baseSatisfactionPenalty: number;
+  baseFinancialPenalty?: number;
+  choices: CrisisChoice[];
+  resolved: boolean;
+  selectedChoiceId?: string;
+  createdAt: Date;
+}
+
 export interface Event {
   id: string;
   name: string;
@@ -133,4 +165,5 @@ export interface GameState {
   selectedEvent?: string;
   finances: FinancesState;
   isBankrupt: boolean;
+  crises: CrisisPrompt[];
 }
