@@ -1,6 +1,17 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { GameState, CrewMember, Event } from '@/types/game';
-import { generateInitialCrew, createInitialCompany, generateEvent } from '@/lib/gameData';
+import React, { createContext, useContext, useState } from 'react';
+import {
+  GameState,
+  CrewMember,
+  Event,
+  FinancialTransaction,
+  FinancialCategory,
+} from '@/types/game';
+import {
+  generateInitialCrew,
+  createInitialCompany,
+  generateEvent,
+  calculateEventCost,
+} from '@/lib/gameData';
 
 interface GameContextType {
   gameState: GameState;
@@ -10,7 +21,10 @@ interface GameContextType {
   acceptEvent: (eventId: string) => void;
   completeEvent: (eventId: string, satisfaction: number) => void;
   advanceDay: () => void;
-  updateBalance: (amount: number) => void;
+  updateBalance: (
+    amount: number,
+    options?: { description?: string; category?: FinancialCategory; eventId?: string }
+  ) => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -32,7 +46,29 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       crew: generateInitialCrew(),
       events,
       currentDate: now,
-    };
+      finances: {
+        transactions: [],
+        creditLimit: -5000,
+        overdraftDays: 0,
+      },
+      isBankrupt: false,
+    } as GameState;
+  });
+
+  const createTransaction = (
+    type: FinancialTransaction['type'],
+    amount: number,
+    description: string,
+    category: FinancialCategory,
+    eventId?: string
+  ): FinancialTransaction => ({
+    id: `txn-${Date.now()}-${Math.random()}`,
+    date: new Date(),
+    type,
+    amount,
+    description,
+    category,
+    eventId,
   });
 
   const hireCrew = (crew: CrewMember) => {
@@ -102,23 +138,50 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const completeEvent = (eventId: string, satisfaction: number) => {
     setGameState(prev => {
+      if (prev.isBankrupt) return prev;
+
       const event = prev.events.find(e => e.id === eventId);
       if (!event) return prev;
 
-      const profit = event.clientPay - Object.values(event.assignedCrew)
-        .flat()
-        .reduce((sum, crew) => sum + (crew.hourlyRate * (event.setupHours + event.eventHours + event.teardownHours)), 0);
-
+      const cost = calculateEventCost(event);
       const reputationGain = Math.floor((satisfaction / 100) * 5);
+
+      const transactions: FinancialTransaction[] = [...prev.finances.transactions];
+
+      if (cost > 0) {
+        transactions.push(
+          createTransaction(
+            'expense',
+            cost,
+            `Crew payroll for ${event.name}`,
+            'payroll',
+            event.id
+          )
+        );
+      }
+
+      transactions.push(
+        createTransaction(
+          'income',
+          event.clientPay,
+          `Client payment for ${event.name}`,
+          'contracts',
+          event.id
+        )
+      );
+
+      const newBalance = prev.company.balance + event.clientPay - cost;
+      const overdraftDays = newBalance < 0 ? prev.finances.overdraftDays + 1 : 0;
+      const isBankrupt = newBalance < prev.finances.creditLimit;
 
       return {
         ...prev,
         company: {
           ...prev.company,
-          balance: prev.company.balance + event.clientPay,
+          balance: newBalance,
           reputation: Math.min(100, prev.company.reputation + reputationGain),
         },
-        events: prev.events.map(e => 
+        events: prev.events.map(e =>
           e.id === eventId ? { ...e, status: 'completed' as const, clientSatisfaction: satisfaction } : e
         ),
         crew: prev.crew.map(c => {
@@ -133,15 +196,23 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           }
           return c;
         }),
+        finances: {
+          ...prev.finances,
+          transactions,
+          overdraftDays,
+        },
+        isBankrupt,
       };
     });
   };
 
   const advanceDay = () => {
     setGameState(prev => {
+      if (prev.isBankrupt) return prev;
+
       const newDate = new Date(prev.currentDate);
       newDate.setDate(newDate.getDate() + 1);
-      
+
       // Generate new events occasionally
       const newEvents = [...prev.events];
       if (Math.random() > 0.7) {
@@ -149,7 +220,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         futureDate.setDate(futureDate.getDate() + Math.floor(Math.random() * 14) + 7);
         newEvents.push(generateEvent(futureDate, 'gig'));
       }
-      
+
+      const overdraftDays = prev.company.balance < 0 ? prev.finances.overdraftDays + 1 : 0;
+      const isBankrupt = prev.company.balance < prev.finances.creditLimit;
+
       return {
         ...prev,
         currentDate: newDate,
@@ -158,18 +232,49 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           ...c,
           fatigue: Math.max(0, c.fatigue - 5),
         })),
+        finances: {
+          ...prev.finances,
+          overdraftDays,
+        },
+        isBankrupt,
       };
     });
   };
 
-  const updateBalance = (amount: number) => {
-    setGameState(prev => ({
-      ...prev,
-      company: {
-        ...prev.company,
-        balance: prev.company.balance + amount,
-      },
-    }));
+  const updateBalance = (
+    amount: number,
+    options?: { description?: string; category?: FinancialCategory; eventId?: string }
+  ) => {
+    setGameState(prev => {
+      if (amount === 0) return prev;
+      if (prev.isBankrupt && amount < 0) return prev;
+
+      const newBalance = prev.company.balance + amount;
+      const transaction = createTransaction(
+        amount >= 0 ? 'income' : 'expense',
+        Math.abs(amount),
+        options?.description || 'Balance adjustment',
+        options?.category || 'misc',
+        options?.eventId
+      );
+
+      const overdraftDays = newBalance < 0 ? prev.finances.overdraftDays + 1 : 0;
+      const isBankrupt = newBalance < prev.finances.creditLimit;
+
+      return {
+        ...prev,
+        company: {
+          ...prev.company,
+          balance: newBalance,
+        },
+        finances: {
+          ...prev.finances,
+          transactions: [...prev.finances.transactions, transaction],
+          overdraftDays,
+        },
+        isBankrupt,
+      };
+    });
   };
 
   return (

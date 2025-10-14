@@ -4,6 +4,31 @@ export type EventType = 'gig' | 'tour' | 'festival';
 
 export type EventStatus = 'available' | 'planned' | 'in-progress' | 'completed' | 'failed';
 
+export type TransactionType = 'income' | 'expense';
+
+export type FinancialCategory =
+  | 'contracts'
+  | 'payroll'
+  | 'operations'
+  | 'maintenance'
+  | 'misc';
+
+export interface FinancialTransaction {
+  id: string;
+  date: Date;
+  type: TransactionType;
+  amount: number;
+  description: string;
+  category: FinancialCategory;
+  eventId?: string;
+}
+
+export interface FinancesState {
+  transactions: FinancialTransaction[];
+  creditLimit: number;
+  overdraftDays: number;
+}
+
 export interface CrewMember {
   id: string;
   name: string;
@@ -54,4 +79,6 @@ export interface GameState {
   events: Event[];
   currentDate: Date;
   selectedEvent?: string;
+  finances: FinancesState;
+  isBankrupt: boolean;
 }
