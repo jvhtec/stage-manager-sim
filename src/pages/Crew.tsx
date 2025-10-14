@@ -30,19 +30,29 @@ export default function Crew() {
   const stageCrew = gameState.crew.filter(c => c.department === 'stage');
   
   const handleHire = (department: Department) => {
+    if (gameState.isBankrupt) {
+      toast.error('Cannot hire crew', {
+        description: 'Your company is bankrupt and cannot make new hires.',
+      });
+      return;
+    }
+
     const skillLevel = 3 + Math.floor(Math.random() * 5); // 3-7
     const newCrew = generateCrewMember(department, skillLevel);
     const hiringCost = 500; // Base hiring cost
-    
+
     if (gameState.company.balance < hiringCost) {
       toast.error('Insufficient funds', {
         description: `You need $${hiringCost} to hire crew`,
       });
       return;
     }
-    
+
     hireCrew(newCrew);
-    updateBalance(-hiringCost);
+    updateBalance(-hiringCost, {
+      description: `Hiring bonus for ${newCrew.name}`,
+      category: 'operations',
+    });
     setIsHireDialogOpen(false);
     toast.success('Crew hired!', {
       description: `${newCrew.name} has joined your team`,
@@ -67,7 +77,7 @@ export default function Crew() {
           
           <Dialog open={isHireDialogOpen} onOpenChange={setIsHireDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
+              <Button disabled={gameState.isBankrupt}>
                 <UserPlus className="mr-2 h-4 w-4" />
                 Hire Crew
               </Button>
