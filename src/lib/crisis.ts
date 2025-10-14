@@ -12,6 +12,7 @@ interface CrisisContext {
   crew: CrewMember[];
   equipment: EquipmentItem[];
   companyReputation: number;
+  companySpecialization?: string;
 }
 
 export interface CrisisOutcome {

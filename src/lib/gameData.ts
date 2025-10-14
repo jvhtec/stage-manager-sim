@@ -138,6 +138,9 @@ export function generateEvent(date: Date, type: 'gig' | 'tour' | 'festival' = 'g
   
   const equipmentRequirements = getEquipmentRequirementsForEvent(type);
 
+  const acceptBy = new Date(date);
+  acceptBy.setDate(acceptBy.getDate() - Math.floor(Math.random() * 3) - 1);
+
   return {
     id: `event-${Date.now()}-${Math.random()}`,
     name: eventNames[Math.floor(Math.random() * eventNames.length)],
@@ -165,6 +168,8 @@ export function generateEvent(date: Date, type: 'gig' | 'tour' | 'festival' = 'g
     eventHours: type === 'festival' ? 12 : type === 'tour' ? 6 : 4,
     teardownHours: type === 'festival' ? 6 : type === 'tour' ? 3 : 2,
     travelHours,
+    bids: [],
+    acceptBy,
   };
 }
 
@@ -260,4 +265,24 @@ export function getCrewRecoveryDays(event: Event): number {
   const restBuffer = Math.max(1, Math.ceil(activeHours / 10));
   const travelBuffer = Math.max(1, Math.ceil(event.travelHours / 8));
   return restBuffer + travelBuffer;
+}
+
+export function getEventPrimaryDepartment(event: Event): Department {
+  const requirements = event.requirements;
+  let maxDept: Department = 'audio';
+  let maxCount = requirements.audio;
+
+  if (requirements.lighting > maxCount) {
+    maxDept = 'lighting';
+    maxCount = requirements.lighting;
+  }
+  if (requirements.video > maxCount) {
+    maxDept = 'video';
+    maxCount = requirements.video;
+  }
+  if (requirements.stage > maxCount) {
+    maxDept = 'stage';
+  }
+
+  return maxDept;
 }

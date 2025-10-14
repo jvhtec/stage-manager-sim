@@ -148,7 +148,7 @@ export function applyExperienceGain(
     hourlyRate: 20 + skillLevel * 5,
     certifications: newCertification ? [...crew.certifications, newCertification] : crew.certifications,
     recentMoraleShift:
-      moraleDelta !== 0
+      moraleDelta > 0 || moraleDelta < 0
         ? createMoraleShift(
             newCertification
               ? `${crew.name} earned ${newCertification}`

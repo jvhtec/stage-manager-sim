@@ -1,6 +1,7 @@
 import {
   Company,
   CompetitorCompany,
+  CompetitorScheduledEvent,
   MarketNewsItem,
   Event,
   EventBid,
@@ -499,7 +500,7 @@ export function progressCompetitorSchedules(
       reputation,
       reliability,
       balance,
-      scheduledEvents: updatedSchedule,
+      scheduledEvents: updatedSchedule as CompetitorScheduledEvent[],
       baseRateModifier: smoothedRate,
       scoutingNotes: notes,
     } satisfies CompetitorCompany;

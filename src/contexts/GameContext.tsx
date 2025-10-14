@@ -706,7 +706,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       const updatedEquipment = prev.equipment.map(eq =>
         eq.id === equipmentId
-          ? { ...eq, status: 'assigned', assignedToEvent: eventId }
+          ? { ...eq, status: 'assigned' as const, assignedToEvent: eventId }
           : eq,
       );
       const updatedEvents = prev.events.map(e =>
@@ -747,7 +747,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setGameState(prev => {
       const updatedEquipment = prev.equipment.map(eq =>
         eq.id === equipmentId
-          ? { ...eq, status: 'available', assignedToEvent: undefined }
+          ? { ...eq, status: 'available' as const, assignedToEvent: undefined }
           : eq,
       );
       const updatedEvents = prev.events.map(e =>

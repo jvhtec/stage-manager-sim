@@ -4,6 +4,8 @@ export type EventType = 'gig' | 'tour' | 'festival';
 
 export type EventStatus = 'available' | 'planned' | 'in-progress' | 'completed' | 'failed';
 
+export type EventBidStatus = 'active' | 'won' | 'lost';
+
 export type TransactionType = 'income' | 'expense';
 
 export type CrisisStage = 'planning' | 'execution';
@@ -126,6 +128,14 @@ export interface PostEventEquipmentReport {
   conditionAfter: number;
 }
 
+export interface EventBid {
+  competitorId: string;
+  amount: number;
+  status: EventBidStatus;
+  submittedOn: Date;
+  reputationWeight: number;
+}
+
 export interface EventPostReport {
   completedOn: Date;
   satisfaction: number;
@@ -167,6 +177,10 @@ export interface Event {
   travelHours: number;
   clientSatisfaction?: number; // 0-100
   postEventReport?: EventPostReport;
+  bids: EventBid[];
+  acceptBy: Date;
+  lostToCompetitorId?: string;
+  lostReason?: string;
 }
 
 export type MarketNewsTone = 'info' | 'positive' | 'warning';
@@ -186,6 +200,7 @@ export interface CompetitorScheduledEvent {
   status: 'pending' | 'booked' | 'completed';
   payout: number;
   scheduledOn: Date;
+  eventDate: Date;
 }
 
 export interface CompetitorCompany {
