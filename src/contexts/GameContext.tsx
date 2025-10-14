@@ -5,18 +5,25 @@ import {
   Event,
   FinancialTransaction,
   FinancialCategory,
+  Department,
 } from '@/types/game';
 import {
   generateInitialCrew,
   createInitialCompany,
   generateEvent,
   calculateEventCost,
+  getCrewRecoveryDays,
+  getEventTimeWindow,
 } from '@/lib/gameData';
 
 interface GameContextType {
   gameState: GameState;
   hireCrew: (crew: CrewMember) => void;
-  assignCrewToEvent: (eventId: string, crewId: string, department: string) => void;
+  assignCrewToEvent: (
+    eventId: string,
+    crewId: string,
+    department: Department
+  ) => { success: boolean; reason?: string };
   unassignCrewFromEvent: (eventId: string, crewId: string) => void;
   acceptEvent: (eventId: string) => void;
   completeEvent: (eventId: string, satisfaction: number) => void;
@@ -78,23 +85,78 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
-  const assignCrewToEvent = (eventId: string, crewId: string, department: string) => {
+  const assignCrewToEvent = (
+    eventId: string,
+    crewId: string,
+    department: Department
+  ) => {
+    let result: { success: boolean; reason?: string } = {
+      success: false,
+      reason: 'Crew or event not found',
+    };
+
     setGameState(prev => {
+      const event = prev.events.find(e => e.id === eventId);
       const crew = prev.crew.find(c => c.id === crewId);
-      if (!crew) return prev;
+      if (!event || !crew) {
+        return prev;
+      }
+
+      if (crew.assignedTo && crew.assignedTo !== eventId) {
+        result = {
+          success: false,
+          reason: `${crew.name} is already assigned to another event.`,
+        };
+        return prev;
+      }
+
+      const departmentAssignments = event.assignedCrew[department];
+      if (departmentAssignments.some(c => c.id === crewId)) {
+        result = {
+          success: false,
+          reason: `${crew.name} is already on this team's roster.`,
+        };
+        return prev;
+      }
+
+      const { eventStart } = getEventTimeWindow(event);
+      const crewAvailable = new Date(crew.availableOn);
+      if (crewAvailable > eventStart) {
+        result = {
+          success: false,
+          reason: `${crew.name} is traveling or resting until ${crewAvailable.toLocaleDateString()}.`,
+        };
+        return prev;
+      }
+
+      if (crew.fatigue >= 85) {
+        result = {
+          success: false,
+          reason: `${crew.name} is too fatigued to take on another show.`,
+        };
+        return prev;
+      }
+
+      const updatedCrewMember: CrewMember = {
+        ...crew,
+        assignedTo: eventId,
+      };
+
+      result = { success: true };
 
       return {
         ...prev,
-        crew: prev.crew.map(c => 
-          c.id === crewId ? { ...c, assignedTo: eventId } : c
-        ),
+        crew: prev.crew.map(c => (c.id === crewId ? updatedCrewMember : c)),
         events: prev.events.map(e => {
           if (e.id === eventId) {
             return {
               ...e,
               assignedCrew: {
                 ...e.assignedCrew,
-                [department]: [...e.assignedCrew[department as keyof typeof e.assignedCrew], crew],
+                [department]: [
+                  ...e.assignedCrew[department],
+                  updatedCrewMember,
+                ],
               },
             };
           }
@@ -102,6 +164,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         }),
       };
     });
+
+    return result;
   };
 
   const unassignCrewFromEvent = (eventId: string, crewId: string) => {
@@ -148,6 +212,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       const transactions: FinancialTransaction[] = [...prev.finances.transactions];
 
+      const recoveryDays = getCrewRecoveryDays(event);
+      const updatedCrewMap = new Map<string, CrewMember>();
+
       if (cost > 0) {
         transactions.push(
           createTransaction(
@@ -174,6 +241,29 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const overdraftDays = newBalance < 0 ? prev.finances.overdraftDays + 1 : 0;
       const isBankrupt = newBalance < prev.finances.creditLimit;
 
+      const updatedCrewList = prev.crew.map(c => {
+        const wasAssigned = Object.values(event.assignedCrew)
+          .flat()
+          .some(ec => ec.id === c.id);
+        if (wasAssigned) {
+          const availability = new Date(event.date);
+          availability.setDate(availability.getDate() + recoveryDays);
+          availability.setHours(8, 0, 0, 0);
+
+          const updatedCrew: CrewMember = {
+            ...c,
+            assignedTo: undefined,
+            fatigue: Math.min(100, c.fatigue + 20 + Math.floor(event.travelHours / 2)),
+            morale: Math.min(100, c.morale + 5),
+            availableOn: availability,
+          };
+
+          updatedCrewMap.set(c.id, updatedCrew);
+          return updatedCrew;
+        }
+        return c;
+      });
+
       return {
         ...prev,
         company: {
@@ -181,21 +271,23 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           balance: newBalance,
           reputation: Math.min(100, prev.company.reputation + reputationGain),
         },
-        events: prev.events.map(e =>
-          e.id === eventId ? { ...e, status: 'completed' as const, clientSatisfaction: satisfaction } : e
-        ),
-        crew: prev.crew.map(c => {
-          const wasAssigned = Object.values(event.assignedCrew).flat().some(ec => ec.id === c.id);
-          if (wasAssigned) {
+        events: prev.events.map(e => {
+          if (e.id === eventId) {
             return {
-              ...c,
-              assignedTo: undefined,
-              fatigue: Math.min(100, c.fatigue + 20),
-              morale: Math.min(100, c.morale + 5),
+              ...e,
+              status: 'completed' as const,
+              clientSatisfaction: satisfaction,
+              assignedCrew: {
+                audio: e.assignedCrew.audio.map(crew => updatedCrewMap.get(crew.id) ?? crew),
+                lighting: e.assignedCrew.lighting.map(crew => updatedCrewMap.get(crew.id) ?? crew),
+                video: e.assignedCrew.video.map(crew => updatedCrewMap.get(crew.id) ?? crew),
+                stage: e.assignedCrew.stage.map(crew => updatedCrewMap.get(crew.id) ?? crew),
+              },
             };
           }
-          return c;
+          return e;
         }),
+        crew: updatedCrewList,
         finances: {
           ...prev.finances,
           transactions,

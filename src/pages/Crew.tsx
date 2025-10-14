@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, UserPlus } from 'lucide-react';
 import { generateCrewMember } from '@/lib/gameData';
-import { Department } from '@/types/game';
+import { CrewMember, Department } from '@/types/game';
 import { toast } from 'sonner';
 import {
   Dialog,
@@ -18,12 +18,13 @@ import {
 } from "@/components/ui/dialog";
 import { useState } from 'react';
 import { DepartmentBadge } from '@/components/DepartmentBadge';
+import { format } from 'date-fns';
 
 export default function Crew() {
   const { gameState, hireCrew, updateBalance } = useGame();
   const navigate = useNavigate();
   const [isHireDialogOpen, setIsHireDialogOpen] = useState(false);
-  
+
   const audioCrew = gameState.crew.filter(c => c.department === 'audio');
   const lightingCrew = gameState.crew.filter(c => c.department === 'lighting');
   const videoCrew = gameState.crew.filter(c => c.department === 'video');
@@ -57,6 +58,17 @@ export default function Crew() {
     toast.success('Crew hired!', {
       description: `${newCrew.name} has joined your team`,
     });
+  };
+
+  const crewHelperText = (crew: CrewMember) => {
+    const availableDate = new Date(crew.availableOn);
+    if (availableDate > gameState.currentDate) {
+      return `Traveling until ${format(availableDate, 'MMM dd')}`;
+    }
+    if (crew.fatigue >= 85) {
+      return 'Needs rest';
+    }
+    return undefined;
   };
 
   return (
@@ -144,6 +156,7 @@ export default function Crew() {
                     key={crew.id}
                     crew={crew}
                     showAssignment
+                    helperText={crewHelperText(crew)}
                   />
                 ))}
               </div>
@@ -172,6 +185,7 @@ export default function Crew() {
                         key={crew.id}
                         crew={crew}
                         showAssignment
+                        helperText={crewHelperText(crew)}
                       />
                     ))}
                   </div>

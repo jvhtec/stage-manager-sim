@@ -31,6 +31,7 @@ Once the loop is stable, layer in depth aligned with the GDD and gameplay loop.
 
 **Key Additions**
 - **Scheduling Pressure**: Multiple concurrent events, travel buffers, and fatigue to force trade-offs.
+- ✅ Implemented event time windows, travel buffers, and crew recovery locks to make overlapping gigs harder to staff.
 - **Crew Progression**: Experience gains, certifications, and morale events that feed narrative choices.
 - **Equipment Management**: Inventory ownership vs. rental, maintenance timers, and breakdown risks.
 - **Risk & Crisis System**: Light-weight crisis prompts during planning/execution tied to preparation quality.

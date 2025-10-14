@@ -2,9 +2,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Event } from '@/types/game';
-import { Calendar, MapPin, DollarSign, Users } from 'lucide-react';
+import { Calendar, MapPin, DollarSign, Users, Clock } from 'lucide-react';
 import { format } from 'date-fns';
-import { isEventFullyStaffed } from '@/lib/gameData';
+import { getEventTimeWindow, isEventFullyStaffed } from '@/lib/gameData';
 
 interface EventCardProps {
   event: Event;
@@ -16,7 +16,8 @@ export function EventCard({ event, onSelect, compact }: EventCardProps) {
   const isStaffed = isEventFullyStaffed(event);
   const totalRequired = Object.values(event.requirements).reduce((a, b) => a + b, 0);
   const totalAssigned = Object.values(event.assignedCrew).flat().length;
-  
+  const { eventStart } = getEventTimeWindow(event);
+
   const statusColor = {
     available: 'bg-muted text-muted-foreground',
     planned: isStaffed ? 'bg-success text-success-foreground' : 'bg-warning text-warning-foreground',
@@ -50,6 +51,10 @@ export function EventCard({ event, onSelect, compact }: EventCardProps) {
                   <MapPin className="h-3 w-3" />
                   {event.venue}
                 </span>
+                <span className="flex items-center gap-1">
+                  <Clock className="h-3 w-3" />
+                  {format(eventStart, 'h a')}
+                </span>
               </div>
             </div>
             <Badge className={statusColor[event.status]}>
@@ -79,6 +84,10 @@ export function EventCard({ event, onSelect, compact }: EventCardProps) {
                 <MapPin className="h-4 w-4" />
                 {event.venue}
               </span>
+              <span className="flex items-center gap-1">
+                <Clock className="h-4 w-4" />
+                {format(eventStart, 'h a')}
+              </span>
             </div>
           </div>
           <Badge className={statusColor[event.status]}>
@@ -96,6 +105,14 @@ export function EventCard({ event, onSelect, compact }: EventCardProps) {
             <span className="font-semibold text-lg">
               ${event.clientPay.toLocaleString()}
             </span>
+          </div>
+
+          <div className="flex items-center justify-between text-sm">
+            <span className="flex items-center gap-1 text-muted-foreground">
+              <Clock className="h-4 w-4" />
+              Travel Buffer
+            </span>
+            <span className="font-medium">{event.travelHours} hrs</span>
           </div>
           
           <div className="flex items-center justify-between text-sm">

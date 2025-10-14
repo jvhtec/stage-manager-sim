@@ -4,22 +4,32 @@ import { Progress } from '@/components/ui/progress';
 import { CrewMember } from '@/types/game';
 import { DepartmentBadge } from './DepartmentBadge';
 import { User, Battery, Heart, DollarSign } from 'lucide-react';
+import { format } from 'date-fns';
 
 interface CrewMemberCardProps {
   crew: CrewMember;
   onSelect?: () => void;
   compact?: boolean;
   showAssignment?: boolean;
+  disabled?: boolean;
+  helperText?: string;
 }
 
-export function CrewMemberCard({ crew, onSelect, compact, showAssignment }: CrewMemberCardProps) {
+export function CrewMemberCard({ crew, onSelect, compact, showAssignment, disabled, helperText }: CrewMemberCardProps) {
   const skillStars = '★'.repeat(crew.skillLevel) + '☆'.repeat(10 - crew.skillLevel);
-  
+
   if (compact) {
     return (
-      <Card 
-        className={`cursor-pointer hover:border-primary transition-colors ${crew.assignedTo ? 'opacity-50' : ''}`}
-        onClick={onSelect}
+      <Card
+        className={`transition-colors ${
+          disabled || crew.assignedTo ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-primary'
+        }`}
+        onClick={() => {
+          if (!disabled && !crew.assignedTo) {
+            onSelect?.();
+          }
+        }}
+        aria-disabled={disabled || !!crew.assignedTo}
       >
         <CardContent className="p-3">
           <div className="flex items-center justify-between">
@@ -28,6 +38,9 @@ export function CrewMemberCard({ crew, onSelect, compact, showAssignment }: Crew
               <div>
                 <div className="font-medium">{crew.name}</div>
                 <div className="text-xs text-muted-foreground">{skillStars}</div>
+                {helperText && (
+                  <div className="text-[10px] text-muted-foreground/80 mt-1">{helperText}</div>
+                )}
               </div>
             </div>
             <DepartmentBadge department={crew.department} />
@@ -38,7 +51,17 @@ export function CrewMemberCard({ crew, onSelect, compact, showAssignment }: Crew
   }
 
   return (
-    <Card className={`${onSelect ? 'cursor-pointer hover:border-primary' : ''} transition-colors`} onClick={onSelect}>
+    <Card
+      className={`${
+        disabled ? 'opacity-60 cursor-not-allowed' : onSelect ? 'cursor-pointer hover:border-primary' : ''
+      } transition-colors`}
+      onClick={() => {
+        if (!disabled) {
+          onSelect?.();
+        }
+      }}
+      aria-disabled={disabled}
+    >
       <CardContent className="p-4">
         <div className="space-y-3">
           <div className="flex items-start justify-between">
@@ -61,7 +84,7 @@ export function CrewMemberCard({ crew, onSelect, compact, showAssignment }: Crew
               <Progress value={100 - crew.fatigue} className="h-2" />
               <span className="text-xs text-muted-foreground">{100 - crew.fatigue}%</span>
             </div>
-            
+
             <div>
               <div className="flex items-center gap-1 text-muted-foreground mb-1">
                 <Heart className="h-3 w-3" />
@@ -70,6 +93,10 @@ export function CrewMemberCard({ crew, onSelect, compact, showAssignment }: Crew
               <Progress value={crew.morale} className="h-2" />
               <span className="text-xs text-muted-foreground">{crew.morale}%</span>
             </div>
+          </div>
+
+          <div className="text-xs text-muted-foreground">
+            Available {format(crew.availableOn, 'MMM dd, yyyy')}
           </div>
 
           <div className="flex items-center justify-between pt-2 border-t">
@@ -84,6 +111,12 @@ export function CrewMemberCard({ crew, onSelect, compact, showAssignment }: Crew
               <Badge variant="outline" className="text-xs">Available</Badge>
             )}
           </div>
+
+          {helperText && (
+            <div className="text-xs text-muted-foreground/80 pt-1 border-t mt-2">
+              {helperText}
+            </div>
+          )}
         </div>
       </CardContent>
     </Card>

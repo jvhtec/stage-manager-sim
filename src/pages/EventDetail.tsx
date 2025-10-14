@@ -7,8 +7,14 @@ import { CrewMemberCard } from '@/components/CrewMemberCard';
 import { DepartmentBadge } from '@/components/DepartmentBadge';
 import { ArrowLeft, Calendar, MapPin, DollarSign, Clock, CheckCircle2, AlertCircle, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
-import { calculateEventCost, calculateEventProfit, isEventFullyStaffed } from '@/lib/gameData';
-import { Department } from '@/types/game';
+import {
+  calculateEventCost,
+  calculateEventProfit,
+  getCrewRecoveryDays,
+  getEventTimeWindow,
+  isEventFullyStaffed,
+} from '@/lib/gameData';
+import { CrewMember, Department } from '@/types/game';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -40,8 +46,26 @@ export default function EventDetail() {
   const profit = calculateEventProfit(event);
   const isStaffed = isEventFullyStaffed(event);
   const availableCrew = gameState.crew.filter(c => !c.assignedTo);
-  
+
+  const { setupStart, eventStart, teardownComplete } = getEventTimeWindow(event);
+  const recoveryDays = getCrewRecoveryDays(event);
+
+  const fatigueThreshold = 85;
+
+  const getCrewHelperText = (crew: CrewMember) => {
+    const isTraveling = new Date(crew.availableOn) > eventStart;
+    if (isTraveling) {
+      return `Available ${format(crew.availableOn, 'MMM dd')}`;
+    }
+    if (crew.fatigue >= fatigueThreshold) {
+      return 'Fatigue too high';
+    }
+    return undefined;
+  };
+
   const totalHours = event.setupHours + event.eventHours + event.teardownHours;
+  const crewReadyDate = new Date(event.date);
+  crewReadyDate.setDate(crewReadyDate.getDate() + recoveryDays);
   
   const handleAcceptEvent = () => {
     if (gameState.isBankrupt) {
@@ -91,7 +115,13 @@ export default function EventDetail() {
       });
       return;
     }
-    assignCrewToEvent(event.id, crewId, department);
+    const result = assignCrewToEvent(event.id, crewId, department);
+    if (!result.success) {
+      toast.error('Unable to assign crew', {
+        description: result.reason,
+      });
+      return;
+    }
     toast.success('Crew assigned');
   };
   
@@ -205,7 +235,7 @@ export default function EventDetail() {
           <CardHeader>
             <CardTitle>Event Timeline</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             <div className="flex items-center justify-around">
               <div className="text-center">
                 <div className="text-sm text-muted-foreground mb-1">Setup</div>
@@ -222,6 +252,46 @@ export default function EventDetail() {
                 <div className="text-2xl font-bold">{event.teardownHours}h</div>
               </div>
             </div>
+
+            <div className="grid gap-3 md:grid-cols-3 text-sm">
+              <div>
+                <div className="text-muted-foreground">Setup begins</div>
+                <div className="font-medium">{format(setupStart, 'MMM dd, h a')}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground">Showtime</div>
+                <div className="font-medium">{format(eventStart, 'MMM dd, h a')}</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground">Crew cleared</div>
+                <div className="font-medium">{format(teardownComplete, 'MMM dd, h a')}</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Logistics & Recovery</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-3 text-sm">
+              <div>
+                <div className="text-muted-foreground">Travel Buffer</div>
+                <div className="text-lg font-semibold">{event.travelHours} hrs</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground">Required Recovery</div>
+                <div className="text-lg font-semibold">{recoveryDays} days</div>
+              </div>
+              <div>
+                <div className="text-muted-foreground">Crew ready by</div>
+                <div className="text-lg font-semibold">{format(crewReadyDate, 'MMM dd')}</div>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-4">
+              Crew cannot be reassigned until after recovery. High fatigue or overlapping travel windows will block assignments.
+            </p>
           </CardContent>
         </Card>
 
@@ -293,14 +363,20 @@ export default function EventDetail() {
                 <div key={dept} className="space-y-2">
                   <DepartmentBadge department={dept} />
                   <div className="grid gap-2">
-                    {deptCrew.map(crew => (
-                      <CrewMemberCard
-                        key={crew.id}
-                        crew={crew}
-                        onSelect={() => handleAssignCrew(crew.id, dept)}
-                        compact
-                      />
-                    ))}
+                    {deptCrew.map(crew => {
+                      const helperText = getCrewHelperText(crew);
+                      const isDisabled = Boolean(helperText);
+                      return (
+                        <CrewMemberCard
+                          key={crew.id}
+                          crew={crew}
+                          onSelect={() => handleAssignCrew(crew.id, dept)}
+                          compact
+                          disabled={isDisabled}
+                          helperText={helperText}
+                        />
+                      );
+                    })}
                   </div>
                 </div>
               );

@@ -37,6 +37,7 @@ export interface CrewMember {
   hourlyRate: number;
   fatigue: number; // 0-100
   morale: number; // 0-100
+  availableOn: Date;
   assignedTo?: string; // event ID
 }
 
@@ -45,6 +46,7 @@ export interface Event {
   name: string;
   type: EventType;
   date: Date;
+  startHour: number; // 0-23
   status: EventStatus;
   venue: string;
   clientPay: number;
@@ -63,6 +65,7 @@ export interface Event {
   setupHours: number;
   eventHours: number;
   teardownHours: number;
+  travelHours: number;
   clientSatisfaction?: number; // 0-100
 }
 
