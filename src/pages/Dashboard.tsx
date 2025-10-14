@@ -180,6 +180,14 @@ export default function Dashboard() {
               <Button
                 className="w-full justify-start"
                 variant="outline"
+                onClick={() => navigate('/inventory')}
+              >
+                <AlertTriangle className="mr-2 h-4 w-4" />
+                Manage Equipment
+              </Button>
+              <Button
+                className="w-full justify-start"
+                variant="outline"
                 onClick={() => navigate('/finances')}
               >
                 <DollarSign className="mr-2 h-4 w-4" />

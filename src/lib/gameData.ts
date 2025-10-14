@@ -1,5 +1,16 @@
-import { CrewMember, Event, Company, Department } from '@/types/game';
+import {
+  CrewMember,
+  Event,
+  Company,
+  Department,
+  EquipmentRequirement,
+} from '@/types/game';
 import { initializeCrewProgression } from './crewProgression';
+import {
+  generateInitialEquipment,
+  getEquipmentRequirementsForEvent,
+  getWearForEvent,
+} from './equipment';
 
 const firstNames = ['Alex', 'Jordan', 'Sam', 'Riley', 'Casey', 'Morgan', 'Taylor', 'Jamie', 'Chris', 'Avery'];
 const lastNames = ['Chen', 'Smith', 'Johnson', 'Martinez', 'Brown', 'Davis', 'Wilson', 'Moore', 'Taylor', 'Anderson'];
@@ -63,6 +74,8 @@ export function generateEvent(date: Date, type: 'gig' | 'tour' | 'festival' = 'g
     festival: 25000,
   };
   
+  const equipmentRequirements = getEquipmentRequirementsForEvent(type);
+
   return {
     id: `event-${Date.now()}-${Math.random()}`,
     name: eventNames[Math.floor(Math.random() * eventNames.length)],
@@ -73,7 +86,14 @@ export function generateEvent(date: Date, type: 'gig' | 'tour' | 'festival' = 'g
     venue: venues[Math.floor(Math.random() * venues.length)],
     clientPay: basePay[type] + Math.floor(Math.random() * 1000),
     requirements: baseRequirements[type],
+    equipmentRequirements,
     assignedCrew: {
+      audio: [],
+      lighting: [],
+      video: [],
+      stage: [],
+    },
+    assignedEquipment: {
       audio: [],
       lighting: [],
       video: [],
@@ -84,6 +104,10 @@ export function generateEvent(date: Date, type: 'gig' | 'tour' | 'festival' = 'g
     teardownHours: type === 'festival' ? 6 : type === 'tour' ? 3 : 2,
     travelHours,
   };
+}
+
+export function generateInitialEquipmentInventory(currentDate: Date = new Date()) {
+  return generateInitialEquipment(currentDate);
 }
 
 export function createInitialCompany(): Company {
@@ -119,6 +143,27 @@ export function isEventFullyStaffed(event: Event): boolean {
     event.assignedCrew.video.length >= event.requirements.video &&
     event.assignedCrew.stage.length >= event.requirements.stage
   );
+}
+
+function getTotalRequiredEquipment(
+  requirements: EquipmentRequirement[]
+): number {
+  return requirements.reduce((total, req) => total + req.quantity, 0);
+}
+
+export function isEventEquipmentReady(event: Event): boolean {
+  return (['audio', 'lighting', 'video', 'stage'] as Department[]).every(dept => {
+    const requirements = event.equipmentRequirements[dept];
+    if (!requirements || requirements.length === 0) {
+      return true;
+    }
+    const requiredCount = getTotalRequiredEquipment(requirements);
+    return event.assignedEquipment[dept].length >= requiredCount;
+  });
+}
+
+export function getEquipmentWearForEvent(event: Event): number {
+  return getWearForEvent(event.type);
 }
 
 export function getEventTimeWindow(event: Event) {
