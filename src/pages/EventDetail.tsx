@@ -5,11 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CrewMemberCard } from '@/components/CrewMemberCard';
 import { DepartmentBadge } from '@/components/DepartmentBadge';
-import { ArrowLeft, Calendar, MapPin, DollarSign, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, DollarSign, Clock, CheckCircle2, AlertCircle, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import { calculateEventCost, calculateEventProfit, isEventFullyStaffed } from '@/lib/gameData';
 import { Department } from '@/types/game';
 import { toast } from 'sonner';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 export default function EventDetail() {
   const { id } = useParams();
@@ -43,6 +44,13 @@ export default function EventDetail() {
   const totalHours = event.setupHours + event.eventHours + event.teardownHours;
   
   const handleAcceptEvent = () => {
+    if (gameState.isBankrupt) {
+      toast.error('Unable to accept contract', {
+        description: 'Your company is bankrupt. Resolve finances to take on new work.',
+      });
+      return;
+    }
+
     if (!isStaffed) {
       toast.error('Cannot accept event', {
         description: 'Please assign all required crew members first',
@@ -56,6 +64,13 @@ export default function EventDetail() {
   };
   
   const handleCompleteEvent = () => {
+    if (gameState.isBankrupt) {
+      toast.error('Unable to complete event', {
+        description: 'Resolve bankruptcy status before completing contracts.',
+      });
+      return;
+    }
+
     // Simplified completion - in full game this would be based on actual execution
     const baseSatisfaction = 75;
     const crewQualityBonus = Math.min(15, Object.values(event.assignedCrew).flat().reduce((sum, c) => sum + c.skillLevel, 0) / 2);
@@ -140,6 +155,16 @@ export default function EventDetail() {
             )}
           </div>
         </div>
+
+        {gameState.isBankrupt && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Company Bankrupt</AlertTitle>
+            <AlertDescription>
+              Financial status prevents progressing this event. Clear debts in the Finances panel to continue.
+            </AlertDescription>
+          </Alert>
+        )}
 
         {/* Financial Overview */}
         <div className="grid gap-4 md:grid-cols-3">
