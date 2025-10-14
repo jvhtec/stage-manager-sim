@@ -10,36 +10,34 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { ArrowLeft, AlertTriangle, PiggyBank, TrendingUp, TrendingDown } from 'lucide-react';
+import {
+  ArrowLeft,
+  AlertTriangle,
+  Banknote,
+  PiggyBank,
+  TrendingUp,
+  TrendingDown,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { useFinancialSummary } from '@/hooks/useFinancialSummary';
+import { MAX_OVERDRAFT_DAYS } from '@/lib/finance';
 
 export default function Finances() {
   const { gameState, updateBalance } = useGame();
   const navigate = useNavigate();
+  const summary = useFinancialSummary();
 
-  const { transactions, creditLimit, overdraftDays } = gameState.finances;
-
-  const sortedTransactions = [...transactions].sort(
-    (a, b) => b.date.getTime() - a.date.getTime()
-  );
-
-  const totalIncome = transactions
-    .filter(t => t.type === 'income')
-    .reduce((sum, t) => sum + t.amount, 0);
-  const totalExpenses = transactions
-    .filter(t => t.type === 'expense')
-    .reduce((sum, t) => sum + t.amount, 0);
-
-  const thirtyDaysAgo = new Date(gameState.currentDate);
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const lastThirty = transactions.filter(t => t.date >= thirtyDaysAgo);
-  const lastThirtyNet = lastThirty.reduce(
-    (sum, t) => sum + (t.type === 'income' ? t.amount : -t.amount),
-    0
-  );
+  const { creditLimit, overdraftDays } = gameState.finances;
+  const {
+    sortedTransactions,
+    totals,
+    thirtyDay,
+    categorySummary,
+    alerts,
+  } = summary;
 
   const handleEmergencyLoan = () => {
     updateBalance(5000, {
@@ -68,15 +66,13 @@ export default function Finances() {
           </div>
         </div>
 
-        {gameState.isBankrupt && (
-          <Alert variant="destructive">
+        {alerts.map(alert => (
+          <Alert key={alert.key} variant={alert.variant}>
             <AlertTriangle className="h-4 w-4" />
-            <AlertTitle>Bankruptcy Triggered</AlertTitle>
-            <AlertDescription>
-              Your balance has fallen below the credit limit. Resolve outstanding debts before taking further actions.
-            </AlertDescription>
+            <AlertTitle>{alert.title}</AlertTitle>
+            <AlertDescription>{alert.description}</AlertDescription>
           </Alert>
-        )}
+        ))}
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
@@ -102,11 +98,11 @@ export default function Finances() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className={`text-2xl font-bold ${lastThirtyNet >= 0 ? 'text-success' : 'text-destructive'}`}>
-                {lastThirtyNet >= 0 ? '+' : '-'}${Math.abs(lastThirtyNet).toLocaleString()}
+              <div className={`text-2xl font-bold ${thirtyDay.net >= 0 ? 'text-success' : 'text-destructive'}`}>
+                {thirtyDay.net >= 0 ? '+' : '-'}${Math.abs(thirtyDay.net).toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                Based on {lastThirty.length} transactions
+                Based on {thirtyDay.transactions.length} transactions
               </p>
             </CardContent>
           </Card>
@@ -119,7 +115,7 @@ export default function Finances() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-success">
-                +${totalIncome.toLocaleString()}
+                +${totals.income.toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground mt-1">Across all contracts</p>
             </CardContent>
@@ -133,37 +129,74 @@ export default function Finances() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-destructive">
-                -${totalExpenses.toLocaleString()}
+                -${totals.expenses.toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground mt-1">Payroll and operations</p>
             </CardContent>
           </Card>
         </div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle>Credit Health</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Days in overdraft</span>
-              <Badge variant={overdraftDays > 0 ? 'secondary' : 'outline'}>
-                {overdraftDays}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Bankruptcy status</span>
-              <Badge variant={gameState.isBankrupt ? 'destructive' : 'secondary'}>
-                {gameState.isBankrupt ? 'Bankrupt' : 'Solvent'}
-              </Badge>
-            </div>
-            {(gameState.isBankrupt || gameState.company.balance < 0) && (
-              <Button className="w-full" variant="outline" onClick={handleEmergencyLoan}>
-                Request Emergency Loan (+$5,000)
-              </Button>
-            )}
-          </CardContent>
-        </Card>
+        <div className="grid gap-4 lg:grid-cols-2">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle>Credit Health</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Days in overdraft</span>
+                <Badge variant={overdraftDays > 0 ? 'secondary' : 'outline'}>
+                  {overdraftDays}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Bankruptcy status</span>
+                <Badge variant={gameState.isBankrupt ? 'destructive' : 'secondary'}>
+                  {gameState.isBankrupt ? 'Bankrupt' : 'Solvent'}
+                </Badge>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Bankruptcy triggers if balance falls below the credit limit or stays negative for {MAX_OVERDRAFT_DAYS} consecutive days.
+              </div>
+              {(gameState.isBankrupt || gameState.company.balance < 0) && (
+                <Button className="w-full" variant="outline" onClick={handleEmergencyLoan}>
+                  Request Emergency Loan (+$5,000)
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Banknote className="h-4 w-4" /> Category Breakdown
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              {categorySummary.length === 0 ? (
+                <p className="text-muted-foreground">No categorized spending yet.</p>
+              ) : (
+                categorySummary.map(category => (
+                  <div key={category.category} className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="font-medium capitalize">{category.category}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {category.count} transaction{category.count === 1 ? '' : 's'}
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className={`font-semibold ${category.net >= 0 ? 'text-success' : 'text-destructive'}`}>
+                        {category.net >= 0 ? '+' : '-'}${Math.abs(category.net).toLocaleString()}
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        +${category.income.toLocaleString()} / -${category.expenses.toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
 
         <Card>
           <CardHeader>

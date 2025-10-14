@@ -15,6 +15,7 @@ import {
   getCrewRecoveryDays,
   getEventTimeWindow,
 } from '@/lib/gameData';
+import { MAX_OVERDRAFT_DAYS } from '@/lib/finance';
 
 interface GameContextType {
   gameState: GameState;
@@ -40,21 +41,32 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [gameState, setGameState] = useState<GameState>(() => {
     const now = new Date();
     const events: Event[] = [];
-    
+
     // Generate 5 available gigs over the next 2 weeks
     for (let i = 0; i < 5; i++) {
       const date = new Date(now);
       date.setDate(date.getDate() + 3 + i * 2);
       events.push(generateEvent(date, 'gig'));
     }
-    
+
+    const company = createInitialCompany();
+
     return {
-      company: createInitialCompany(),
+      company,
       crew: generateInitialCrew(),
       events,
       currentDate: now,
       finances: {
-        transactions: [],
+        transactions: [
+          {
+            id: `txn-start-${now.getTime()}`,
+            date: new Date(now),
+            type: 'income',
+            amount: company.balance,
+            description: 'Initial capital injection',
+            category: 'misc',
+          },
+        ],
         creditLimit: -5000,
         overdraftDays: 0,
       },
@@ -78,6 +90,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     eventId,
   });
 
+  const evaluateFinancialState = (prev: GameState, newBalance: number) => {
+    const overdraftDays = newBalance < 0 ? prev.finances.overdraftDays + 1 : 0;
+    const isBankrupt =
+      newBalance < prev.finances.creditLimit || overdraftDays >= MAX_OVERDRAFT_DAYS;
+
+    return { overdraftDays, isBankrupt };
+  };
+
   const hireCrew = (crew: CrewMember) => {
     setGameState(prev => ({
       ...prev,
@@ -90,6 +110,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     crewId: string,
     department: Department
   ) => {
+    if (gameState.isBankrupt) {
+      return {
+        success: false,
+        reason: 'Company is bankrupt. Resolve finances before assigning crew.',
+      };
+    }
+
     let result: { success: boolean; reason?: string } = {
       success: false,
       reason: 'Crew or event not found',
@@ -192,12 +219,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const acceptEvent = (eventId: string) => {
-    setGameState(prev => ({
-      ...prev,
-      events: prev.events.map(e => 
-        e.id === eventId ? { ...e, status: 'planned' as const } : e
-      ),
-    }));
+    setGameState(prev => {
+      if (prev.isBankrupt) {
+        return prev;
+      }
+
+      return {
+        ...prev,
+        events: prev.events.map(e =>
+          e.id === eventId ? { ...e, status: 'planned' as const } : e
+        ),
+      };
+    });
   };
 
   const completeEvent = (eventId: string, satisfaction: number) => {
@@ -238,8 +271,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       );
 
       const newBalance = prev.company.balance + event.clientPay - cost;
-      const overdraftDays = newBalance < 0 ? prev.finances.overdraftDays + 1 : 0;
-      const isBankrupt = newBalance < prev.finances.creditLimit;
+      const { overdraftDays, isBankrupt } = evaluateFinancialState(prev, newBalance);
 
       const updatedCrewList = prev.crew.map(c => {
         const wasAssigned = Object.values(event.assignedCrew)
@@ -313,8 +345,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         newEvents.push(generateEvent(futureDate, 'gig'));
       }
 
-      const overdraftDays = prev.company.balance < 0 ? prev.finances.overdraftDays + 1 : 0;
-      const isBankrupt = prev.company.balance < prev.finances.creditLimit;
+      const { overdraftDays, isBankrupt } = evaluateFinancialState(
+        prev,
+        prev.company.balance,
+      );
 
       return {
         ...prev,
@@ -350,8 +384,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         options?.eventId
       );
 
-      const overdraftDays = newBalance < 0 ? prev.finances.overdraftDays + 1 : 0;
-      const isBankrupt = newBalance < prev.finances.creditLimit;
+      const { overdraftDays, isBankrupt } = evaluateFinancialState(prev, newBalance);
 
       return {
         ...prev,
