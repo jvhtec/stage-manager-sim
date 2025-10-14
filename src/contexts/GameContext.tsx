@@ -11,6 +11,8 @@ import {
   CrisisPrompt,
   Company,
   MarketNewsItem,
+  CompetitorCompany,
+  ReputationSnapshot,
 } from '@/types/game';
 import {
   generateInitialCrew,
@@ -44,6 +46,8 @@ import {
 import {
   createInitialMarketNews,
   generateInitialCompetitors,
+  simulateCompetitorBidding,
+  progressCompetitorSchedules,
 } from '@/lib/competitors';
 
 type CompanyIdentityInput = Pick<
@@ -126,6 +130,28 @@ interface GameContextType {
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
 
+function buildReputationSnapshot(
+  company: Company,
+  competitors: CompetitorCompany[],
+  date: Date,
+): ReputationSnapshot {
+  const sortedCompetitors = [...competitors].sort((a, b) => b.reputation - a.reputation);
+  const averageReputation = sortedCompetitors.length
+    ? sortedCompetitors.reduce((sum, competitor) => sum + competitor.reputation, 0) /
+      sortedCompetitors.length
+    : company.reputation;
+  const leader = sortedCompetitors[0];
+
+  return {
+    date: new Date(date),
+    playerReputation: company.reputation,
+    competitorAverage: Math.round(averageReputation * 10) / 10,
+    leaderId: leader?.id,
+    leaderName: leader?.name,
+    leaderReputation: leader?.reputation,
+  };
+}
+
 export function GameProvider({ children }: { children: React.ReactNode }) {
   const [gameState, setGameState] = useState<GameState>(() => {
     const now = new Date();
@@ -142,6 +168,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const equipment = generateInitialEquipmentInventory(now);
     const competitors = generateInitialCompetitors(company);
     const marketNews = createInitialMarketNews(competitors, company, now);
+    const reputationHistory = [buildReputationSnapshot(company, competitors, now)];
 
     return {
       company,
@@ -167,6 +194,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       crises: [],
       competitors,
       marketNews,
+      reputationHistory,
       hasCompletedOnboarding: false,
     } as GameState;
   });
@@ -213,6 +241,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       crew: updatedCrew,
       equipment: updatedEquipment,
       companyReputation: prev.company.reputation,
+      companySpecialization: prev.company.specialization,
     });
 
     const merged = mergeExistingCrisisState(
@@ -237,6 +266,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           crew,
           equipment,
           companyReputation: prev.company.reputation,
+          companySpecialization: prev.company.specialization,
         });
         const merged = mergeExistingCrisisState(
           generated,
@@ -271,9 +301,92 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const completeCompanyOnboarding = (identity: CompanyIdentityInput) => {
     setGameState(prev => {
-      const updatedCompany: Company = {
+      if (prev.hasCompletedOnboarding) {
+        return prev;
+      }
+
+      const baseCompany: Company = {
         ...prev.company,
         ...identity,
+      };
+
+      let adjustedCrew = prev.crew.map(crew => ({ ...crew }));
+      let adjustedEquipment = prev.equipment.map(item => ({ ...item }));
+      let adjustedTransactions = [...prev.finances.transactions];
+      let adjustedBalance = prev.company.balance;
+      let adjustedReputation = prev.company.reputation;
+
+      switch (identity.specialization) {
+        case 'audio':
+          adjustedCrew = prev.crew.map(crew => {
+            if (crew.department !== 'audio') return crew;
+            const nextSkill = Math.min(10, crew.skillLevel + 1);
+            return {
+              ...crew,
+              skillLevel: nextSkill,
+              hourlyRate: crew.hourlyRate + 5,
+            } satisfies CrewMember;
+          });
+          break;
+        case 'lighting':
+          adjustedEquipment = prev.equipment.map(item => {
+            if (item.department !== 'lighting') return item;
+            const boostedCondition = Math.min(100, item.condition + 10);
+            const maintenanceDue = new Date(item.maintenanceDue);
+            maintenanceDue.setDate(maintenanceDue.getDate() + 7);
+            return {
+              ...item,
+              condition: boostedCondition,
+              maintenanceDue,
+            } satisfies EquipmentItem;
+          });
+          break;
+        case 'video':
+          adjustedEquipment = prev.equipment.map(item => {
+            if (item.department !== 'video') return item;
+            const boostedCondition = Math.min(100, item.condition + 8);
+            return {
+              ...item,
+              condition: boostedCondition,
+            } satisfies EquipmentItem;
+          });
+          adjustedCrew = prev.crew.map(crew => {
+            if (crew.department !== 'video') return crew;
+            const certification = 'Rapid Response Video Specialist';
+            const certifications = crew.certifications.includes(certification)
+              ? crew.certifications
+              : [...crew.certifications, certification];
+            return {
+              ...crew,
+              certifications,
+            } satisfies CrewMember;
+          });
+          break;
+        case 'stage':
+          adjustedCrew = prev.crew.map(crew => {
+            if (crew.department !== 'stage') return crew;
+            return {
+              ...crew,
+              fatigue: Math.max(0, crew.fatigue - 10),
+            } satisfies CrewMember;
+          });
+          break;
+        case 'balanced':
+          adjustedBalance += 2000;
+          adjustedReputation = Math.min(100, prev.company.reputation + 5);
+          adjustedTransactions = [
+            ...prev.finances.transactions,
+            createTransaction('income', 2000, 'Strategic partnership bonus', 'misc'),
+          ];
+          break;
+        default:
+          break;
+      }
+
+      const updatedCompany: Company = {
+        ...baseCompany,
+        balance: adjustedBalance,
+        reputation: adjustedReputation,
       };
 
       const updatedCompetitors = prev.competitors.map(competitor => ({
@@ -285,11 +398,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         ),
       }));
 
+      const specializationBoosts: Record<Company['specialization'], string> = {
+        audio: 'Audio crew hit the ground with higher skill caps.',
+        lighting: 'Lighting inventory refreshed with top condition gear.',
+        video: 'Video teams prepped for crisis response out of the gate.',
+        stage: 'Stage crews rested and ready for rapid builds.',
+        balanced: 'Launch bonus extends runway and reputation.',
+      };
+
       const launchStory: MarketNewsItem = {
         id: `market-${Date.now()}-launch`,
         date: new Date(),
         title: `${identity.name} enters the circuit`,
-        summary: `${identity.name} launches with ${specializationLabels[identity.specialization]} and a refreshed brand palette.`,
+        summary: `${identity.name} launches with ${specializationLabels[identity.specialization]} and a refreshed brand palette. ${specializationBoosts[identity.specialization]}`,
         tone: 'positive',
       };
 
@@ -299,12 +420,30 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       const nextNews = [launchStory, ...filteredNews].slice(0, 8);
 
+      const { overdraftDays, isBankrupt } = evaluateFinancialState(prev, adjustedBalance);
+
+      const refreshedCrises = rebuildAllPlannedCrises(
+        { ...prev, company: updatedCompany },
+        prev.events,
+        adjustedCrew,
+        adjustedEquipment,
+      );
+
       return {
         ...prev,
         company: updatedCompany,
+        crew: adjustedCrew,
+        equipment: adjustedEquipment,
         competitors: updatedCompetitors,
         marketNews: nextNews,
+        finances: {
+          ...prev.finances,
+          transactions: adjustedTransactions,
+          overdraftDays,
+        },
+        crises: refreshedCrises,
         hasCompletedOnboarding: true,
+        isBankrupt,
       };
     });
   };
@@ -343,6 +482,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const event = prev.events.find(e => e.id === eventId);
       const crew = prev.crew.find(c => c.id === crewId);
       if (!event || !crew) {
+        return prev;
+      }
+
+      if (event.status === 'failed') {
+        result = {
+          success: false,
+          reason: 'This contract has already been awarded to a competitor.',
+        };
         return prev;
       }
 
@@ -733,9 +880,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         return prev;
       }
 
+      const definition = getEquipmentDefinition(type);
       const rentalItem = createRentalEquipment(type, prev.currentDate, rentalDays, provider);
-      const dailyCost = rentalItem.rentalInfo?.dailyCost ?? 0;
-      const totalCost = dailyCost * rentalDays;
+      let adjustedDailyCost = rentalItem.rentalInfo?.dailyCost ?? definition.rentalDailyCost;
+
+      if (prev.company.specialization === 'audio' && definition.department === 'audio') {
+        adjustedDailyCost = Math.round(adjustedDailyCost * 0.85);
+      }
+
+      if (rentalItem.rentalInfo) {
+        rentalItem.rentalInfo.dailyCost = adjustedDailyCost;
+      }
+
+      const totalCost = adjustedDailyCost * rentalDays;
 
       const newBalance = prev.company.balance - totalCost;
       const transactions = totalCost
@@ -793,18 +950,49 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         return prev;
       }
 
-      const updatedEvents = prev.events.map(e =>
-        e.id === eventId ? { ...e, status: 'planned' as const } : e,
-      );
+      const updatedEvents = prev.events.map(e => {
+        if (e.id !== eventId) return e;
+        const clearedBids = e.bids.length
+          ? e.bids.map(bid => ({ ...bid, status: 'lost' as const, submittedOn: new Date() }))
+          : e.bids;
+        return { ...e, status: 'planned' as const, bids: clearedBids };
+      });
       const updatedEvent = updatedEvents.find(e => e.id === eventId);
       const updatedCrises = updatedEvent
         ? rebuildEventCrises(prev, updatedEvent, prev.crew, prev.equipment)
         : prev.crises;
 
+      const updatedCompetitors = prev.competitors.map(competitor =>
+        competitor.activeBids.includes(eventId)
+          ? {
+              ...competitor,
+              activeBids: competitor.activeBids.filter(id => id !== eventId),
+            }
+          : competitor,
+      );
+
+      const acceptanceNews =
+        event.bids.length > 0
+          ? ({
+              id: `market-${Date.now()}-${event.id}-player-win`,
+              date: new Date(),
+              title: `${prev.company.name} locks ${event.name}`,
+              summary: `${prev.company.name} confirmed the ${event.venue} contract ahead of ${event.bids.length} rival bids.`,
+              tone: 'positive' as const,
+              eventId: event.id,
+            } satisfies MarketNewsItem)
+          : undefined;
+
+      const nextNews = acceptanceNews
+        ? [acceptanceNews, ...prev.marketNews].slice(0, 8)
+        : prev.marketNews;
+
       return {
         ...prev,
         events: updatedEvents,
         crises: updatedCrises,
+        competitors: updatedCompetitors,
+        marketNews: nextNews,
       };
     });
   };
@@ -901,10 +1089,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           availability.setDate(availability.getDate() + recoveryDays);
           availability.setHours(8, 0, 0, 0);
 
+          const baseFatigue = 20 + Math.floor(event.travelHours / 2);
+          const fatigueAdjustment =
+            prev.company.specialization === 'stage' && c.department === 'stage'
+              ? -6
+              : 0;
+          const appliedFatigue = Math.max(8, baseFatigue + fatigueAdjustment);
+
           const baseCrew: CrewMember = {
             ...c,
             assignedTo: undefined,
-            fatigue: Math.min(100, c.fatigue + 20 + Math.floor(event.travelHours / 2)),
+            fatigue: Math.min(100, c.fatigue + appliedFatigue),
             availableOn: availability,
           };
 
@@ -927,7 +1122,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         }
 
         const conditionBefore = eq.condition;
-        const conditionAfter = Math.max(0, conditionBefore - wearAmount);
+        const wearReduction =
+          prev.company.specialization === 'lighting' && eq.department === 'lighting' ? 3 : 0;
+        const appliedWear = Math.max(1, wearAmount - wearReduction);
+        const conditionAfter = Math.max(0, conditionBefore - appliedWear);
         const maintenanceDue = new Date(eq.maintenanceDue);
 
         if (conditionAfter < 60) {
@@ -1211,17 +1409,33 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         return applyDailyMoraleDrift(recovered, newDate);
       });
 
+      const scheduleProgress = progressCompetitorSchedules(prev.competitors, newDate);
+      const biddingWithSchedule = simulateCompetitorBidding({
+        events: cleanedEvents,
+        competitors: scheduleProgress.competitors,
+        currentDate: newDate,
+        playerCompany: prev.company,
+      });
+
       const recalculatedCrises = rebuildAllPlannedCrises(
         prev,
-        cleanedEvents,
+        biddingWithSchedule.events,
         refreshedCrew,
         updatedEquipment,
       );
 
+      const combinedNews = [...scheduleProgress.news, ...biddingWithSchedule.news];
+      const nextNews = combinedNews.length
+        ? [...combinedNews, ...prev.marketNews].slice(0, 10)
+        : prev.marketNews;
+
+      const snapshot = buildReputationSnapshot(prev.company, biddingWithSchedule.competitors, newDate);
+      const reputationHistory = [...prev.reputationHistory, snapshot].slice(-45);
+
       return {
         ...prev,
         currentDate: newDate,
-        events: cleanedEvents,
+        events: biddingWithSchedule.events,
         crew: refreshedCrew,
         equipment: updatedEquipment,
         finances: {
@@ -1230,6 +1444,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         },
         crises: recalculatedCrises,
         isBankrupt,
+        competitors: biddingWithSchedule.competitors,
+        marketNews: nextNews,
+        reputationHistory,
       };
     });
   };

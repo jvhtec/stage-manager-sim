@@ -199,6 +199,16 @@ export interface CompetitorCompany {
   activeBids: string[];
   scheduledEvents: CompetitorScheduledEvent[];
   scoutingNotes: string[];
+  balance: number;
+}
+
+export interface ReputationSnapshot {
+  date: Date;
+  playerReputation: number;
+  competitorAverage: number;
+  leaderId?: string;
+  leaderName?: string;
+  leaderReputation?: number;
 }
 
 export interface Company {
@@ -224,5 +234,6 @@ export interface GameState {
   crises: CrisisPrompt[];
   competitors: CompetitorCompany[];
   marketNews: MarketNewsItem[];
+  reputationHistory: ReputationSnapshot[];
   hasCompletedOnboarding: boolean;
 }
