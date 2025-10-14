@@ -66,6 +66,8 @@ Run a daily simulation step within `advanceDay` in `GameContext`:
 1. **Phase 1 – Data & Seeding:** Add types, initial competitor generation, and dashboard ticker stubs. Display static rival info without affecting gameplay.
 2. **Phase 2 – Bidding Simulation:** Integrate the daily loop, adjust contract availability, and provide basic UI surfacing.
 3. **Phase 3 – Reputation Feedback:** Hook in financial/reputation adjustments, add analytics comparisons, and expand crisis hooks so AI performance influences market conditions.
+   - ✅ Daily schedule resolution now adjusts rival reputation, reliability, and pricing while emitting market headlines.
+   - ✅ Reputation history powers a dashboard chart comparing the player to the field across a 30-day window.
 
 ## Player Company Customization
 

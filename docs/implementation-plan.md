@@ -64,15 +64,17 @@ Open up the event variety described in the GDD.
 - ✅ Design plan for AI competitors and player company customization authored to guide implementation.
 - ✅ Phase 1 AI competitor seeding with dashboard market ticker and scouting notes.
 - ✅ Player onboarding modal captures company identity, palette, and specialization before day one.
+- ✅ Competitor bidding simulation now contests contracts, reserves calendars, and feeds market news and cash standings.
+- ✅ Specialization perks adjust starting crew, equipment, finances, and color treatments beyond the dashboard hero.
+- ✅ Competitor reputation feedback loop now resolves booked shows, tunes rival pricing, and powers new analytics.
 
 ## Upcoming Implementation Focus
-- **AI Competitor Companies – Phase 2 (Bidding Simulation)**
-  - Build the bidding/scheduling simulation loop and integrate reputation and pricing feedback into contract generation.
-  - Track calendar interactions so winning bids reserve dates and remove opportunities from the player's pipeline.
-  - Expand UI surfacing with live bid indicators on contracts without overwhelming the player.
-- **Player Company Customization – Phase 2 (System Hooks)**
-  - Apply specialization modifiers to starting crew, equipment, and finances when generating the initial state.
-  - Thread brand colors and tagline into additional surfaces (calendar badges, analytics) beyond the dashboard hero.
-  - Plan persistence updates so saves capture branding choices once serialization is introduced.
+- **Player Company Customization – Phase 3 (Polish & Rebranding Tools)**
+  - Introduce mid-campaign rebranding flows so palettes and taglines can be refreshed without restarting.
+  - Layer specialization-aware tutorials and tips into planning views to reinforce perk advantages.
+  - Prep serialization updates so saved games persist branding choices and specialization effects reliably.
+- **Simulation Balancing & Testing**
+  - Tune AI bidding aggressiveness and crisis failure penalties using the new reputation telemetry.
+  - Formalize automated coverage for bidding edge cases and specialization perks to guard against regressions.
 
 This staged plan ensures every iteration honors the authentic backstage management fantasy while keeping scope sustainable for a solo developer.

@@ -1,7 +1,16 @@
 import { useGame } from '@/contexts/GameContext';
 import { StatCard } from '@/components/StatCard';
 import { EventCard } from '@/components/EventCard';
-import { DollarSign, TrendingUp, Users, Calendar, Play, AlertTriangle, Wrench, Megaphone } from 'lucide-react';
+import {
+  DollarSign,
+  TrendingUp,
+  Users,
+  Calendar,
+  Play,
+  AlertTriangle,
+  Wrench,
+  Megaphone,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -11,11 +20,15 @@ import { useFinancialSummary } from '@/hooks/useFinancialSummary';
 import { Badge } from '@/components/ui/badge';
 import { CompanyOnboardingDialog } from '@/components/CompanyOnboardingDialog';
 import type { Company, MarketNewsTone } from '@/types/game';
+import { useReputationSummary } from '@/hooks/useReputationSummary';
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 
 export default function Dashboard() {
   const { gameState, advanceDay, completeCompanyOnboarding } = useGame();
   const navigate = useNavigate();
   const financialSummary = useFinancialSummary();
+  const reputationSummary = useReputationSummary();
 
   const specializationLabels: Record<Company['specialization'], string> = {
     audio: 'Audio Specialist',
@@ -94,6 +107,18 @@ export default function Dashboard() {
       currency: 'USD',
       maximumFractionDigits: 0,
     }).format(value);
+  const reputationChartData = reputationSummary.history.map(point => ({
+    date: format(point.date, 'MMM dd'),
+    player: point.player,
+    competitors: point.competitors,
+  }));
+  const reputationChartConfig = {
+    player: { label: gameState.company.name, color: gameState.company.brandColor },
+    competitors: {
+      label: 'Field Average',
+      color: gameState.company.accentColor || '#6b7280',
+    },
+  } as const;
 
   return (
     <>
@@ -282,8 +307,8 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-2">
-          <Card>
+        <div className="grid gap-6 xl:grid-cols-3">
+          <Card className="xl:col-span-2">
             <CardHeader>
               <CardTitle>Competitor Landscape</CardTitle>
               <p className="text-sm text-muted-foreground">
@@ -307,6 +332,9 @@ export default function Dashboard() {
                   const bookedCount = competitor.scheduledEvents.filter(
                     event => event.status === 'booked',
                   ).length;
+                  const upcomingBooking = competitor.scheduledEvents
+                    .filter(event => event.status === 'booked')
+                    .sort((a, b) => a.eventDate.getTime() - b.eventDate.getTime())[0];
 
                   return (
                     <div
@@ -341,6 +369,12 @@ export default function Dashboard() {
                       <div className="mt-3 flex flex-wrap gap-4 text-xs text-muted-foreground">
                         <span>Active bids: {competitor.activeBids.length}</span>
                         <span>Booked shows: {bookedCount}</span>
+                        <span>Cash reserve: ${competitor.balance.toLocaleString()}</span>
+                        {upcomingBooking && (
+                          <span>
+                            Next gig: {format(upcomingBooking.eventDate, 'MMM dd')}
+                          </span>
+                        )}
                       </div>
                       {competitor.scoutingNotes.length > 0 && (
                         <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
@@ -355,7 +389,82 @@ export default function Dashboard() {
               )}
             </CardContent>
           </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Reputation Trajectory</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Tracking your reputation alongside the regional field over the last 30 days.
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Current Reputation</p>
+                  <p className="text-3xl font-semibold" style={{ color: gameState.company.brandColor }}>
+                    {gameState.company.reputation}%
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {reputationSummary.playerDelta >= 0 ? '▲' : '▼'}{' '}
+                    {Math.abs(reputationSummary.playerDelta).toFixed(1)} pts vs 30 days ago
+                  </p>
+                </div>
+                {reputationSummary.leader && (
+                  <div className="text-right text-sm text-muted-foreground">
+                    <p className="font-semibold text-foreground">{reputationSummary.leader.name}</p>
+                    <p>Leader at {reputationSummary.leader.reputation}%</p>
+                    <p className="text-xs">
+                      Gap: {reputationSummary.gapToLeader >= 0 ? '+' : '-'}
+                      {Math.abs(reputationSummary.gapToLeader).toFixed(1)} pts
+                    </p>
+                  </div>
+                )}
+              </div>
 
+              {reputationChartData.length > 1 ? (
+                <ChartContainer config={reputationChartConfig} className="h-48 w-full">
+                  <AreaChart data={reputationChartData} margin={{ left: 4, right: 12, top: 8, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="4 4" />
+                    <XAxis dataKey="date" tickLine={false} axisLine={false} interval={Math.ceil(reputationChartData.length / 6)} />
+                    <YAxis domain={[0, 100]} tickLine={false} axisLine={false} tickCount={6} />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Area
+                      type="monotone"
+                      dataKey="player"
+                      stroke="var(--color-player)"
+                      fill="var(--color-player)"
+                      strokeWidth={2}
+                      fillOpacity={0.2}
+                      dot={false}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="competitors"
+                      stroke="var(--color-competitors)"
+                      fill="var(--color-competitors)"
+                      strokeWidth={2}
+                      fillOpacity={0.12}
+                      dot={false}
+                    />
+                  </AreaChart>
+                </ChartContainer>
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-6">
+                  Collect a few more days of data to unlock reputation trends.
+                </p>
+              )}
+
+              <div className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+                <span>Field average: {reputationSummary.average.toFixed(1)}%</span>
+                <span>
+                  {reputationSummary.competitorDelta >= 0 ? '▲' : '▼'}{' '}
+                  {Math.abs(reputationSummary.competitorDelta).toFixed(1)} pts movement in the field
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-6 lg:grid-cols-2">
           <Card>
             <CardHeader className="flex flex-row items-start justify-between space-y-0">
               <div>
