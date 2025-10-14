@@ -52,7 +52,7 @@ Open up the event variety described in the GDD.
 1. ✅ Introduce the planning/execution crisis prompts scoped for the MVP.
 2. ✅ Expand financial reporting with trend charts and alerts once core systems stabilize.
 3. ✅ Tie equipment condition into post-show reporting now that the crisis system surfaces wear risks.
-4. Draft the design and technical plan for AI-driven competitor companies and expanded player company customization before building those features.
+4. ✅ Draft the design and technical plan for AI-driven competitor companies and expanded player company customization before building those features. See `docs/ai-competitors-and-customization-plan.md`.
 
 ## Progress Snapshot
 - ✅ Scheduling pressure (travel buffers, recovery locks, fatigue safeguards).
@@ -61,15 +61,16 @@ Open up the event variety described in the GDD.
 - ✅ Risk & crisis prompt system (planning prompts, execution fallout, and mitigation logging).
 - ✅ Financial analytics dashboard with 30-day trend visualizations and proactive alerts.
 - ✅ Post-event equipment wear reports surfaced in event and dashboard views.
+- ✅ Design plan for AI competitors and player company customization authored to guide implementation.
 
-## Upcoming Planning Focus
+## Upcoming Implementation Focus
 - **AI Competitor Companies**
-  - Define rival studio data structures (branding, specialties, market reach) and how they bid on contracts over the shared calendar.
-  - Outline simulation cadence for competitor staffing, pricing strategies, and reputation growth so their actions create scheduling pressure.
-  - Identify UI hooks (dashboard ticker, contract comparison overlays) that communicate competitor moves without overwhelming the player.
+  - Implement rival studio data structures and calendar interactions per the new design plan.
+  - Build the bidding/scheduling simulation loop and integrate reputation and pricing feedback into contract generation.
+  - Surface competitor activity in the dashboard ticker and contract overlays without overwhelming the player.
 - **Player Company Customization**
-  - Determine customizable attributes (name, branding palette, service specializations) and how they influence starting crew/equipment or reputation modifiers.
-  - Plan onboarding flow updates to capture customization inputs and preview their systemic effects.
-  - Map persistence requirements so custom identities carry across saves and surface consistently in reports and UI chrome.
+  - Extend onboarding to capture company identity, palette, and specialization choices defined in the plan.
+  - Apply customization modifiers to starting crew, equipment, and reputation when generating the initial company state.
+  - Ensure the customized identity persists through saves and is referenced across dashboard, calendar, and reporting views.
 
 This staged plan ensures every iteration honors the authentic backstage management fantasy while keeping scope sustainable for a solo developer.
