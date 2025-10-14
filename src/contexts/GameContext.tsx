@@ -3,6 +3,7 @@ import {
   GameState,
   CrewMember,
   Event,
+  EventPostReport,
   FinancialTransaction,
   FinancialCategory,
   Department,
@@ -896,10 +897,28 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         },
         events: prev.events.map(e => {
           if (e.id === eventId) {
+            const postEventReport: EventPostReport = {
+              completedOn: new Date(prev.currentDate),
+              satisfaction: finalSatisfaction,
+              financial: {
+                income: totalIncome,
+                expense: totalExpenses,
+                net,
+                balanceAfter: newBalance,
+              },
+              equipment: equipmentWearResults.map(result => ({
+                equipmentId: result.equipmentId,
+                name: result.name,
+                conditionBefore: result.conditionBefore,
+                conditionAfter: result.conditionAfter,
+              })),
+            };
+
             return {
               ...e,
               status: 'completed' as const,
               clientSatisfaction: finalSatisfaction,
+              postEventReport,
               assignedCrew: {
                 audio: e.assignedCrew.audio.map(crew => updatedCrewMap.get(crew.id) ?? crew),
                 lighting: e.assignedCrew.lighting.map(crew => updatedCrewMap.get(crew.id) ?? crew),

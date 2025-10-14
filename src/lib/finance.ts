@@ -17,6 +17,14 @@ export interface ThirtyDaySummary {
   expenseCount: number;
 }
 
+export interface BalanceTrendPoint {
+  date: Date;
+  balance: number;
+  income: number;
+  expenses: number;
+  net: number;
+}
+
 export function calculateTotals(transactions: FinancialTransaction[]) {
   return transactions.reduce(
     (acc, txn) => {
@@ -82,6 +90,71 @@ export function getThirtyDaySummary(
     incomeCount: counts.incomeCount,
     expenseCount: counts.expenseCount,
   };
+}
+
+export function getBalanceTrend(
+  transactions: FinancialTransaction[],
+  referenceDate: Date,
+  days = 30,
+): BalanceTrendPoint[] {
+  if (transactions.length === 0 || days <= 0) {
+    return [];
+  }
+
+  const sorted = [...transactions].sort(
+    (a, b) => a.date.getTime() - b.date.getTime(),
+  );
+
+  const startDate = new Date(referenceDate);
+  startDate.setHours(0, 0, 0, 0);
+  startDate.setDate(startDate.getDate() - (days - 1));
+
+  const startKey = startDate.getTime();
+  const dailyTotals = new Map<number, { income: number; expenses: number }>();
+
+  let runningBalanceBeforeWindow = 0;
+
+  sorted.forEach(txn => {
+    const normalized = new Date(txn.date);
+    normalized.setHours(0, 0, 0, 0);
+    const key = normalized.getTime();
+
+    const delta = txn.type === 'income' ? txn.amount : -txn.amount;
+
+    if (key < startKey) {
+      runningBalanceBeforeWindow += delta;
+      return;
+    }
+
+    const totals = dailyTotals.get(key) ?? { income: 0, expenses: 0 };
+    if (txn.type === 'income') {
+      totals.income += txn.amount;
+    } else {
+      totals.expenses += txn.amount;
+    }
+    dailyTotals.set(key, totals);
+  });
+
+  const points: BalanceTrendPoint[] = [];
+  let balance = runningBalanceBeforeWindow;
+
+  for (let i = 0; i < days; i++) {
+    const day = new Date(startDate);
+    day.setDate(startDate.getDate() + i);
+    const key = day.getTime();
+    const totals = dailyTotals.get(key) ?? { income: 0, expenses: 0 };
+    balance += totals.income - totals.expenses;
+
+    points.push({
+      date: day,
+      balance,
+      income: totals.income,
+      expenses: totals.expenses,
+      net: totals.income - totals.expenses,
+    });
+  }
+
+  return points;
 }
 
 export function calculateBalanceToLimit(balance: number, creditLimit: number) {

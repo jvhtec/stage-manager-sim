@@ -41,7 +41,7 @@ export default function EventDetail() {
   const navigate = useNavigate();
   
   const event = gameState.events.find(e => e.id === id);
-  
+
   if (!event) {
     return (
       <div className="min-h-screen bg-background p-6">
@@ -58,7 +58,8 @@ export default function EventDetail() {
       </div>
     );
   }
-  
+
+  const postEventReport = event.postEventReport;
   const cost = calculateEventCost(event);
   const profit = calculateEventProfit(event);
   const isStaffed = isEventFullyStaffed(event);
@@ -339,6 +340,69 @@ export default function EventDetail() {
               Financial status prevents progressing this event. Clear debts in the Finances panel to continue.
             </AlertDescription>
           </Alert>
+        )}
+
+        {event.status === 'completed' && postEventReport && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Post-Event Report</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Closed on {format(postEventReport.completedOn, 'MMM dd, yyyy')} • Balance after payout{' '}
+                {formatCurrency(postEventReport.financial.balanceAfter)}
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3 text-sm">
+                <div>
+                  <div className="text-muted-foreground">Client Satisfaction</div>
+                  <div className="text-lg font-semibold">{postEventReport.satisfaction}%</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Total Income</div>
+                  <div className="text-lg font-semibold text-success">
+                    +{formatCurrency(postEventReport.financial.income)}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Total Expenses</div>
+                  <div className="text-lg font-semibold text-destructive">
+                    -{formatCurrency(postEventReport.financial.expense)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-semibold uppercase text-muted-foreground">
+                  <AlertTriangle className="h-4 w-4" /> Equipment Condition Highlights
+                </div>
+                {postEventReport.equipment.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No equipment assignments were logged against this show.
+                  </p>
+                ) : (
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {postEventReport.equipment.map(item => {
+                      const wear = item.conditionBefore - item.conditionAfter;
+                      const needsService = item.conditionAfter <= 60;
+                      return (
+                        <div key={item.equipmentId} className="rounded-lg border border-border/70 p-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-semibold">{item.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {item.conditionBefore}% → {item.conditionAfter}% ({wear}% wear)
+                              </div>
+                            </div>
+                            {needsService && <Badge variant="destructive">Schedule Service</Badge>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         {/* Financial Overview */}

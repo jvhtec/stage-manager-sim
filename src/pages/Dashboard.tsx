@@ -1,13 +1,14 @@
 import { useGame } from '@/contexts/GameContext';
 import { StatCard } from '@/components/StatCard';
 import { EventCard } from '@/components/EventCard';
-import { DollarSign, TrendingUp, Users, Calendar, Play, AlertTriangle } from 'lucide-react';
+import { DollarSign, TrendingUp, Users, Calendar, Play, AlertTriangle, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useFinancialSummary } from '@/hooks/useFinancialSummary';
+import { Badge } from '@/components/ui/badge';
 
 export default function Dashboard() {
   const { gameState, advanceDay } = useGame();
@@ -34,6 +35,23 @@ export default function Dashboard() {
   const recentTransactions = financialSummary.sortedTransactions.slice(0, 5);
   const financeAlerts = financialSummary.alerts.filter(alert => alert.key !== 'bankrupt');
   const topCategories = financialSummary.categorySummary.slice(0, 2);
+
+  const completedReports = [...gameState.events]
+    .filter(event => Boolean(event.postEventReport))
+    .sort((a, b) => {
+      const aTime = a.postEventReport?.completedOn.getTime() ?? 0;
+      const bTime = b.postEventReport?.completedOn.getTime() ?? 0;
+      return bTime - aTime;
+    });
+
+  const latestReportEvent = completedReports[0];
+  const latestReport = latestReportEvent?.postEventReport;
+  const formatCurrency = (value: number) =>
+    new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0,
+    }).format(value);
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -196,6 +214,88 @@ export default function Dashboard() {
             </CardContent>
           </Card>
         </div>
+
+        {latestReport && latestReportEvent && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Post-Event Equipment Report</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                {latestReportEvent.name} • Completed {format(latestReport.completedOn, 'MMM dd, yyyy')}
+              </p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3 text-sm">
+                <div>
+                  <div className="text-muted-foreground">Client Satisfaction</div>
+                  <div className="text-lg font-semibold">{latestReport.satisfaction}%</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Net Result</div>
+                  <div
+                    className={`text-lg font-semibold ${
+                      latestReport.financial.net >= 0 ? 'text-success' : 'text-destructive'
+                    }`}
+                  >
+                    {latestReport.financial.net >= 0 ? '+' : '-'}
+                    {formatCurrency(Math.abs(latestReport.financial.net))}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Balance After Payout</div>
+                  <div className="text-lg font-semibold">{formatCurrency(latestReport.financial.balanceAfter)}</div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 text-sm font-semibold uppercase text-muted-foreground">
+                  <Wrench className="h-4 w-4" /> Equipment Wear
+                </div>
+                {latestReport.equipment.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No equipment was assigned to this contract.
+                  </p>
+                ) : (
+                  <div className="grid gap-2 md:grid-cols-2">
+                    {latestReport.equipment.slice(0, 4).map(item => {
+                      const drop = item.conditionBefore - item.conditionAfter;
+                      const needsService = item.conditionAfter <= 60;
+                      return (
+                        <div
+                          key={item.equipmentId}
+                          className="rounded-lg border border-border/70 p-3"
+                        >
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <div className="font-semibold">{item.name}</div>
+                              <div className="text-xs text-muted-foreground">
+                                -{drop}% wear • {item.conditionAfter}% remaining
+                              </div>
+                            </div>
+                            {needsService && <Badge variant="destructive">Maintenance Soon</Badge>}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                {latestReport.equipment.length > 4 && (
+                  <p className="text-xs text-muted-foreground">
+                    +{latestReport.equipment.length - 4} additional items recorded in the full report.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => navigate(`/event/${latestReportEvent.id}`)}>
+                  Review Event Details
+                </Button>
+                <Button variant="ghost" onClick={() => navigate('/inventory')}>
+                  Open Inventory
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Recent Activity */}
         {(recentEvents.length > 0 || recentTransactions.length > 0 || topCategories.length > 0) && (
