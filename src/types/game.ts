@@ -169,11 +169,47 @@ export interface Event {
   postEventReport?: EventPostReport;
 }
 
+export type MarketNewsTone = 'info' | 'positive' | 'warning';
+
+export interface MarketNewsItem {
+  id: string;
+  date: Date;
+  title: string;
+  summary: string;
+  tone: MarketNewsTone;
+  companyId?: string;
+  eventId?: string;
+}
+
+export interface CompetitorScheduledEvent {
+  eventId: string;
+  status: 'pending' | 'booked' | 'completed';
+  payout: number;
+  scheduledOn: Date;
+}
+
+export interface CompetitorCompany {
+  id: string;
+  name: string;
+  brandColor: string;
+  specialties: Department[];
+  reputation: number; // 0-100
+  reliability: number; // influences cancellation odds
+  baseRateModifier: number; // percentage applied to contract bids
+  activeBids: string[];
+  scheduledEvents: CompetitorScheduledEvent[];
+  scoutingNotes: string[];
+}
+
 export interface Company {
   name: string;
   balance: number;
   reputation: number; // 0-100
   level: number;
+  brandColor: string;
+  accentColor: string;
+  specialization: 'audio' | 'lighting' | 'video' | 'stage' | 'balanced';
+  tagline?: string;
 }
 
 export interface GameState {
@@ -186,4 +222,7 @@ export interface GameState {
   finances: FinancesState;
   isBankrupt: boolean;
   crises: CrisisPrompt[];
+  competitors: CompetitorCompany[];
+  marketNews: MarketNewsItem[];
+  hasCompletedOnboarding: boolean;
 }

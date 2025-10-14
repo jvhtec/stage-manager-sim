@@ -120,6 +120,6 @@ Also add a lightweight `BrandingPreset` helper type to `src/lib/gameData.ts` for
 
 ## Next Steps Checklist
 - [x] Document design requirements and phased implementation outline (this document).
-- [ ] Implement Phase 1 competitor data structures and dashboard surfacing.
-- [ ] Implement Phase 1 player customization onboarding and state wiring.
+- [x] Implement Phase 1 competitor data structures and dashboard surfacing.
+- [x] Implement Phase 1 player customization onboarding and state wiring.
 - [ ] Iterate on balance/UX based on playtesting feedback once features are interactive.

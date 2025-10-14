@@ -62,15 +62,17 @@ Open up the event variety described in the GDD.
 - ✅ Financial analytics dashboard with 30-day trend visualizations and proactive alerts.
 - ✅ Post-event equipment wear reports surfaced in event and dashboard views.
 - ✅ Design plan for AI competitors and player company customization authored to guide implementation.
+- ✅ Phase 1 AI competitor seeding with dashboard market ticker and scouting notes.
+- ✅ Player onboarding modal captures company identity, palette, and specialization before day one.
 
 ## Upcoming Implementation Focus
-- **AI Competitor Companies**
-  - Implement rival studio data structures and calendar interactions per the new design plan.
+- **AI Competitor Companies – Phase 2 (Bidding Simulation)**
   - Build the bidding/scheduling simulation loop and integrate reputation and pricing feedback into contract generation.
-  - Surface competitor activity in the dashboard ticker and contract overlays without overwhelming the player.
-- **Player Company Customization**
-  - Extend onboarding to capture company identity, palette, and specialization choices defined in the plan.
-  - Apply customization modifiers to starting crew, equipment, and reputation when generating the initial company state.
-  - Ensure the customized identity persists through saves and is referenced across dashboard, calendar, and reporting views.
+  - Track calendar interactions so winning bids reserve dates and remove opportunities from the player's pipeline.
+  - Expand UI surfacing with live bid indicators on contracts without overwhelming the player.
+- **Player Company Customization – Phase 2 (System Hooks)**
+  - Apply specialization modifiers to starting crew, equipment, and finances when generating the initial state.
+  - Thread brand colors and tagline into additional surfaces (calendar badges, analytics) beyond the dashboard hero.
+  - Plan persistence updates so saves capture branding choices once serialization is introduced.
 
 This staged plan ensures every iteration honors the authentic backstage management fantasy while keeping scope sustainable for a solo developer.
