@@ -7,6 +7,7 @@ import {
   FinancialCategory,
   Department,
   EquipmentItem,
+  CrisisPrompt,
 } from '@/types/game';
 import {
   generateInitialCrew,
@@ -31,6 +32,12 @@ import {
   createRentalEquipment,
   getEquipmentDefinition,
 } from '@/lib/equipment';
+import {
+  generateCrisisPrompts,
+  mergeExistingCrisisState,
+  evaluateCrisisOutcomes,
+  CrisisOutcome,
+} from '@/lib/crisis';
 
 interface EventCompletionSummary {
   eventId: string;
@@ -49,6 +56,7 @@ interface EventCompletionSummary {
     conditionBefore: number;
     conditionAfter: number;
   }[];
+  crisisOutcomes: CrisisOutcome[];
 }
 
 interface GameContextType {
@@ -92,6 +100,10 @@ interface GameContextType {
       eventId?: string;
     }
   ) => { success: boolean; equipment?: EquipmentItem; cost?: number; reason?: string };
+  respondToCrisisPrompt: (
+    promptId: string,
+    choiceId: string,
+  ) => { success: boolean; reason?: string };
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -132,6 +144,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         overdraftDays: 0,
       },
       isBankrupt: false,
+      crises: [],
     } as GameState;
   });
 
@@ -157,6 +170,60 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       newBalance < prev.finances.creditLimit || overdraftDays >= MAX_OVERDRAFT_DAYS;
 
     return { overdraftDays, isBankrupt };
+  };
+
+  const rebuildEventCrises = (
+    prev: GameState,
+    updatedEvent: Event,
+    updatedCrew: CrewMember[],
+    updatedEquipment: EquipmentItem[],
+  ): CrisisPrompt[] => {
+    const shouldTrack =
+      updatedEvent.status === 'planned' || updatedEvent.status === 'in-progress';
+
+    const remaining = prev.crises.filter(crisis => crisis.eventId !== updatedEvent.id);
+    if (!shouldTrack) {
+      return remaining;
+    }
+
+    const generated = generateCrisisPrompts(updatedEvent, {
+      crew: updatedCrew,
+      equipment: updatedEquipment,
+      companyReputation: prev.company.reputation,
+    });
+
+    const merged = mergeExistingCrisisState(
+      generated,
+      prev.crises.filter(crisis => crisis.eventId === updatedEvent.id),
+    );
+
+    return [...remaining, ...merged];
+  };
+
+  const rebuildAllPlannedCrises = (
+    prev: GameState,
+    events: Event[],
+    crew: CrewMember[],
+    equipment: EquipmentItem[],
+  ): CrisisPrompt[] => {
+    const prompts: CrisisPrompt[] = [];
+
+    events.forEach(event => {
+      if (event.status === 'planned' || event.status === 'in-progress') {
+        const generated = generateCrisisPrompts(event, {
+          crew,
+          equipment,
+          companyReputation: prev.company.reputation,
+        });
+        const merged = mergeExistingCrisisState(
+          generated,
+          prev.crises.filter(crisis => crisis.eventId === event.id),
+        );
+        prompts.push(...merged);
+      }
+    });
+
+    return prompts;
   };
 
   const getRequiredEquipmentCount = (event: Event, department: Department) => {
@@ -238,24 +305,34 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       result = { success: true };
 
+      const updatedCrewList = prev.crew.map(c =>
+        c.id === crewId ? updatedCrewMember : c,
+      );
+      const updatedEvents = prev.events.map(e => {
+        if (e.id === eventId) {
+          return {
+            ...e,
+            assignedCrew: {
+              ...e.assignedCrew,
+              [department]: [...e.assignedCrew[department], updatedCrewMember],
+            },
+          };
+        }
+        return e;
+      });
+      const updatedEvent = updatedEvents.find(e => e.id === eventId) ?? event;
+      const updatedCrises = rebuildEventCrises(
+        prev,
+        updatedEvent,
+        updatedCrewList,
+        prev.equipment,
+      );
+
       return {
         ...prev,
-        crew: prev.crew.map(c => (c.id === crewId ? updatedCrewMember : c)),
-        events: prev.events.map(e => {
-          if (e.id === eventId) {
-            return {
-              ...e,
-              assignedCrew: {
-                ...e.assignedCrew,
-                [department]: [
-                  ...e.assignedCrew[department],
-                  updatedCrewMember,
-                ],
-              },
-            };
-          }
-          return e;
-        }),
+        crew: updatedCrewList,
+        events: updatedEvents,
+        crises: updatedCrises,
       };
     });
 
@@ -263,12 +340,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const unassignCrewFromEvent = (eventId: string, crewId: string) => {
-    setGameState(prev => ({
-      ...prev,
-      crew: prev.crew.map(c =>
-        c.id === crewId ? { ...c, assignedTo: undefined } : c
-      ),
-      events: prev.events.map(e => {
+    setGameState(prev => {
+      const updatedCrewList = prev.crew.map(c =>
+        c.id === crewId ? { ...c, assignedTo: undefined } : c,
+      );
+      const updatedEvents = prev.events.map(e => {
         if (e.id === eventId) {
           return {
             ...e,
@@ -281,8 +357,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           };
         }
         return e;
-      }),
-    }));
+      });
+      const updatedEvent = updatedEvents.find(e => e.id === eventId);
+      const updatedCrises = updatedEvent
+        ? rebuildEventCrises(prev, updatedEvent, updatedCrewList, prev.equipment)
+        : prev.crises;
+
+      return {
+        ...prev,
+        crew: updatedCrewList,
+        events: updatedEvents,
+        crises: updatedCrises,
+      };
+    });
   };
 
   const assignEquipmentToEvent = (
@@ -387,24 +474,35 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       result = { success: true };
 
+      const updatedEquipment = prev.equipment.map(eq =>
+        eq.id === equipmentId
+          ? { ...eq, status: 'assigned', assignedToEvent: eventId }
+          : eq,
+      );
+      const updatedEvents = prev.events.map(e =>
+        e.id === eventId
+          ? {
+              ...e,
+              assignedEquipment: {
+                ...e.assignedEquipment,
+                [department]: [...e.assignedEquipment[department], equipmentId],
+              },
+            }
+          : e,
+      );
+      const updatedEvent = updatedEvents.find(e => e.id === eventId) ?? event;
+      const updatedCrises = rebuildEventCrises(
+        prev,
+        updatedEvent,
+        prev.crew,
+        updatedEquipment,
+      );
+
       return {
         ...prev,
-        equipment: prev.equipment.map(eq =>
-          eq.id === equipmentId
-            ? { ...eq, status: 'assigned', assignedToEvent: eventId }
-            : eq
-        ),
-        events: prev.events.map(e =>
-          e.id === eventId
-            ? {
-                ...e,
-                assignedEquipment: {
-                  ...e.assignedEquipment,
-                  [department]: [...e.assignedEquipment[department], equipmentId],
-                },
-              }
-            : e
-        ),
+        equipment: updatedEquipment,
+        events: updatedEvents,
+        crises: updatedCrises,
       };
     });
 
@@ -416,14 +514,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     equipmentId: string,
     department: Department
   ) => {
-    setGameState(prev => ({
-      ...prev,
-      equipment: prev.equipment.map(eq =>
+    setGameState(prev => {
+      const updatedEquipment = prev.equipment.map(eq =>
         eq.id === equipmentId
           ? { ...eq, status: 'available', assignedToEvent: undefined }
-          : eq
-      ),
-      events: prev.events.map(e =>
+          : eq,
+      );
+      const updatedEvents = prev.events.map(e =>
         e.id === eventId
           ? {
               ...e,
@@ -432,9 +529,20 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
                 [department]: e.assignedEquipment[department].filter(id => id !== equipmentId),
               },
             }
-          : e
-      ),
-    }));
+          : e,
+      );
+      const updatedEvent = updatedEvents.find(e => e.id === eventId);
+      const updatedCrises = updatedEvent
+        ? rebuildEventCrises(prev, updatedEvent, prev.crew, updatedEquipment)
+        : prev.crises;
+
+      return {
+        ...prev,
+        equipment: updatedEquipment,
+        events: updatedEvents,
+        crises: updatedCrises,
+      };
+    });
   };
 
   const scheduleEquipmentMaintenance = (
@@ -602,11 +710,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         return prev;
       }
 
+      const updatedEvents = prev.events.map(e =>
+        e.id === eventId ? { ...e, status: 'planned' as const } : e,
+      );
+      const updatedEvent = updatedEvents.find(e => e.id === eventId);
+      const updatedCrises = updatedEvent
+        ? rebuildEventCrises(prev, updatedEvent, prev.crew, prev.equipment)
+        : prev.crises;
+
       return {
         ...prev,
-        events: prev.events.map(e =>
-          e.id === eventId ? { ...e, status: 'planned' as const } : e
-        ),
+        events: updatedEvents,
+        crises: updatedCrises,
       };
     });
   };
@@ -621,7 +736,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       if (!event) return prev;
 
       const cost = calculateEventCost(event);
-      const reputationGain = Math.floor((satisfaction / 100) * 5);
+      const eventCrises = prev.crises.filter(crisis => crisis.eventId === eventId);
+      const { satisfactionDelta, additionalExpenses, outcomes } = evaluateCrisisOutcomes(
+        event,
+        eventCrises,
+      );
+      const finalSatisfaction = Math.max(
+        0,
+        Math.min(100, satisfaction + satisfactionDelta),
+      );
+      const reputationGain = Math.floor((finalSatisfaction / 100) * 5);
 
       const transactions: FinancialTransaction[] = [...prev.finances.transactions];
 
@@ -653,11 +777,36 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           event.clientPay,
           `Client payment for ${event.name}`,
           'contracts',
-          event.id
-        )
+          event.id,
+        ),
       );
 
-      const newBalance = prev.company.balance + event.clientPay - cost;
+      if (additionalExpenses > 0) {
+        transactions.push(
+          createTransaction(
+            'expense',
+            additionalExpenses,
+            `Crisis fallout for ${event.name}`,
+            'operations',
+            event.id,
+          ),
+        );
+      } else if (additionalExpenses < 0) {
+        transactions.push(
+          createTransaction(
+            'income',
+            Math.abs(additionalExpenses),
+            `Crisis contingency savings for ${event.name}`,
+            'operations',
+            event.id,
+          ),
+        );
+      }
+
+      const totalExpenses = cost + Math.max(additionalExpenses, 0);
+      const totalIncome = event.clientPay + Math.max(-additionalExpenses, 0);
+      const net = totalIncome - totalExpenses;
+      const newBalance = prev.company.balance + net;
       const { overdraftDays, isBankrupt } = evaluateFinancialState(prev, newBalance);
 
       const updatedCrewList = prev.crew.map(c => {
@@ -676,7 +825,11 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             availableOn: availability,
           };
 
-          const { updatedCrew, result } = applyExperienceGain(baseCrew, event, satisfaction);
+          const { updatedCrew, result } = applyExperienceGain(
+            baseCrew,
+            event,
+            finalSatisfaction,
+          );
 
           updatedCrewMap.set(c.id, updatedCrew);
           crewResults.push(result);
@@ -721,16 +874,17 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       summary = {
         eventId,
-        satisfaction,
+        satisfaction: finalSatisfaction,
         crewResults,
         financial: {
-          income: event.clientPay,
-          expense: cost,
-          net: event.clientPay - cost,
+          income: totalIncome,
+          expense: totalExpenses,
+          net,
           newBalance,
           isBankrupt,
         },
         equipmentResults: equipmentWearResults,
+        crisisOutcomes: outcomes,
       };
 
       return {
@@ -745,7 +899,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
             return {
               ...e,
               status: 'completed' as const,
-              clientSatisfaction: satisfaction,
+              clientSatisfaction: finalSatisfaction,
               assignedCrew: {
                 audio: e.assignedCrew.audio.map(crew => updatedCrewMap.get(crew.id) ?? crew),
                 lighting: e.assignedCrew.lighting.map(crew => updatedCrewMap.get(crew.id) ?? crew),
@@ -763,11 +917,101 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           transactions,
           overdraftDays,
         },
+        crises: prev.crises.filter(crisis => crisis.eventId !== eventId),
         isBankrupt,
       };
     });
 
     return summary;
+  };
+
+  const respondToCrisisPrompt = (promptId: string, choiceId: string) => {
+    let response: { success: boolean; reason?: string } = {
+      success: false,
+      reason: 'Crisis prompt not found',
+    };
+
+    setGameState(prev => {
+      const promptIndex = prev.crises.findIndex(crisis => crisis.id === promptId);
+      if (promptIndex === -1) {
+        return prev;
+      }
+
+      const prompt = prev.crises[promptIndex];
+      const event = prev.events.find(e => e.id === prompt.eventId);
+
+      if (!event || (event.status !== 'planned' && event.status !== 'in-progress')) {
+        response = {
+          success: false,
+          reason: 'This crisis can only be addressed for scheduled events.',
+        };
+        return prev;
+      }
+
+      if (prompt.resolved) {
+        response = {
+          success: false,
+          reason: 'This crisis has already been resolved.',
+        };
+        return prev;
+      }
+
+      const choice = prompt.choices.find(option => option.id === choiceId);
+      if (!choice) {
+        response = {
+          success: false,
+          reason: 'Resolution option not found.',
+        };
+        return prev;
+      }
+
+      let newBalance = prev.company.balance;
+      let transactions = prev.finances.transactions;
+
+      if (choice.cost && choice.cost !== 0) {
+        const costAmount = Math.abs(choice.cost);
+        const isExpense = choice.cost > 0;
+        const transaction = createTransaction(
+          isExpense ? 'expense' : 'income',
+          costAmount,
+          `${prompt.title} – ${choice.label}`,
+          choice.transactionCategory ?? 'operations',
+          prompt.eventId,
+        );
+
+        transactions = [...transactions, transaction];
+        newBalance += isExpense ? -costAmount : costAmount;
+      }
+
+      const { overdraftDays, isBankrupt } = evaluateFinancialState(prev, newBalance);
+
+      response = { success: true };
+
+      const updatedPrompt: CrisisPrompt = {
+        ...prompt,
+        resolved: true,
+        selectedChoiceId: choice.id,
+      };
+
+      return {
+        ...prev,
+        company: {
+          ...prev.company,
+          balance: newBalance,
+        },
+        finances: {
+          ...prev.finances,
+          transactions,
+          overdraftDays,
+        },
+        crises: prev.crises.map((crisis, index) =>
+          index === promptIndex ? updatedPrompt : crisis,
+        ),
+        isBankrupt,
+      };
+    });
+
+    return response;
   };
 
   const advanceDay = () => {
@@ -858,22 +1102,32 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         prev.company.balance,
       );
 
+      const refreshedCrew = prev.crew.map(c => {
+        const recovered = {
+          ...c,
+          fatigue: Math.max(0, c.fatigue - 5),
+        };
+        return applyDailyMoraleDrift(recovered, newDate);
+      });
+
+      const recalculatedCrises = rebuildAllPlannedCrises(
+        prev,
+        cleanedEvents,
+        refreshedCrew,
+        updatedEquipment,
+      );
+
       return {
         ...prev,
         currentDate: newDate,
         events: cleanedEvents,
-        crew: prev.crew.map(c => {
-          const recovered = {
-            ...c,
-            fatigue: Math.max(0, c.fatigue - 5),
-          };
-          return applyDailyMoraleDrift(recovered, newDate);
-        }),
+        crew: refreshedCrew,
         equipment: updatedEquipment,
         finances: {
           ...prev.finances,
           overdraftDays,
         },
+        crises: recalculatedCrises,
         isBankrupt,
       };
     });
@@ -928,6 +1182,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       unassignEquipmentFromEvent,
       scheduleEquipmentMaintenance,
       rentEquipment,
+      respondToCrisisPrompt,
     }}>
       {children}
     </GameContext.Provider>
