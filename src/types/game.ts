@@ -39,6 +39,15 @@ export interface CrewMember {
   morale: number; // 0-100
   availableOn: Date;
   assignedTo?: string; // event ID
+  experience: number;
+  certifications: string[];
+  recentMoraleShift?: {
+    id: string;
+    date: Date;
+    description: string;
+    delta: number;
+    type: 'positive' | 'negative';
+  };
 }
 
 export interface Event {

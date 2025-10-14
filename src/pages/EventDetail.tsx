@@ -100,10 +100,30 @@ export default function EventDetail() {
     const crewQualityBonus = Math.min(15, Object.values(event.assignedCrew).flat().reduce((sum, c) => sum + c.skillLevel, 0) / 2);
     const satisfaction = Math.min(100, baseSatisfaction + crewQualityBonus);
     
-    completeEvent(event.id, satisfaction);
+    const result = completeEvent(event.id, satisfaction);
     toast.success('Event completed!', {
       description: `Client satisfaction: ${satisfaction}%`,
     });
+
+    result?.crewResults.forEach(outcome => {
+      if (outcome.leveledUp) {
+        toast.success(`${outcome.crewName} leveled up!`, {
+          description: `Now level ${outcome.newSkillLevel}${outcome.newCertification ? ` • Earned ${outcome.newCertification}` : ''}`,
+        });
+      } else if (outcome.newCertification) {
+        toast.success(`${outcome.crewName} earned ${outcome.newCertification}`);
+      } else if (outcome.moraleDelta < 0) {
+        toast.warning(`${outcome.crewName} is worn down`, {
+          description: `Morale dropped by ${Math.abs(outcome.moraleDelta)}. Consider giving them rest.`,
+        });
+      }
+    });
+
+    if (result?.financial.isBankrupt) {
+      toast.error('Bankruptcy triggered', {
+        description: 'Balance fell below the credit limit. Visit Finances to resolve.',
+      });
+    }
     navigate('/');
   };
   

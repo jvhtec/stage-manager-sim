@@ -16,6 +16,24 @@ import {
   getEventTimeWindow,
 } from '@/lib/gameData';
 import { MAX_OVERDRAFT_DAYS } from '@/lib/finance';
+import {
+  applyDailyMoraleDrift,
+  applyExperienceGain,
+  ExperienceGainResult,
+} from '@/lib/crewProgression';
+
+interface EventCompletionSummary {
+  eventId: string;
+  satisfaction: number;
+  crewResults: ExperienceGainResult[];
+  financial: {
+    income: number;
+    expense: number;
+    net: number;
+    newBalance: number;
+    isBankrupt: boolean;
+  };
+}
 
 interface GameContextType {
   gameState: GameState;
@@ -27,7 +45,10 @@ interface GameContextType {
   ) => { success: boolean; reason?: string };
   unassignCrewFromEvent: (eventId: string, crewId: string) => void;
   acceptEvent: (eventId: string) => void;
-  completeEvent: (eventId: string, satisfaction: number) => void;
+  completeEvent: (
+    eventId: string,
+    satisfaction: number,
+  ) => EventCompletionSummary | undefined;
   advanceDay: () => void;
   updateBalance: (
     amount: number,
@@ -234,6 +255,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const completeEvent = (eventId: string, satisfaction: number) => {
+    let summary: EventCompletionSummary | undefined;
+
     setGameState(prev => {
       if (prev.isBankrupt) return prev;
 
@@ -247,6 +270,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       const recoveryDays = getCrewRecoveryDays(event);
       const updatedCrewMap = new Map<string, CrewMember>();
+      const crewResults: ExperienceGainResult[] = [];
 
       if (cost > 0) {
         transactions.push(
@@ -282,19 +306,34 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           availability.setDate(availability.getDate() + recoveryDays);
           availability.setHours(8, 0, 0, 0);
 
-          const updatedCrew: CrewMember = {
+          const baseCrew: CrewMember = {
             ...c,
             assignedTo: undefined,
             fatigue: Math.min(100, c.fatigue + 20 + Math.floor(event.travelHours / 2)),
-            morale: Math.min(100, c.morale + 5),
             availableOn: availability,
           };
 
+          const { updatedCrew, result } = applyExperienceGain(baseCrew, event, satisfaction);
+
           updatedCrewMap.set(c.id, updatedCrew);
+          crewResults.push(result);
           return updatedCrew;
         }
         return c;
       });
+
+      summary = {
+        eventId,
+        satisfaction,
+        crewResults,
+        financial: {
+          income: event.clientPay,
+          expense: cost,
+          net: event.clientPay - cost,
+          newBalance,
+          isBankrupt,
+        },
+      };
 
       return {
         ...prev,
@@ -328,6 +367,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         isBankrupt,
       };
     });
+
+    return summary;
   };
 
   const advanceDay = () => {
@@ -354,10 +395,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         currentDate: newDate,
         events: newEvents,
-        crew: prev.crew.map(c => ({
-          ...c,
-          fatigue: Math.max(0, c.fatigue - 5),
-        })),
+        crew: prev.crew.map(c => {
+          const recovered = {
+            ...c,
+            fatigue: Math.max(0, c.fatigue - 5),
+          };
+          return applyDailyMoraleDrift(recovered, newDate);
+        }),
         finances: {
           ...prev.finances,
           overdraftDays,
