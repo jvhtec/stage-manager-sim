@@ -100,7 +100,7 @@ function getNextCertification(department: Department, currentCerts: string[], sk
   return undefined;
 }
 
-function createMoraleShift(description: string, delta: number, type: 'positive' | 'negative'): MoraleShift {
+export function createMoraleShift(description: string, delta: number, type: 'positive' | 'negative'): MoraleShift {
   return {
     id: `morale-${Date.now()}-${Math.random()}`,
     date: new Date(),

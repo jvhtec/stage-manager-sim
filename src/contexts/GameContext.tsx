@@ -13,7 +13,15 @@ import {
   persistGameState,
   clearSavedGameState,
 } from '@/engine/state';
-import { hireCrew as hireCrewAction, assignCrewToEvent as assignCrewToEventAction, unassignCrewFromEvent as unassignCrewFromEventAction } from '@/engine/crewActions';
+import {
+  hireCrew as hireCrewAction,
+  assignCrewToEvent as assignCrewToEventAction,
+  unassignCrewFromEvent as unassignCrewFromEventAction,
+  hireCandidate as hireCandidateAction,
+  negotiateCandidateRate as negotiateCandidateRateAction,
+  fireCrew as fireCrewAction,
+} from '@/engine/crewActions';
+import { createRng } from '@/lib/rng';
 import {
   assignEquipmentToEvent as assignEquipmentToEventAction,
   unassignEquipmentFromEvent as unassignEquipmentFromEventAction,
@@ -40,6 +48,9 @@ interface GameContextType {
     department: Department
   ) => ActionResult;
   unassignCrewFromEvent: (eventId: string, crewId: string) => void;
+  hireCandidate: (candidateId: string) => ActionResult;
+  negotiateCandidateRate: (candidateId: string) => ActionResult;
+  fireCrew: (crewId: string) => ActionResult;
   acceptEvent: (eventId: string) => void;
   completeEvent: (
     eventId: string,
@@ -147,6 +158,39 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     setGameState(prev => unassignCrewFromEventAction(prev, eventId, crewId));
   };
 
+  const hireCandidate = (candidateId: string): ActionResult => {
+    let result: ActionResult = { success: false, reason: 'Candidate not found.' };
+    setGameState(prev => {
+      const outcome = hireCandidateAction(prev, candidateId);
+      result = outcome.result;
+      return outcome.state;
+    });
+    return result;
+  };
+
+  const negotiateCandidateRate = (candidateId: string): ActionResult => {
+    let result: ActionResult = { success: false, reason: 'Candidate not found.' };
+    setGameState(prev => {
+      // Manual, on-demand action outside the day-tick simulation loop — see
+      // the same exception already documented for Crew.tsx's hire button.
+      const rng = createRng(Date.now());
+      const outcome = negotiateCandidateRateAction(prev, candidateId, rng);
+      result = outcome.result;
+      return outcome.state;
+    });
+    return result;
+  };
+
+  const fireCrew = (crewId: string): ActionResult => {
+    let result: ActionResult = { success: false, reason: 'Crew member not found.' };
+    setGameState(prev => {
+      const outcome = fireCrewAction(prev, crewId);
+      result = outcome.result;
+      return outcome.state;
+    });
+    return result;
+  };
+
   const assignEquipmentToEvent = (
     eventId: string,
     equipmentId: string,
@@ -247,6 +291,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       hireCrew,
       assignCrewToEvent,
       unassignCrewFromEvent,
+      hireCandidate,
+      negotiateCandidateRate,
+      fireCrew,
       acceptEvent,
       completeEvent,
       advanceDay,

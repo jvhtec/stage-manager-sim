@@ -1,10 +1,14 @@
 import { EquipmentItem, GameState } from '@/types/game';
-import { applyEventLifecycle, generateEvent } from '@/lib/gameData';
+import { applyEventLifecycle, generateCandidatePool, generateEvent } from '@/lib/gameData';
 import { applyDailyMoraleDrift } from '@/lib/crewProgression';
 import { getEquipmentDefinition } from '@/lib/equipment';
 import { rebuildAllPlannedCrises } from '@/lib/crisis';
 import { evaluateFinancialState } from '@/lib/finance';
-import { calculateStandingCosts, GAME_OVER_BANKRUPT_STREAK_DAYS } from '@/lib/economy';
+import {
+  calculateStandingCosts,
+  GAME_OVER_BANKRUPT_STREAK_DAYS,
+  PAYROLL_INTERVAL_DAYS,
+} from '@/lib/economy';
 import {
   progressCompetitorSchedules,
   simulateCompetitorBidding,
@@ -109,6 +113,12 @@ export function advanceDay(state: GameState): GameState {
     return applyDailyMoraleDrift(recovered, newDate, rng);
   });
 
+  // Same cadence as the weekly retainer — a fresh hiring-market pool every payday.
+  const crewCandidates =
+    daysElapsed > 0 && daysElapsed % PAYROLL_INTERVAL_DAYS === 0
+      ? generateCandidatePool(rng, newDate, state.company.reputation)
+      : state.crewCandidates;
+
   const scheduleProgress = progressCompetitorSchedules(state.competitors, newDate, rng);
   const biddingWithSchedule = simulateCompetitorBidding({
     events: cleanedEvents,
@@ -178,6 +188,7 @@ export function advanceDay(state: GameState): GameState {
     daysElapsed,
     events: lifecycle.events,
     crew: lifecycle.crew,
+    crewCandidates,
     equipment: lifecycle.equipment,
     company: syncCompanyLevel({
       ...state.company,

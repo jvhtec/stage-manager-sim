@@ -99,6 +99,20 @@ describe('advanceDay', () => {
     expect(state.finances.transactions.length).toBeGreaterThan(txnCountBefore);
   });
 
+  it('rotates the hiring-market candidate pool on the same weekly cadence as payroll', () => {
+    let state = createNewGameState();
+    const initialCandidateIds = state.crewCandidates.map(c => c.id);
+
+    for (let i = 0; i < 6; i++) {
+      state = advanceDay(state);
+      expect(state.crewCandidates.map(c => c.id)).toEqual(initialCandidateIds);
+    }
+
+    state = advanceDay(state); // day 7 — pool rotates
+    expect(state.crewCandidates).toHaveLength(initialCandidateIds.length);
+    expect(state.crewCandidates.map(c => c.id)).not.toEqual(initialCandidateIds);
+  });
+
   it('accrues loan interest daily once a loan is outstanding', () => {
     const state = { ...createNewGameState(), finances: { ...createNewGameState().finances, loanBalance: 1000 } };
     const nextState = advanceDay(state);

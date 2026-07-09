@@ -74,6 +74,19 @@ export interface EquipmentItem {
   };
 }
 
+export interface CrewCandidate {
+  id: string;
+  name: string;
+  department: Department;
+  skillLevel: number; // 1-10
+  askingRate: number;
+  signingBonus: number;
+  experience: number;
+  certifications: string[];
+  /** One negotiation attempt is allowed per candidate before the pool rotates. */
+  negotiated: boolean;
+}
+
 export interface CrewMember {
   id: string;
   name: string;
@@ -244,6 +257,8 @@ export interface Company {
 export interface GameState {
   company: Company;
   crew: CrewMember[];
+  /** Weekly-rotating pool of hireable candidates — the hiring market (Phase 2). */
+  crewCandidates: CrewCandidate[];
   equipment: EquipmentItem[];
   events: Event[];
   currentDate: Date;
