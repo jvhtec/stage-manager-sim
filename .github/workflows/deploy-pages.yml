@@ -23,6 +23,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Pages
+        # Provisions the repo's Pages site (build type "workflow") via the API
+        # if it hasn't been enabled yet — without this, deploy-pages fails
+        # with a 404 on the very first run since there's no Pages site to
+        # deploy to.
+        uses: actions/configure-pages@v5
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
