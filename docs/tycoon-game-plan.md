@@ -282,9 +282,31 @@ of this exit criteria was already satisfied by the show-day preparation score (P
 
 ### Phase 2 — Depth: roster, gear, and market as strategic layers
 
-1. **Hiring market.** Replace instant-hire with a rotating weekly candidate pool (seeded RNG),
-   signing bonuses, and rate negotiation influenced by reputation. Firing has severance +
-   morale splash on the rest of the roster.
+1. **Hiring market** *(done)*. `Crew.tsx`'s flat $500 instant-hire dialog is gone, replaced by
+   a "Hiring Market" panel backed by `GameState.crewCandidates`: one candidate per department
+   plus a wildcard, rotating on the same weekly cadence as payroll (`generateCandidatePool` in
+   `src/lib/gameData.ts`, wired into `advanceDay` in `src/engine/dayActions.ts`, seeded off the
+   sim's rng — deterministic like every other automatic roll). Three new engine actions in
+   `src/engine/crewActions.ts`:
+   - `hireCandidate` — converts a candidate into a `CrewMember`, charging the signing bonus
+     as an expense transaction.
+   - `negotiateCandidateRate` — one attempt per candidate. Success chance scales with
+     reputation (45-85%); on success, asking rate and signing bonus both drop; on failure
+     there's a 25% chance the candidate walks entirely — negotiating is a real bet, not a
+     free re-roll. This is a manual UI action outside the day-tick loop, so it takes its own
+     wall-clock rng (same documented exception as the old hire button).
+   - `fireCrew` — blocks firing anyone currently assigned to a show (unassign first), charges
+     a 2-week retainer's worth of severance, and applies a -5 morale splash + `recentMoraleShift`
+     entry to every remaining crew member (a layoff unsettles the whole roster, not just the
+     person let go).
+   - `SAVE_SCHEMA_VERSION` bumped to 4 (`crewCandidates` is a new required array) — older saves
+     are discarded per the existing convention.
+   - Verified in a real browser: onboarding → market renders 5 rotating candidates → negotiate
+     (both outcomes observed: terms improved, and a candidate walking away) → hire (7→8 crew,
+     signing bonus charged) → let go (8→7 crew, morale-shift toast visible on every remaining
+     card) → zero console errors. Covered by 8 new engine tests
+     (`src/engine/__tests__/crewActions.test.ts`) plus a weekly-rotation test in
+     `dayActions.test.ts`.
 2. **Equipment ownership arc.** Buy/sell owned gear (marketplace tab in Inventory with
    tiered catalogs gated by company level), depreciation on sale price, insurance opt-in
    that softens crisis damage costs.

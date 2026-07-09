@@ -9,6 +9,7 @@ import {
 import {
   generateInitialCrew,
   createInitialCompany,
+  generateCandidatePool,
   generateEvent,
   generateInitialEquipmentInventory,
 } from '@/lib/gameData';
@@ -19,7 +20,9 @@ export const SAVE_STORAGE_KEY = 'stage-manager-sim:save';
 // Bump whenever the GameState shape changes in a way old saves can't satisfy.
 // v2: added rngState (seeded PRNG). v3: added loanBalance, daysElapsed,
 // bankruptStreak, isGameOver, runSummary — older saves lack them and are discarded.
-export const SAVE_SCHEMA_VERSION = 3;
+// v4: added crewCandidates (weekly hiring-market pool) — older saves lack it
+// and are discarded rather than half-loaded with an empty/missing pool.
+export const SAVE_SCHEMA_VERSION = 4;
 
 interface SaveFile {
   version: number;
@@ -117,6 +120,7 @@ export function createNewGameState(): GameState {
   return {
     company,
     crew: generateInitialCrew(rng, now),
+    crewCandidates: generateCandidatePool(rng, now, company.reputation),
     equipment,
     events,
     currentDate: now,

@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { createNewGameState } from '../state';
-import { assignCrewToEvent, unassignCrewFromEvent, hireCrew } from '../crewActions';
-import { generateEvent } from '@/lib/gameData';
+import {
+  assignCrewToEvent,
+  unassignCrewFromEvent,
+  hireCrew,
+  hireCandidate,
+  negotiateCandidateRate,
+  fireCrew,
+} from '../crewActions';
+import { generateEvent, generateCandidate } from '@/lib/gameData';
 import { createRng } from '@/lib/rng';
-import type { CrewMember } from '@/types/game';
+import type { CrewCandidate, CrewMember } from '@/types/game';
 
 function baseState() {
   const state = createNewGameState();
@@ -95,5 +102,121 @@ describe('hireCrew', () => {
     expect(nextState.crew).toHaveLength(state.crew.length + 1);
     expect(nextState.crew.at(-1)?.id).toBe('crew-new-1');
     expect(state.crew).toHaveLength(state.crew.length); // original untouched
+  });
+});
+
+function candidateState(candidate: CrewCandidate) {
+  const state = baseState();
+  return { ...state, crewCandidates: [candidate] };
+}
+
+describe('hireCandidate', () => {
+  it('converts the candidate into a crew member and charges the signing bonus', () => {
+    const candidate = generateCandidate('audio', createRng(10), new Date('2026-08-01'), 50);
+    const state = candidateState(candidate);
+    const startingBalance = state.company.balance;
+
+    const { state: nextState, result } = hireCandidate(state, candidate.id);
+
+    expect(result.success).toBe(true);
+    expect(nextState.crewCandidates).toHaveLength(0);
+    expect(nextState.crew.at(-1)?.name).toBe(candidate.name);
+    expect(nextState.crew.at(-1)?.hourlyRate).toBe(candidate.askingRate);
+    expect(nextState.company.balance).toBe(startingBalance - candidate.signingBonus);
+  });
+
+  it('rejects hiring when the company cannot afford the signing bonus', () => {
+    const candidate = generateCandidate('audio', createRng(10), new Date('2026-08-01'), 50);
+    const state = {
+      ...candidateState(candidate),
+      company: { ...candidateState(candidate).company, balance: 0 },
+    };
+
+    const { result } = hireCandidate(state, candidate.id);
+
+    expect(result.success).toBe(false);
+    expect(result.reason).toMatch(/signing bonus/i);
+  });
+
+  it('rejects hiring while bankrupt', () => {
+    const candidate = generateCandidate('audio', createRng(10), new Date('2026-08-01'), 50);
+    const state = { ...candidateState(candidate), isBankrupt: true };
+
+    const { result } = hireCandidate(state, candidate.id);
+
+    expect(result.success).toBe(false);
+    expect(result.reason).toMatch(/bankrupt/i);
+  });
+});
+
+describe('negotiateCandidateRate', () => {
+  it('improves terms and marks the candidate as negotiated on success', () => {
+    const candidate = generateCandidate('audio', createRng(10), new Date('2026-08-01'), 50);
+    const state = candidateState(candidate);
+    // Rigged rng: chance() always true for the success roll and the rate/bonus rolls.
+    const rng = { ...createRng(1), chance: () => true, next: () => 0.5 };
+
+    const { state: nextState, result } = negotiateCandidateRate(state, candidate.id, rng);
+
+    expect(result.success).toBe(true);
+    const updated = nextState.crewCandidates[0];
+    expect(updated.negotiated).toBe(true);
+    expect(updated.askingRate).toBeLessThan(candidate.askingRate);
+    expect(updated.signingBonus).toBeLessThan(candidate.signingBonus);
+  });
+
+  it('removes the candidate when a failed negotiation makes them walk', () => {
+    const candidate = generateCandidate('audio', createRng(10), new Date('2026-08-01'), 50);
+    const state = candidateState(candidate);
+    // First chance() call is the negotiation roll (fails), second is the
+    // walk-away roll (succeeds).
+    let calls = 0;
+    const rng = { ...createRng(1), chance: () => { calls += 1; return calls === 2; } };
+
+    const { state: nextState, result } = negotiateCandidateRate(state, candidate.id, rng);
+
+    expect(result.success).toBe(false);
+    expect(nextState.crewCandidates).toHaveLength(0);
+  });
+
+  it('rejects a second negotiation attempt on the same candidate', () => {
+    const candidate = generateCandidate('audio', createRng(10), new Date('2026-08-01'), 50);
+    const alreadyNegotiated = { ...candidate, negotiated: true };
+    const state = candidateState(alreadyNegotiated);
+
+    const { result } = negotiateCandidateRate(state, candidate.id, createRng(1));
+
+    expect(result.success).toBe(false);
+    expect(result.reason).toMatch(/already negotiated/i);
+  });
+});
+
+describe('fireCrew', () => {
+  it('removes the crew member, charges severance, and dents remaining morale', () => {
+    const state = baseState();
+    const target = state.crew[0];
+    const startingBalance = state.company.balance;
+    const otherMoraleBefore = state.crew[1].morale;
+
+    const { state: nextState, result } = fireCrew(state, target.id);
+
+    expect(result.success).toBe(true);
+    expect(nextState.crew.find(c => c.id === target.id)).toBeUndefined();
+    expect(nextState.crew).toHaveLength(state.crew.length - 1);
+    expect(nextState.company.balance).toBeLessThan(startingBalance);
+    const remaining = nextState.crew.find(c => c.id === state.crew[1].id)!;
+    expect(remaining.morale).toBe(Math.max(0, otherMoraleBefore - 5));
+  });
+
+  it('refuses to fire a crew member currently assigned to a show', () => {
+    const state = baseState();
+    const event = state.events[state.events.length - 1];
+    const crew = state.crew.find(c => c.department === 'audio')!;
+    const { state: assigned } = assignCrewToEvent(state, event.id, crew.id, 'audio');
+
+    const { result } = fireCrew(assigned, crew.id);
+
+    expect(result.success).toBe(false);
+    expect(result.reason).toMatch(/unassign/i);
   });
 });

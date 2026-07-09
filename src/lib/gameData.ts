@@ -1,4 +1,5 @@
 import {
+  CrewCandidate,
   CrewMember,
   Event,
   Company,
@@ -104,6 +105,50 @@ export function generateCrewMember(
     experience: progression.experience,
     certifications: progression.certifications,
   };
+}
+
+const CANDIDATE_DEPARTMENTS: Department[] = ['audio', 'lighting', 'video', 'stage'];
+
+/**
+ * A hireable candidate for the weekly hiring market. Candidates ask for a
+ * premium over the baseline hourly rate plus an upfront signing bonus;
+ * better reputation makes the company a more attractive employer, so both
+ * shrink somewhat as reputation rises (see `negotiateCandidateRate` in
+ * `src/engine/crewActions.ts` for the other lever — talking terms down).
+ */
+export function generateCandidate(
+  department: Department,
+  rng: Rng,
+  currentDate: Date,
+  reputation: number,
+): CrewCandidate {
+  const firstName = rng.pick(firstNames);
+  const lastName = rng.pick(lastNames);
+  const skillLevel = 2 + rng.nextInt(7); // 2-8
+  const progression = initializeCrewProgression(department, skillLevel, rng);
+  const baseRate = 20 + skillLevel * 5;
+  const reputationDiscount = Math.min(0.3, reputation / 300); // 0-0.3 at rep 90+
+
+  return {
+    id: `candidate-${Date.now()}-${Math.random()}`,
+    name: `${firstName} ${lastName}`,
+    department,
+    skillLevel,
+    askingRate: Math.round(baseRate * (1.15 - reputationDiscount * 0.5)),
+    signingBonus: Math.round(baseRate * 12 * (1 - reputationDiscount)),
+    experience: progression.experience,
+    certifications: progression.certifications,
+    negotiated: false,
+  };
+}
+
+/** One candidate per department plus a wildcard extra — refreshed weekly in `advanceDay`. */
+export function generateCandidatePool(rng: Rng, currentDate: Date, reputation: number): CrewCandidate[] {
+  const pool = CANDIDATE_DEPARTMENTS.map(department =>
+    generateCandidate(department, rng, currentDate, reputation),
+  );
+  pool.push(generateCandidate(rng.pick(CANDIDATE_DEPARTMENTS), rng, currentDate, reputation));
+  return pool;
 }
 
 export function generateInitialCrew(rng: Rng, currentDate: Date): CrewMember[] {

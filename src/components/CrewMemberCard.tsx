@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -14,9 +15,10 @@ interface CrewMemberCardProps {
   showAssignment?: boolean;
   disabled?: boolean;
   helperText?: string;
+  footer?: ReactNode;
 }
 
-export function CrewMemberCard({ crew, onSelect, compact, showAssignment, disabled, helperText }: CrewMemberCardProps) {
+export function CrewMemberCard({ crew, onSelect, compact, showAssignment, disabled, helperText, footer }: CrewMemberCardProps) {
   const skillStars = '★'.repeat(crew.skillLevel) + '☆'.repeat(10 - crew.skillLevel);
   const experienceThreshold = getExperienceThresholdForLevel(crew.skillLevel);
   const experiencePercent =
@@ -163,6 +165,8 @@ export function CrewMemberCard({ crew, onSelect, compact, showAssignment, disabl
               </div>
             </div>
           )}
+
+          {footer}
         </div>
       </CardContent>
     </Card>
