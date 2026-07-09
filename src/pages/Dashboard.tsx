@@ -10,10 +10,22 @@ import {
   AlertTriangle,
   Wrench,
   Megaphone,
+  RotateCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useFinancialSummary } from '@/hooks/useFinancialSummary';
@@ -25,7 +37,7 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 
 export default function Dashboard() {
-  const { gameState, advanceDay, completeCompanyOnboarding } = useGame();
+  const { gameState, advanceDay, completeCompanyOnboarding, resetGame } = useGame();
   const navigate = useNavigate();
   const financialSummary = useFinancialSummary();
   const reputationSummary = useReputationSummary();
@@ -149,6 +161,29 @@ export default function Dashboard() {
               </p>
             </div>
             <div className="flex gap-2">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" className="text-muted-foreground">
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    New Game
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Start a new company?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This permanently deletes {gameState.company.name} — crew, gear,
+                      finances, and reputation. There is no undo.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep playing</AlertDialogCancel>
+                    <AlertDialogAction onClick={resetGame}>
+                      Delete save & restart
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               <Button
                 onClick={advanceDay}
                 variant="outline"

@@ -1,5 +1,9 @@
 # Sector Pro Simulator – Implementation Plan
 
+> **Superseded (July 2026):** prioritization and status now live in
+> [`docs/tycoon-game-plan.md`](tycoon-game-plan.md). This document is kept as a record of the
+> original staged build-out.
+
 This plan turns the design documentation into a staged roadmap for the playable prototype and beyond. Milestones build on the "Minimum Viable Product" and "Version 1.0" scope outlined in the roadmap while anchoring features to the gameplay loop described in the docs.
 
 ## Guiding Principles

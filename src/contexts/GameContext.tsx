@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 import {
   GameState,
   CrewMember,
@@ -126,9 +126,105 @@ interface GameContextType {
   updateCompanyIdentity: (
     updates: Partial<Pick<Company, 'brandColor' | 'accentColor' | 'tagline'>>,
   ) => void;
+  resetGame: () => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
+
+const SAVE_STORAGE_KEY = 'stage-manager-sim:save';
+// Bump whenever the GameState shape changes in a way old saves can't satisfy.
+const SAVE_SCHEMA_VERSION = 1;
+
+interface SaveFile {
+  version: number;
+  savedAt: string;
+  state: GameState;
+}
+
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{1,3})?Z$/;
+
+function reviveDates(_key: string, value: unknown): unknown {
+  if (typeof value === 'string' && ISO_DATE_PATTERN.test(value)) {
+    return new Date(value);
+  }
+  return value;
+}
+
+function loadSavedGameState(): GameState | null {
+  try {
+    const raw = localStorage.getItem(SAVE_STORAGE_KEY);
+    if (!raw) return null;
+
+    const save = JSON.parse(raw, reviveDates) as SaveFile;
+    if (save?.version !== SAVE_SCHEMA_VERSION || !save.state?.company) {
+      // Incompatible or corrupt save — discard rather than half-load it.
+      localStorage.removeItem(SAVE_STORAGE_KEY);
+      return null;
+    }
+    return save.state;
+  } catch {
+    return null;
+  }
+}
+
+function persistGameState(state: GameState) {
+  try {
+    const save: SaveFile = {
+      version: SAVE_SCHEMA_VERSION,
+      savedAt: new Date().toISOString(),
+      state,
+    };
+    localStorage.setItem(SAVE_STORAGE_KEY, JSON.stringify(save));
+  } catch {
+    // Storage full or unavailable (private mode) — the game stays playable in-memory.
+  }
+}
+
+function createNewGameState(): GameState {
+  const now = new Date();
+  const events: Event[] = [];
+
+  // Generate 5 available gigs over the next 2 weeks
+  for (let i = 0; i < 5; i++) {
+    const date = new Date(now);
+    date.setDate(date.getDate() + 3 + i * 2);
+    events.push(generateEvent(date, 'gig'));
+  }
+
+  const company = createInitialCompany();
+  const equipment = generateInitialEquipmentInventory(now);
+  const competitors = generateInitialCompetitors(company);
+  const marketNews = createInitialMarketNews(competitors, company, now);
+  const reputationHistory = [buildReputationSnapshot(company, competitors, now)];
+
+  return {
+    company,
+    crew: generateInitialCrew(),
+    equipment,
+    events,
+    currentDate: now,
+    finances: {
+      transactions: [
+        {
+          id: `txn-start-${now.getTime()}`,
+          date: new Date(now),
+          type: 'income',
+          amount: company.balance,
+          description: 'Initial capital injection',
+          category: 'misc',
+        },
+      ],
+      creditLimit: -5000,
+      overdraftDays: 0,
+    },
+    isBankrupt: false,
+    crises: [],
+    competitors,
+    marketNews,
+    reputationHistory,
+    hasCompletedOnboarding: false,
+  } as GameState;
+}
 
 function buildReputationSnapshot(
   company: Company,
@@ -153,51 +249,22 @@ function buildReputationSnapshot(
 }
 
 export function GameProvider({ children }: { children: React.ReactNode }) {
-  const [gameState, setGameState] = useState<GameState>(() => {
-    const now = new Date();
-    const events: Event[] = [];
+  const [gameState, setGameState] = useState<GameState>(
+    () => loadSavedGameState() ?? createNewGameState(),
+  );
 
-    // Generate 5 available gigs over the next 2 weeks
-    for (let i = 0; i < 5; i++) {
-      const date = new Date(now);
-      date.setDate(date.getDate() + 3 + i * 2);
-      events.push(generateEvent(date, 'gig'));
+  useEffect(() => {
+    persistGameState(gameState);
+  }, [gameState]);
+
+  const resetGame = () => {
+    try {
+      localStorage.removeItem(SAVE_STORAGE_KEY);
+    } catch {
+      // Ignore storage errors; the in-memory reset below still applies.
     }
-
-    const company = createInitialCompany();
-    const equipment = generateInitialEquipmentInventory(now);
-    const competitors = generateInitialCompetitors(company);
-    const marketNews = createInitialMarketNews(competitors, company, now);
-    const reputationHistory = [buildReputationSnapshot(company, competitors, now)];
-
-    return {
-      company,
-      crew: generateInitialCrew(),
-      equipment,
-      events,
-      currentDate: now,
-      finances: {
-        transactions: [
-          {
-            id: `txn-start-${now.getTime()}`,
-            date: new Date(now),
-            type: 'income',
-            amount: company.balance,
-            description: 'Initial capital injection',
-            category: 'misc',
-          },
-        ],
-        creditLimit: -5000,
-        overdraftDays: 0,
-      },
-      isBankrupt: false,
-      crises: [],
-      competitors,
-      marketNews,
-      reputationHistory,
-      hasCompletedOnboarding: false,
-    } as GameState;
-  });
+    setGameState(createNewGameState());
+  };
 
   const createTransaction = (
     type: FinancialTransaction['type'],
@@ -1503,6 +1570,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       respondToCrisisPrompt,
       completeCompanyOnboarding,
       updateCompanyIdentity,
+      resetGame,
     }}>
       {children}
     </GameContext.Provider>
