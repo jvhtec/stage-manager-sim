@@ -1,5 +1,12 @@
 # Stage Manager Sim — Tycoon Game Plan (2026 Reboot)
 
+> **Status note:** every Phase 0/1 item plus Phase 2's hiring market has shipped, and the
+> game deploys to GitHub Pages. Playtesting the deployed build surfaced the next problem:
+> the sim is sound but the *presentation* still reads as an admin dashboard. That overhaul
+> (graphics, HUD, animated Show Day scene, sound, city map, milestones) is planned in
+> **`docs/game-feel-plan.md`**, which now drives sequencing. Remaining items here (Phase 2
+> §2-5, Phase 3, Phase 4) are folded into that plan's workstream F.
+
 This is the working plan for turning the current prototype into a proper tycoon game. It
 supersedes `docs/implementation-plan.md` for prioritization: that document tracked a staged
 build-out that added *systems*, but the project still lacks the things that make a tycoon game
