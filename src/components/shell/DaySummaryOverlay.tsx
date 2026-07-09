@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { TrendingUp, TrendingDown, Moon, AlertTriangle } from 'lucide-react';
@@ -31,13 +32,24 @@ export function DaySummaryOverlay({ summary, onContinue }: DaySummaryOverlayProp
     summary.moraleShiftsCount === 0;
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 p-4 backdrop-blur-sm animate-in fade-in"
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.25 }}
+      // The backdrop is the "night sweep" — it lands first and fast; the
+      // card itself springs in a beat later so the day genuinely feels like
+      // it closes before the recap opens.
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 p-4 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label="Overnight summary"
     >
-      <div className="w-full max-w-lg rounded-xl border bg-card p-6 shadow-2xl">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.94, y: 12 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.15, ease: 'easeOut' }}
+        className="w-full max-w-lg rounded-xl border bg-card p-6 shadow-2xl"
+      >
         <div className="mb-4 flex items-center gap-3">
           <div className="rounded-full bg-primary/10 p-2 text-primary">
             <Moon className="h-5 w-5" />
@@ -141,7 +153,7 @@ export function DaySummaryOverlay({ summary, onContinue }: DaySummaryOverlayProp
         <Button className="mt-6 w-full" onClick={onContinue} autoFocus>
           Continue
         </Button>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 }

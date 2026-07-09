@@ -1,4 +1,5 @@
-import { ReactNode } from 'react';
+import { ReactNode, useEffect, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useGame } from '@/contexts/GameContext';
 import { useCountUp } from '@/hooks/useCountUp';
@@ -18,7 +19,11 @@ import { getTierProgress } from '@/lib/reputationTiers';
 import { CompanyOnboardingDialog } from '@/components/CompanyOnboardingDialog';
 import { GameOverDialog } from '@/components/GameOverDialog';
 import { DaySummaryOverlay } from './DaySummaryOverlay';
+import { FloatingDelta, type DeltaEvent } from './FloatingDelta';
 import { LayoutDashboard, CalendarDays, Users, Package, Wallet, Play, RotateCcw, Star } from 'lucide-react';
+
+/** How long a flash/pop stays visible before settling back to neutral. */
+const FLASH_DURATION_MS = 900;
 
 const NAV_ITEMS = [
   { to: '/', label: 'HQ', icon: LayoutDashboard },
@@ -69,6 +74,31 @@ export function GameShell({ children }: GameShellProps) {
   const navigate = useNavigate();
   const tierProgress = getTierProgress(gameState.company.reputation);
   const animatedBalance = useCountUp(gameState.company.balance);
+
+  const [balanceDeltas, setBalanceDeltas] = useState<DeltaEvent[]>([]);
+  const [flashSign, setFlashSign] = useState<'positive' | 'negative' | null>(null);
+  const prevBalanceRef = useRef(gameState.company.balance);
+
+  useEffect(() => {
+    const prev = prevBalanceRef.current;
+    const delta = gameState.company.balance - prev;
+    prevBalanceRef.current = gameState.company.balance;
+    if (delta === 0) return;
+
+    const id = `delta-${Date.now()}-${Math.random()}`;
+    setBalanceDeltas(current => [...current, { id, amount: delta }]);
+    setFlashSign(delta > 0 ? 'positive' : 'negative');
+
+    const removeTimer = setTimeout(() => {
+      setBalanceDeltas(current => current.filter(d => d.id !== id));
+    }, 1300);
+    const flashTimer = setTimeout(() => setFlashSign(null), FLASH_DURATION_MS);
+
+    return () => {
+      clearTimeout(removeTimer);
+      clearTimeout(flashTimer);
+    };
+  }, [gameState.company.balance]);
 
   const onboardingInitialValues = {
     name: gameState.company.name,
@@ -122,13 +152,26 @@ export function GameShell({ children }: GameShellProps) {
         </div>
 
         <div className="ml-auto flex items-center gap-3">
-          <div
-            className={`text-sm font-semibold tabular-nums ${
-              gameState.isBankrupt ? 'text-destructive' : 'text-success'
-            }`}
-            title="Company balance"
-          >
-            ${Math.round(animatedBalance).toLocaleString()}
+          <div className="relative">
+            <motion.div
+              key={Math.round(gameState.company.balance)}
+              initial={{ scale: 1.15 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              className={`text-sm font-semibold tabular-nums ${
+                flashSign === 'positive'
+                  ? 'text-success'
+                  : flashSign === 'negative'
+                    ? 'text-destructive'
+                    : gameState.isBankrupt
+                      ? 'text-destructive'
+                      : 'text-foreground'
+              }`}
+              title="Company balance"
+            >
+              ${Math.round(animatedBalance).toLocaleString()}
+            </motion.div>
+            <FloatingDelta deltas={balanceDeltas} />
           </div>
           <div className="hidden text-xs text-muted-foreground md:block">
             {new Intl.DateTimeFormat('en-US', { month: 'short', day: '2-digit', year: 'numeric' }).format(

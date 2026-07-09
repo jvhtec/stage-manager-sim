@@ -220,7 +220,7 @@ Presentation makes it feel like a game; these give it a game's *spine*. All engi
 | # | PR | Contents | Why this order |
 |---|----|----------|----------------|
 | 1 | ✅ **Shell + HUD + code-split** *(done)* | Workstream A, route lazy-loading, bundle budget in CI | The frame everything else mounts into; biggest feel-win per line |
-| 2 | **Juice foundation** | framer-motion, animated numbers, transaction deltas, day-transition ceremony polish | Makes the sim's existing outputs *felt*; shell (1) provides the mount points |
+| 2 | ✅ **Juice foundation** *(done)* | framer-motion, animated numbers, transaction deltas, day-transition ceremony polish | Makes the sim's existing outputs *felt*; shell (1) provides the mount points |
 | 3 | **Identity + avatars + venue art** | Workstream B | Pure content; unblocks the scene (needs venue backdrops + avatars) |
 | 4 | **Show Day scene v1** | Workstream C: stage, crowd, phases, incidents-over-scene, results sequence | The centerpiece; depends on 2 + 3 |
 | 5 | **Sound** | Workstream D audio module, wired into HUD + scene | Scene exists to score; independent of 6-8 |
@@ -272,6 +272,38 @@ browser-verified with screenshots, tracker updated in this file.
   end-to-end and surfaces a real competitor-won-contract news item, zero console errors, and
   a mobile-width (390px) spot check confirmed nothing breaks (stars/tier text intentionally
   hide below the `sm` breakpoint — full mobile nav-rail polish is not in scope for this PR).
+
+### PR 2 status — Juice foundation (done)
+
+- **`framer-motion` added** as a real dependency (not a lazy/dynamic-only import) — it's
+  used by the always-mounted shell, so it has to be present from first paint. Given its
+  own `manualChunks` entry in `vite.config.ts` (`vendor-framer-motion`) specifically so it
+  doesn't inflate the main entry chunk it's imported from; without that split the entry
+  chunk hit 562KB and failed the bundle budget check from PR 1 — this is exactly the
+  scenario that budget check's own comment predicted ("adding framer-motion in PR 2 should
+  bump this, not blow through it unnoticed"). With the chunk split, entry chunk is 443KB
+  and the budget check passes with no threshold changes.
+- **HUD balance now pops and flashes** (`GameShell.tsx`): a `motion.div` keyed on the
+  rounded balance value re-triggers a quick scale-pop on every change, colored green/red
+  for the delta's sign and settling back to neutral after ~900ms — layered on top of the
+  existing `useCountUp` digit tween from PR 1, so the numbers count up *and* the container
+  pops when a new target lands.
+- **Floating `+$X`/`-$X` deltas** (`src/components/shell/FloatingDelta.tsx`): a small queue
+  of delta events tracked via a `prevBalanceRef` diff in `GameShell`, rendered with
+  `AnimatePresence` — each one drifts up and fades over ~1.1s, then prunes itself.
+- **Day-summary ceremony polish** (`DaySummaryOverlay.tsx`): backdrop and card are now
+  separate `motion.div`s — the backdrop fades in fast (the "night falls" beat), the card
+  springs in ~150ms later with a slight scale+y offset, so advancing a day reads as two
+  discrete beats instead of one flat dialog pop.
+- **Card micro-motion**: `EventCard` and `CrewMemberCard` (both compact and full variants)
+  get `whileHover`/`whileTap` scale via `motion.div` wrappers, gated off when the card is
+  `disabled` or already assigned (no false affordance on a card you can't interact with).
+- Verified in a real browser (Playwright): onboarding → HUD → all 5 nav-rail destinations →
+  Next Day → day-summary overlay (with a real competitor-won-contract news item, matching
+  PR 1's verification) → Continue → balance/date updated correctly, card hover confirmed on
+  the Crew page with no console errors. Full suite: `tsc` clean, `eslint` clean (only the
+  same pre-existing shadcn boilerplate warnings from before this branch), 85/85 tests
+  passing, `budget:bundle` passing against the `build:pages` artifact.
 
 ## 5. Explicit non-goals (same discipline as before)
 

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -32,6 +33,10 @@ export function CrewMemberCard({ crew, onSelect, compact, showAssignment, disabl
 
   if (compact) {
     return (
+      <motion.div
+        whileHover={disabled || crew.assignedTo ? undefined : { scale: 1.02 }}
+        whileTap={disabled || crew.assignedTo ? undefined : { scale: 0.98 }}
+      >
       <Card
         className={`transition-colors ${
           disabled || crew.assignedTo ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-primary'
@@ -60,10 +65,12 @@ export function CrewMemberCard({ crew, onSelect, compact, showAssignment, disabl
           </div>
         </CardContent>
       </Card>
+      </motion.div>
     );
   }
 
   return (
+    <motion.div whileHover={disabled ? undefined : { scale: 1.01 }} transition={{ duration: 0.15 }}>
     <Card
       className={`${
         disabled ? 'opacity-60 cursor-not-allowed' : onSelect ? 'cursor-pointer hover:border-primary' : ''
@@ -170,5 +177,6 @@ export function CrewMemberCard({ crew, onSelect, compact, showAssignment, disabl
         </div>
       </CardContent>
     </Card>
+    </motion.div>
   );
 }
