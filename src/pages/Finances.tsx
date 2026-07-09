@@ -24,15 +24,19 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { useFinancialSummary } from '@/hooks/useFinancialSummary';
 import { MAX_OVERDRAFT_DAYS } from '@/lib/finance';
+import { GAME_OVER_BANKRUPT_STREAK_DAYS, calculateMaxLoanAmount } from '@/lib/economy';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 
 export default function Finances() {
-  const { gameState, updateBalance } = useGame();
+  const { gameState, takeLoan, repayLoan } = useGame();
   const navigate = useNavigate();
   const summary = useFinancialSummary();
 
-  const { creditLimit, overdraftDays } = gameState.finances;
+  const { creditLimit, overdraftDays, loanBalance } = gameState.finances;
+  const maxLoan = calculateMaxLoanAmount(gameState.company.reputation);
+  const availableCredit = Math.max(0, maxLoan - loanBalance);
+  const daysUntilGameOver = GAME_OVER_BANKRUPT_STREAK_DAYS - gameState.bankruptStreak;
   const {
     sortedTransactions,
     totals,
@@ -63,14 +67,24 @@ export default function Finances() {
     ? Math.min(...balanceTrend.map(point => point.balance))
     : gameState.company.balance;
 
-  const handleEmergencyLoan = () => {
-    updateBalance(5000, {
-      description: 'Emergency bridge loan',
-      category: 'operations',
+  const handleTakeLoan = (amount: number) => {
+    const result = takeLoan(amount);
+    if (!result.success) {
+      toast.error('Unable to secure loan', { description: result.reason });
+      return;
+    }
+    toast.success(`Loan secured: +${formatCurrency(amount)}`, {
+      description: 'Interest accrues daily until repaid — see Credit Health below.',
     });
-    toast.success('Emergency funds secured', {
-      description: 'A short-term loan has been added to your balance.',
-    });
+  };
+
+  const handleRepayLoan = (amount: number) => {
+    const result = repayLoan(amount);
+    if (!result.success) {
+      toast.error('Unable to repay loan', { description: result.reason });
+      return;
+    }
+    toast.success(`Repaid ${formatCurrency(amount)}`);
   };
 
   return (
@@ -160,7 +174,7 @@ export default function Finances() {
           </Card>
         </div>
 
-        <div className="grid gap-4 lg:grid-cols-2">
+        <div className="grid gap-4 lg:grid-cols-3">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle>Credit Health</CardTitle>
@@ -178,14 +192,65 @@ export default function Finances() {
                   {gameState.isBankrupt ? 'Bankrupt' : 'Solvent'}
                 </Badge>
               </div>
+              {gameState.isBankrupt && (
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Days until the company folds</span>
+                  <Badge variant="destructive">{Math.max(0, daysUntilGameOver)}</Badge>
+                </div>
+              )}
               <div className="text-xs text-muted-foreground">
                 Bankruptcy triggers if balance falls below the credit limit or stays negative for {MAX_OVERDRAFT_DAYS} consecutive days.
+                {' '}Finishing shows already booked still pays out while bankrupt — or take a loan below.
               </div>
-              {(gameState.isBankrupt || gameState.company.balance < 0) && (
-                <Button className="w-full" variant="outline" onClick={handleEmergencyLoan}>
-                  Request Emergency Loan (+$5,000)
-                </Button>
-              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <Banknote className="h-4 w-4" /> Bank Loan
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Outstanding balance</span>
+                <span className={`font-semibold ${loanBalance > 0 ? 'text-destructive' : ''}`}>
+                  {formatCurrency(loanBalance)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">Available credit</span>
+                <span className="font-semibold">{formatCurrency(availableCredit)}</span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                1% daily interest accrues on any outstanding balance. Credit limit scales with reputation.
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {[1000, 2500].map(amount => (
+                  <Button
+                    key={`take-${amount}`}
+                    variant="outline"
+                    size="sm"
+                    disabled={amount > availableCredit}
+                    onClick={() => handleTakeLoan(amount)}
+                  >
+                    Borrow {formatCurrency(amount)}
+                  </Button>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {[500, 2000].map(amount => (
+                  <Button
+                    key={`repay-${amount}`}
+                    variant="outline"
+                    size="sm"
+                    disabled={loanBalance <= 0 || gameState.company.balance <= 0}
+                    onClick={() => handleRepayLoan(Math.min(amount, loanBalance))}
+                  >
+                    Repay {formatCurrency(Math.min(amount, loanBalance || amount))}
+                  </Button>
+                ))}
+              </div>
             </CardContent>
           </Card>
 

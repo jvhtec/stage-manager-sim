@@ -75,7 +75,11 @@ export function completeEvent(
   eventId: string,
   satisfaction: number,
 ): { state: GameState; result: EventCompletionSummary | undefined } {
-  if (state.isBankrupt) {
+  // Deliberately NOT blocked by isBankrupt: a show already staffed and
+  // rented is a sunk cost either way, and finishing it to collect payment
+  // is one of the few ways out of a cash crunch. Only a genuine game over
+  // stops it.
+  if (state.isGameOver) {
     return { state, result: undefined };
   }
 

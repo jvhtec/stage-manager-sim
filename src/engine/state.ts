@@ -4,6 +4,7 @@ import {
   Event,
   GameState,
   ReputationSnapshot,
+  RunSummary,
 } from '@/types/game';
 import {
   generateInitialCrew,
@@ -16,8 +17,9 @@ import { createRng, createRandomSeed } from '@/lib/rng';
 
 export const SAVE_STORAGE_KEY = 'stage-manager-sim:save';
 // Bump whenever the GameState shape changes in a way old saves can't satisfy.
-// v2: added rngState (seeded PRNG) — older saves lack it and are discarded.
-export const SAVE_SCHEMA_VERSION = 2;
+// v2: added rngState (seeded PRNG). v3: added loanBalance, daysElapsed,
+// bankruptStreak, isGameOver, runSummary — older saves lack them and are discarded.
+export const SAVE_SCHEMA_VERSION = 3;
 
 interface SaveFile {
   version: number;
@@ -131,6 +133,7 @@ export function createNewGameState(): GameState {
       ],
       creditLimit: -5000,
       overdraftDays: 0,
+      loanBalance: 0,
     },
     isBankrupt: false,
     crises: [],
@@ -139,5 +142,37 @@ export function createNewGameState(): GameState {
     reputationHistory,
     hasCompletedOnboarding: false,
     rngState: rng.getState(),
+    daysElapsed: 0,
+    bankruptStreak: 0,
+    isGameOver: false,
+    runSummary: undefined,
   } as GameState;
+}
+
+/** Snapshot for the game-over screen — computed once, at the moment the run ends. */
+export function buildRunSummary(state: GameState, reason: string): RunSummary {
+  const sortedTransactions = [...state.finances.transactions].sort(
+    (a, b) => a.date.getTime() - b.date.getTime(),
+  );
+  let running = 0;
+  let peakBalance = 0;
+  sortedTransactions.forEach(txn => {
+    running += txn.type === 'income' ? txn.amount : -txn.amount;
+    peakBalance = Math.max(peakBalance, running);
+  });
+
+  const peakReputation = state.reputationHistory.reduce(
+    (max, snapshot) => Math.max(max, snapshot.playerReputation),
+    state.company.reputation,
+  );
+
+  return {
+    endedOn: new Date(state.currentDate),
+    reason,
+    daysSurvived: state.daysElapsed,
+    showsCompleted: state.events.filter(e => e.status === 'completed').length,
+    peakBalance,
+    peakReputation,
+    finalBalance: state.company.balance,
+  };
 }

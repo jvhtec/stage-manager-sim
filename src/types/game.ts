@@ -43,6 +43,8 @@ export interface FinancesState {
   transactions: FinancialTransaction[];
   creditLimit: number;
   overdraftDays: number;
+  /** Outstanding principal on the bank loan lever (0 = no active loan). */
+  loanBalance: number;
 }
 
 export interface EquipmentRequirement {
@@ -253,4 +255,20 @@ export interface GameState {
   hasCompletedOnboarding: boolean;
   /** Current state of the seeded PRNG driving contract/crew/competitor rolls. */
   rngState: number;
+  /** Total in-game days elapsed since founding; drives weekly payroll/monthly rent cadence. */
+  daysElapsed: number;
+  /** Consecutive days isBankrupt has been true; resets to 0 the moment it isn't. */
+  bankruptStreak: number;
+  isGameOver: boolean;
+  runSummary?: RunSummary;
+}
+
+export interface RunSummary {
+  endedOn: Date;
+  reason: string;
+  daysSurvived: number;
+  showsCompleted: number;
+  peakBalance: number;
+  peakReputation: number;
+  finalBalance: number;
 }

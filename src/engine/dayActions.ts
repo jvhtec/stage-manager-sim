@@ -4,18 +4,23 @@ import { applyDailyMoraleDrift } from '@/lib/crewProgression';
 import { getEquipmentDefinition } from '@/lib/equipment';
 import { rebuildAllPlannedCrises } from '@/lib/crisis';
 import { evaluateFinancialState } from '@/lib/finance';
+import { calculateStandingCosts, GAME_OVER_BANKRUPT_STREAK_DAYS } from '@/lib/economy';
 import {
   progressCompetitorSchedules,
   simulateCompetitorBidding,
 } from '@/lib/competitors';
 import { createRng } from '@/lib/rng';
-import { buildReputationSnapshot } from './state';
+import { buildReputationSnapshot, buildRunSummary } from './state';
 
 export function advanceDay(state: GameState): GameState {
-  if (state.isBankrupt) return state;
+  // Bankruptcy alone no longer freezes time — bills keep coming, and the
+  // player can still take a loan or finish an in-progress show to recover.
+  // Only a genuine game over stops the clock.
+  if (state.isGameOver) return state;
 
   const newDate = new Date(state.currentDate);
   newDate.setDate(newDate.getDate() + 1);
+  const daysElapsed = state.daysElapsed + 1;
 
   const rng = createRng(state.rngState);
 
@@ -123,14 +128,27 @@ export function advanceDay(state: GameState): GameState {
     state.company.name,
   );
 
+  // Standing costs land regardless of whether a show happened today — this
+  // is what makes "do nothing" a losing strategy instead of a free option.
+  const standingCosts = calculateStandingCosts(
+    lifecycle.crew,
+    lifecycle.equipment,
+    state.finances.loanBalance,
+    daysElapsed,
+    newDate,
+  );
+  const allNewTransactions = [...lifecycle.transactions, ...standingCosts.transactions];
+
   const newBalance =
     state.company.balance -
-    lifecycle.transactions.reduce(
+    allNewTransactions.reduce(
       (sum, txn) => sum + (txn.type === 'expense' ? txn.amount : -txn.amount),
       0,
     );
   const { overdraftDays, isBankrupt } = evaluateFinancialState(state.finances, newBalance);
   const newReputation = Math.max(0, Math.min(100, state.company.reputation + lifecycle.reputationDelta));
+  const bankruptStreak = isBankrupt ? state.bankruptStreak + 1 : 0;
+  const isGameOver = bankruptStreak >= GAME_OVER_BANKRUPT_STREAK_DAYS;
 
   const recalculatedCrises = rebuildAllPlannedCrises(
     state.crises,
@@ -153,9 +171,10 @@ export function advanceDay(state: GameState): GameState {
   );
   const reputationHistory = [...state.reputationHistory, snapshot].slice(-45);
 
-  return {
+  const nextState: GameState = {
     ...state,
     currentDate: newDate,
+    daysElapsed,
     events: lifecycle.events,
     crew: lifecycle.crew,
     equipment: lifecycle.equipment,
@@ -166,16 +185,31 @@ export function advanceDay(state: GameState): GameState {
     },
     finances: {
       ...state.finances,
-      transactions: lifecycle.transactions.length
-        ? [...state.finances.transactions, ...lifecycle.transactions]
+      transactions: allNewTransactions.length
+        ? [...state.finances.transactions, ...allNewTransactions]
         : state.finances.transactions,
+      loanBalance: state.finances.loanBalance + standingCosts.loanInterestAccrued,
       overdraftDays,
     },
     crises: recalculatedCrises,
     isBankrupt,
+    bankruptStreak,
+    isGameOver,
     competitors: biddingWithSchedule.competitors,
     marketNews: nextNews,
     reputationHistory,
     rngState: rng.getState(),
   };
+
+  if (isGameOver) {
+    return {
+      ...nextState,
+      runSummary: buildRunSummary(
+        nextState,
+        `${state.company.name} could not recover from ${bankruptStreak} consecutive days bankrupt.`,
+      ),
+    };
+  }
+
+  return nextState;
 }

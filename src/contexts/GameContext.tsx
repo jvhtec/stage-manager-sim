@@ -28,6 +28,7 @@ import {
 } from '@/engine/companyActions';
 import { advanceDay as advanceDayAction } from '@/engine/dayActions';
 import { updateBalance as updateBalanceAction } from '@/engine/financeActions';
+import { takeLoan as takeLoanAction, repayLoan as repayLoanAction } from '@/engine/loanActions';
 import type { ActionResult, CompanyIdentityInput, EventCompletionSummary } from '@/engine/types';
 
 interface GameContextType {
@@ -80,6 +81,8 @@ interface GameContextType {
     updates: Partial<Pick<Company, 'brandColor' | 'accentColor' | 'tagline'>>,
   ) => void;
   resetGame: () => void;
+  takeLoan: (amount: number) => ActionResult;
+  repayLoan: (amount: number) => ActionResult;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -104,6 +107,26 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const resetGame = () => {
     clearSavedGameState();
     setGameState(createNewGameState());
+  };
+
+  const takeLoan = (amount: number): ActionResult => {
+    let result: ActionResult = { success: false, reason: 'Unable to process loan' };
+    setGameState(prev => {
+      const outcome = takeLoanAction(prev, amount);
+      result = outcome.result;
+      return outcome.state;
+    });
+    return result;
+  };
+
+  const repayLoan = (amount: number): ActionResult => {
+    let result: ActionResult = { success: false, reason: 'Unable to process repayment' };
+    setGameState(prev => {
+      const outcome = repayLoanAction(prev, amount);
+      result = outcome.result;
+      return outcome.state;
+    });
+    return result;
   };
 
   const hireCrew = (crew: CrewMember) => {
@@ -236,6 +259,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       completeCompanyOnboarding,
       updateCompanyIdentity,
       resetGame,
+      takeLoan,
+      repayLoan,
     }}>
       {children}
     </GameContext.Provider>

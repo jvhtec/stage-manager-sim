@@ -90,9 +90,18 @@ describe('completeEvent', () => {
     expect(nextState).toBe(state);
   });
 
-  it('refuses to complete anything while bankrupt', () => {
+  it('still allows finishing an already-committed show while bankrupt — it is a way out, not blocked', () => {
     const { state, eventId } = fullyStaffedAndEquippedState();
     const accepted = { ...acceptEvent(state, eventId), isBankrupt: true };
+
+    const { result } = completeEvent(accepted, eventId, 80);
+
+    expect(result).toBeDefined();
+  });
+
+  it('refuses to complete anything once the game is truly over', () => {
+    const { state, eventId } = fullyStaffedAndEquippedState();
+    const accepted = { ...acceptEvent(state, eventId), isGameOver: true };
 
     const { result } = completeEvent(accepted, eventId, 80);
 

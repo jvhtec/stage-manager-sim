@@ -222,16 +222,37 @@ This is the phase that changes the genre from "dashboard" to "tycoon."
      crisis intensity all derive from rep bands (0–25 bar gigs → 75+ arena shows).
    - Make `Company.level` real: derive it from reputation milestones, use it to gate
      equipment tiers and (later) tours/festivals. Surface "next unlock at rep X" in the UI.
-4. **Economic pressure.** Weekly payroll for the standing roster (not just per-event),
-   monthly warehouse rent scaled to owned inventory. Add one recovery lever: a bank loan
-   (principal + daily interest as ledger entries) so bankruptcy becomes avoidable-by-choice.
-5. **Real game over + restart.** If bankruptcy sticks (credit limit breached N days), show a
-   run-summary screen (days survived, shows played, peak balance/rep) with "Start New
-   Company" wired to the Phase 0 reset.
+4. **Economic pressure** *(done)*. `src/lib/economy.ts`'s `calculateStandingCosts()`, applied
+   every `advanceDay`:
+   - Weekly (every 7 days) crew retainer — `hourlyRate × 6h` per crew member, charged whether
+     or not they worked a show. Deliberately *not* a full 40h/week wage: this industry's crew
+     are freelance, and a full salaried model would bankrupt a fresh $15k-balance company
+     within two weeks doing nothing wrong. Verified against the starting roster: ~$1,890/week,
+     ~$7,560 over an idle month — real pressure, not an instant trap.
+   - Monthly (every 30 days) warehouse overhead — a base fee plus a per-owned-item charge.
+   - **Bank loan lever** (`src/engine/loanActions.ts`, `takeLoan`/`repayLoan`, wired into the
+     Finances page): principal capped by a reputation-scaled credit limit
+     (`calculateMaxLoanAmount`), 1%/day interest charged as its own ledger transaction and
+     added to the principal. This is the "avoidable by choice" escape hatch the plan called
+     for — it replaces a placeholder "Emergency Loan (+$5,000)" button that was literally free
+     money with no debt tracking at all.
+5. **Real game over + restart** *(done)*. Bankruptcy no longer freezes `advanceDay` — bills
+   still land, and `completeEvent` is deliberately *not* blocked by `isBankrupt` (finishing an
+   already-staffed show to collect payment is one of the few ways out; blocking it made the
+   old soft-lock worse). `GameState.bankruptStreak` counts consecutive bankrupt days; at
+   `GAME_OVER_BANKRUPT_STREAK_DAYS` (5) a real `isGameOver: true` triggers, with a
+   `RunSummary` (days survived, shows completed, peak balance/reputation) computed once from
+   the transaction ledger. `GameOverDialog` (new component, same blocking-modal pattern as
+   onboarding) shows the summary and wires "Start a New Company" to the existing reset. The
+   Dashboard's "Next Day" button only disables on `isGameOver` now, not `isBankrupt`.
 
-**Exit criteria:** it is possible to *lose*; skipping "Next Day" forever is not viable;
-two players with different prep get visibly different show outcomes; a full
-session (new game → several shows → game over or thriving) works without a refresh.
+**Exit criteria met**: it is possible to *lose* — verified end-to-end in a real browser
+(forced bankruptcy → `bankruptStreak` climbs → `GameOverDialog` appears with a correct
+summary → "Start a New Company" resets cleanly); skipping "Next Day" forever is no longer
+free (weekly retainer bites); a full session (new game → idle days → loan → repayment →
+bankruptcy → game over → restart) works without a refresh, zero console errors across 5
+screenshots. The "two players with different prep get visibly different show outcomes" half
+of this exit criteria was already satisfied by the show-day preparation score (Phase 1 §2).
 
 ### Phase 2 — Depth: roster, gear, and market as strategic layers
 
@@ -314,9 +335,13 @@ survivable only with deliberate gear strategy; both are unlockables, not day-1 n
 5. ✅ **Engine extraction** *(done, with one deliberate deviation)* — see Phase 0 §2 above.
    `GameContext.tsx` is down to ~250 lines; every mutation lives in `src/engine/**` as a pure,
    tested function.
+6. ✅ **Economic pressure + real game over** *(done)* — see Phase 1 §4-5 above. Weekly
+   retainer, monthly overhead, a real bank loan, and bankruptcy that ends in an actual
+   game-over screen instead of a frozen dashboard.
 
-All five items from the original "first three PRs" plus the two Phase 1 items tackled since
-are now done. Next up: Phase 1 §3-5 (difficulty/reputation-gated contract scaling, weekly
-payroll/rent as real economic pressure, and a proper game-over/restart flow) — these are what's
-left to make a losing run and a winning run actually feel different, which is the last gap
-before Phase 2 (hiring market, gear marketplace, crew traits) is worth starting.
+Everything from the original plan is done except Phase 1 §3 (reputation-gated contract
+scaling and a real `Company.level`) — that's the one remaining item before Phase 2 (hiring
+market, gear marketplace, crew traits) is the more valuable place to spend effort. Contract
+pay/requirements/venue-tier and crisis intensity currently don't scale with reputation at all,
+so day 100 offers the same gigs as day 1 — the last piece of "make a losing run and a winning
+run feel different."

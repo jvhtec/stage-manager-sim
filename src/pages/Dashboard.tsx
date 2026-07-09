@@ -35,12 +35,15 @@ import type { Company, Event, MarketNewsTone } from '@/types/game';
 import { useReputationSummary } from '@/hooks/useReputationSummary';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { GAME_OVER_BANKRUPT_STREAK_DAYS } from '@/lib/economy';
+import { GameOverDialog } from '@/components/GameOverDialog';
 
 export default function Dashboard() {
   const { gameState, advanceDay, completeCompanyOnboarding, resetGame } = useGame();
   const navigate = useNavigate();
   const financialSummary = useFinancialSummary();
   const reputationSummary = useReputationSummary();
+  const daysUntilGameOver = GAME_OVER_BANKRUPT_STREAK_DAYS - gameState.bankruptStreak;
 
   const specializationLabels: Record<Company['specialization'], string> = {
     audio: 'Audio Specialist',
@@ -148,6 +151,12 @@ export default function Dashboard() {
         onComplete={completeCompanyOnboarding}
         disableClose={!gameState.hasCompletedOnboarding}
       />
+      <GameOverDialog
+        open={gameState.isGameOver}
+        companyName={gameState.company.name}
+        runSummary={gameState.runSummary}
+        onStartNewCompany={resetGame}
+      />
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Header */}
@@ -195,11 +204,11 @@ export default function Dashboard() {
               <Button
                 onClick={advanceDay}
                 variant="outline"
-                disabled={gameState.isBankrupt || !gameState.hasCompletedOnboarding}
+                disabled={gameState.isGameOver || !gameState.hasCompletedOnboarding}
               >
                 <Play className="mr-2 h-4 w-4" />
-                {gameState.isBankrupt
-                  ? 'Resolve Bankruptcy'
+                {gameState.isGameOver
+                  ? 'Game Over'
                   : gameState.hasCompletedOnboarding
                     ? 'Next Day'
                     : 'Finish Setup'}
@@ -207,12 +216,16 @@ export default function Dashboard() {
             </div>
           </div>
 
-        {gameState.isBankrupt && (
+        {gameState.isBankrupt && !gameState.isGameOver && (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Bankruptcy in Effect</AlertTitle>
             <AlertDescription>
-              Balance has fallen below the credit limit. Clear outstanding debts from the Finances view to resume operations.
+              Balance has fallen below the credit limit. Time keeps moving — finish shows
+              already booked to collect payment, or take a loan from the Finances view.{' '}
+              {daysUntilGameOver > 0
+                ? `${daysUntilGameOver} more day${daysUntilGameOver === 1 ? '' : 's'} bankrupt and this company folds.`
+                : 'One more bankrupt day and this company folds.'}
             </AlertDescription>
           </Alert>
         )}
