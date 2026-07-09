@@ -7,6 +7,7 @@ import {
   Event,
 } from '@/types/game';
 import { isEventEquipmentReady, isEventFullyStaffed } from './gameData';
+import { getCrisisIntensityMultiplierForTier } from './reputationTiers';
 
 interface CrisisContext {
   crew: CrewMember[];
@@ -404,7 +405,21 @@ export function generateCrisisPrompts(
     return true;
   });
 
-  return filtered;
+  // Higher-tier shows carry higher stakes: the venue tier is fixed at the
+  // moment the contract was booked, so a show's crisis intensity doesn't
+  // retroactively change if the company's reputation later drifts.
+  const intensity = getCrisisIntensityMultiplierForTier(event.venueTier);
+  if (intensity === 1) {
+    return filtered;
+  }
+
+  return filtered.map(prompt => ({
+    ...prompt,
+    baseSatisfactionPenalty: Math.round(prompt.baseSatisfactionPenalty * intensity),
+    baseFinancialPenalty: prompt.baseFinancialPenalty
+      ? Math.round(prompt.baseFinancialPenalty * intensity)
+      : prompt.baseFinancialPenalty,
+  }));
 }
 
 export function mergeExistingCrisisState(

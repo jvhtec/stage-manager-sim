@@ -155,6 +155,8 @@ export interface Event {
   name: string;
   type: EventType;
   date: Date;
+  /** Reputation tier (1-4) this contract was booked at — fixed at generation, drives pay/requirements/crisis stakes. */
+  venueTier: number;
   startHour: number; // 0-23
   status: EventStatus;
   venue: string;

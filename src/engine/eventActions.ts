@@ -13,9 +13,10 @@ import {
   isEventEquipmentReady,
   isEventFullyStaffed,
 } from '@/lib/gameData';
-import { evaluateCrisisOutcomes } from '@/lib/crisis';
+import { evaluateCrisisOutcomes, rebuildEventCrises } from '@/lib/crisis';
 import { applyExperienceGain, ExperienceGainResult } from '@/lib/crewProgression';
 import { createTransaction, evaluateFinancialState } from '@/lib/finance';
+import { syncCompanyLevel } from '@/lib/reputationTiers';
 import type { EventCompletionSummary } from './types';
 
 export function acceptEvent(state: GameState, eventId: string): GameState {
@@ -39,6 +40,21 @@ export function acceptEvent(state: GameState, eventId: string): GameState {
       : e.bids;
     return { ...e, status: 'planned' as const, bids: clearedBids };
   });
+  const updatedEvent = updatedEvents.find(e => e.id === eventId);
+  // Crises are only ever generated for planned/in-progress events, and
+  // acceptEvent is what makes that transition — so this is the first
+  // moment planning-stage (and eventually execution-stage) risk prompts
+  // for this show come into existence.
+  const updatedCrises = updatedEvent
+    ? rebuildEventCrises(
+        state.crises,
+        updatedEvent,
+        state.crew,
+        state.equipment,
+        state.company.reputation,
+        state.company.specialization,
+      )
+    : state.crises;
 
   const updatedCompetitors = state.competitors.map(competitor =>
     competitor.activeBids.includes(eventId)
@@ -65,6 +81,7 @@ export function acceptEvent(state: GameState, eventId: string): GameState {
   return {
     ...state,
     events: updatedEvents,
+    crises: updatedCrises,
     competitors: updatedCompetitors,
     marketNews: nextNews,
   };
@@ -236,11 +253,11 @@ export function completeEvent(
 
   const nextState: GameState = {
     ...state,
-    company: {
+    company: syncCompanyLevel({
       ...state.company,
       balance: newBalance,
       reputation: Math.min(100, state.company.reputation + reputationGain),
-    },
+    }),
     events: state.events.map(e => {
       if (e.id === eventId) {
         const postEventReport: EventPostReport = {

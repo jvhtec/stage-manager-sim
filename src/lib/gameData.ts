@@ -15,6 +15,7 @@ import {
   getWearForEvent,
 } from './equipment';
 import type { Rng } from './rng';
+import { getReputationTier, getCompanyLevel } from './reputationTiers';
 
 const firstNames = ['Alex', 'Jordan', 'Sam', 'Riley', 'Casey', 'Morgan', 'Taylor', 'Jamie', 'Chris', 'Avery'];
 const lastNames = ['Chen', 'Smith', 'Johnson', 'Martinez', 'Brown', 'Davis', 'Wilson', 'Moore', 'Taylor', 'Anderson'];
@@ -117,9 +118,15 @@ export function generateInitialCrew(rng: Rng, currentDate: Date): CrewMember[] {
   ];
 }
 
-export function generateEvent(date: Date, type: 'gig' | 'tour' | 'festival', rng: Rng): Event {
-  const venues = ['The Warehouse', 'City Arena', 'Blue Moon Club', 'Metro Theater', 'Riverside Hall', 'Central Auditorium'];
+export function generateEvent(
+  date: Date,
+  type: 'gig' | 'tour' | 'festival',
+  rng: Rng,
+  reputation: number,
+): Event {
   const eventNames = ['Rock Night', 'Jazz Evening', 'EDM Festival', 'Corporate Event', 'Comedy Show', 'Music Awards'];
+
+  const tier = getReputationTier(reputation);
 
   const startHour = type === 'festival'
     ? 12 + rng.nextInt(4) // Midday start for festivals
@@ -145,6 +152,13 @@ export function generateEvent(date: Date, type: 'gig' | 'tour' | 'festival', rng
     festival: 25000,
   };
 
+  const requirements = {
+    audio: baseRequirements[type].audio + (tier.requirementBonus.audio ?? 0),
+    lighting: baseRequirements[type].lighting + (tier.requirementBonus.lighting ?? 0),
+    video: baseRequirements[type].video + (tier.requirementBonus.video ?? 0),
+    stage: baseRequirements[type].stage + (tier.requirementBonus.stage ?? 0),
+  };
+
   const equipmentRequirements = getEquipmentRequirementsForEvent(type);
 
   const acceptBy = new Date(date);
@@ -155,11 +169,12 @@ export function generateEvent(date: Date, type: 'gig' | 'tour' | 'festival', rng
     name: rng.pick(eventNames),
     type,
     date,
+    venueTier: tier.level,
     startHour,
     status: 'available',
-    venue: rng.pick(venues),
-    clientPay: basePay[type] + rng.nextInt(1000),
-    requirements: baseRequirements[type],
+    venue: rng.pick(tier.venues),
+    clientPay: Math.round(basePay[type] * tier.payMultiplier) + rng.nextInt(1000),
+    requirements,
     equipmentRequirements,
     assignedCrew: {
       audio: [],
@@ -188,12 +203,13 @@ export function generateInitialEquipmentInventory(currentDate: Date = new Date()
 
 export function createInitialCompany(overrides: Partial<Company> = {}): Company {
   const basePreset = brandingPresets.find(preset => preset.id === 'balanced-studio') ?? brandingPresets[0];
+  const startingReputation = 50;
 
   const baseCompany: Company = {
     name: 'Sector Pro Productions',
     balance: 15000,
-    reputation: 50,
-    level: 1,
+    reputation: startingReputation,
+    level: getCompanyLevel(startingReputation),
     brandColor: basePreset.brandColor,
     accentColor: basePreset.accentColor,
     specialization: basePreset.specialization,

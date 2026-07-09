@@ -1,6 +1,7 @@
 import { Company, CrewMember, EquipmentItem, GameState, MarketNewsItem } from '@/types/game';
 import { rebuildAllPlannedCrises } from '@/lib/crisis';
 import { createTransaction, evaluateFinancialState } from '@/lib/finance';
+import { syncCompanyLevel } from '@/lib/reputationTiers';
 import type { CompanyIdentityInput } from './types';
 
 const specializationLabels: Record<Company['specialization'], string> = {
@@ -110,11 +111,11 @@ export function completeCompanyOnboarding(
       break;
   }
 
-  const updatedCompany: Company = {
+  const updatedCompany: Company = syncCompanyLevel({
     ...baseCompany,
     balance: adjustedBalance,
     reputation: adjustedReputation,
-  };
+  });
 
   const updatedCompetitors = state.competitors.map(competitor => ({
     ...competitor,

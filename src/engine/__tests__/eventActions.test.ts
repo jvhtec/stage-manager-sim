@@ -9,7 +9,7 @@ import type { Department } from '@/types/game';
 
 function fullyStaffedAndEquippedState() {
   const state = createNewGameState();
-  const event = generateEvent(new Date('2026-08-01'), 'gig', createRng(1));
+  const event = generateEvent(new Date('2026-08-01'), 'gig', createRng(1), 50);
   let working = { ...state, events: [...state.events, event] };
 
   (['audio', 'lighting', 'video', 'stage'] as Department[]).forEach(dept => {
@@ -50,12 +50,25 @@ describe('acceptEvent', () => {
 
   it('leaves an understaffed event untouched', () => {
     const state = createNewGameState();
-    const event = generateEvent(new Date('2026-08-01'), 'gig', createRng(1));
+    const event = generateEvent(new Date('2026-08-01'), 'gig', createRng(1), 50);
     const withEvent = { ...state, events: [...state.events, event] };
 
     const nextState = acceptEvent(withEvent, event.id);
 
     expect(nextState.events.find(e => e.id === event.id)?.status).toBe('available');
+  });
+
+  it('generates risk/crisis prompts for the event now that it is planned', () => {
+    // Regression test: crises are only ever generated for planned/in-progress
+    // events, and acceptEvent is what makes that transition. A prior refactor
+    // silently dropped this, which meant no accepted show ever got a crisis
+    // prompt (not even the always-on "spot check" fallback) for the entire
+    // pre-show risk panel and show-day flow.
+    const { state, eventId } = fullyStaffedAndEquippedState();
+    const nextState = acceptEvent(state, eventId);
+
+    const eventCrises = nextState.crises.filter(c => c.eventId === eventId);
+    expect(eventCrises.length).toBeGreaterThan(0);
   });
 });
 
@@ -106,5 +119,18 @@ describe('completeEvent', () => {
     const { result } = completeEvent(accepted, eventId, 80);
 
     expect(result).toBeUndefined();
+  });
+
+  it('bumps company.level when reputation gains cross a tier boundary', () => {
+    const { state, eventId } = fullyStaffedAndEquippedState();
+    const nearTierThree = {
+      ...acceptEvent(state, eventId),
+      company: { ...state.company, reputation: 59, level: 2 }, // tier 3 starts at 60
+    };
+
+    const { state: nextState } = completeEvent(nearTierThree, eventId, 100);
+
+    expect(nextState.company.reputation).toBeGreaterThanOrEqual(60);
+    expect(nextState.company.level).toBe(3);
   });
 });

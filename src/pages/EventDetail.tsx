@@ -18,6 +18,7 @@ import {
   isEventEquipmentReady,
 } from '@/lib/gameData';
 import { getEquipmentDefinition } from '@/lib/equipment';
+import { REPUTATION_TIERS } from '@/lib/reputationTiers';
 import {
   CrewMember,
   Department,
@@ -77,6 +78,8 @@ export default function EventDetail() {
   const { setupStart, eventStart, teardownComplete } = getEventTimeWindow(event);
   const recoveryDays = getCrewRecoveryDays(event);
   const showGraceDeadline = getShowGraceDeadline(event);
+  const venueTierLabel =
+    REPUTATION_TIERS.find(tier => tier.level === event.venueTier)?.label ?? 'Local Circuit';
 
   const fatigueThreshold = 85;
 
@@ -220,6 +223,7 @@ export default function EventDetail() {
                 <Badge className={event.type === 'festival' ? 'bg-video' : event.type === 'tour' ? 'bg-accent' : 'bg-primary'}>
                   {event.type.toUpperCase()}
                 </Badge>
+                <Badge variant="outline">{venueTierLabel}</Badge>
               </div>
               <div className="flex items-center gap-4 text-muted-foreground">
                 <span className="flex items-center gap-1">

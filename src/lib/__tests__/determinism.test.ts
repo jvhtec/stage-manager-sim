@@ -14,11 +14,11 @@ describe('seeded RNG determinism', () => {
   it('generates identical events from the same seed', () => {
     const eventsA = Array.from({ length: 5 }, (_, i) => {
       const rng = createRng(42);
-      return generateEvent(new Date(`2026-0${(i % 9) + 1}-01`), 'gig', rng);
+      return generateEvent(new Date(`2026-0${(i % 9) + 1}-01`), 'gig', rng, 50);
     });
     const eventsB = Array.from({ length: 5 }, (_, i) => {
       const rng = createRng(42);
-      return generateEvent(new Date(`2026-0${(i % 9) + 1}-01`), 'gig', rng);
+      return generateEvent(new Date(`2026-0${(i % 9) + 1}-01`), 'gig', rng, 50);
     });
 
     eventsA.forEach((event, i) => {
@@ -31,8 +31,8 @@ describe('seeded RNG determinism', () => {
   it('generates different events from different seeds', () => {
     const rngA = createRng(1);
     const rngB = createRng(2);
-    const eventA = generateEvent(new Date('2026-08-01'), 'gig', rngA);
-    const eventB = generateEvent(new Date('2026-08-01'), 'gig', rngB);
+    const eventA = generateEvent(new Date('2026-08-01'), 'gig', rngA, 50);
+    const eventB = generateEvent(new Date('2026-08-01'), 'gig', rngB, 50);
 
     // At least one of the rolled fields should differ between seeds.
     const differs =
@@ -69,7 +69,7 @@ describe('seeded RNG determinism', () => {
       const rolls: unknown[] = [];
       rolls.push(rng.chance(0.3));
       rolls.push(rng.nextInt(14));
-      rolls.push(generateEvent(new Date('2026-09-01'), 'gig', rng));
+      rolls.push(generateEvent(new Date('2026-09-01'), 'gig', rng, 50));
       rolls.push(rng.nextRange(0, 100));
       return { rolls, finalState: rng.getState() };
     }

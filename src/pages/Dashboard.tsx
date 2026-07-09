@@ -36,6 +36,7 @@ import { useReputationSummary } from '@/hooks/useReputationSummary';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { GAME_OVER_BANKRUPT_STREAK_DAYS } from '@/lib/economy';
+import { getTierProgress } from '@/lib/reputationTiers';
 import { GameOverDialog } from '@/components/GameOverDialog';
 
 export default function Dashboard() {
@@ -44,6 +45,7 @@ export default function Dashboard() {
   const financialSummary = useFinancialSummary();
   const reputationSummary = useReputationSummary();
   const daysUntilGameOver = GAME_OVER_BANKRUPT_STREAK_DAYS - gameState.bankruptStreak;
+  const tierProgress = getTierProgress(gameState.company.reputation);
 
   const specializationLabels: Record<Company['specialization'], string> = {
     audio: 'Audio Specialist',
@@ -167,6 +169,9 @@ export default function Dashboard() {
                   {gameState.company.name}
                 </h1>
                 <Badge style={brandBadgeStyle}>{specializationLabel}</Badge>
+                <Badge variant="outline">
+                  Level {gameState.company.level} · {tierProgress.current.label}
+                </Badge>
               </div>
               {gameState.company.tagline && gameState.company.tagline.length > 0 && (
                 <p className="text-sm font-medium" style={taglineStyle}>
@@ -175,6 +180,11 @@ export default function Dashboard() {
               )}
               <p className="text-muted-foreground">
                 {format(gameState.currentDate, 'EEEE, MMMM dd, yyyy')}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {tierProgress.next
+                  ? `${tierProgress.repToNext} more reputation to ${tierProgress.next.label} — bigger venues, bigger pay, higher stakes.`
+                  : 'Top tier reached — the biggest venues and the highest stakes.'}
               </p>
             </div>
             <div className="flex gap-2">

@@ -217,11 +217,37 @@ This is the phase that changes the genre from "dashboard" to "tycoon."
      performance phase itself, and no crew traits ("Calm Under Pressure") influencing options.
      That's real content work for the crisis library (Phase 2's traits item is the natural
      home for it), not a wiring problem.
-3. **Difficulty and progression curve.**
-   - Contract generation scales with reputation: pay, requirement counts, venue tier, and
-     crisis intensity all derive from rep bands (0–25 bar gigs → 75+ arena shows).
-   - Make `Company.level` real: derive it from reputation milestones, use it to gate
-     equipment tiers and (later) tours/festivals. Surface "next unlock at rep X" in the UI.
+3. **Difficulty and progression curve** *(done for gigs; tours/festivals remain Phase 3)*.
+   `src/lib/reputationTiers.ts` defines 4 bands calibrated around the 50-reputation starting
+   point (Local Circuit 0-34, Regional Touring 35-59, National Headliner 60-84, World Class
+   85-100), each with its own venue pool, pay multiplier (0.75x-2.4x), and — from tier 3
+   up — an added crew requirement on top of the gig baseline (tiers 1-2 keep the exact
+   original 2/1/1/2 requirement so a fresh company's first contracts never outgrow the
+   starting 7-person roster).
+   - `generateEvent()` now takes the company's reputation and picks venue/pay/requirements
+     from the matching tier; `Event.venueTier` is fixed at generation time so a contract's
+     stakes don't retroactively change if reputation later drifts.
+   - Crisis intensity scales too: `generateCrisisPrompts()` multiplies `baseSatisfactionPenalty`
+     / `baseFinancialPenalty` by the event's own `venueTier` multiplier (0.85x-1.45x) — bigger
+     shows are harder to fully mitigate even with the best available choice, by design.
+   - `Company.level` is real now (`syncCompanyLevel()`, called everywhere reputation changes:
+     `completeEvent`, `advanceDay`'s lifecycle delta, `completeCompanyOnboarding`'s balanced
+     bonus) and surfaced in the UI: a "Level N · Tier Label" badge plus a "X more reputation to
+     Y" hint on the Dashboard, and a venue-tier badge on `EventDetail`.
+   - Verified in a real browser: boosting reputation to 90 correctly generated tier-4
+     contracts (Skydome Stadium, $6,249) with the tier-3+ requirement bonus visibly applied
+     (Audio 0/4 instead of the baseline 0/2), and the level badge tracked a reputation dip
+     from an unrelated missed show mid-test — the systems compose correctly together.
+   - **Regression caught and fixed along the way**: the engine extraction two commits prior
+     had silently dropped `acceptEvent`'s `rebuildEventCrises` call. Crises are only ever
+     generated for `planned`/`in-progress` events, and `acceptEvent` is the only place that
+     makes that transition — so no accepted show got a crisis prompt (not even the always-on
+     "spot check" fallback) until the next `advanceDay`, which separately calls
+     `rebuildAllPlannedCrises` and papered over the gap. That's exactly why it slipped past
+     the extraction's own browser verification: every prior smoke test advanced several days
+     between accepting and reaching Show Day. Fixed, with a regression test
+     (`eventActions.test.ts`) and a browser check of the specific window (immediately after
+     accept, before any day advances).
 4. **Economic pressure** *(done)*. `src/lib/economy.ts`'s `calculateStandingCosts()`, applied
    every `advanceDay`:
    - Weekly (every 7 days) crew retainer — `hourlyRate × 6h` per crew member, charged whether
@@ -338,10 +364,14 @@ survivable only with deliberate gear strategy; both are unlockables, not day-1 n
 6. ✅ **Economic pressure + real game over** *(done)* — see Phase 1 §4-5 above. Weekly
    retainer, monthly overhead, a real bank loan, and bankruptcy that ends in an actual
    game-over screen instead of a frozen dashboard.
+7. ✅ **Difficulty and progression curve** *(done)* — see Phase 1 §3 above. Reputation now
+   gates venue, pay, and requirements for gigs, `Company.level` is real, and crisis stakes
+   scale with the tier a show was booked at.
 
-Everything from the original plan is done except Phase 1 §3 (reputation-gated contract
-scaling and a real `Company.level`) — that's the one remaining item before Phase 2 (hiring
-market, gear marketplace, crew traits) is the more valuable place to spend effort. Contract
-pay/requirements/venue-tier and crisis intensity currently don't scale with reputation at all,
-so day 100 offers the same gigs as day 1 — the last piece of "make a losing run and a winning
-run feel different."
+**Every item from Phase 0 and Phase 1 is now done** (tours/festivals stay deferred to Phase 3,
+as originally scoped — they were never meant to land here). Day 100 finally looks different
+from day 1: better reputation unlocks bigger venues, bigger pay, harder requirements, and
+higher-stakes crises; an idle company bleeds cash; bankruptcy either resolves through a loan
+or a finished show, or ends the run for real. Phase 2 (hiring market, gear marketplace, crew
+traits) is the natural next place to spend effort — the core loop this plan set out to fix is
+complete.

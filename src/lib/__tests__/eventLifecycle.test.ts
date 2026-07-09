@@ -38,7 +38,7 @@ function makeEquipment(id: string, assignedToEvent?: string): EquipmentItem {
 
 describe('applyEventLifecycle', () => {
   it('expires an available contract past acceptBy with no active bids', () => {
-    const event = generateEvent(new Date('2026-07-20'), 'gig', rng);
+    const event = generateEvent(new Date('2026-07-20'), 'gig', rng, 50);
     event.status = 'available';
     event.acceptBy = new Date('2026-07-10');
     event.bids = [];
@@ -55,7 +55,7 @@ describe('applyEventLifecycle', () => {
   });
 
   it('leaves an available contract alone before its accept deadline', () => {
-    const event = generateEvent(new Date('2026-07-20'), 'gig', rng);
+    const event = generateEvent(new Date('2026-07-20'), 'gig', rng, 50);
     event.status = 'available';
     event.acceptBy = new Date('2026-07-18');
     event.bids = [];
@@ -67,7 +67,7 @@ describe('applyEventLifecycle', () => {
   });
 
   it('leaves an available contract alone while a competitor bid is still active', () => {
-    const event = generateEvent(new Date('2026-07-20'), 'gig', rng);
+    const event = generateEvent(new Date('2026-07-20'), 'gig', rng, 50);
     event.status = 'available';
     event.acceptBy = new Date('2026-07-10');
     event.bids = [
@@ -80,7 +80,7 @@ describe('applyEventLifecycle', () => {
   });
 
   it('flips a planned event to in-progress on its show date', () => {
-    const event = generateEvent(new Date('2026-07-11'), 'gig', rng);
+    const event = generateEvent(new Date('2026-07-11'), 'gig', rng, 50);
     event.status = 'planned';
 
     const result = applyEventLifecycle([event], [], [], new Date('2026-07-11T09:00:00'), 'Sector Pro');
@@ -89,7 +89,7 @@ describe('applyEventLifecycle', () => {
   });
 
   it('leaves a planned event alone before its show date', () => {
-    const event = generateEvent(new Date('2026-07-20'), 'gig', rng);
+    const event = generateEvent(new Date('2026-07-20'), 'gig', rng, 50);
     event.status = 'planned';
 
     const result = applyEventLifecycle([event], [], [], new Date('2026-07-11'), 'Sector Pro');
@@ -98,7 +98,7 @@ describe('applyEventLifecycle', () => {
   });
 
   it('auto-fails an in-progress show past its grace deadline, charges a penalty, and frees crew/gear', () => {
-    const event = generateEvent(new Date('2026-07-01'), 'gig', rng);
+    const event = generateEvent(new Date('2026-07-01'), 'gig', rng, 50);
     event.status = 'in-progress';
     event.clientPay = 3000;
 
@@ -128,7 +128,7 @@ describe('applyEventLifecycle', () => {
   });
 
   it('does not touch an in-progress show still inside its grace window', () => {
-    const event = generateEvent(new Date('2026-07-11'), 'gig', rng);
+    const event = generateEvent(new Date('2026-07-11'), 'gig', rng, 50);
     event.status = 'in-progress';
 
     const result = applyEventLifecycle([event], [], [], new Date('2026-07-11T20:00:00'), 'Sector Pro');
@@ -138,9 +138,9 @@ describe('applyEventLifecycle', () => {
   });
 
   it('leaves completed and already-failed events untouched', () => {
-    const completed = generateEvent(new Date('2026-01-01'), 'gig', rng);
+    const completed = generateEvent(new Date('2026-01-01'), 'gig', rng, 50);
     completed.status = 'completed';
-    const failed = generateEvent(new Date('2026-01-01'), 'gig', rng);
+    const failed = generateEvent(new Date('2026-01-01'), 'gig', rng, 50);
     failed.status = 'failed';
     failed.lostReason = 'Already resolved.';
 

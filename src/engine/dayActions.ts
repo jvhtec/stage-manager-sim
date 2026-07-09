@@ -10,6 +10,7 @@ import {
   simulateCompetitorBidding,
 } from '@/lib/competitors';
 import { createRng } from '@/lib/rng';
+import { syncCompanyLevel } from '@/lib/reputationTiers';
 import { buildReputationSnapshot, buildRunSummary } from './state';
 
 export function advanceDay(state: GameState): GameState {
@@ -29,7 +30,7 @@ export function advanceDay(state: GameState): GameState {
   if (rng.chance(0.3)) {
     const futureDate = new Date(newDate);
     futureDate.setDate(futureDate.getDate() + rng.nextInt(14) + 7);
-    eventsWithNewContracts.push(generateEvent(futureDate, 'gig', rng));
+    eventsWithNewContracts.push(generateEvent(futureDate, 'gig', rng, state.company.reputation));
   }
 
   const expiredRentalIds: string[] = [];
@@ -178,11 +179,11 @@ export function advanceDay(state: GameState): GameState {
     events: lifecycle.events,
     crew: lifecycle.crew,
     equipment: lifecycle.equipment,
-    company: {
+    company: syncCompanyLevel({
       ...state.company,
       balance: newBalance,
       reputation: newReputation,
-    },
+    }),
     finances: {
       ...state.finances,
       transactions: allNewTransactions.length

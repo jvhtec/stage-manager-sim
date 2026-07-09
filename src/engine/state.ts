@@ -99,16 +99,16 @@ export function buildReputationSnapshot(
 export function createNewGameState(): GameState {
   const now = new Date();
   const rng = createRng(createRandomSeed());
+  const company = createInitialCompany();
   const events: Event[] = [];
 
   // Generate 5 available gigs over the next 2 weeks
   for (let i = 0; i < 5; i++) {
     const date = new Date(now);
     date.setDate(date.getDate() + 3 + i * 2);
-    events.push(generateEvent(date, 'gig', rng));
+    events.push(generateEvent(date, 'gig', rng, company.reputation));
   }
 
-  const company = createInitialCompany();
   const equipment = generateInitialEquipmentInventory(now);
   const competitors = generateInitialCompetitors(company, rng);
   const marketNews = createInitialMarketNews(competitors, company, now);

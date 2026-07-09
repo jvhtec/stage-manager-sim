@@ -7,7 +7,7 @@ import type { CrewMember } from '@/types/game';
 
 function baseState() {
   const state = createNewGameState();
-  const event = generateEvent(new Date('2026-08-01'), 'gig', createRng(1));
+  const event = generateEvent(new Date('2026-08-01'), 'gig', createRng(1), 50);
   return { ...state, events: [...state.events, event] };
 }
 
@@ -40,8 +40,8 @@ describe('assignCrewToEvent', () => {
   it('rejects a crew member already assigned to a different event', () => {
     const state = baseState();
     const [eventA, eventB] = [
-      generateEvent(new Date('2026-08-05'), 'gig', createRng(2)),
-      generateEvent(new Date('2026-08-06'), 'gig', createRng(3)),
+      generateEvent(new Date('2026-08-05'), 'gig', createRng(2), 50),
+      generateEvent(new Date('2026-08-06'), 'gig', createRng(3), 50),
     ];
     const withEvents = { ...state, events: [...state.events, eventA, eventB] };
     const crew = withEvents.crew.find(c => c.department === 'audio')!;
