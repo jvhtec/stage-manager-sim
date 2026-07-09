@@ -124,16 +124,33 @@ The unglamorous work everything else stands on.
    versioned localStorage autosave of `GameState` on every change, restore on boot, ISO-date
    revival, "New Game" reset. Old/incompatible save versions are discarded rather than
    half-loaded.
-2. **Extract the engine from React** *(not started)*. Convert `GameContext.tsx` into:
-   - `src/engine/state.ts` — `GameState` factory + save serialization (schema version lives here)
-   - `src/engine/reducer.ts` — pure `(state, action) => state` covering every mutation the
-     context does today (assign/unassign, accept, complete, advanceDay, crisis response, …)
-   - `src/engine/` modules absorb `lib/gameData.ts`, `lib/crisis.ts`, `lib/competitors.ts` rules
-   - `GameContext.tsx` shrinks to `useReducer` + convenience callbacks. UI behavior unchanged.
-   - Note: `src/lib/**` already holds all the pure sim logic and is where `showDay.ts` and
-     `applyEventLifecycle()` landed too — a rename to `src/engine/` is cosmetic (touches every
-     `@/lib/...` import for zero behavior change) and is deferred until this item is actually
-     tackled, rather than done piecemeal now.
+2. **Extract the engine from React** *(done, with one deliberate deviation)*. `src/engine/`
+   now holds:
+   - `state.ts` — `GameState` factory + save serialization (schema version lives here)
+   - `crewActions.ts`, `equipmentActions.ts`, `eventActions.ts`, `crisisActions.ts`,
+     `companyActions.ts`, `dayActions.ts` — every mutation `GameContext.tsx` used to do inline
+     inside a `setGameState(prev => {...})` callback is now a standalone exported function
+     shaped `(state: GameState, ...args) => GameState` (or `{ state, result }` for the ~6
+     actions that report a result back to the caller — assign/rent/maintenance/crisis-response
+     all return `{success, reason?}`-shaped results the UI reads synchronously for toasts).
+   - **Deviation from the original plan text**: no literal `useReducer`/discriminated
+     action-type union. `GameContext.tsx` (1,626 → ~250 lines) keeps `useState` and calls these
+     functions directly inside the same `setGameState(prev => ...)` pattern it always used —
+     each wrapper is now 3-5 lines instead of 20-230. This achieves every stated goal (pure,
+     testable, no React in the engine, `GameContext.tsx` shrinks to thin orchestration) without
+     inventing an out-of-band mechanism for actions that need to return a value synchronously,
+     which a raw reducer can't do without extra machinery. If a real reason to formalize
+     dispatch/action-types shows up later (undo/redo, action logging), revisit then.
+   - `src/lib/**` keeps the domain rule modules (`gameData.ts`, `crisis.ts`, `competitors.ts`,
+     `equipment.ts`, `crewProgression.ts`, `finance.ts`) — `src/engine/` calls into them. No
+     `lib/` → `engine/` rename; that's still cosmetic churn for zero behavior change.
+   - Verified with 43 tests (`src/engine/__tests__/*`, plus the existing `src/lib/__tests__/*`)
+     and a full-surface browser smoke test exercising every single action in the app
+     (onboarding, staffing, accept, rent, maintenance, hire, day-advance, crisis response,
+     show-day completion, new-game reset) with zero console errors.
+   - Bonus find from writing these tests: `generateCrewMember`'s `availableOn` used wall-clock
+     `new Date()` instead of game time — the same bug class already fixed for transactions.
+     Fixed by threading `currentDate` through `generateCrewMember`/`generateInitialCrew`.
 3. **Seeded RNG** *(done)*. `src/lib/rng.ts`'s `createRng(seed)` (mulberry32) is threaded
    through every *automatic* simulation surface: initial game boot (starting crew, contracts,
    competitors) and `advanceDay`'s cascade (new-contract rolls, event terms, crew morale
@@ -290,22 +307,16 @@ survivable only with deliberate gear strategy; both are unlockables, not day-1 n
 
 1. ✅ **Persistence + New Game** *(done)* — autosave/restore/reset.
 2. ✅ **Seeded RNG** *(done)* — see Phase 0 §3 above. vitest itself landed with this PR too.
-   **Still outstanding from the original "engine extraction" item**: turning `GameContext.tsx`
-   (1,600+ lines) into `useReducer` over a pure reducer/action-type split. The RNG work didn't
-   need that split to be safe — every function it touched was already a plain exported
-   function taking explicit arguments, just missing the rng one — but Phase 2's hiring
-   market/gear marketplace/traits will keep growing `GameContext.tsx` if the reducer split
-   keeps getting deferred.
 3. ✅ **Event lifecycle + missed-show penalties** *(done)* — see Phase 1 §1 above.
 4. ✅ **Show-day resolution screen** *(mostly done)* — see Phase 1 §2 above. The remaining
    piece (randomized live-show incidents, crew traits) is crisis-library content work, not
    plumbing.
+5. ✅ **Engine extraction** *(done, with one deliberate deviation)* — see Phase 0 §2 above.
+   `GameContext.tsx` is down to ~250 lines; every mutation lives in `src/engine/**` as a pure,
+   tested function.
 
-Next up: the `GameContext.tsx` → `useReducer` split (Phase 0 §2) is the one item from the
-original three that's still genuinely untouched, or — if Phase 2 content feels more
-valuable right now — start the hiring market / gear marketplace and accept `GameContext.tsx`
-growing a bit more before the reducer split happens.
-
-Next up: item 2, the engine extraction — `GameContext.tsx` has grown with every feature
-(1,600+ lines) and Phase 2's hiring market / gear marketplace / traits work will keep adding
-to it unless the reducer split happens first.
+All five items from the original "first three PRs" plus the two Phase 1 items tackled since
+are now done. Next up: Phase 1 §3-5 (difficulty/reputation-gated contract scaling, weekly
+payroll/rent as real economic pressure, and a proper game-over/restart flow) — these are what's
+left to make a losing run and a winning run actually feel different, which is the last gap
+before Phase 2 (hiring market, gear marketplace, crew traits) is worth starting.

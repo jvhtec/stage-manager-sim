@@ -45,8 +45,9 @@ describe('seeded RNG determinism', () => {
   });
 
   it('generates identical starting crews from the same seed', () => {
-    const crewA = generateInitialCrew(createRng(7));
-    const crewB = generateInitialCrew(createRng(7));
+    const referenceDate = new Date('2026-07-09');
+    const crewA = generateInitialCrew(createRng(7), referenceDate);
+    const crewB = generateInitialCrew(createRng(7), referenceDate);
 
     expect(withoutIds(crewA)).toEqual(withoutIds(crewB));
   });

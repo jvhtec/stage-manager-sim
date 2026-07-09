@@ -423,6 +423,72 @@ export function mergeExistingCrisisState(
   });
 }
 
+/**
+ * Recomputes the crisis prompts for a single event after something about it
+ * changed (crew/equipment assignment, status transition), preserving any
+ * resolution the player already locked in.
+ */
+export function rebuildEventCrises(
+  existingCrises: CrisisPrompt[],
+  updatedEvent: Event,
+  updatedCrew: CrewMember[],
+  updatedEquipment: EquipmentItem[],
+  companyReputation: number,
+  companySpecialization: string,
+): CrisisPrompt[] {
+  const shouldTrack =
+    updatedEvent.status === 'planned' || updatedEvent.status === 'in-progress';
+
+  const remaining = existingCrises.filter(crisis => crisis.eventId !== updatedEvent.id);
+  if (!shouldTrack) {
+    return remaining;
+  }
+
+  const generated = generateCrisisPrompts(updatedEvent, {
+    crew: updatedCrew,
+    equipment: updatedEquipment,
+    companyReputation,
+    companySpecialization,
+  });
+
+  const merged = mergeExistingCrisisState(
+    generated,
+    existingCrises.filter(crisis => crisis.eventId === updatedEvent.id),
+  );
+
+  return [...remaining, ...merged];
+}
+
+/** Same as rebuildEventCrises, but reconciles every planned/in-progress event at once. */
+export function rebuildAllPlannedCrises(
+  existingCrises: CrisisPrompt[],
+  events: Event[],
+  crew: CrewMember[],
+  equipment: EquipmentItem[],
+  companyReputation: number,
+  companySpecialization: string,
+): CrisisPrompt[] {
+  const prompts: CrisisPrompt[] = [];
+
+  events.forEach(event => {
+    if (event.status === 'planned' || event.status === 'in-progress') {
+      const generated = generateCrisisPrompts(event, {
+        crew,
+        equipment,
+        companyReputation,
+        companySpecialization,
+      });
+      const merged = mergeExistingCrisisState(
+        generated,
+        existingCrises.filter(crisis => crisis.eventId === event.id),
+      );
+      prompts.push(...merged);
+    }
+  });
+
+  return prompts;
+}
+
 export function evaluateCrisisOutcomes(
   event: Event,
   prompts: CrisisPrompt[],

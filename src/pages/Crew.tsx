@@ -43,7 +43,7 @@ export default function Crew() {
     // part of the seeded sim, so a one-off wall-clock rng is fine here.
     const rng = createRng(Date.now());
     const skillLevel = 3 + rng.nextInt(5); // 3-7
-    const newCrew = generateCrewMember(department, skillLevel, rng);
+    const newCrew = generateCrewMember(department, skillLevel, rng, gameState.currentDate);
     const hiringCost = 500; // Base hiring cost
 
     if (gameState.company.balance < hiringCost) {

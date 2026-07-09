@@ -1,6 +1,35 @@
-import { FinancialCategory, FinancialTransaction } from '@/types/game';
+import { FinancesState, FinancialCategory, FinancialTransaction } from '@/types/game';
 
 export const MAX_OVERDRAFT_DAYS = 5;
+
+export function createTransaction(
+  gameDate: Date,
+  type: FinancialTransaction['type'],
+  amount: number,
+  description: string,
+  category: FinancialCategory,
+  eventId?: string,
+): FinancialTransaction {
+  return {
+    id: `txn-${Date.now()}-${Math.random()}`,
+    date: new Date(gameDate),
+    type,
+    amount,
+    description,
+    category,
+    eventId,
+  };
+}
+
+export function evaluateFinancialState(
+  finances: FinancesState,
+  newBalance: number,
+): { overdraftDays: number; isBankrupt: boolean } {
+  const overdraftDays = newBalance < 0 ? finances.overdraftDays + 1 : 0;
+  const isBankrupt = newBalance < finances.creditLimit || overdraftDays >= MAX_OVERDRAFT_DAYS;
+
+  return { overdraftDays, isBankrupt };
+}
 
 export interface CategorySummary {
   category: FinancialCategory;

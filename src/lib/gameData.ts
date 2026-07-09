@@ -81,7 +81,12 @@ export function getBrandingPresets(): BrandingPreset[] {
   return brandingPresets;
 }
 
-export function generateCrewMember(department: Department, skillLevel: number, rng: Rng): CrewMember {
+export function generateCrewMember(
+  department: Department,
+  skillLevel: number,
+  rng: Rng,
+  currentDate: Date,
+): CrewMember {
   const firstName = rng.pick(firstNames);
   const lastName = rng.pick(lastNames);
   const progression = initializeCrewProgression(department, skillLevel, rng);
@@ -94,21 +99,21 @@ export function generateCrewMember(department: Department, skillLevel: number, r
     hourlyRate: 20 + (skillLevel * 5),
     fatigue: rng.nextInt(30),
     morale: 70 + rng.nextInt(30),
-    availableOn: new Date(),
+    availableOn: new Date(currentDate),
     experience: progression.experience,
     certifications: progression.certifications,
   };
 }
 
-export function generateInitialCrew(rng: Rng): CrewMember[] {
+export function generateInitialCrew(rng: Rng, currentDate: Date): CrewMember[] {
   return [
-    generateCrewMember('audio', 6, rng),
-    generateCrewMember('audio', 4, rng),
-    generateCrewMember('lighting', 5, rng),
-    generateCrewMember('lighting', 4, rng),
-    generateCrewMember('video', 5, rng),
-    generateCrewMember('stage', 6, rng),
-    generateCrewMember('stage', 5, rng),
+    generateCrewMember('audio', 6, rng, currentDate),
+    generateCrewMember('audio', 4, rng, currentDate),
+    generateCrewMember('lighting', 5, rng, currentDate),
+    generateCrewMember('lighting', 4, rng, currentDate),
+    generateCrewMember('video', 5, rng, currentDate),
+    generateCrewMember('stage', 6, rng, currentDate),
+    generateCrewMember('stage', 5, rng, currentDate),
   ];
 }
 
