@@ -5,7 +5,10 @@ import {
   getPhaseForCrisisPrompt,
 } from '../showDay';
 import { generateEvent } from '../gameData';
+import { createRng } from '../rng';
 import type { CrewMember, EquipmentItem } from '@/types/game';
+
+const rng = createRng(1);
 
 function makeCrew(overrides: Partial<CrewMember> = {}): CrewMember {
   return {
@@ -54,7 +57,7 @@ describe('getPhaseForCrisisPrompt', () => {
 
 describe('calculatePreparationScore', () => {
   it('scores a well-rested, high-skill, well-maintained crew highly', () => {
-    const event = generateEvent(new Date('2026-08-01'), 'gig');
+    const event = generateEvent(new Date('2026-08-01'), 'gig', rng);
     const crew = makeCrew({ skillLevel: 9, fatigue: 5 });
     event.assignedCrew.audio = [crew];
     event.assignedEquipment.audio = ['eq-1'];
@@ -65,7 +68,7 @@ describe('calculatePreparationScore', () => {
   });
 
   it('scores a tired, low-skill crew on worn gear poorly', () => {
-    const event = generateEvent(new Date('2026-08-01'), 'gig');
+    const event = generateEvent(new Date('2026-08-01'), 'gig', rng);
     const crew = makeCrew({ skillLevel: 1, fatigue: 90 });
     event.assignedCrew.audio = [crew];
     event.assignedEquipment.audio = ['eq-1'];
@@ -76,7 +79,7 @@ describe('calculatePreparationScore', () => {
   });
 
   it('falls back to defaults when nobody is assigned (no crew, no gear)', () => {
-    const event = generateEvent(new Date('2026-08-01'), 'gig');
+    const event = generateEvent(new Date('2026-08-01'), 'gig', rng);
     const score = calculatePreparationScore(event, [], []);
     // skillComponent=0 (no crew), restComponent=100 (avgFatigue defaults to 0),
     // conditionComponent=100 (no gear defaults neutral-good): 0*.45 + 100*.25 + 100*.3

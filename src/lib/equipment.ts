@@ -230,6 +230,8 @@ export function createEquipmentItem(
   overrides: Partial<EquipmentItem> = {}
 ): EquipmentItem {
   const definition = EQUIPMENT_DEFINITIONS[type];
+  // Not seeded: every current caller (generateInitialEquipment, createRentalEquipment)
+  // passes an explicit condition override, so this default is presently unreachable.
   const baseCondition = overrides.condition ?? (80 + Math.floor(Math.random() * 15));
   const maintenanceDue = new Date(overrides.maintenanceDue ?? currentDate);
   maintenanceDue.setDate(maintenanceDue.getDate() + definition.maintenanceIntervalDays);

@@ -14,6 +14,7 @@ import {
   getEquipmentRequirementsForEvent,
   getWearForEvent,
 } from './equipment';
+import type { Rng } from './rng';
 
 const firstNames = ['Alex', 'Jordan', 'Sam', 'Riley', 'Casey', 'Morgan', 'Taylor', 'Jamie', 'Chris', 'Avery'];
 const lastNames = ['Chen', 'Smith', 'Johnson', 'Martinez', 'Brown', 'Davis', 'Wilson', 'Moore', 'Taylor', 'Anderson'];
@@ -80,10 +81,10 @@ export function getBrandingPresets(): BrandingPreset[] {
   return brandingPresets;
 }
 
-export function generateCrewMember(department: Department, skillLevel: number = 5): CrewMember {
-  const firstName = firstNames[Math.floor(Math.random() * firstNames.length)];
-  const lastName = lastNames[Math.floor(Math.random() * lastNames.length)];
-  const progression = initializeCrewProgression(department, skillLevel);
+export function generateCrewMember(department: Department, skillLevel: number, rng: Rng): CrewMember {
+  const firstName = rng.pick(firstNames);
+  const lastName = rng.pick(lastNames);
+  const progression = initializeCrewProgression(department, skillLevel, rng);
 
   return {
     id: `crew-${Date.now()}-${Math.random()}`,
@@ -91,68 +92,68 @@ export function generateCrewMember(department: Department, skillLevel: number = 
     department,
     skillLevel,
     hourlyRate: 20 + (skillLevel * 5),
-    fatigue: Math.floor(Math.random() * 30),
-    morale: 70 + Math.floor(Math.random() * 30),
+    fatigue: rng.nextInt(30),
+    morale: 70 + rng.nextInt(30),
     availableOn: new Date(),
     experience: progression.experience,
     certifications: progression.certifications,
   };
 }
 
-export function generateInitialCrew(): CrewMember[] {
+export function generateInitialCrew(rng: Rng): CrewMember[] {
   return [
-    generateCrewMember('audio', 6),
-    generateCrewMember('audio', 4),
-    generateCrewMember('lighting', 5),
-    generateCrewMember('lighting', 4),
-    generateCrewMember('video', 5),
-    generateCrewMember('stage', 6),
-    generateCrewMember('stage', 5),
+    generateCrewMember('audio', 6, rng),
+    generateCrewMember('audio', 4, rng),
+    generateCrewMember('lighting', 5, rng),
+    generateCrewMember('lighting', 4, rng),
+    generateCrewMember('video', 5, rng),
+    generateCrewMember('stage', 6, rng),
+    generateCrewMember('stage', 5, rng),
   ];
 }
 
-export function generateEvent(date: Date, type: 'gig' | 'tour' | 'festival' = 'gig'): Event {
+export function generateEvent(date: Date, type: 'gig' | 'tour' | 'festival', rng: Rng): Event {
   const venues = ['The Warehouse', 'City Arena', 'Blue Moon Club', 'Metro Theater', 'Riverside Hall', 'Central Auditorium'];
   const eventNames = ['Rock Night', 'Jazz Evening', 'EDM Festival', 'Corporate Event', 'Comedy Show', 'Music Awards'];
 
   const startHour = type === 'festival'
-    ? 12 + Math.floor(Math.random() * 4) // Midday start for festivals
+    ? 12 + rng.nextInt(4) // Midday start for festivals
     : type === 'tour'
-      ? 16 + Math.floor(Math.random() * 3) // Late afternoon/evening for tours
-      : 18 + Math.floor(Math.random() * 3); // Evening club gigs
+      ? 16 + rng.nextInt(3) // Late afternoon/evening for tours
+      : 18 + rng.nextInt(3); // Evening club gigs
 
   const travelHours = type === 'festival'
-    ? 10 + Math.floor(Math.random() * 4)
+    ? 10 + rng.nextInt(4)
     : type === 'tour'
-      ? 6 + Math.floor(Math.random() * 4)
-      : 3 + Math.floor(Math.random() * 3);
-  
+      ? 6 + rng.nextInt(4)
+      : 3 + rng.nextInt(3);
+
   const baseRequirements = {
     gig: { audio: 2, lighting: 1, video: 1, stage: 2 },
     tour: { audio: 3, lighting: 2, video: 1, stage: 3 },
     festival: { audio: 5, lighting: 4, video: 3, stage: 6 },
   };
-  
+
   const basePay = {
     gig: 2500,
     tour: 8000,
     festival: 25000,
   };
-  
+
   const equipmentRequirements = getEquipmentRequirementsForEvent(type);
 
   const acceptBy = new Date(date);
-  acceptBy.setDate(acceptBy.getDate() - Math.floor(Math.random() * 3) - 1);
+  acceptBy.setDate(acceptBy.getDate() - rng.nextInt(3) - 1);
 
   return {
     id: `event-${Date.now()}-${Math.random()}`,
-    name: eventNames[Math.floor(Math.random() * eventNames.length)],
+    name: rng.pick(eventNames),
     type,
     date,
     startHour,
     status: 'available',
-    venue: venues[Math.floor(Math.random() * venues.length)],
-    clientPay: basePay[type] + Math.floor(Math.random() * 1000),
+    venue: rng.pick(venues),
+    clientPay: basePay[type] + rng.nextInt(1000),
     requirements: baseRequirements[type],
     equipmentRequirements,
     assignedCrew: {

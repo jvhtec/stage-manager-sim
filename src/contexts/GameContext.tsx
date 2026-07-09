@@ -50,6 +50,7 @@ import {
   simulateCompetitorBidding,
   progressCompetitorSchedules,
 } from '@/lib/competitors';
+import { createRng, createRandomSeed } from '@/lib/rng';
 
 type CompanyIdentityInput = Pick<
   Company,
@@ -134,7 +135,8 @@ const GameContext = createContext<GameContextType | undefined>(undefined);
 
 const SAVE_STORAGE_KEY = 'stage-manager-sim:save';
 // Bump whenever the GameState shape changes in a way old saves can't satisfy.
-const SAVE_SCHEMA_VERSION = 1;
+// v2: added rngState (seeded PRNG) — older saves lack it and are discarded.
+const SAVE_SCHEMA_VERSION = 2;
 
 interface SaveFile {
   version: number;
@@ -183,24 +185,25 @@ function persistGameState(state: GameState) {
 
 function createNewGameState(): GameState {
   const now = new Date();
+  const rng = createRng(createRandomSeed());
   const events: Event[] = [];
 
   // Generate 5 available gigs over the next 2 weeks
   for (let i = 0; i < 5; i++) {
     const date = new Date(now);
     date.setDate(date.getDate() + 3 + i * 2);
-    events.push(generateEvent(date, 'gig'));
+    events.push(generateEvent(date, 'gig', rng));
   }
 
   const company = createInitialCompany();
   const equipment = generateInitialEquipmentInventory(now);
-  const competitors = generateInitialCompetitors(company);
+  const competitors = generateInitialCompetitors(company, rng);
   const marketNews = createInitialMarketNews(competitors, company, now);
   const reputationHistory = [buildReputationSnapshot(company, competitors, now)];
 
   return {
     company,
-    crew: generateInitialCrew(),
+    crew: generateInitialCrew(rng),
     equipment,
     events,
     currentDate: now,
@@ -224,6 +227,7 @@ function createNewGameState(): GameState {
     marketNews,
     reputationHistory,
     hasCompletedOnboarding: false,
+    rngState: rng.getState(),
   } as GameState;
 }
 
@@ -1396,12 +1400,14 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const newDate = new Date(prev.currentDate);
       newDate.setDate(newDate.getDate() + 1);
 
+      const rng = createRng(prev.rngState);
+
       // Generate new events occasionally
       const eventsWithNewContracts = [...prev.events];
-      if (Math.random() > 0.7) {
+      if (rng.chance(0.3)) {
         const futureDate = new Date(newDate);
-        futureDate.setDate(futureDate.getDate() + Math.floor(Math.random() * 14) + 7);
-        eventsWithNewContracts.push(generateEvent(futureDate, 'gig'));
+        futureDate.setDate(futureDate.getDate() + rng.nextInt(14) + 7);
+        eventsWithNewContracts.push(generateEvent(futureDate, 'gig', rng));
       }
 
       const expiredRentalIds: string[] = [];
@@ -1477,15 +1483,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           ...c,
           fatigue: Math.max(0, c.fatigue - 5),
         };
-        return applyDailyMoraleDrift(recovered, newDate);
+        return applyDailyMoraleDrift(recovered, newDate, rng);
       });
 
-      const scheduleProgress = progressCompetitorSchedules(prev.competitors, newDate);
+      const scheduleProgress = progressCompetitorSchedules(prev.competitors, newDate, rng);
       const biddingWithSchedule = simulateCompetitorBidding({
         events: cleanedEvents,
         competitors: scheduleProgress.competitors,
         currentDate: newDate,
         playerCompany: prev.company,
+        rng,
       });
 
       // Runs after competitor bidding so contracts get one last day of
@@ -1553,6 +1560,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         competitors: biddingWithSchedule.competitors,
         marketNews: nextNews,
         reputationHistory,
+        rngState: rng.getState(),
       };
     });
   };

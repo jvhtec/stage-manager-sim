@@ -251,4 +251,6 @@ export interface GameState {
   marketNews: MarketNewsItem[];
   reputationHistory: ReputationSnapshot[];
   hasCompletedOnboarding: boolean;
+  /** Current state of the seeded PRNG driving contract/crew/competitor rolls. */
+  rngState: number;
 }

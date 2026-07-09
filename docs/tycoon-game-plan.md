@@ -124,15 +124,30 @@ The unglamorous work everything else stands on.
    versioned localStorage autosave of `GameState` on every change, restore on boot, ISO-date
    revival, "New Game" reset. Old/incompatible save versions are discarded rather than
    half-loaded.
-2. **Extract the engine from React.** Convert `GameContext.tsx` into:
+2. **Extract the engine from React** *(not started)*. Convert `GameContext.tsx` into:
    - `src/engine/state.ts` — `GameState` factory + save serialization (schema version lives here)
    - `src/engine/reducer.ts` — pure `(state, action) => state` covering every mutation the
      context does today (assign/unassign, accept, complete, advanceDay, crisis response, …)
    - `src/engine/` modules absorb `lib/gameData.ts`, `lib/crisis.ts`, `lib/competitors.ts` rules
    - `GameContext.tsx` shrinks to `useReducer` + convenience callbacks. UI behavior unchanged.
-3. **Seeded RNG.** Single `Rng` instance (mulberry32 or similar) threaded through the engine;
-   seed stored in `GameState`. `Math.random()` becomes forbidden in `src/engine/**` (ESLint
-   `no-restricted-properties`). This is what makes outcomes reproducible and testable.
+   - Note: `src/lib/**` already holds all the pure sim logic and is where `showDay.ts` and
+     `applyEventLifecycle()` landed too — a rename to `src/engine/` is cosmetic (touches every
+     `@/lib/...` import for zero behavior change) and is deferred until this item is actually
+     tackled, rather than done piecemeal now.
+3. **Seeded RNG** *(done)*. `src/lib/rng.ts`'s `createRng(seed)` (mulberry32) is threaded
+   through every *automatic* simulation surface: initial game boot (starting crew, contracts,
+   competitors) and `advanceDay`'s cascade (new-contract rolls, event terms, crew morale
+   drift, competitor bidding/schedule progression). `GameState.rngState` persists the current
+   generator state so a saved-and-reloaded game continues the same sequence rather than
+   reseeding. Proven in `src/lib/__tests__/determinism.test.ts`: same seed → byte-identical
+   (minus ids) events/crew/competitors, and a simulated multi-step "day" replays exactly.
+   Deliberately left un-seeded: entity id suffixes (uniqueness only, not a gameplay outcome —
+   still plain `Date.now() + Math.random()`), and `Crew.tsx`'s manual "hire a candidate"
+   button (a one-off UI action outside the day-tick loop, given its own local
+   `createRng(Date.now())`). The `no-restricted-properties` ESLint rule forbidding
+   `Math.random()` outright isn't added yet — doing so now would also need to flag those two
+   intentional exceptions, so it's left for whoever does item 2 above and can decide the
+   final file boundary at the same time.
 4. **Game-clock everywhere.** Every transaction, bid, news item, and snapshot is stamped with
    sim time (`state.currentDate`), never `new Date()`. Fixes the ledger/trend-chart corruption.
 5. **Test harness.** Add vitest + a `test` script. First tests are engine round-trips:
@@ -274,15 +289,22 @@ survivable only with deliberate gear strategy; both are unlockables, not day-1 n
 ## 6. Suggested first three PRs
 
 1. ✅ **Persistence + New Game** *(done)* — autosave/restore/reset.
-2. **Engine extraction + seeded RNG** — vitest itself landed alongside PR 3 (it needed a
-   harness to test the lifecycle rules), and `showDay.ts`/`gameData.ts`'s lifecycle functions
-   are already pure and tested in isolation. What's still outstanding is the big one: turning
-   `GameContext.tsx` into `useReducer` over a pure reducer, and a seeded RNG to replace the
-   scattered `Math.random()` calls in `gameData.ts`/`crisis.ts`/`competitors.ts`.
+2. ✅ **Seeded RNG** *(done)* — see Phase 0 §3 above. vitest itself landed with this PR too.
+   **Still outstanding from the original "engine extraction" item**: turning `GameContext.tsx`
+   (1,600+ lines) into `useReducer` over a pure reducer/action-type split. The RNG work didn't
+   need that split to be safe — every function it touched was already a plain exported
+   function taking explicit arguments, just missing the rng one — but Phase 2's hiring
+   market/gear marketplace/traits will keep growing `GameContext.tsx` if the reducer split
+   keeps getting deferred.
 3. ✅ **Event lifecycle + missed-show penalties** *(done)* — see Phase 1 §1 above.
 4. ✅ **Show-day resolution screen** *(mostly done)* — see Phase 1 §2 above. The remaining
    piece (randomized live-show incidents, crew traits) is crisis-library content work, not
    plumbing.
+
+Next up: the `GameContext.tsx` → `useReducer` split (Phase 0 §2) is the one item from the
+original three that's still genuinely untouched, or — if Phase 2 content feels more
+valuable right now — start the hiring market / gear marketplace and accept `GameContext.tsx`
+growing a bit more before the reducer split happens.
 
 Next up: item 2, the engine extraction — `GameContext.tsx` has grown with every feature
 (1,600+ lines) and Phase 2's hiring market / gear marketplace / traits work will keep adding

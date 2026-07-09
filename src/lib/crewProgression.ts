@@ -1,4 +1,5 @@
 import { CrewMember, Department, Event } from '@/types/game';
+import type { Rng } from './rng';
 
 export const MAX_SKILL_LEVEL = 10;
 
@@ -72,12 +73,12 @@ export function getExperienceThresholdForLevel(level: number) {
   return 100 + (level - 1) * 40;
 }
 
-export function initializeCrewProgression(department: Department, skillLevel: number) {
+export function initializeCrewProgression(department: Department, skillLevel: number, rng: Rng) {
   const certificationsNeeded = CERTIFICATION_THRESHOLDS.filter(
     threshold => skillLevel >= threshold,
   ).length;
   const certifications = DEPARTMENT_CERTIFICATIONS[department].slice(0, certificationsNeeded);
-  const experience = Math.floor(Math.random() * Math.max(10, getExperienceThresholdForLevel(skillLevel)));
+  const experience = rng.nextInt(Math.max(10, getExperienceThresholdForLevel(skillLevel)));
 
   return { experience, certifications };
 }
@@ -177,21 +178,21 @@ export function applyExperienceGain(
   };
 }
 
-export function applyDailyMoraleDrift(crew: CrewMember, currentDate: Date): CrewMember {
+export function applyDailyMoraleDrift(crew: CrewMember, currentDate: Date, rng: Rng): CrewMember {
   const moraleRecovery = crew.morale < 80 ? 1 : 0;
   let morale = clamp(crew.morale + moraleRecovery, 0, 100);
   let recentMoraleShift = crew.recentMoraleShift;
 
-  const roll = Math.random();
+  const roll = rng.next();
   if (roll < 0.08) {
-    const event = POSITIVE_MORALE_EVENTS[Math.floor(Math.random() * POSITIVE_MORALE_EVENTS.length)];
+    const event = rng.pick(POSITIVE_MORALE_EVENTS);
     morale = clamp(morale + event.delta, 0, 100);
     recentMoraleShift = {
       ...createMoraleShift(event.description, event.delta, event.delta >= 0 ? 'positive' : 'negative'),
       date: currentDate,
     };
   } else if (roll > 0.92) {
-    const event = NEGATIVE_MORALE_EVENTS[Math.floor(Math.random() * NEGATIVE_MORALE_EVENTS.length)];
+    const event = rng.pick(NEGATIVE_MORALE_EVENTS);
     morale = clamp(morale + event.delta, 0, 100);
     recentMoraleShift = {
       ...createMoraleShift(event.description, event.delta, event.delta >= 0 ? 'positive' : 'negative'),
