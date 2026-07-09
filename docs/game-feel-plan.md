@@ -219,7 +219,7 @@ Presentation makes it feel like a game; these give it a game's *spine*. All engi
 
 | # | PR | Contents | Why this order |
 |---|----|----------|----------------|
-| 1 | **Shell + HUD + code-split** | Workstream A, route lazy-loading, bundle budget in CI | The frame everything else mounts into; biggest feel-win per line |
+| 1 | ✅ **Shell + HUD + code-split** *(done)* | Workstream A, route lazy-loading, bundle budget in CI | The frame everything else mounts into; biggest feel-win per line |
 | 2 | **Juice foundation** | framer-motion, animated numbers, transaction deltas, day-transition ceremony polish | Makes the sim's existing outputs *felt*; shell (1) provides the mount points |
 | 3 | **Identity + avatars + venue art** | Workstream B | Pure content; unblocks the scene (needs venue backdrops + avatars) |
 | 4 | **Show Day scene v1** | Workstream C: stage, crowd, phases, incidents-over-scene, results sequence | The centerpiece; depends on 2 + 3 |
@@ -232,6 +232,46 @@ Presentation makes it feel like a game; these give it a game's *spine*. All engi
 
 Each PR keeps the tycoon plan's rules: engine changes tested, schema bumps versioned,
 browser-verified with screenshots, tracker updated in this file.
+
+### PR 1 status — Shell + HUD + code-split (done)
+
+- **HUD** (`src/components/shell/GameShell.tsx`): sticky top bar with brand-colored accent
+  border, count-up cash display (`src/hooks/useCountUp.ts` — RAF tween, no new dependency),
+  a 5-star reputation meter that fills proportionally within each 20-point band (not a
+  snap), level/tier label, in-game date, and the Next Day / New Game actions (moved out of
+  `Dashboard.tsx`, which previously owned both).
+- **Nav rail**: persistent left icon column (HQ/Calendar/Crew/Inventory/Finances) replaces
+  every top-level page's own "arrow back to /" button. `Calendar.tsx`, `Crew.tsx`,
+  `Inventory.tsx`, `Finances.tsx` all lost their redundant header row and `min-h-screen`
+  wrapper (the shell now owns the page frame and background). `EventDetail.tsx`/`ShowDay.tsx`
+  deliberately kept their own contextual back button — they're reached from a specific event,
+  not the rail.
+- **News ticker**: `marketNews` scrolls across a footer bar (CSS `marquee` keyframe added to
+  `tailwind.config.ts`) so the world stays visible without needing a dedicated page.
+- **End Day ceremony** (`src/lib/daySummary.ts` + `src/components/shell/DaySummaryOverlay.tsx`):
+  a pure `computeDaySummary(prev, next)` diffs the state before/after `advanceDay` — new
+  transactions (by id, not truncated-list slicing), new market news (by id, since the news
+  feed itself is capped to 10 and would otherwise look "empty" some days), reputation/balance
+  deltas, a bankruptcy-transition flag, and a same-day morale-shift count. `GameContext.tsx`'s
+  `advanceDay` wrapper computes this diff and stores it as ephemeral UI state (`daySummary` —
+  deliberately *not* part of `GameState`/save data, no schema bump needed). The overlay is
+  what actually dramatizes output `advanceDay` already computed but the old UI discarded
+  silently (new contracts, competitor wins, missed-show penalties, morale events). Covered by
+  3 new tests in `src/lib/__tests__/daySummary.test.ts`.
+- **Code-split**: every route in `App.tsx` is now `React.lazy` behind a single `Suspense`.
+  Main entry chunk dropped from 952KB to ~450KB; routes that don't touch `recharts`
+  (Calendar, Crew, Inventory, ShowDay) no longer pull in its 389KB chart chunk at all —
+  previously every route paid for it.
+- **Bundle budget** (`scripts/check-bundle-budget.mjs`, wired into
+  `.github/workflows/deploy-pages.yml` right after the pages build): fails CI if total JS
+  exceeds 1400KB or any single chunk exceeds 500KB. Current total ~945KB — enough headroom
+  for the plan's remaining workstreams (avatars, scene, map) before the budget needs raising,
+  and any raise has to be a deliberate comment-explained edit, not a silent creep.
+- Verified in a real browser (Playwright): HUD elements render and stay persistent across
+  all 5 nav-rail destinations, the Next Day → day-summary overlay → Continue flow works
+  end-to-end and surfaces a real competitor-won-contract news item, zero console errors, and
+  a mobile-width (390px) spot check confirmed nothing breaks (stars/tier text intentionally
+  hide below the `sm` breakpoint — full mobile nav-rail polish is not in scope for this PR).
 
 ## 5. Explicit non-goals (same discipline as before)
 

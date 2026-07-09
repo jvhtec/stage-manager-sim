@@ -11,14 +11,12 @@ import {
 } from '@/components/ui/table';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import {
-  ArrowLeft,
   AlertTriangle,
   Banknote,
   PiggyBank,
   TrendingUp,
   TrendingDown,
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
@@ -30,7 +28,6 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 
 export default function Finances() {
   const { gameState, takeLoan, repayLoan } = useGame();
-  const navigate = useNavigate();
   const summary = useFinancialSummary();
 
   const { creditLimit, overdraftDays, loanBalance } = gameState.finances;
@@ -88,20 +85,13 @@ export default function Finances() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => navigate('/')}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Financial Overview</h1>
-              <p className="text-muted-foreground">
-                Track income, expenses, and credit health
-              </p>
-            </div>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold">Financial Overview</h1>
+          <p className="text-muted-foreground">
+            Track income, expenses, and credit health
+          </p>
         </div>
 
         {alerts.map(alert => (

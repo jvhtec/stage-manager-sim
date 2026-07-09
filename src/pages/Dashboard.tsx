@@ -6,41 +6,26 @@ import {
   TrendingUp,
   Users,
   Calendar,
-  Play,
   AlertTriangle,
   Wrench,
   Megaphone,
-  RotateCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useFinancialSummary } from '@/hooks/useFinancialSummary';
 import { Badge } from '@/components/ui/badge';
-import { CompanyOnboardingDialog } from '@/components/CompanyOnboardingDialog';
 import type { Company, Event, MarketNewsTone } from '@/types/game';
 import { useReputationSummary } from '@/hooks/useReputationSummary';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 import { GAME_OVER_BANKRUPT_STREAK_DAYS } from '@/lib/economy';
 import { getTierProgress } from '@/lib/reputationTiers';
-import { GameOverDialog } from '@/components/GameOverDialog';
 
 export default function Dashboard() {
-  const { gameState, advanceDay, completeCompanyOnboarding, resetGame } = useGame();
+  const { gameState } = useGame();
   const navigate = useNavigate();
   const financialSummary = useFinancialSummary();
   const reputationSummary = useReputationSummary();
@@ -146,21 +131,8 @@ export default function Dashboard() {
   } as const;
 
   return (
-    <>
-      <CompanyOnboardingDialog
-        open={!gameState.hasCompletedOnboarding}
-        initialValues={onboardingInitialValues}
-        onComplete={completeCompanyOnboarding}
-        disableClose={!gameState.hasCompletedOnboarding}
-      />
-      <GameOverDialog
-        open={gameState.isGameOver}
-        companyName={gameState.company.name}
-        runSummary={gameState.runSummary}
-        onStartNewCompany={resetGame}
-      />
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-7xl mx-auto space-y-6">
+    <div className="p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
           {/* Header */}
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
@@ -186,43 +158,6 @@ export default function Dashboard() {
                   ? `${tierProgress.repToNext} more reputation to ${tierProgress.next.label} — bigger venues, bigger pay, higher stakes.`
                   : 'Top tier reached — the biggest venues and the highest stakes.'}
               </p>
-            </div>
-            <div className="flex gap-2">
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="ghost" className="text-muted-foreground">
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    New Game
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Start a new company?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This permanently deletes {gameState.company.name} — crew, gear,
-                      finances, and reputation. There is no undo.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Keep playing</AlertDialogCancel>
-                    <AlertDialogAction onClick={resetGame}>
-                      Delete save & restart
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-              <Button
-                onClick={advanceDay}
-                variant="outline"
-                disabled={gameState.isGameOver || !gameState.hasCompletedOnboarding}
-              >
-                <Play className="mr-2 h-4 w-4" />
-                {gameState.isGameOver
-                  ? 'Game Over'
-                  : gameState.hasCompletedOnboarding
-                    ? 'Next Day'
-                    : 'Finish Setup'}
-              </Button>
             </div>
           </div>
 
@@ -739,6 +674,5 @@ export default function Dashboard() {
         )}
       </div>
     </div>
-    </>
   );
 }

@@ -11,7 +11,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "budget:bundle": "node scripts/check-bundle-budget.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

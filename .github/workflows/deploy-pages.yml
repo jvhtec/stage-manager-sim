@@ -42,6 +42,9 @@ jobs:
       - name: Build (GitHub Pages base path)
         run: npm run build:pages
 
+      - name: Check bundle budget
+        run: npm run budget:bundle
+
       - name: SPA fallback for client-side routing
         # GitHub Pages has no server-side rewrites, so a direct link or
         # refresh on a route like /calendar 404s. Serving index.html for

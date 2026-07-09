@@ -1,34 +1,26 @@
 import { useGame } from '@/contexts/GameContext';
 import { EventCard } from '@/components/EventCard';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 
 export default function Calendar() {
   const { gameState } = useGame();
   const navigate = useNavigate();
-  
+
   const availableEvents = gameState.events.filter(e => e.status === 'available');
   const plannedEvents = gameState.events.filter(e => e.status === 'planned');
   const inProgressEvents = gameState.events.filter(e => e.status === 'in-progress');
   const completedEvents = gameState.events.filter(e => e.status === 'completed');
   const failedEvents = gameState.events.filter(e => e.status === 'failed');
-  
+
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => navigate('/')}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Event Calendar</h1>
-              <p className="text-muted-foreground">Manage your event schedule</p>
-            </div>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold">Event Calendar</h1>
+          <p className="text-muted-foreground">Manage your event schedule</p>
         </div>
 
         <Tabs defaultValue="available" className="w-full">
