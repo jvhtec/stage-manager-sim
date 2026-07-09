@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { CrewMemberCard } from '@/components/CrewMemberCard';
 import { EquipmentCard } from '@/components/EquipmentCard';
 import { DepartmentBadge } from '@/components/DepartmentBadge';
+import { VenueArt } from '@/components/VenueArt';
 import { ArrowLeft, Calendar, MapPin, DollarSign, Clock, CheckCircle2, AlertCircle, AlertTriangle } from 'lucide-react';
 import { format } from 'date-fns';
 import {
@@ -211,6 +212,8 @@ export default function EventDetail() {
   return (
     <div className="min-h-screen bg-background p-6">
       <div className="max-w-7xl mx-auto space-y-6">
+        <VenueArt tier={event.venueTier} className="h-32 w-full rounded-lg" />
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">

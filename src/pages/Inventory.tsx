@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { differenceInCalendarDays, format } from 'date-fns';
 import { useGame } from '@/contexts/GameContext';
 import { EquipmentCard } from '@/components/EquipmentCard';
@@ -9,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Calendar, Wrench } from 'lucide-react';
+import { Calendar, Wrench } from 'lucide-react';
 import { toast } from 'sonner';
 import { Department, EquipmentItem, EquipmentType } from '@/types/game';
 import { getAllEquipmentTypes, getEquipmentDefinition } from '@/lib/equipment';
@@ -17,7 +16,6 @@ import { getAllEquipmentTypes, getEquipmentDefinition } from '@/lib/equipment';
 const departmentTabs: (Department | 'all')[] = ['all', 'audio', 'lighting', 'video', 'stage'];
 
 export default function Inventory() {
-  const navigate = useNavigate();
   const { gameState, scheduleEquipmentMaintenance, rentEquipment } = useGame();
   const [selectedRentalType, setSelectedRentalType] = useState<EquipmentType>('pa-system');
   const [rentalDays, setRentalDays] = useState(3);
@@ -123,20 +121,13 @@ export default function Inventory() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => navigate('/')}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Equipment Inventory</h1>
-              <p className="text-muted-foreground">
-                Track owned gear, rentals, and maintenance windows.
-              </p>
-            </div>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold">Equipment Inventory</h1>
+          <p className="text-muted-foreground">
+            Track owned gear, rentals, and maintenance windows.
+          </p>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

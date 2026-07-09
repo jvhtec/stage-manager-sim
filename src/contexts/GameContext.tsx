@@ -38,6 +38,7 @@ import { advanceDay as advanceDayAction } from '@/engine/dayActions';
 import { updateBalance as updateBalanceAction } from '@/engine/financeActions';
 import { takeLoan as takeLoanAction, repayLoan as repayLoanAction } from '@/engine/loanActions';
 import type { ActionResult, CompanyIdentityInput, EventCompletionSummary } from '@/engine/types';
+import { computeDaySummary, type DaySummary } from '@/lib/daySummary';
 
 interface GameContextType {
   gameState: GameState;
@@ -94,6 +95,9 @@ interface GameContextType {
   resetGame: () => void;
   takeLoan: (amount: number) => ActionResult;
   repayLoan: (amount: number) => ActionResult;
+  /** The "while you slept" summary for the day just advanced, or null between/before advances. */
+  daySummary: DaySummary | null;
+  dismissDaySummary: () => void;
 }
 
 const GameContext = createContext<GameContextType | undefined>(undefined);
@@ -110,10 +114,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   const [gameState, setGameState] = useState<GameState>(
     () => loadSavedGameState() ?? createNewGameState(),
   );
+  const [daySummary, setDaySummary] = useState<DaySummary | null>(null);
 
   useEffect(() => {
     persistGameState(gameState);
   }, [gameState]);
+
+  const dismissDaySummary = () => setDaySummary(null);
 
   const resetGame = () => {
     clearSavedGameState();
@@ -265,7 +272,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const advanceDay = () => {
-    setGameState(prev => advanceDayAction(prev));
+    setGameState(prev => {
+      const next = advanceDayAction(prev);
+      if (next !== prev) {
+        setDaySummary(computeDaySummary(prev, next));
+      }
+      return next;
+    });
   };
 
   const updateBalance = (
@@ -308,6 +321,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       resetGame,
       takeLoan,
       repayLoan,
+      daySummary,
+      dismissDaySummary,
     }}>
       {children}
     </GameContext.Provider>

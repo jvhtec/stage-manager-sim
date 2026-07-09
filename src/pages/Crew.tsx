@@ -4,16 +4,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Users, UserPlus, DollarSign, Handshake, UserMinus } from 'lucide-react';
+import { Users, UserPlus, DollarSign, Handshake, UserMinus } from 'lucide-react';
 import { CrewMember, Department } from '@/types/game';
 import { toast } from 'sonner';
 import { DepartmentBadge } from '@/components/DepartmentBadge';
+import { CrewAvatar } from '@/components/CrewAvatar';
 import { format } from 'date-fns';
 
 export default function Crew() {
   const { gameState, hireCandidate, negotiateCandidateRate, fireCrew } = useGame();
-  const navigate = useNavigate();
 
   const audioCrew = gameState.crew.filter(c => c.department === 'audio');
   const lightingCrew = gameState.crew.filter(c => c.department === 'lighting');
@@ -72,20 +71,13 @@ export default function Crew() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-6">
+    <div className="p-6">
       <div className="max-w-7xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => navigate('/')}>
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-bold">Crew Management</h1>
-              <p className="text-muted-foreground">
-                {gameState.crew.length} total crew members
-              </p>
-            </div>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold">Crew Management</h1>
+          <p className="text-muted-foreground">
+            {gameState.crew.length} total crew members
+          </p>
         </div>
 
         <Card>
@@ -108,10 +100,13 @@ export default function Crew() {
                   <Card key={candidate.id} className="border-dashed">
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="font-semibold">{candidate.name}</h4>
-                          <div className="text-xs text-muted-foreground">
-                            Skill {candidate.skillLevel}/10
+                        <div className="flex items-start gap-3">
+                          <CrewAvatar id={candidate.id} department={candidate.department} size={36} className="shrink-0" />
+                          <div>
+                            <h4 className="font-semibold">{candidate.name}</h4>
+                            <div className="text-xs text-muted-foreground">
+                              Skill {candidate.skillLevel}/10
+                            </div>
                           </div>
                         </div>
                         <DepartmentBadge department={candidate.department} />

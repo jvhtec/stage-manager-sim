@@ -20,4 +20,18 @@ export default defineConfig(({ mode }) => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // framer-motion is imported eagerly by the always-mounted game
+          // shell (HUD/day-summary ceremony), so it would otherwise inflate
+          // the main entry chunk. Forcing its own chunk keeps the entry
+          // chunk under the bundle budget and lets browsers cache this
+          // separately from app code that changes far more often.
+          "vendor-framer-motion": ["framer-motion"],
+        },
+      },
+    },
+  },
 }));
