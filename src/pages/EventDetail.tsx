@@ -13,6 +13,7 @@ import {
   calculateEventProfit,
   getCrewRecoveryDays,
   getEventTimeWindow,
+  getShowGraceDeadline,
   isEventFullyStaffed,
   isEventEquipmentReady,
 } from '@/lib/gameData';
@@ -76,6 +77,7 @@ export default function EventDetail() {
 
   const { setupStart, eventStart, teardownComplete } = getEventTimeWindow(event);
   const recoveryDays = getCrewRecoveryDays(event);
+  const showGraceDeadline = getShowGraceDeadline(event);
 
   const fatigueThreshold = 85;
 
@@ -324,7 +326,7 @@ export default function EventDetail() {
                 )}
               </Button>
             )}
-            {event.status === 'planned' && (
+            {(event.status === 'planned' || event.status === 'in-progress') && (
               <Button onClick={handleCompleteEvent}>
                 Complete Event (Demo)
               </Button>
@@ -339,6 +341,28 @@ export default function EventDetail() {
             <AlertDescription>
               Financial status prevents progressing this event. Clear debts in the Finances panel to continue.
             </AlertDescription>
+          </Alert>
+        )}
+
+        {event.status === 'in-progress' && (
+          <Alert>
+            <Clock className="h-4 w-4" />
+            <AlertTitle>Show day has arrived</AlertTitle>
+            <AlertDescription>
+              This event is live on the calendar. Complete it before{' '}
+              {format(showGraceDeadline, 'MMM dd, yyyy')} or it will be recorded as a missed
+              show — a cancellation penalty and reputation hit follow automatically.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {event.status === 'failed' && event.lostReason && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>
+              {event.lostToCompetitorId ? 'Contract lost to a competitor' : 'Contract failed'}
+            </AlertTitle>
+            <AlertDescription>{event.lostReason}</AlertDescription>
           </Alert>
         )}
 

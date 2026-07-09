@@ -31,7 +31,7 @@ import { useNavigate } from 'react-router-dom';
 import { useFinancialSummary } from '@/hooks/useFinancialSummary';
 import { Badge } from '@/components/ui/badge';
 import { CompanyOnboardingDialog } from '@/components/CompanyOnboardingDialog';
-import type { Company, MarketNewsTone } from '@/types/game';
+import type { Company, Event, MarketNewsTone } from '@/types/game';
 import { useReputationSummary } from '@/hooks/useReputationSummary';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
@@ -60,9 +60,17 @@ export default function Dashboard() {
     warning: 'Watch',
   };
 
+  const upcomingStatusPriority: Partial<Record<Event['status'], number>> = {
+    'in-progress': 0,
+    planned: 1,
+    available: 2,
+  };
   const upcomingEvents = gameState.events
-    .filter(e => e.status === 'planned' || e.status === 'available')
-    .sort((a, b) => a.date.getTime() - b.date.getTime())
+    .filter(e => e.status === 'planned' || e.status === 'available' || e.status === 'in-progress')
+    .sort((a, b) => {
+      const priorityDelta = upcomingStatusPriority[a.status] - upcomingStatusPriority[b.status];
+      return priorityDelta !== 0 ? priorityDelta : a.date.getTime() - b.date.getTime();
+    })
     .slice(0, 3);
 
   const activeCrew = gameState.crew.filter(c => !c.assignedTo).length;

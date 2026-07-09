@@ -149,11 +149,23 @@ fashion; a fixed seed replays identically; `GameContext.tsx` < 300 lines.
 
 This is the phase that changes the genre from "dashboard" to "tycoon."
 
-1. **Event lifecycle driven by the calendar.** On `advanceDay`:
-   - `available` contracts past `acceptBy` expire (competitor picks them up, market news).
-   - `planned` events whose date arrives become `in-progress` automatically.
-   - A `planned` event whose date passes unresolved becomes `failed`: contract penalty
-     (30–50% of `clientPay`), reputation hit, angry market news. Missing a show must hurt.
+1. **Event lifecycle driven by the calendar** *(done)*. `src/lib/gameData.ts`'s
+   `applyEventLifecycle()`, wired into `advanceDay`:
+   - `available` contracts with no active bid past `acceptBy` expire (`failed`, info-tone
+     market news) — previously an unclaimed contract sat as `available` forever.
+   - `planned` events flip to `in-progress` automatically once their date arrives.
+   - A show left unresolved 1 day past teardown auto-fails: 35% of `clientPay` charged as a
+     cancellation penalty (correctly game-time-stamped — see below), a 6-point reputation
+     hit, warning-tone market news, and its crew/gear are released back to the pool.
+   - Fixed alongside it: every transaction (`createTransaction` in `GameContext.tsx`) was
+     stamped with real wall-clock `new Date()` instead of `gameState.currentDate` — this
+     silently corrupted the 30-day financial trend chart whenever you fast-forwarded days.
+     Now takes the game date explicitly.
+   - Calendar gained "In Progress" and "Failed" tabs — both states were previously invisible
+     in the UI (a `planned` event that flipped status simply vanished from every list).
+   - Covered by `src/lib/__tests__/eventLifecycle.test.ts` (8 cases: expiry, in-progress
+     transition, grace-deadline auto-fail + penalty math + crew/gear release, and the
+     do-nothing paths). First vitest harness in the repo (`npm test` / `npm run test:run`).
 2. **Show-day resolution screen.** Replace the "Complete Event" button with a show-day flow
    (new route `/event/:id/show`). Minimum viable version — no animation needed:
    - The show plays out as a sequence of phases (load-in → soundcheck → doors → show →
@@ -253,12 +265,12 @@ survivable only with deliberate gear strategy; both are unlockables, not day-1 n
 
 ## 6. Suggested first three PRs
 
-1. **Persistence + New Game** *(this branch)* — autosave/restore/reset. Small, immediately
-   felt, unblocks playtesting.
-2. **Engine extraction + seeded RNG + vitest** — pure refactor, no behavior change, locked in
-   by the first round-trip and replay tests.
-3. **Event lifecycle + missed-show penalties** — the first real *game rule*, and the smallest
-   slice of Phase 1 that creates time pressure.
+1. ✅ **Persistence + New Game** *(done)* — autosave/restore/reset.
+2. **Engine extraction + seeded RNG + vitest** — vitest itself landed alongside PR 3 below
+   (it needed a harness to test the lifecycle rules); the actual pure-reducer extraction of
+   `GameContext.tsx` and the seeded RNG are still outstanding.
+3. ✅ **Event lifecycle + missed-show penalties** *(done)* — see Phase 1 §1 above.
 
-After that, Phase 1's show-day screen is the big rock, and everything else follows the order
-above.
+Next up: the show-day resolution screen (Phase 1 §2) is the big remaining rock for this
+phase — everything else in Phase 1 is comparatively small. The engine extraction (item 2
+above) is worth doing before the show-day screen adds more logic to `GameContext.tsx`.

@@ -25,6 +25,7 @@ import {
   isEventFullyStaffed,
   isEventEquipmentReady,
   getEquipmentWearForEvent,
+  applyEventLifecycle,
 } from '@/lib/gameData';
 import { MAX_OVERDRAFT_DAYS } from '@/lib/finance';
 import {
@@ -267,6 +268,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   };
 
   const createTransaction = (
+    gameDate: Date,
     type: FinancialTransaction['type'],
     amount: number,
     description: string,
@@ -274,7 +276,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     eventId?: string
   ): FinancialTransaction => ({
     id: `txn-${Date.now()}-${Math.random()}`,
-    date: new Date(),
+    date: new Date(gameDate),
     type,
     amount,
     description,
@@ -443,7 +445,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           adjustedReputation = Math.min(100, prev.company.reputation + 5);
           adjustedTransactions = [
             ...prev.finances.transactions,
-            createTransaction('income', 2000, 'Strategic partnership bonus', 'misc'),
+            createTransaction(prev.currentDate, 'income', 2000, 'Strategic partnership bonus', 'misc'),
           ];
           break;
         default:
@@ -883,6 +885,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         ? [
             ...prev.finances.transactions,
             createTransaction(
+              prev.currentDate,
               'expense',
               maintenanceCost,
               `Maintenance for ${equipment.name}`,
@@ -966,6 +969,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         ? [
             ...prev.finances.transactions,
             createTransaction(
+              prev.currentDate,
               'expense',
               totalCost,
               `Rental: ${rentalItem.name}`,
@@ -1100,6 +1104,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       if (cost > 0) {
         transactions.push(
           createTransaction(
+            prev.currentDate,
             'expense',
             cost,
             `Crew payroll for ${event.name}`,
@@ -1111,6 +1116,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       transactions.push(
         createTransaction(
+          prev.currentDate,
           'income',
           event.clientPay,
           `Client payment for ${event.name}`,
@@ -1122,6 +1128,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       if (additionalExpenses > 0) {
         transactions.push(
           createTransaction(
+            prev.currentDate,
             'expense',
             additionalExpenses,
             `Crisis fallout for ${event.name}`,
@@ -1132,6 +1139,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       } else if (additionalExpenses < 0) {
         transactions.push(
           createTransaction(
+            prev.currentDate,
             'income',
             Math.abs(additionalExpenses),
             `Crisis contingency savings for ${event.name}`,
@@ -1338,6 +1346,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         const costAmount = Math.abs(choice.cost);
         const isExpense = choice.cost > 0;
         const transaction = createTransaction(
+          prev.currentDate,
           isExpense ? 'expense' : 'income',
           costAmount,
           `${prompt.title} – ${choice.label}`,
@@ -1463,11 +1472,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           })
         : eventsWithNewContracts;
 
-      const { overdraftDays, isBankrupt } = evaluateFinancialState(
-        prev,
-        prev.company.balance,
-      );
-
       const refreshedCrew = prev.crew.map(c => {
         const recovered = {
           ...c,
@@ -1484,29 +1488,64 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         playerCompany: prev.company,
       });
 
-      const recalculatedCrises = rebuildAllPlannedCrises(
-        prev,
+      // Runs after competitor bidding so contracts get one last day of
+      // interest before an unclaimed offer expires; also flips planned
+      // shows into in-progress on their date and auto-fails no-shows.
+      const lifecycle = applyEventLifecycle(
         biddingWithSchedule.events,
         refreshedCrew,
         updatedEquipment,
+        newDate,
+        prev.company.name,
       );
 
-      const combinedNews = [...scheduleProgress.news, ...biddingWithSchedule.news];
+      const newBalance =
+        prev.company.balance -
+        lifecycle.transactions.reduce(
+          (sum, txn) => sum + (txn.type === 'expense' ? txn.amount : -txn.amount),
+          0,
+        );
+      const { overdraftDays, isBankrupt } = evaluateFinancialState(prev, newBalance);
+      const newReputation = Math.max(
+        0,
+        Math.min(100, prev.company.reputation + lifecycle.reputationDelta),
+      );
+
+      const recalculatedCrises = rebuildAllPlannedCrises(
+        prev,
+        lifecycle.events,
+        lifecycle.crew,
+        lifecycle.equipment,
+      );
+
+      const combinedNews = [...scheduleProgress.news, ...biddingWithSchedule.news, ...lifecycle.news];
       const nextNews = combinedNews.length
         ? [...combinedNews, ...prev.marketNews].slice(0, 10)
         : prev.marketNews;
 
-      const snapshot = buildReputationSnapshot(prev.company, biddingWithSchedule.competitors, newDate);
+      const snapshot = buildReputationSnapshot(
+        { ...prev.company, reputation: newReputation },
+        biddingWithSchedule.competitors,
+        newDate,
+      );
       const reputationHistory = [...prev.reputationHistory, snapshot].slice(-45);
 
       return {
         ...prev,
         currentDate: newDate,
-        events: biddingWithSchedule.events,
-        crew: refreshedCrew,
-        equipment: updatedEquipment,
+        events: lifecycle.events,
+        crew: lifecycle.crew,
+        equipment: lifecycle.equipment,
+        company: {
+          ...prev.company,
+          balance: newBalance,
+          reputation: newReputation,
+        },
         finances: {
           ...prev.finances,
+          transactions: lifecycle.transactions.length
+            ? [...prev.finances.transactions, ...lifecycle.transactions]
+            : prev.finances.transactions,
           overdraftDays,
         },
         crises: recalculatedCrises,
@@ -1528,6 +1567,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       const newBalance = prev.company.balance + amount;
       const transaction = createTransaction(
+        prev.currentDate,
         amount >= 0 ? 'income' : 'expense',
         Math.abs(amount),
         options?.description || 'Balance adjustment',

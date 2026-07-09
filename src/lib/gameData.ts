@@ -3,7 +3,10 @@ import {
   Event,
   Company,
   Department,
+  EquipmentItem,
   EquipmentRequirement,
+  FinancialTransaction,
+  MarketNewsItem,
 } from '@/types/game';
 import { initializeCrewProgression } from './crewProgression';
 import {
@@ -265,6 +268,144 @@ export function getCrewRecoveryDays(event: Event): number {
   const restBuffer = Math.max(1, Math.ceil(activeHours / 10));
   const travelBuffer = Math.max(1, Math.ceil(event.travelHours / 8));
   return restBuffer + travelBuffer;
+}
+
+// How many days past teardown a booked show is allowed to sit unresolved
+// before it's treated as a no-show.
+const SHOW_GRACE_DAYS = 1;
+export const MISSED_SHOW_PENALTY_RATE = 0.35;
+export const MISSED_SHOW_REPUTATION_PENALTY = 6;
+
+function truncateToDay(date: Date): Date {
+  const truncated = new Date(date);
+  truncated.setHours(0, 0, 0, 0);
+  return truncated;
+}
+
+export function getShowGraceDeadline(event: Event): Date {
+  const { teardownComplete } = getEventTimeWindow(event);
+  const deadline = new Date(teardownComplete);
+  deadline.setDate(deadline.getDate() + SHOW_GRACE_DAYS);
+  return deadline;
+}
+
+export interface EventLifecycleResult {
+  events: Event[];
+  crew: CrewMember[];
+  equipment: EquipmentItem[];
+  transactions: FinancialTransaction[];
+  news: MarketNewsItem[];
+  reputationDelta: number;
+}
+
+/**
+ * Applies calendar-driven event transitions for a single day advance:
+ * unclaimed `available` contracts past their accept deadline expire,
+ * `planned` shows flip to `in-progress` on their date, and shows left
+ * unresolved past a grace deadline are auto-failed with a cancellation
+ * penalty and reputation hit — freeing whatever crew/gear they held.
+ * Must run after competitor bidding has had its chance at `available` events.
+ */
+export function applyEventLifecycle(
+  events: Event[],
+  crew: CrewMember[],
+  equipment: EquipmentItem[],
+  currentDate: Date,
+  companyName: string,
+): EventLifecycleResult {
+  const transactions: FinancialTransaction[] = [];
+  const news: MarketNewsItem[] = [];
+  let reputationDelta = 0;
+  const overdueEventIds = new Set<string>();
+  const today = truncateToDay(currentDate);
+
+  const updatedEvents = events.map(event => {
+    if (event.status === 'available') {
+      const hasActiveInterest = event.bids.some(bid => bid.status === 'active');
+      if (!hasActiveInterest && today.getTime() > truncateToDay(event.acceptBy).getTime()) {
+        news.push({
+          id: `market-${currentDate.getTime()}-${event.id}-expired`,
+          date: new Date(currentDate),
+          title: `${event.name} opportunity lapses`,
+          summary: `Nobody secured the ${event.venue} booking in time — the client moved on.`,
+          tone: 'info',
+          eventId: event.id,
+        });
+        return {
+          ...event,
+          status: 'failed' as const,
+          lostReason: 'Booking window closed unclaimed.',
+        };
+      }
+      return event;
+    }
+
+    if (event.status === 'planned' || event.status === 'in-progress') {
+      const { eventStart } = getEventTimeWindow(event);
+      const graceDeadline = getShowGraceDeadline(event);
+
+      if (today.getTime() > truncateToDay(graceDeadline).getTime()) {
+        overdueEventIds.add(event.id);
+        const penalty = Math.round(event.clientPay * MISSED_SHOW_PENALTY_RATE);
+        transactions.push({
+          id: `txn-${currentDate.getTime()}-${event.id}-missed`,
+          date: new Date(currentDate),
+          type: 'expense',
+          amount: penalty,
+          description: `Cancellation penalty for missed show: ${event.name}`,
+          category: 'contracts',
+          eventId: event.id,
+        });
+        reputationDelta -= MISSED_SHOW_REPUTATION_PENALTY;
+        news.push({
+          id: `market-${currentDate.getTime()}-${event.id}-missed`,
+          date: new Date(currentDate),
+          title: `${event.name} collapses without a crew`,
+          summary: `${companyName} failed to deliver at ${event.venue}. A cancellation penalty and reputation hit follow.`,
+          tone: 'warning',
+          eventId: event.id,
+        });
+        return {
+          ...event,
+          status: 'failed' as const,
+          lostReason: 'Show was never executed before the grace deadline passed.',
+        };
+      }
+
+      if (event.status === 'planned' && today.getTime() >= truncateToDay(eventStart).getTime()) {
+        return { ...event, status: 'in-progress' as const };
+      }
+
+      return event;
+    }
+
+    return event;
+  });
+
+  const releasedCrew = overdueEventIds.size
+    ? crew.map(member =>
+        member.assignedTo && overdueEventIds.has(member.assignedTo)
+          ? { ...member, assignedTo: undefined }
+          : member,
+      )
+    : crew;
+
+  const releasedEquipment = overdueEventIds.size
+    ? equipment.map(item =>
+        item.assignedToEvent && overdueEventIds.has(item.assignedToEvent)
+          ? { ...item, status: 'available' as const, assignedToEvent: undefined }
+          : item,
+      )
+    : equipment;
+
+  return {
+    events: updatedEvents,
+    crew: releasedCrew,
+    equipment: releasedEquipment,
+    transactions,
+    news,
+    reputationDelta,
+  };
 }
 
 export function getEventPrimaryDepartment(event: Event): Department {
