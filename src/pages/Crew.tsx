@@ -8,6 +8,7 @@ import { Users, UserPlus, DollarSign, Handshake, UserMinus } from 'lucide-react'
 import { CrewMember, Department } from '@/types/game';
 import { toast } from 'sonner';
 import { DepartmentBadge } from '@/components/DepartmentBadge';
+import { CrewAvatar } from '@/components/CrewAvatar';
 import { format } from 'date-fns';
 
 export default function Crew() {
@@ -99,10 +100,13 @@ export default function Crew() {
                   <Card key={candidate.id} className="border-dashed">
                     <CardContent className="p-4 space-y-3">
                       <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="font-semibold">{candidate.name}</h4>
-                          <div className="text-xs text-muted-foreground">
-                            Skill {candidate.skillLevel}/10
+                        <div className="flex items-start gap-3">
+                          <CrewAvatar id={candidate.id} department={candidate.department} size={36} className="shrink-0" />
+                          <div>
+                            <h4 className="font-semibold">{candidate.name}</h4>
+                            <div className="text-xs text-muted-foreground">
+                              Skill {candidate.skillLevel}/10
+                            </div>
                           </div>
                         </div>
                         <DepartmentBadge department={candidate.department} />

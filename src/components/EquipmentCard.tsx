@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { EquipmentItem } from '@/types/game';
 import { DepartmentBadge } from './DepartmentBadge';
-import { Calendar, Package, Wrench } from 'lucide-react';
+import { EquipmentIcon } from './EquipmentIcon';
+import { Calendar, Wrench } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface EquipmentCardProps {
@@ -49,14 +50,16 @@ export function EquipmentCard({
     >
       <CardContent className="p-4 space-y-3">
         <div className="flex items-start justify-between gap-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <h4 className="font-semibold">{equipment.name}</h4>
-              <Badge className={statusColor}>{equipment.status}</Badge>
-            </div>
-            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-              <Package className="h-3 w-3" />
-              <span>{isRental ? 'Rental' : 'Owned'} • {equipment.type.replace('-', ' ')}</span>
+          <div className="flex items-start gap-3">
+            <EquipmentIcon type={equipment.type} size={28} className="mt-0.5 shrink-0 text-muted-foreground" />
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="font-semibold">{equipment.name}</h4>
+                <Badge className={statusColor}>{equipment.status}</Badge>
+              </div>
+              <div className="text-xs text-muted-foreground mt-1">
+                {isRental ? 'Rental' : 'Owned'} • {equipment.type.replace('-', ' ')}
+              </div>
             </div>
           </div>
           <DepartmentBadge department={equipment.department} />

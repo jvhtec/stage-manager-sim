@@ -5,7 +5,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { CrewMember } from '@/types/game';
 import { DepartmentBadge } from './DepartmentBadge';
-import { User, Battery, Heart, DollarSign } from 'lucide-react';
+import { CrewAvatar } from './CrewAvatar';
+import { Battery, Heart, DollarSign } from 'lucide-react';
 import { format } from 'date-fns';
 import { getExperienceThresholdForLevel } from '@/lib/crewProgression';
 
@@ -51,7 +52,7 @@ export function CrewMemberCard({ crew, onSelect, compact, showAssignment, disabl
         <CardContent className="p-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-muted-foreground" />
+              <CrewAvatar id={crew.id} department={crew.department} size={32} />
               <div>
                 <div className="font-medium">{crew.name}</div>
                 <div className="text-xs text-muted-foreground">Lvl {crew.skillLevel}</div>
@@ -85,27 +86,27 @@ export function CrewMemberCard({ crew, onSelect, compact, showAssignment, disabl
       <CardContent className="p-4">
         <div className="space-y-3">
           <div className="flex items-start justify-between">
-            <div>
-              <h4 className="font-semibold flex items-center gap-2">
-                <User className="h-4 w-4" />
-                {crew.name}
-              </h4>
-              <div className="text-xs text-muted-foreground mt-1">{skillStars}</div>
-              <div className="mt-2">
-                <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
-                  <span>XP Progress</span>
-                  <span>{experienceThreshold === Infinity ? 'MAX' : `${experiencePercent}%`}</span>
-                </div>
-                <Progress
-                  value={experienceThreshold === Infinity ? 100 : experiencePercent}
-                  className="h-2"
-                />
-                {crew.certifications.length > 0 && (
-                  <div className="text-xs text-muted-foreground mt-2">
-                    <span className="font-medium text-foreground">Certifications:</span>{' '}
-                    {crew.certifications.join(', ')}
+            <div className="flex items-start gap-3">
+              <CrewAvatar id={crew.id} department={crew.department} size={44} className="shrink-0" />
+              <div>
+                <h4 className="font-semibold">{crew.name}</h4>
+                <div className="text-xs text-muted-foreground mt-1">{skillStars}</div>
+                <div className="mt-2">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-1">
+                    <span>XP Progress</span>
+                    <span>{experienceThreshold === Infinity ? 'MAX' : `${experiencePercent}%`}</span>
                   </div>
-                )}
+                  <Progress
+                    value={experienceThreshold === Infinity ? 100 : experiencePercent}
+                    className="h-2"
+                  />
+                  {crew.certifications.length > 0 && (
+                    <div className="text-xs text-muted-foreground mt-2">
+                      <span className="font-medium text-foreground">Certifications:</span>{' '}
+                      {crew.certifications.join(', ')}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
             <DepartmentBadge department={crew.department} />

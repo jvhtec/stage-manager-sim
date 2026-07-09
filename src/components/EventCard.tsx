@@ -6,6 +6,7 @@ import { Event } from '@/types/game';
 import { Calendar, MapPin, DollarSign, Users, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { getEventTimeWindow, isEventFullyStaffed } from '@/lib/gameData';
+import { VenueArt } from './VenueArt';
 
 interface EventCardProps {
   event: Event;
@@ -36,7 +37,8 @@ export function EventCard({ event, onSelect, compact }: EventCardProps) {
   if (compact) {
     return (
       <motion.div whileHover={{ scale: 1.015 }} whileTap={{ scale: 0.99 }}>
-      <Card className="cursor-pointer hover:border-primary transition-colors" onClick={onSelect}>
+      <Card className={`cursor-pointer hover:border-primary transition-colors overflow-hidden tier-glow-${event.venueTier}`} onClick={onSelect}>
+        <VenueArt tier={event.venueTier} className="h-10 w-full" />
         <CardContent className="p-4">
           <div className="flex items-center justify-between">
             <div>
@@ -71,7 +73,8 @@ export function EventCard({ event, onSelect, compact }: EventCardProps) {
 
   return (
     <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.15 }}>
-    <Card className="hover:border-primary transition-colors">
+    <Card className={`hover:border-primary transition-colors overflow-hidden tier-glow-${event.venueTier}`}>
+      <VenueArt tier={event.venueTier} className="h-24 w-full" />
       <CardHeader>
         <div className="flex items-start justify-between">
           <div>

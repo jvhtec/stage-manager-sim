@@ -221,7 +221,7 @@ Presentation makes it feel like a game; these give it a game's *spine*. All engi
 |---|----|----------|----------------|
 | 1 | ✅ **Shell + HUD + code-split** *(done)* | Workstream A, route lazy-loading, bundle budget in CI | The frame everything else mounts into; biggest feel-win per line |
 | 2 | ✅ **Juice foundation** *(done)* | framer-motion, animated numbers, transaction deltas, day-transition ceremony polish | Makes the sim's existing outputs *felt*; shell (1) provides the mount points |
-| 3 | **Identity + avatars + venue art** | Workstream B | Pure content; unblocks the scene (needs venue backdrops + avatars) |
+| 3 | ✅ **Identity + avatars + venue art** *(done)* | Workstream B | Pure content; unblocks the scene (needs venue backdrops + avatars) |
 | 4 | **Show Day scene v1** | Workstream C: stage, crowd, phases, incidents-over-scene, results sequence | The centerpiece; depends on 2 + 3 |
 | 5 | **Sound** | Workstream D audio module, wired into HUD + scene | Scene exists to score; independent of 6-8 |
 | 6 | **City map** | Workstream E incl. travel-from-distance engine change | Big but isolated; makes market + competitors spatial |
@@ -304,6 +304,50 @@ browser-verified with screenshots, tracker updated in this file.
   the Crew page with no console errors. Full suite: `tsc` clean, `eslint` clean (only the
   same pre-existing shadcn boilerplate warnings from before this branch), 85/85 tests
   passing, `budget:bundle` passing against the `build:pages` artifact.
+
+### PR 3 status — Identity + avatars + venue art (done)
+
+- **Procedural crew avatars** (`src/lib/avatarSeed.ts` + `src/components/CrewAvatar.tsx`):
+  an FNV-1a string hash seeds `createRng` (the same seeded PRNG the sim uses, just fed a
+  hash instead of `GameState.rngState` — cosmetic rolls, not a gameplay one, so it
+  deliberately doesn't touch or consume the sim's shared rng sequence) to pick skin tone,
+  hair style/color, and an optional accessory. Same id always renders the same face.
+  Wired into `CrewMemberCard` (both compact and full variants — replacing the generic
+  lucide `User` icon) and the hiring-market candidate cards in `Crew.tsx`. 3 new tests in
+  `src/lib/__tests__/avatarSeed.test.ts` (determinism, trait-shape validity, and a
+  variety check that 5 ids don't all collapse onto one hairstyle).
+- **Venue art** (`src/components/VenueArt.tsx`): one SVG scene per reputation tier (dive
+  bar → club → arena → stadium) — sky gradient, light beams, a truss, a stage, an LED wall
+  at tier 3+, pyro bursts at tier 4, and a procedurally-laid-out crowd that gets denser per
+  tier. Driven directly by `Event.venueTier` (already fixed at contract-generation time, no
+  new engine logic needed). Wired into `EventCard` (both compact — thin banner strip — and
+  full — taller banner) and `EventDetail`'s header.
+- **Equipment icons** (`src/components/EquipmentIcon.tsx`): a real glyph per
+  `EquipmentType` (PA stack, monitor wedge, lighting truss, LED wall grid, stage deck,
+  power distro) replacing the one generic `Package` icon every equipment card used
+  regardless of type. Wired into `EquipmentCard`.
+- **Design-language pass** (`src/index.css`): a `tier-glow-{1-4}` utility (new `--tier-1`
+  through `--tier-4` HSL tokens, light and dark) applied to `EventCard` so higher-tier
+  shows visibly glow harder; a subtle radial-gradient + inline-SVG-noise background on
+  `body` (no network request, no asset file — a data-URI `feTurbulence` filter at 3.5%
+  opacity, deliberately faint enough to never threaten text contrast); and a styled
+  system font stack (`ui-rounded, "Segoe UI Variable"...`) applied to `h1`/`h2`/`h3` at the
+  element level so every page title and card title picks it up without touching each
+  component — no webfont fetch, matching the plan's "self-hosted subset, or a styled
+  system stack" option.
+- Verified in a real browser (Playwright): fresh onboarding → Calendar (venue art banners
+  on every event card, tier-glow visible) → EventDetail (venue banner + crew-roster
+  avatars, all visually distinct) → Crew (hiring-market candidates and every roster card
+  showing a unique procedural face) → Inventory (distinct icon per equipment type) → back
+  to Dashboard (compact venue art on Upcoming Events, heading font applied, background
+  texture present but unobtrusive) — zero console errors across all five. Full suite:
+  `tsc` clean, `eslint` clean, 88/88 tests passing (3 new), `budget:bundle` passing
+  (1069KB total, entry chunk unchanged from PR 2 since all three new components are pure
+  SVG/CSS with no new runtime dependency).
+- **Scope note**: the plan mentioned avatars appearing in "show-day incident prompts" —
+  skipped here because `CrisisPrompt` isn't tied to a specific crew member in the current
+  data model (it's keyed to `eventId`, not a crew id), so there's no id to seed a face
+  from yet. Revisit if/when crisis content gets crew-specific in a later pass.
 
 ## 5. Explicit non-goals (same discipline as before)
 
