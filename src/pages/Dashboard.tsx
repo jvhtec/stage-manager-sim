@@ -10,25 +10,42 @@ import {
   AlertTriangle,
   Wrench,
   Megaphone,
+  RotateCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { format } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useFinancialSummary } from '@/hooks/useFinancialSummary';
 import { Badge } from '@/components/ui/badge';
 import { CompanyOnboardingDialog } from '@/components/CompanyOnboardingDialog';
-import type { Company, MarketNewsTone } from '@/types/game';
+import type { Company, Event, MarketNewsTone } from '@/types/game';
 import { useReputationSummary } from '@/hooks/useReputationSummary';
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts';
+import { GAME_OVER_BANKRUPT_STREAK_DAYS } from '@/lib/economy';
+import { getTierProgress } from '@/lib/reputationTiers';
+import { GameOverDialog } from '@/components/GameOverDialog';
 
 export default function Dashboard() {
-  const { gameState, advanceDay, completeCompanyOnboarding } = useGame();
+  const { gameState, advanceDay, completeCompanyOnboarding, resetGame } = useGame();
   const navigate = useNavigate();
   const financialSummary = useFinancialSummary();
   const reputationSummary = useReputationSummary();
+  const daysUntilGameOver = GAME_OVER_BANKRUPT_STREAK_DAYS - gameState.bankruptStreak;
+  const tierProgress = getTierProgress(gameState.company.reputation);
 
   const specializationLabels: Record<Company['specialization'], string> = {
     audio: 'Audio Specialist',
@@ -48,9 +65,17 @@ export default function Dashboard() {
     warning: 'Watch',
   };
 
+  const upcomingStatusPriority: Partial<Record<Event['status'], number>> = {
+    'in-progress': 0,
+    planned: 1,
+    available: 2,
+  };
   const upcomingEvents = gameState.events
-    .filter(e => e.status === 'planned' || e.status === 'available')
-    .sort((a, b) => a.date.getTime() - b.date.getTime())
+    .filter(e => e.status === 'planned' || e.status === 'available' || e.status === 'in-progress')
+    .sort((a, b) => {
+      const priorityDelta = upcomingStatusPriority[a.status] - upcomingStatusPriority[b.status];
+      return priorityDelta !== 0 ? priorityDelta : a.date.getTime() - b.date.getTime();
+    })
     .slice(0, 3);
 
   const activeCrew = gameState.crew.filter(c => !c.assignedTo).length;
@@ -128,6 +153,12 @@ export default function Dashboard() {
         onComplete={completeCompanyOnboarding}
         disableClose={!gameState.hasCompletedOnboarding}
       />
+      <GameOverDialog
+        open={gameState.isGameOver}
+        companyName={gameState.company.name}
+        runSummary={gameState.runSummary}
+        onStartNewCompany={resetGame}
+      />
       <div className="min-h-screen bg-background p-6">
         <div className="max-w-7xl mx-auto space-y-6">
           {/* Header */}
@@ -138,6 +169,9 @@ export default function Dashboard() {
                   {gameState.company.name}
                 </h1>
                 <Badge style={brandBadgeStyle}>{specializationLabel}</Badge>
+                <Badge variant="outline">
+                  Level {gameState.company.level} · {tierProgress.current.label}
+                </Badge>
               </div>
               {gameState.company.tagline && gameState.company.tagline.length > 0 && (
                 <p className="text-sm font-medium" style={taglineStyle}>
@@ -147,16 +181,44 @@ export default function Dashboard() {
               <p className="text-muted-foreground">
                 {format(gameState.currentDate, 'EEEE, MMMM dd, yyyy')}
               </p>
+              <p className="text-xs text-muted-foreground">
+                {tierProgress.next
+                  ? `${tierProgress.repToNext} more reputation to ${tierProgress.next.label} — bigger venues, bigger pay, higher stakes.`
+                  : 'Top tier reached — the biggest venues and the highest stakes.'}
+              </p>
             </div>
             <div className="flex gap-2">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" className="text-muted-foreground">
+                    <RotateCcw className="mr-2 h-4 w-4" />
+                    New Game
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Start a new company?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This permanently deletes {gameState.company.name} — crew, gear,
+                      finances, and reputation. There is no undo.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Keep playing</AlertDialogCancel>
+                    <AlertDialogAction onClick={resetGame}>
+                      Delete save & restart
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
               <Button
                 onClick={advanceDay}
                 variant="outline"
-                disabled={gameState.isBankrupt || !gameState.hasCompletedOnboarding}
+                disabled={gameState.isGameOver || !gameState.hasCompletedOnboarding}
               >
                 <Play className="mr-2 h-4 w-4" />
-                {gameState.isBankrupt
-                  ? 'Resolve Bankruptcy'
+                {gameState.isGameOver
+                  ? 'Game Over'
                   : gameState.hasCompletedOnboarding
                     ? 'Next Day'
                     : 'Finish Setup'}
@@ -164,12 +226,16 @@ export default function Dashboard() {
             </div>
           </div>
 
-        {gameState.isBankrupt && (
+        {gameState.isBankrupt && !gameState.isGameOver && (
           <Alert variant="destructive">
             <AlertTriangle className="h-4 w-4" />
             <AlertTitle>Bankruptcy in Effect</AlertTitle>
             <AlertDescription>
-              Balance has fallen below the credit limit. Clear outstanding debts from the Finances view to resume operations.
+              Balance has fallen below the credit limit. Time keeps moving — finish shows
+              already booked to collect payment, or take a loan from the Finances view.{' '}
+              {daysUntilGameOver > 0
+                ? `${daysUntilGameOver} more day${daysUntilGameOver === 1 ? '' : 's'} bankrupt and this company folds.`
+                : 'One more bankrupt day and this company folds.'}
             </AlertDescription>
           </Alert>
         )}

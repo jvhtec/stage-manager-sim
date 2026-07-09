@@ -13,10 +13,12 @@ import {
   calculateEventProfit,
   getCrewRecoveryDays,
   getEventTimeWindow,
+  getShowGraceDeadline,
   isEventFullyStaffed,
   isEventEquipmentReady,
 } from '@/lib/gameData';
 import { getEquipmentDefinition } from '@/lib/equipment';
+import { REPUTATION_TIERS } from '@/lib/reputationTiers';
 import {
   CrewMember,
   Department,
@@ -35,7 +37,6 @@ export default function EventDetail() {
     assignEquipmentToEvent,
     unassignEquipmentFromEvent,
     acceptEvent,
-    completeEvent,
     respondToCrisisPrompt,
   } = useGame();
   const navigate = useNavigate();
@@ -76,6 +77,9 @@ export default function EventDetail() {
 
   const { setupStart, eventStart, teardownComplete } = getEventTimeWindow(event);
   const recoveryDays = getCrewRecoveryDays(event);
+  const showGraceDeadline = getShowGraceDeadline(event);
+  const venueTierLabel =
+    REPUTATION_TIERS.find(tier => tier.level === event.venueTier)?.label ?? 'Local Circuit';
 
   const fatigueThreshold = 85;
 
@@ -104,7 +108,11 @@ export default function EventDetail() {
   const crewReadyDate = new Date(event.date);
   crewReadyDate.setDate(crewReadyDate.getDate() + recoveryDays);
 
-  const crisisPrompts = gameState.crises.filter(prompt => prompt.eventId === event.id);
+  // Execution-stage crises now play out on the Show Day screen instead of
+  // being resolvable ahead of time — only planning-stage risks show here.
+  const crisisPrompts = gameState.crises.filter(
+    prompt => prompt.eventId === event.id && prompt.stage === 'planning',
+  );
 
   const severityStyles: Record<CrisisSeverity, string> = {
     low: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300',
@@ -161,82 +169,6 @@ export default function EventDetail() {
     });
   };
   
-  const handleCompleteEvent = () => {
-    if (gameState.isBankrupt) {
-      toast.error('Unable to complete event', {
-        description: 'Resolve bankruptcy status before completing contracts.',
-      });
-      return;
-    }
-
-    // Simplified completion - in full game this would be based on actual execution
-    const baseSatisfaction = 75;
-    const crewQualityBonus = Math.min(
-      15,
-      Object.values(event.assignedCrew)
-        .flat()
-        .reduce((sum, c) => sum + c.skillLevel, 0) / 2,
-    );
-    const provisionalSatisfaction = Math.min(100, baseSatisfaction + crewQualityBonus);
-
-    const result = completeEvent(event.id, provisionalSatisfaction);
-    const finalSatisfaction = result?.satisfaction ?? provisionalSatisfaction;
-    toast.success('Event completed!', {
-      description: `Client satisfaction: ${finalSatisfaction}%`,
-    });
-
-    result?.crewResults.forEach(outcome => {
-      if (outcome.leveledUp) {
-        toast.success(`${outcome.crewName} leveled up!`, {
-          description: `Now level ${outcome.newSkillLevel}${outcome.newCertification ? ` • Earned ${outcome.newCertification}` : ''}`,
-        });
-      } else if (outcome.newCertification) {
-        toast.success(`${outcome.crewName} earned ${outcome.newCertification}`);
-      } else if (outcome.moraleDelta < 0) {
-        toast.warning(`${outcome.crewName} is worn down`, {
-          description: `Morale dropped by ${Math.abs(outcome.moraleDelta)}. Consider giving them rest.`,
-        });
-      }
-    });
-
-    result?.equipmentResults.forEach(equipment => {
-      if (equipment.conditionAfter <= 40) {
-        toast.warning(`${equipment.name} is wearing down`, {
-          description: `Condition is at ${equipment.conditionAfter}%. Schedule maintenance soon.`,
-        });
-      }
-    });
-
-    result?.crisisOutcomes.forEach(outcome => {
-      const hasPenalty = outcome.satisfactionDelta < 0 || outcome.financialDelta > 0;
-      const message = `${outcome.title} (${stageLabels[outcome.stage]})`;
-      const financialImpact =
-        outcome.financialDelta !== 0
-          ? ` • Financial impact: ${formatCurrency(Math.abs(outcome.financialDelta))} ${
-              outcome.financialDelta > 0 ? 'expense' : 'savings'
-            }`
-          : '';
-      const description = `${outcome.resolution}. ${outcome.notes ?? ''}${financialImpact}`;
-
-      if (hasPenalty) {
-        toast.warning(message, {
-          description,
-        });
-      } else {
-        toast.success(message, {
-          description,
-        });
-      }
-    });
-
-    if (result?.financial.isBankrupt) {
-      toast.error('Bankruptcy triggered', {
-        description: 'Balance fell below the credit limit. Visit Finances to resolve.',
-      });
-    }
-    navigate('/');
-  };
-  
   const handleAssignCrew = (crewId: string, department: Department) => {
     const currentAssigned = event.assignedCrew[department].length;
     if (currentAssigned >= event.requirements[department]) {
@@ -291,6 +223,7 @@ export default function EventDetail() {
                 <Badge className={event.type === 'festival' ? 'bg-video' : event.type === 'tour' ? 'bg-accent' : 'bg-primary'}>
                   {event.type.toUpperCase()}
                 </Badge>
+                <Badge variant="outline">{venueTierLabel}</Badge>
               </div>
               <div className="flex items-center gap-4 text-muted-foreground">
                 <span className="flex items-center gap-1">
@@ -324,9 +257,9 @@ export default function EventDetail() {
                 )}
               </Button>
             )}
-            {event.status === 'planned' && (
-              <Button onClick={handleCompleteEvent}>
-                Complete Event (Demo)
+            {(event.status === 'planned' || event.status === 'in-progress') && (
+              <Button onClick={() => navigate(`/event/${event.id}/show`)}>
+                Go to Show Day
               </Button>
             )}
           </div>
@@ -339,6 +272,28 @@ export default function EventDetail() {
             <AlertDescription>
               Financial status prevents progressing this event. Clear debts in the Finances panel to continue.
             </AlertDescription>
+          </Alert>
+        )}
+
+        {event.status === 'in-progress' && (
+          <Alert>
+            <Clock className="h-4 w-4" />
+            <AlertTitle>Show day has arrived</AlertTitle>
+            <AlertDescription>
+              This event is live on the calendar. Complete it before{' '}
+              {format(showGraceDeadline, 'MMM dd, yyyy')} or it will be recorded as a missed
+              show — a cancellation penalty and reputation hit follow automatically.
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {event.status === 'failed' && event.lostReason && (
+          <Alert variant="destructive">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>
+              {event.lostToCompetitorId ? 'Contract lost to a competitor' : 'Contract failed'}
+            </AlertTitle>
+            <AlertDescription>{event.lostReason}</AlertDescription>
           </Alert>
         )}
 

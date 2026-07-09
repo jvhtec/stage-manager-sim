@@ -8,12 +8,14 @@ import {
 } from '@/types/game';
 import type { Department } from '@/types/game';
 import { getEventPrimaryDepartment } from './gameData';
+import type { Rng } from './rng';
 
 interface BiddingSimulationContext {
   events: Event[];
   competitors: CompetitorCompany[];
   currentDate: Date;
   playerCompany: Company;
+  rng: Rng;
 }
 
 interface BiddingSimulationResult {
@@ -95,11 +97,11 @@ const competitorTemplates: CompetitorTemplate[] = [
   },
 ];
 
-function selectTemplates(count: number): CompetitorTemplate[] {
+function selectTemplates(count: number, rng: Rng): CompetitorTemplate[] {
   const pool = [...competitorTemplates];
   const selected: CompetitorTemplate[] = [];
   while (selected.length < count && pool.length > 0) {
-    const index = Math.floor(Math.random() * pool.length);
+    const index = rng.nextInt(pool.length);
     selected.push(pool.splice(index, 1)[0]);
   }
   return selected;
@@ -118,8 +120,12 @@ function describeSpecialties(specialties: Department[]): string {
   return `${specialties.length} department lineups`;
 }
 
-export function generateInitialCompetitors(playerCompany: Company, count = 4): CompetitorCompany[] {
-  const templates = selectTemplates(count);
+export function generateInitialCompetitors(
+  playerCompany: Company,
+  rng: Rng,
+  count = 4,
+): CompetitorCompany[] {
+  const templates = selectTemplates(count, rng);
   return templates.map((template, idx) => ({
     id: `competitor-${Date.now()}-${idx}-${Math.random().toString(16).slice(2)}`,
     name: template.name,
@@ -135,7 +141,7 @@ export function generateInitialCompetitors(playerCompany: Company, count = 4): C
       `${template.name} is watching ${describeSpecialties(template.specialties)} this quarter.`,
       `${template.name} keeps a close eye on ${playerCompany.name}'s moves.`,
     ],
-    balance: 25000 + Math.floor(Math.random() * 5000),
+    balance: 25000 + rng.nextInt(5000),
   }));
 }
 
@@ -165,8 +171,8 @@ export function createInitialMarketNews(
   return [playerStory, ...competitorStories];
 }
 
-function calculateBidQuote(event: Event, competitor: CompetitorCompany): number {
-  const variance = 0.92 + Math.random() * 0.16; // 0.92 - 1.08
+function calculateBidQuote(event: Event, competitor: CompetitorCompany, rng: Rng): number {
+  const variance = 0.92 + rng.next() * 0.16; // 0.92 - 1.08
   const quote = event.clientPay * competitor.baseRateModifier * variance;
   return Math.round(quote);
 }
@@ -338,6 +344,7 @@ export function simulateCompetitorBidding({
   competitors,
   currentDate,
   playerCompany,
+  rng,
 }: BiddingSimulationContext): BiddingSimulationResult {
   const workingEvents = events.map(event => ({ ...event }));
   let workingCompetitors = competitors.map(competitor => ({ ...competitor }));
@@ -360,7 +367,7 @@ export function simulateCompetitorBidding({
           return competitor;
         }
 
-        const quote = calculateBidQuote(event, competitor);
+        const quote = calculateBidQuote(event, competitor, rng);
         const reputationWeight = Math.max(0.1, competitor.reputation / 100);
         const bid: EventBid = {
           competitorId: competitor.id,
@@ -383,7 +390,7 @@ export function simulateCompetitorBidding({
       }
 
       if (alreadyBidding && bidWindowMs > 0) {
-        const withdrawalChance = Math.random();
+        const withdrawalChance = rng.next();
         if (withdrawalChance > 0.7) {
           workingEvents[index] = updateBidStatus(workingEvents[index], competitor.id, 'lost');
           return removeBidFromCompetitor(competitor, event.id);
@@ -431,6 +438,7 @@ export function simulateCompetitorBidding({
 export function progressCompetitorSchedules(
   competitors: CompetitorCompany[],
   currentDate: Date,
+  rng: Rng,
 ): { competitors: CompetitorCompany[]; news: MarketNewsItem[] } {
   const newsItems: MarketNewsItem[] = [];
 
@@ -450,7 +458,7 @@ export function progressCompetitorSchedules(
       }
 
       const failureChance = Math.max(0.08, (100 - competitor.reliability) / 110);
-      const didFail = Math.random() < failureChance;
+      const didFail = rng.chance(failureChance);
 
       if (didFail) {
         const reputationLoss = 2 + Math.max(1, Math.round(event.payout / 15000));

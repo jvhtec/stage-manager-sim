@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Users, UserPlus } from 'lucide-react';
 import { generateCrewMember } from '@/lib/gameData';
+import { createRng } from '@/lib/rng';
 import { CrewMember, Department } from '@/types/game';
 import { toast } from 'sonner';
 import {
@@ -38,8 +39,11 @@ export default function Crew() {
       return;
     }
 
-    const skillLevel = 3 + Math.floor(Math.random() * 5); // 3-7
-    const newCrew = generateCrewMember(department, skillLevel);
+    // A manual, on-demand action outside the day-tick simulation loop — not
+    // part of the seeded sim, so a one-off wall-clock rng is fine here.
+    const rng = createRng(Date.now());
+    const skillLevel = 3 + rng.nextInt(5); // 3-7
+    const newCrew = generateCrewMember(department, skillLevel, rng, gameState.currentDate);
     const hiringCost = 500; // Base hiring cost
 
     if (gameState.company.balance < hiringCost) {
