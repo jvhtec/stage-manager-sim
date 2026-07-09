@@ -36,7 +36,6 @@ export default function EventDetail() {
     assignEquipmentToEvent,
     unassignEquipmentFromEvent,
     acceptEvent,
-    completeEvent,
     respondToCrisisPrompt,
   } = useGame();
   const navigate = useNavigate();
@@ -106,7 +105,11 @@ export default function EventDetail() {
   const crewReadyDate = new Date(event.date);
   crewReadyDate.setDate(crewReadyDate.getDate() + recoveryDays);
 
-  const crisisPrompts = gameState.crises.filter(prompt => prompt.eventId === event.id);
+  // Execution-stage crises now play out on the Show Day screen instead of
+  // being resolvable ahead of time — only planning-stage risks show here.
+  const crisisPrompts = gameState.crises.filter(
+    prompt => prompt.eventId === event.id && prompt.stage === 'planning',
+  );
 
   const severityStyles: Record<CrisisSeverity, string> = {
     low: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-300',
@@ -161,82 +164,6 @@ export default function EventDetail() {
     toast.success('Event accepted!', {
       description: `${event.name} has been added to your schedule`,
     });
-  };
-  
-  const handleCompleteEvent = () => {
-    if (gameState.isBankrupt) {
-      toast.error('Unable to complete event', {
-        description: 'Resolve bankruptcy status before completing contracts.',
-      });
-      return;
-    }
-
-    // Simplified completion - in full game this would be based on actual execution
-    const baseSatisfaction = 75;
-    const crewQualityBonus = Math.min(
-      15,
-      Object.values(event.assignedCrew)
-        .flat()
-        .reduce((sum, c) => sum + c.skillLevel, 0) / 2,
-    );
-    const provisionalSatisfaction = Math.min(100, baseSatisfaction + crewQualityBonus);
-
-    const result = completeEvent(event.id, provisionalSatisfaction);
-    const finalSatisfaction = result?.satisfaction ?? provisionalSatisfaction;
-    toast.success('Event completed!', {
-      description: `Client satisfaction: ${finalSatisfaction}%`,
-    });
-
-    result?.crewResults.forEach(outcome => {
-      if (outcome.leveledUp) {
-        toast.success(`${outcome.crewName} leveled up!`, {
-          description: `Now level ${outcome.newSkillLevel}${outcome.newCertification ? ` • Earned ${outcome.newCertification}` : ''}`,
-        });
-      } else if (outcome.newCertification) {
-        toast.success(`${outcome.crewName} earned ${outcome.newCertification}`);
-      } else if (outcome.moraleDelta < 0) {
-        toast.warning(`${outcome.crewName} is worn down`, {
-          description: `Morale dropped by ${Math.abs(outcome.moraleDelta)}. Consider giving them rest.`,
-        });
-      }
-    });
-
-    result?.equipmentResults.forEach(equipment => {
-      if (equipment.conditionAfter <= 40) {
-        toast.warning(`${equipment.name} is wearing down`, {
-          description: `Condition is at ${equipment.conditionAfter}%. Schedule maintenance soon.`,
-        });
-      }
-    });
-
-    result?.crisisOutcomes.forEach(outcome => {
-      const hasPenalty = outcome.satisfactionDelta < 0 || outcome.financialDelta > 0;
-      const message = `${outcome.title} (${stageLabels[outcome.stage]})`;
-      const financialImpact =
-        outcome.financialDelta !== 0
-          ? ` • Financial impact: ${formatCurrency(Math.abs(outcome.financialDelta))} ${
-              outcome.financialDelta > 0 ? 'expense' : 'savings'
-            }`
-          : '';
-      const description = `${outcome.resolution}. ${outcome.notes ?? ''}${financialImpact}`;
-
-      if (hasPenalty) {
-        toast.warning(message, {
-          description,
-        });
-      } else {
-        toast.success(message, {
-          description,
-        });
-      }
-    });
-
-    if (result?.financial.isBankrupt) {
-      toast.error('Bankruptcy triggered', {
-        description: 'Balance fell below the credit limit. Visit Finances to resolve.',
-      });
-    }
-    navigate('/');
   };
   
   const handleAssignCrew = (crewId: string, department: Department) => {
@@ -327,8 +254,8 @@ export default function EventDetail() {
               </Button>
             )}
             {(event.status === 'planned' || event.status === 'in-progress') && (
-              <Button onClick={handleCompleteEvent}>
-                Complete Event (Demo)
+              <Button onClick={() => navigate(`/event/${event.id}/show`)}>
+                Go to Show Day
               </Button>
             )}
           </div>

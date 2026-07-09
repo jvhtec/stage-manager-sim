@@ -166,17 +166,25 @@ This is the phase that changes the genre from "dashboard" to "tycoon."
    - Covered by `src/lib/__tests__/eventLifecycle.test.ts` (8 cases: expiry, in-progress
      transition, grace-deadline auto-fail + penalty math + crew/gear release, and the
      do-nothing paths). First vitest harness in the repo (`npm test` / `npm run test:run`).
-2. **Show-day resolution screen.** Replace the "Complete Event" button with a show-day flow
-   (new route `/event/:id/show`). Minimum viable version — no animation needed:
-   - The show plays out as a sequence of phases (load-in → soundcheck → doors → show →
-     teardown) on a step/auto-advance timeline.
-   - Each phase rolls incidents from the existing crisis library (`crisis.ts` execution
-     prompts move here), weighted by *preparation quality*: understaffing, low-skill crew in
-     the lead slot, gear condition < 60, unresolved planning crises all raise incident odds.
-   - Incidents present the existing choice UI, but now mid-show with a time cost, and crew
-     stats influence which options exist ("Calm Under Pressure" tech can cover a failure).
-   - Satisfaction is *accumulated* across phases instead of `75 + bonus`. The formula lives
-     in the engine and is unit-tested.
+2. **Show-day resolution screen** *(mostly done)*. `/event/:id/show` (`src/pages/ShowDay.tsx`)
+   replaces the old "Complete Event (Demo)" button:
+   - `src/lib/showDay.ts`'s `calculatePreparationScore()` derives a 0-100 readiness score from
+     assigned crew's average skill and fatigue and assigned gear's average condition — this
+     is the "preparation quality" the plan called for. `getBaseSatisfactionFromPreparation()`
+     maps it onto a 45-90 baseline, replacing the old flat `75 + crew bonus` that ignored prep
+     entirely. Both are pure and unit-tested (`src/lib/__tests__/showDay.test.ts`).
+   - Three phases — Load-In, Doors & Performance, Teardown — as a step timeline. Execution-
+     stage crisis prompts (`worn-equipment`, `turnaround-risk`) were moved out of the pre-show
+     "Risk & Crisis Preparation" panel (now planning-stage only) and now surface on their
+     mapped phase (`getPhaseForCrisisPrompt()`); resolving them uses the same
+     `respondToCrisisPrompt` action, just gated to the right moment instead of resolvable
+     days in advance.
+   - Still missing: an actual per-phase incident **roll**. Today a phase only shows an
+     incident if the existing crisis generator already flagged one during planning (worn gear
+     or a tight turnaround) — there's no randomized "something goes wrong live" event for the
+     performance phase itself, and no crew traits ("Calm Under Pressure") influencing options.
+     That's real content work for the crisis library (Phase 2's traits item is the natural
+     home for it), not a wiring problem.
 3. **Difficulty and progression curve.**
    - Contract generation scales with reputation: pay, requirement counts, venue tier, and
      crisis intensity all derive from rep bands (0–25 bar gigs → 75+ arena shows).
@@ -266,11 +274,16 @@ survivable only with deliberate gear strategy; both are unlockables, not day-1 n
 ## 6. Suggested first three PRs
 
 1. ✅ **Persistence + New Game** *(done)* — autosave/restore/reset.
-2. **Engine extraction + seeded RNG + vitest** — vitest itself landed alongside PR 3 below
-   (it needed a harness to test the lifecycle rules); the actual pure-reducer extraction of
-   `GameContext.tsx` and the seeded RNG are still outstanding.
+2. **Engine extraction + seeded RNG** — vitest itself landed alongside PR 3 (it needed a
+   harness to test the lifecycle rules), and `showDay.ts`/`gameData.ts`'s lifecycle functions
+   are already pure and tested in isolation. What's still outstanding is the big one: turning
+   `GameContext.tsx` into `useReducer` over a pure reducer, and a seeded RNG to replace the
+   scattered `Math.random()` calls in `gameData.ts`/`crisis.ts`/`competitors.ts`.
 3. ✅ **Event lifecycle + missed-show penalties** *(done)* — see Phase 1 §1 above.
+4. ✅ **Show-day resolution screen** *(mostly done)* — see Phase 1 §2 above. The remaining
+   piece (randomized live-show incidents, crew traits) is crisis-library content work, not
+   plumbing.
 
-Next up: the show-day resolution screen (Phase 1 §2) is the big remaining rock for this
-phase — everything else in Phase 1 is comparatively small. The engine extraction (item 2
-above) is worth doing before the show-day screen adds more logic to `GameContext.tsx`.
+Next up: item 2, the engine extraction — `GameContext.tsx` has grown with every feature
+(1,600+ lines) and Phase 2's hiring market / gear marketplace / traits work will keep adding
+to it unless the reducer split happens first.

@@ -7,6 +7,7 @@ import { GameProvider } from "./contexts/GameContext";
 import Dashboard from "./pages/Dashboard";
 import Calendar from "./pages/Calendar";
 import EventDetail from "./pages/EventDetail";
+import ShowDay from "./pages/ShowDay";
 import Crew from "./pages/Crew";
 import Finances from "./pages/Finances";
 import Inventory from "./pages/Inventory";
@@ -26,6 +27,7 @@ const App = () => (
               <Route path="/" element={<Dashboard />} />
               <Route path="/calendar" element={<Calendar />} />
               <Route path="/event/:id" element={<EventDetail />} />
+              <Route path="/event/:id/show" element={<ShowDay />} />
               <Route path="/crew" element={<Crew />} />
               <Route path="/inventory" element={<Inventory />} />
               <Route path="/finances" element={<Finances />} />
