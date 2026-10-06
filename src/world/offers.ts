@@ -69,7 +69,13 @@ export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
   const tier = spec.tier ?? spec.venue.tier;
   const info = tierInfo(tier);
   const needs = {} as DeptCounts;
+  const showYear = dateOfDay(state, spec.day).getUTCFullYear();
   DEPTS.forEach(d => {
+    // Nobody asks for kit that hasn't been invented yet (no video screens in 1975).
+    if (!productsAvailableIn(showYear, d).length) {
+      needs[d] = 0;
+      return;
+    }
     const base = info.needs[d];
     if (d === 'console') {
       // FOH always; monitor world from club level up; a spare/broadcast desk at stadiums.

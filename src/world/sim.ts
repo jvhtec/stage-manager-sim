@@ -505,11 +505,12 @@ export function updateRivals(s: TycoonState, world: WorldMap, year: number) {
     }
     if (!rival) {
       if (t.enters > year || gone) return;
-      // Spread out: emptiest big town with a free warehouse lot.
+      // Their real home town if it's on the map with a free lot; otherwise
+      // spread out to the emptiest big town.
       const candidates = world.cities
         .map(c => ({ c, lot: freeLot(s, world, c.id), crowd: s.rivals.filter(r => r.hqCityId === c.id).length }))
         .filter(x => x.lot >= 0 && x.c.id !== s.company.hqCityId)
-        .sort((a, b) => a.crowd - b.crowd || b.c.population - a.c.population);
+        .sort((a, b) => Number(b.c.name === t.hq) - Number(a.c.name === t.hq) || a.crowd - b.crowd || b.c.population - a.c.population);
       const pick = candidates[0];
       if (!pick) return;
       s.rivals.push({

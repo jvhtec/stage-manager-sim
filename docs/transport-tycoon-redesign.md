@@ -77,7 +77,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 41 tests):
+(`src/world/__tests__/*.test.ts`, 44 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -145,6 +145,15 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
   its brand colour, and brands/companies show as typographic badges in their colours. For a
   personal build, official logo files can be dropped into `public/brands/` and listed in
   `public/brands/index.json` — they then replace the badges (see the README there).
+
+- **Start years** (1975, 1980, 1985, 1990, 2000, 2010) — the era sets which trucks, gear and
+  desks exist (Bedford TK, Altec A4s, Yamaha PM1000 and Strand lanterns in 1975; no video kit
+  until the mid-'80s), your starter rig (the cheapest kit a pub crowd of that year will accept),
+  which acts are touring (Led Zeppelin, The Who, Miguel Ríos, Barón Rojo… through to today) and
+  which firms are trading. Companies arrive, rebrand and fold in their real years — e.g. in
+  Spain LIL Service (1979, later Twin Cam Audio), Milán Acústica (1981), Berenice, Sorter,
+  Apogee, then Fluge (1991); in the US Tycobrahe Sound (1968–81) and Silverfish (→ Sound Image,
+  1984). Rivals set up in their real home city when it's on the map.
 
 Years and careers are approximate and for flavour. This uses real names for personal play;
 note that pushing to `main` publishes the build to GitHub Pages.

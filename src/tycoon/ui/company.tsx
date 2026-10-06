@@ -4,6 +4,7 @@ import {
   LOAN_INTEREST_PER_YEAR,
   LOAN_STEP,
   MAX_LOAN,
+  START_YEARS,
   NEGATIVE_MONTHS_GAME_OVER,
   TIERS,
   companyTier,
@@ -199,13 +200,14 @@ export function NewGameForm({
   onCancel,
 }: {
   onPreview: (seed: number, hqCityId?: string, country?: CountryCode) => void;
-  onStart: (opts: { companyName: string; color: string; seed: number; hqCityId: string; country: CountryCode }) => void;
+  onStart: (opts: { companyName: string; color: string; seed: number; hqCityId: string; country: CountryCode; startYear: number }) => void;
   onCancel?: () => void;
 }) {
   const [name, setName] = useState('Roadcase & Rigging');
   const [color, setColor] = useState(COLORS[0]);
   const [seed, setSeed] = useState(() => createRandomSeed());
   const [country, setCountry] = useState<CountryCode>(() => guessCountry());
+  const [startYear, setStartYear] = useState(1990);
   const cities = useMemo(() => suggestedHqCities(seed, country), [seed, country]);
   const [hq, setHq] = useState<string>('');
   const hqId = cities.find(c => c.id === hq)?.id ?? cities.find(c => c.size === 'town')?.id ?? cities[0]?.id;
@@ -215,7 +217,7 @@ export function NewGameForm({
   return (
     <div className="tt-newgame" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div className="tt-dim tt-intro" style={{ whiteSpace: 'normal' }}>
-        It's 1990. You've got two vans, a warehouse and a few flight cases. Build a touring empire.
+        It's {startYear}. You've got two vans, a warehouse and a few flight cases. Build a touring empire.
       </div>
       <label>
         <div className="tt-dim" style={{ marginBottom: 3 }}>
@@ -254,6 +256,18 @@ export function NewGameForm({
           ))}
         </div>
       </div>
+      <div>
+        <div className="tt-dim" style={{ marginBottom: 3 }}>
+          Start year
+        </div>
+        <div className="tt-years">
+          {START_YEARS.map(y => (
+            <button key={y} className="tt-btn sm" data-on={y === startYear} onClick={() => setStartYear(y)}>
+              {y}
+            </button>
+          ))}
+        </div>
+      </div>
       <label>
         <div className="tt-dim" style={{ marginBottom: 3 }}>
           Home town
@@ -279,7 +293,7 @@ export function NewGameForm({
           <button
             className="tt-btn primary"
             disabled={!name.trim() || !hqId}
-            onClick={() => onStart({ companyName: name.trim(), color, seed, hqCityId: hqId!, country })}
+            onClick={() => onStart({ companyName: name.trim(), color, seed, hqCityId: hqId!, country, startYear })}
           >
             Start company
           </button>

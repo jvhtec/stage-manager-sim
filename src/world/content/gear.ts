@@ -44,6 +44,10 @@ export interface GearProduct {
 
 export const GEAR_PRODUCTS: GearProduct[] = [
   // Audio — PA systems
+  { id: 'altec-a4', kind: 'point-source', brand: 'Altec Lansing', name: 'Voice of the Theatre A4', dept: 'audio', introYear: 1960, price: 1400, quality: 2 },
+  { id: 'jbl-4560', kind: 'point-source', brand: 'JBL', name: '4560 bins', dept: 'audio', introYear: 1971, price: 1800, quality: 3 },
+  { id: 'meyer-upa1', kind: 'point-source', brand: 'Meyer Sound', name: 'UPA-1', dept: 'audio', introYear: 1980, price: 2500, quality: 5 },
+  { id: 'turbosound-tms3', kind: 'point-source', brand: 'Turbosound', name: 'TMS-3', dept: 'audio', introYear: 1983, price: 2600, quality: 5 },
   { id: 'martin-f2', kind: 'point-source', brand: 'Martin Audio', name: 'F2 PA', dept: 'audio', introYear: 1984, price: 2200, quality: 4 },
   { id: 'meyer-msl3', kind: 'point-source', brand: 'Meyer Sound', name: 'MSL-3', dept: 'audio', introYear: 1987, price: 2700, quality: 5 },
   { id: 'eaw-kf850', kind: 'point-source', brand: 'EAW', name: 'KF850', dept: 'audio', introYear: 1990, price: 2900, quality: 5 },
@@ -56,6 +60,8 @@ export const GEAR_PRODUCTS: GearProduct[] = [
   { id: 'dnb-gsl', kind: 'line-array', brand: 'd&b audiotechnik', name: 'GSL', dept: 'audio', introYear: 2016, price: 7200, quality: 10 },
 
   // Consoles — FOH and monitor desks (analogue to digital)
+  { id: 'yamaha-pm1000', kind: 'console-analog', brand: 'Yamaha', name: 'PM1000', dept: 'console', introYear: 1974, price: 1800, quality: 3 },
+  { id: 'midas-pro4', kind: 'console-analog', brand: 'Midas', name: 'Pro 4', dept: 'console', introYear: 1977, price: 2600, quality: 4 },
   { id: 'yamaha-pm3000', kind: 'console-analog', brand: 'Yamaha', name: 'PM3000', dept: 'console', introYear: 1985, price: 2800, quality: 4 },
   { id: 'midas-xl3', kind: 'console-analog', brand: 'Midas', name: 'XL3', dept: 'console', introYear: 1988, price: 3600, quality: 5 },
   { id: 'soundcraft-series5', kind: 'console-analog', brand: 'Soundcraft', name: 'Series Five', dept: 'console', introYear: 1990, price: 2600, quality: 4 },
@@ -75,6 +81,9 @@ export const GEAR_PRODUCTS: GearProduct[] = [
   { id: 'digico-quantum7', kind: 'console-digital', brand: 'DiGiCo', name: 'Quantum7', dept: 'console', introYear: 2018, price: 9400, quality: 10 },
 
   // Lighting — fixtures & control
+  { id: 'strand-patt23', kind: 'par', brand: 'Strand', name: 'Patt 23 lanterns', dept: 'lighting', introYear: 1960, price: 600, quality: 2 },
+  { id: 'avolites-qm500', kind: 'desk', brand: 'Avolites', name: 'QM500 desk + rig', dept: 'lighting', introYear: 1980, price: 1800, quality: 4 },
+  { id: 'vari-lite-vl1', kind: 'moving-spot', brand: 'Vari-Lite', name: 'VL1 spots', dept: 'lighting', introYear: 1981, price: 2400, quality: 4 },
   { id: 'par64', kind: 'par', brand: 'Thomas', name: 'PAR 64 can rig', dept: 'lighting', introYear: 1975, price: 1200, quality: 3 },
   { id: 'vari-lite-vl2', kind: 'moving-spot', brand: 'Vari-Lite', name: 'VL2 spots', dept: 'lighting', introYear: 1986, price: 2600, quality: 5 },
   { id: 'avolites-pearl', kind: 'desk', brand: 'Avolites', name: 'Pearl desk + rig', dept: 'lighting', introYear: 1990, price: 2300, quality: 5 },
@@ -96,6 +105,7 @@ export const GEAR_PRODUCTS: GearProduct[] = [
   { id: 'roe-blackpearl', kind: 'led-wall', brand: 'ROE Visual', name: 'Black Pearl LED', dept: 'video', introYear: 2015, price: 7600, quality: 10 },
 
   // Staging — decks, truss, rigging, automation
+  { id: 'layher-scaffold', kind: 'deck', brand: 'Layher', name: 'Scaffold stage', dept: 'stage', introYear: 1965, price: 900, quality: 2 },
   { id: 'steeldeck', kind: 'deck', brand: 'Steeldeck', name: 'Stage decks', dept: 'stage', introYear: 1980, price: 1300, quality: 4 },
   { id: 'prolyte-truss', kind: 'truss', brand: 'Prolyte', name: 'Truss & motors', dept: 'stage', introYear: 1990, price: 1700, quality: 5 },
   { id: 'cm-lodestar', kind: 'motor', brand: 'CM', name: 'Lodestar rigging', dept: 'stage', introYear: 1992, price: 2000, quality: 6 },
@@ -121,5 +131,5 @@ export function productsAvailableIn(year: number, dept?: Dept): GearProduct[] {
  * rooms want better kit, and the bar rises about one point every eight years.
  */
 export function expectedQuality(tier: number, year: number): number {
-  return Math.min(10, 2.5 + tier + Math.max(0, year - 1990) / 8);
+  return Math.max(2, Math.min(10, 2.5 + tier + (year - 1990) / 8));
 }

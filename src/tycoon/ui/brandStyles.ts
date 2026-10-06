@@ -16,6 +16,11 @@ export const STYLES: Record<string, BrandStyle> = {
   'd&b audiotechnik': { bg: '#fff', fg: '#111', text: 'd&b', weight: 900, lower: true },
   'Meyer Sound': { bg: '#111', fg: '#fff', text: 'MEYER SOUND', weight: 700, spacing: 1 },
   'Martin Audio': { bg: '#1b1b1b', fg: '#e5e5e5', text: 'MARTIN AUDIO', weight: 800 },
+  'Altec Lansing': { bg: '#1f3b5c', fg: '#f5d76e', text: 'ALTEC', weight: 900, serif: true },
+  JBL: { bg: '#f26522', fg: '#fff', text: 'JBL', weight: 900 },
+  Turbosound: { bg: '#111', fg: '#22d3ee', text: 'TURBOSOUND', weight: 800 },
+  Strand: { bg: '#0b3a6e', fg: '#fff', text: 'STRAND', weight: 800, serif: true },
+  Layher: { bg: '#004b93', fg: '#ffd400', text: 'LAYHER', weight: 900 },
   EAW: { bg: '#0b3a6e', fg: '#fff', text: 'EAW', weight: 900, italic: true },
   // Consoles
   DiGiCo: { bg: '#0b5cad', fg: '#fff', text: 'DiGiCo', weight: 800 },

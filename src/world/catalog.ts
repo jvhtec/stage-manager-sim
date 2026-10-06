@@ -7,6 +7,8 @@ import type { Dept, DeptCounts } from './types';
 
 export const HOURS_PER_DAY = 24;
 export const START_YEAR = 1990;
+/** Eras you can start a company in. */
+export const START_YEARS = [1975, 1980, 1985, 1990, 2000, 2010] as const;
 
 // Show-day timetable, in hours after midnight on the gig's day. Trucks must be
 // at the venue by LOAD_IN; anything that rolls up after SHOW_START is useless.
@@ -38,6 +40,19 @@ export interface VehicleModel {
 // Real-world vans, trucks and buses (launch years approximate, for flavour).
 export const VEHICLE_MODELS: VehicleModel[] = [
   {
+    id: 'bedford-tk',
+    name: 'Bedford TK box truck',
+    kind: 'truck',
+    gearCapacity: 9,
+    crewSeats: 2,
+    speed: 1.2,
+    price: 30000,
+    runningCostPerYear: 7000,
+    reliability: 72,
+    lifespanYears: 10,
+    introYear: 1960,
+  },
+  {
     id: 'splitter-van',
     name: 'Ford Transit Splitter',
     kind: 'van',
@@ -48,7 +63,7 @@ export const VEHICLE_MODELS: VehicleModel[] = [
     runningCostPerYear: 3500,
     reliability: 82,
     lifespanYears: 8,
-    introYear: 1980,
+    introYear: 1965,
   },
   {
     id: 'luton-box',
@@ -61,7 +76,7 @@ export const VEHICLE_MODELS: VehicleModel[] = [
     runningCostPerYear: 5500,
     reliability: 80,
     lifespanYears: 10,
-    introYear: 1984,
+    introYear: 1978,
   },
   {
     id: 'rigid-7t',

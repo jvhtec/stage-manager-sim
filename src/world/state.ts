@@ -7,14 +7,14 @@ import {
   getModel,
 } from './catalog';
 import { newId } from './core';
-import { productsAvailableIn } from './content/gear';
+import { expectedQuality, productsAvailableIn } from './content/gear';
 import { DEFAULT_COUNTRY, type CountryCode } from './content/countries';
 import { updateRivals } from './sim';
 import { generateNationalTour } from './tours';
 import { getWorld } from './mapgen';
 import { generateOffer } from './offers';
 import { roadDistance } from './pathfinding';
-import type { TycoonState, Vehicle } from './types';
+import { DEPTS, type GearStock, type TycoonState, type Vehicle } from './types';
 
 export const TYCOON_SAVE_KEY = 'stage-manager-sim:tycoon';
 // v2: gear became real products (GearStock), plus artist relations, riders
@@ -29,6 +29,39 @@ export interface NewGameOptions {
   seed?: number;
   hqCityId?: string;
   country?: CountryCode;
+  startYear?: number;
+}
+
+/**
+ * A starter rig for the era: in each slot, the cheapest kit that a pub
+ * crowd of that year would still accept (or the best there is, early on).
+ */
+export function starterKit(year: number): GearStock {
+  const counts: Record<string, number> = { audio: 5, console: 2, lighting: 4, video: 1, stage: 3 };
+  const kit: GearStock = {};
+  DEPTS.forEach(dept => {
+    const options = productsAvailableIn(year, dept).sort((a, b) => a.price - b.price);
+    if (!options.length) return;
+    const bar = expectedQuality(1, year);
+    const ok = options.filter(p => p.quality >= bar);
+    const pool = ok.length ? ok : [...options].sort((a, b) => b.quality - a.quality);
+    // Lighting gets two kinds of fixture for a bit of variety.
+    if (dept === 'lighting' && pool.length > 1) {
+      kit[pool[0].id] = 2;
+      kit[pool[1].id] = counts[dept] - 2;
+    } else {
+      kit[pool[0].id] = counts[dept];
+    }
+  });
+  return kit;
+}
+
+/** A crew van and a box truck from whatever the era sells. */
+export function starterFleet(year: number): string[] {
+  const models = VEHICLE_MODELS.filter(m => m.introYear <= year).sort((a, b) => a.price - b.price);
+  const van = models.find(m => m.crewSeats >= 4) ?? models[0];
+  const truck = models.find(m => m.id !== van.id && m.gearCapacity >= 6) ?? models.find(m => m.id !== van.id) ?? van;
+  return [van.id, truck.id];
 }
 
 /** Towns make the best starting HQ: busy enough for work, not in a rival's back yard. */
@@ -63,6 +96,7 @@ export function makeVehicle(state: TycoonState, modelId: string, homeCityId: str
 export function createTycoonGame(options: NewGameOptions): TycoonState {
   const seed = options.seed ?? createRandomSeed();
   const country = options.country ?? DEFAULT_COUNTRY;
+  const startYear = options.startYear ?? START_YEAR;
   const world = getWorld(seed, country);
   const rng = createRng(seed ^ 0xa11ce);
 
@@ -77,7 +111,7 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     country,
     rngState: rng.getState(),
     hour: 8,
-    startYear: START_YEAR,
+    startYear,
     company: {
       name: options.companyName,
       color: options.color,
@@ -94,8 +128,8 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     tours: [],
     news: [],
     ledger: {},
-    announcedModels: VEHICLE_MODELS.filter(m => m.introYear <= START_YEAR).map(m => m.id),
-    announcedGear: productsAvailableIn(START_YEAR).map(p => p.id),
+    announcedModels: VEHICLE_MODELS.filter(m => m.introYear <= startYear).map(m => m.id),
+    announcedGear: productsAvailableIn(startYear).map(p => p.id),
     artistRelations: {},
     negativeMonths: 0,
     nextId: 0,
@@ -106,18 +140,15 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     id: newId(state, 'depot'),
     cityId: hq.id,
     lot: 0,
-    // A 1990 starter kit: a Martin F2 PA, two Yamaha PM3000s (FOH + monitors),
-    // PAR cans and a couple of Vari-Lites,
-    // a projector and some Steeldeck.
-    gear: { 'martin-f2': 5, 'yamaha-pm3000': 2, par64: 2, 'vari-lite-vl2': 2, 'barco-projector': 1, steeldeck: 3 },
+    // A small, slightly dated rig for the era you start in.
+    gear: starterKit(startYear),
     crew: 5,
     builtHour: 0,
   });
-  state.vehicles.push(makeVehicle(state, 'splitter-van', hq.id));
-  state.vehicles.push(makeVehicle(state, 'luton-box', hq.id));
+  starterFleet(startYear).forEach(modelId => state.vehicles.push(makeVehicle(state, modelId, hq.id)));
 
   // Rivals (real production houses) set up in the biggest places that aren't your home town.
-  updateRivals(state, world, START_YEAR);
+  updateRivals(state, world, startYear);
 
   // An opening market: a couple of small shows close to home so the first
   // week has something bookable, plus a spread across the map.

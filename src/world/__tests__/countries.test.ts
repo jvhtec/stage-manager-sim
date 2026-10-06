@@ -8,6 +8,7 @@ import { rivalsFor } from '../content/companies';
 import { generateOffer } from '../offers';
 import { generateWorldTour, tourGigs } from '../tours';
 import { formatMoney } from '../core';
+import { deptTotals } from '../loading';
 import type { Tour } from '../types';
 
 const game = (country: 'ES' | 'GB' | 'US' | 'DE' | 'FR' | 'IT', seed = 2024) =>
@@ -40,9 +41,12 @@ describe('countries', () => {
     const s = game('ES');
     const ids = s.rivals.map(r => r.id);
     expect(ids).toContain('clair');
-    expect(ids).toContain('fluge');
-    expect(ids).toContain('dushow');
+    // 1990: the '80s Spanish sound houses are trading; Fluge (1991) isn't yet.
+    ['twincam', 'milan', 'berenice', 'sorter', 'apogee'].forEach(id => expect(ids).toContain(id));
+    expect(ids).not.toContain('fluge');
     expect(ids).not.toContain('britrow');
+    expect(ids).not.toContain('tycobrahe');
+    expect(s.rivals.find(r => r.id === 'twincam')!.name).toBe('Twin Cam Audio');
     rivalsFor('ES').forEach(t => expect(t.countries.includes('ES') || t.countries.includes('*')).toBe(true));
   });
 
@@ -86,6 +90,6 @@ describe('countries', () => {
 
   it('starts with a full rig including consoles', () => {
     const s = game('IT');
-    expect(s.depots[0].gear['yamaha-pm3000']).toBe(2);
+    expect(deptTotals(s.depots[0].gear).console).toBe(2);
   });
 });
