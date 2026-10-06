@@ -102,14 +102,17 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
   arenas and stadiums are always real acts. Do an act proud (≥75%) and they remember: their
   later offers come to you more often, pay 10% more, are marked **♥ Asked for you**, and rivals
   are far less likely to poach them.
-- **Rival companies** (`companies.ts`) — Clair Brothers, Sound Image, Britannia Row, Wigwam,
-  Thunder Audio, Light & Sound Design, Neg Earth, Eighth Day Sound, Tycho Brahe, Delta and
-  Silverfish trade from day one, each with a specialty department and the venue tiers they
-  chase. XL Video (1993), Christie Lites (1994), Creative Technology (1996) and Solotech (2005)
-  arrive later; LSD becomes PRG (2001), Clair becomes Clair Global (2010), XL Video is absorbed
-  into PRG (2011). Entries marked `// verify` are guesses. Towns have several warehouse lots
-  (1 in villages, 2 in towns, 3 in cities) shared between you and rivals. Shown in a TT-style
-  **company league**.
+- **Rival companies** (`companies.ts`) — the international giants (Clair Brothers → Clair Global
+  2010, Light & Sound Design → PRG 2001, Solotech 2005) trade everywhere; each country adds its
+  own period-accurate roster. UK: Martin Audio's '70s PA hire (to 1988), Britannia Row (Clair
+  Global from 2017), Wigwam, Skan PA Hire (to Britannia Row 2024), SSE, Neg Earth, Adlib,
+  Capital, Delta Sound (1988, later DeltaLive), XL Video, Creative Technology, ESS PA, 22live
+  (2022). US: Tycobrahe, Silverfish → Sound Image, Showco, Thunder Audio, Eighth Day, Bandit,
+  Upstaging, Firehouse, Christie. Spain: LIL Service → Twin Cam, Milán Acústica, Berenice,
+  Sorter, Apogee, Fluge, Pronorte, Sonido Tole. Plus France, Germany and Italy. Each has a
+  specialty department, the venue tiers they chase, an HQ town, and entry/rename/exit years.
+  Entries marked `// verify` are guesses. Towns have several warehouse lots (1 in villages, 2
+  in towns, 3 in cities) shared between you and rivals. Shown in a TT-style **company league**.
 - **Tours** (`tours.ts`, `content/world.ts`) — club, theatre and arena tours bundle 3-6 dates
   in different towns with a completion bonus; put one truck on the whole tour and it drives the
   route. **World tours** for stadium and arena acts add one or two overseas legs (Europe, North

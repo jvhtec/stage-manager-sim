@@ -52,7 +52,10 @@ export const RIVAL_COMPANIES: RivalTemplate[] = [
   }),
 
   // --- United Kingdom ---------------------------------------------------------
-  T({ id: 'britrow', name: 'Britannia Row', hq: 'London', color: '#7f1d1d', specialty: 'audio', countries: ['GB'], minTier: 2, maxTier: 4, startingReputation: 58, enters: 1975 }),
+  T({
+    id: 'britrow', name: 'Britannia Row', hq: 'London', color: '#7f1d1d', specialty: 'audio', countries: ['GB'], minTier: 2, maxTier: 4, startingReputation: 58, enters: 1975,
+    renames: [{ year: 2017, name: 'Britannia Row Productions', news: 'Clair Global acquires Britannia Row Productions.' }],
+  }),
   T({ id: 'wigwam', name: 'Wigwam Acoustics', hq: 'Manchester', color: '#4d7c0f', specialty: 'audio', countries: ['GB'], minTier: 1, maxTier: 3, startingReputation: 36, enters: 1976 }),
   T({ id: 'negearth', name: 'Neg Earth Lights', hq: 'London', color: '#854d0e', specialty: 'lighting', countries: ['GB'], minTier: 1, maxTier: 3, startingReputation: 42, enters: 1979 }),
   T({ id: 'sse', name: 'SSE Audio', hq: 'Birmingham', color: '#1e3a5f', specialty: 'audio', countries: ['GB'], minTier: 1, maxTier: 3, startingReputation: 44, enters: 1977 }), // verify year
@@ -63,6 +66,23 @@ export const RIVAL_COMPANIES: RivalTemplate[] = [
     exits: { year: 2011, news: 'XL Video is absorbed into PRG — its screens now tour under the PRG banner.' },
   }),
   T({ id: 'ct', name: 'Creative Technology', hq: 'London', color: '#155e75', specialty: 'video', countries: ['GB'], minTier: 3, maxTier: 4, startingReputation: 52, enters: 1996 }),
+  T({
+    // Dave Martin's PA hire in the '70s (Pink Floyd, The Who, Supertramp) before the name meant loudspeakers.
+    id: 'martinaudio', name: 'Martin Audio', hq: 'London', color: '#1c1917', specialty: 'audio', countries: ['GB'], minTier: 2, maxTier: 4, startingReputation: 58, enters: 1971,
+    exits: { year: 1988, news: 'Martin Audio winds down its hire fleet to concentrate on building loudspeakers.' }, // verify year
+  }),
+  T({
+    // Newbury, Berkshire (not on the town list, so they set up wherever there's room).
+    id: 'skan', name: 'Skan PA Hire', color: '#4a044e', specialty: 'audio', countries: ['GB'], minTier: 1, maxTier: 3, startingReputation: 38, enters: 1976, // verify year
+    exits: { year: 2024, news: 'Skan PA Hire is acquired by Britannia Row Productions.' },
+  }),
+  T({
+    // Founded by Paul Keating and Mark Bonner.
+    id: 'delta', name: 'Delta Sound', hq: 'London', color: '#3f6212', specialty: 'audio', countries: ['GB'], minTier: 2, maxTier: 4, startingReputation: 42, enters: 1988,
+    renames: [{ year: 2016, name: 'DeltaLive', news: 'Delta Sound rebrands as DeltaLive.' }], // verify year
+  }),
+  T({ id: 'ess', name: 'ESS PA', color: '#0c4a6e', specialty: 'audio', countries: ['GB'], minTier: 1, maxTier: 3, startingReputation: 34, enters: 1995 }), // verify year/city
+  T({ id: '22live', name: '22live', hq: 'Birmingham', color: '#7c2d12', specialty: 'audio', countries: ['GB'], minTier: 2, maxTier: 4, startingReputation: 44, enters: 2022 }), // Redditch, ex-SSE directors
 
   // --- United States ----------------------------------------------------------
   T({
@@ -96,7 +116,6 @@ export const RIVAL_COMPANIES: RivalTemplate[] = [
   T({ id: 'fluge', name: 'Fluge Audiovisuales', hq: 'Madrid', color: '#0f766e', specialty: 'audio', countries: ['ES'], minTier: 2, maxTier: 4, startingReputation: 44, enters: 1991 }),
   T({ id: 'pronorte', name: 'Pronorte Sonido', hq: 'Oviedo', color: '#78350f', specialty: 'audio', countries: ['ES'], minTier: 1, maxTier: 3, startingReputation: 34, enters: 1992 }), // verify year
   T({ id: 'tole', name: 'Sonido Tole', hq: 'Málaga', color: '#713f12', specialty: 'audio', countries: ['ES'], minTier: 1, maxTier: 3, startingReputation: 32, enters: 1995 }), // verify year
-  T({ id: 'delta', name: 'Delta Sound', color: '#3f6212', specialty: 'audio', countries: ['ES'], minTier: 1, maxTier: 3, startingReputation: 34, enters: 2005 }), // verify year
 
   // --- France -------------------------------------------------------------------
   T({ id: 'dushow', name: 'Dushow', hq: 'Paris', color: '#1e3a5f', specialty: 'lighting', countries: ['FR'], minTier: 2, maxTier: 4, startingReputation: 54, enters: 1980 }), // verify year
