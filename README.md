@@ -76,7 +76,8 @@ Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/c
 
 The following design documents outline the core vision for the Sector Pro Simulator experience:
 
-- [Tycoon Game Plan — current roadmap & priorities](docs/tycoon-game-plan.md)
+- [Transport Tycoon Redesign — current direction](docs/transport-tycoon-redesign.md)
+- [Tycoon Game Plan — earlier roadmap (dashboard era)](docs/tycoon-game-plan.md)
 - [Game Concept Document](docs/sector-pro-simulator-game-concept.md)
 - [Game Design Document](docs/sector-pro-simulator-gdd.md)
 - [Core Gameplay Loop Diagram](docs/sector-pro-simulator-gameplay-loop.md)

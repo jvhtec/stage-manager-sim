@@ -1,0 +1,468 @@
+/**
+ * The clock. `advanceHours` steps the world one game hour at a time:
+ * vehicles follow their orders along the road network, break down, get
+ * serviced; shows resolve from whatever actually turned up at load-in; and
+ * once a day the market, wages, running costs and rivals tick over.
+ *
+ * Pure and deterministic: same state in → same state out (the only
+ * randomness is the seeded rng carried in `state.rngState`).
+ */
+import type { Rng } from '@/lib/rng';
+import {
+  CREW_WAGE_PER_DAY,
+  DEPOT_UPKEEP_PER_MONTH,
+  HOURS_PER_DAY,
+  LOAN_INTEREST_PER_YEAR,
+  NEGATIVE_MONTHS_GAME_OVER,
+  NO_SHOW_PENALTY_RATE,
+  SERVICE_COST,
+  SERVICE_HOURS,
+  SERVICE_INTERVAL_DAYS,
+  VEHICLE_MODELS,
+  getModel,
+} from './catalog';
+import {
+  book,
+  cloneState,
+  dateOfDay,
+  dayOf,
+  depotInCity,
+  emptyCounts,
+  formatDay,
+  gigById,
+  loadInHour,
+  loadOutDoneHour,
+  maxReliability,
+  plannedDepartureHour,
+  pushNews,
+  showEndHour,
+  showStartHour,
+  sumCounts,
+  totalCrew,
+  travelHours,
+  vehicleAgeYears,
+  withRng,
+} from './core';
+import { getWorld } from './mapgen';
+import { dailyOffers, pruneGigs, rivalsTakeOffers } from './offers';
+import { getCityPath } from './pathfinding';
+import { DEPTS, type Gig, type TycoonState, type Vehicle, type WorldMap } from './types';
+
+const TIER_WEIGHT = [0, 1, 1.3, 1.7, 2.2];
+/** Playing pubs can only get you so far — each venue tier caps the reputation it can earn you. */
+const TIER_REP_CEILING = [0, 38, 68, 92, 100];
+
+export function reputationAfterShow(rep: number, tier: number, quality: number): number {
+  const delta = (quality - 0.6) * 3 * TIER_WEIGHT[tier];
+  if (delta <= 0) return Math.max(0, rep + delta);
+  const ceiling = TIER_REP_CEILING[tier];
+  if (rep >= ceiling) return rep;
+  // Diminishing returns as you approach the ceiling.
+  return Math.min(ceiling, rep + delta * Math.max(0.25, 1 - rep / 110));
+}
+
+export function advanceHours(state: TycoonState, hours: number): TycoonState {
+  if (state.gameOver || hours <= 0) return state;
+  const s = cloneState(state);
+  const world = getWorld(s.mapSeed);
+  withRng(s, rng => {
+    for (let i = 0; i < hours && !s.gameOver; i++) stepHour(s, world, rng);
+  });
+  return s;
+}
+
+function stepHour(s: TycoonState, world: WorldMap, rng: Rng) {
+  s.hour += 1;
+  if (s.hour % HOURS_PER_DAY === 0) dailyTick(s, world, rng);
+  resolveShows(s, world, rng);
+  // Snapshot the list: rival trucks can be removed mid-loop.
+  [...s.vehicles].forEach(v => stepVehicle(s, world, v, rng));
+  s.vehicles = s.vehicles.filter(v => !(v.owner !== 'player' && v.status === 'parked' && v.cityId === v.homeCityId && !v.orders.length));
+}
+
+// ---------------------------------------------------------------------------
+// Vehicles
+// ---------------------------------------------------------------------------
+
+/** Orders still worth driving to: booked (or rival-held) and not already over. */
+function nextGig(s: TycoonState, v: Vehicle): Gig | undefined {
+  while (v.orders.length) {
+    const gig = gigById(s, v.orders[0]);
+    const live = gig && (v.owner === 'player' ? gig.status === 'booked' : gig.status === 'rival' && !gig.result);
+    if (gig && live && s.hour < showEndHour(gig)) return gig;
+    v.orders.shift();
+  }
+  return undefined;
+}
+
+function startDrive(s: TycoonState, world: WorldMap, v: Vehicle, to: string) {
+  const from = v.cityId!;
+  if (from === to) return;
+  const path = getCityPath(world, from, to);
+  if (!path.length) {
+    if (v.owner === 'player') pushNews(s, `${v.name} can't find a road to ${world.cityById.get(to)?.name}.`, 'bad', { vehicleId: v.id });
+    v.orders = [];
+    return;
+  }
+  v.status = 'driving';
+  v.route = { from, to, progress: 0 };
+  v.cityId = undefined;
+  v.arrivedHour = undefined;
+}
+
+function loadVehicle(s: TycoonState, v: Vehicle, gig: Gig) {
+  if (v.owner !== 'player') {
+    v.cargo = { ...gig.needs };
+    v.crew = gig.crewNeeded;
+    return;
+  }
+  const depot = depotInCity(s, v.homeCityId);
+  if (!depot) return;
+  const model = getModel(v.modelId);
+
+  // Remaining need across this vehicle's whole tour, net of what other
+  // already-loaded trucks are bringing to each show.
+  const remaining = emptyCounts();
+  let crewRemaining = 0;
+  v.orders.forEach(gigId => {
+    const g = gigById(s, gigId);
+    if (!g || g.status !== 'booked') return;
+    const others = s.vehicles.filter(o => o !== v && o.owner === 'player' && o.orders.includes(gigId));
+    DEPTS.forEach(d => {
+      const brought = others.reduce((sum, o) => sum + o.cargo[d], 0);
+      remaining[d] = Math.max(remaining[d], g.needs[d] - brought);
+    });
+    const crewBrought = others.reduce((sum, o) => sum + o.crew, 0);
+    crewRemaining = Math.max(crewRemaining, g.crewNeeded - crewBrought);
+  });
+
+  let space = model.gearCapacity - sumCounts(v.cargo);
+  while (space > 0) {
+    const dept = [...DEPTS]
+      .filter(d => remaining[d] > 0 && depot.gear[d] > 0)
+      .sort((a, b) => remaining[b] - remaining[a])[0];
+    if (!dept) break;
+    remaining[dept] -= 1;
+    depot.gear[dept] -= 1;
+    v.cargo[dept] += 1;
+    space -= 1;
+  }
+  const seats = Math.min(model.crewSeats - v.crew, crewRemaining, depot.crew);
+  if (seats > 0) {
+    depot.crew -= seats;
+    v.crew += seats;
+  }
+}
+
+const isLoaded = (v: Vehicle) => sumCounts(v.cargo) + v.crew > 0;
+
+function unloadVehicle(s: TycoonState, v: Vehicle) {
+  if (v.owner !== 'player') return;
+  const depot = depotInCity(s, v.homeCityId);
+  if (!depot) return;
+  DEPTS.forEach(d => {
+    depot.gear[d] += v.cargo[d];
+  });
+  depot.crew += v.crew;
+  v.cargo = emptyCounts();
+  v.crew = 0;
+}
+
+function maybeService(s: TycoonState, v: Vehicle, freeHours: number) {
+  if (v.owner !== 'player') return false;
+  const due = s.hour - v.lastServiceHour >= SERVICE_INTERVAL_DAYS * HOURS_PER_DAY;
+  if (!due || freeHours < SERVICE_HOURS) return false;
+  serviceNow(s, v);
+  return true;
+}
+
+export function serviceNow(s: TycoonState, v: Vehicle) {
+  v.status = 'servicing';
+  v.busyUntil = s.hour + SERVICE_HOURS;
+  v.lastServiceHour = s.hour;
+  v.reliability = maxReliability(v, s.hour);
+  book(s, 'servicing', -SERVICE_COST);
+  v.profitThisYear -= SERVICE_COST;
+}
+
+/** Decide what a stationary vehicle does next. */
+function decide(s: TycoonState, world: WorldMap, v: Vehicle) {
+  const at = v.cityId!;
+  const gig = nextGig(s, v);
+
+  if (!gig) {
+    if (at !== v.homeCityId) {
+      startDrive(s, world, v, v.homeCityId);
+    } else {
+      unloadVehicle(s, v);
+      v.status = 'parked';
+      maybeService(s, v, Infinity);
+    }
+    return;
+  }
+
+  if (at === v.homeCityId && v.owner === 'player' && !isLoaded(v)) {
+    const departAt = plannedDepartureHour(world, v, at, gig);
+    if (s.hour < departAt) {
+      if (!maybeService(s, v, departAt - s.hour)) v.status = 'scheduled';
+      return;
+    }
+    loadVehicle(s, v, gig);
+  } else if (at === v.homeCityId && v.owner !== 'player') {
+    if (s.hour < plannedDepartureHour(world, v, at, gig)) {
+      v.status = 'scheduled';
+      return;
+    }
+    loadVehicle(s, v, gig);
+  }
+
+  if (at === gig.cityId) {
+    v.status = 'on-site';
+    v.arrivedHour ??= s.hour;
+    return;
+  }
+
+  if (at === v.homeCityId) {
+    startDrive(s, world, v, gig.cityId);
+    return;
+  }
+
+  // Out on the road between shows: go straight on if the next show is soon,
+  // otherwise pop home first (unload, service, reload for the next leg).
+  const direct = travelHours(world, v.modelId, at, gig.cityId);
+  const viaHome = travelHours(world, v.modelId, at, v.homeCityId) + travelHours(world, v.modelId, v.homeCityId, gig.cityId);
+  const window = loadInHour(gig) - s.hour;
+  if (v.owner === 'player' && window - direct > 48 && viaHome + 24 < window) {
+    startDrive(s, world, v, v.homeCityId);
+  } else {
+    startDrive(s, world, v, gig.cityId);
+  }
+}
+
+function arrive(s: TycoonState, world: WorldMap, v: Vehicle) {
+  v.cityId = v.route!.to;
+  v.route = undefined;
+  v.status = 'parked';
+  if (v.cityId === v.homeCityId) unloadVehicle(s, v);
+  decide(s, world, v);
+}
+
+function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
+  switch (v.status) {
+    case 'servicing':
+      if (s.hour >= (v.busyUntil ?? 0)) {
+        v.status = 'parked';
+        v.busyUntil = undefined;
+        decide(s, world, v);
+      }
+      return;
+    case 'on-site': {
+      const gig = gigById(s, v.orders[0]);
+      if (!gig || s.hour >= loadOutDoneHour(gig)) {
+        v.orders.shift();
+        v.arrivedHour = undefined;
+        v.status = 'parked';
+        decide(s, world, v);
+      }
+      return;
+    }
+    case 'parked':
+    case 'scheduled':
+      decide(s, world, v);
+      return;
+    case 'broken':
+      if (s.hour < (v.brokenUntil ?? 0)) return;
+      v.status = 'driving';
+      v.brokenUntil = undefined;
+      if (v.owner === 'player') pushNews(s, `${v.name} is back on the road.`, 'info', { vehicleId: v.id });
+      break;
+    case 'driving':
+      if (rng.chance((1 - v.reliability / 100) * 0.035)) {
+        v.status = 'broken';
+        v.brokenUntil = s.hour + 3 + rng.nextInt(6);
+        if (v.owner === 'player') pushNews(s, `${v.name} has broken down!`, 'bad', { vehicleId: v.id });
+        return;
+      }
+      break;
+  }
+
+  // Driving.
+  const route = v.route!;
+  const path = getCityPath(world, route.from, route.to);
+  route.progress += getModel(v.modelId).speed;
+  if (route.progress >= path.length - 1) arrive(s, world, v);
+}
+
+// ---------------------------------------------------------------------------
+// Shows
+// ---------------------------------------------------------------------------
+
+function resolveShows(s: TycoonState, world: WorldMap, rng: Rng) {
+  s.gigs.forEach(gig => {
+    if (s.hour !== showEndHour(gig)) return;
+    if (gig.status === 'rival' && !gig.result) {
+      const rival = s.rivals.find(r => r.id === gig.rivalId);
+      if (rival) {
+        rival.showsPlayed += 1;
+        rival.reputation = Math.min(100, rival.reputation + 0.3 * TIER_WEIGHT[gig.tier]);
+      }
+      gig.result = { quality: 0.8, payout: gig.fee, lateHours: 0, gearCoverage: 1, crewCoverage: 1 };
+      return;
+    }
+    if (gig.status !== 'booked') return;
+    playShow(s, world, gig, rng);
+  });
+}
+
+function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
+  const venue = world.venueById.get(gig.venueId);
+  const city = world.cityById.get(gig.cityId);
+  const where = `${venue?.name}, ${city?.name}`;
+  const onSite = s.vehicles.filter(
+    v =>
+      v.owner === 'player' &&
+      v.status === 'on-site' &&
+      v.cityId === gig.cityId &&
+      v.orders[0] === gig.id &&
+      (v.arrivedHour ?? Infinity) <= showStartHour(gig),
+  );
+
+  const delivered = emptyCounts();
+  let crew = 0;
+  onSite.forEach(v => {
+    DEPTS.forEach(d => {
+      delivered[d] += v.cargo[d];
+    });
+    crew += v.crew;
+  });
+  const gearNeed = Math.max(1, sumCounts(gig.needs));
+  const gearCoverage = DEPTS.reduce((sum, d) => sum + Math.min(delivered[d], gig.needs[d]), 0) / gearNeed;
+  const crewCoverage = Math.min(1, crew / Math.max(1, gig.crewNeeded));
+  const lastArrival = Math.max(...onSite.map(v => v.arrivedHour ?? 0), 0);
+  const lateHours = onSite.length ? Math.max(0, lastArrival - loadInHour(gig)) : 0;
+  const punctuality = lateHours <= 0 ? 1 : Math.max(0.35, 1 - lateHours / 12);
+  const quality = Math.max(
+    0,
+    Math.min(1, (gearCoverage * 0.65 + crewCoverage * 0.35) * punctuality + (rng.next() - 0.5) * 0.08),
+  );
+  const tw = TIER_WEIGHT[gig.tier];
+  const rating = s.cityRatings[gig.cityId] ?? 50;
+
+  if (!onSite.length || quality < 0.3) {
+    const penalty = Math.round(gig.fee * NO_SHOW_PENALTY_RATE);
+    book(s, 'penalties', -penalty);
+    gig.status = 'failed';
+    gig.result = { quality, payout: -penalty, lateHours, gearCoverage, crewCoverage };
+    s.company.reputation = Math.max(0, s.company.reputation - 4 * tw);
+    s.cityRatings[gig.cityId] = Math.max(0, rating - 20);
+    s.stats.showsFailed += 1;
+    pushNews(
+      s,
+      onSite.length
+        ? `Disaster at ${where}: ${gig.act} played to a half-built rig. Penalty $${penalty.toLocaleString()}.`
+        : `No-show! Nobody turned up for ${gig.act} at ${where}. Penalty $${penalty.toLocaleString()}.`,
+      'bad',
+      { cityId: gig.cityId, gigId: gig.id },
+    );
+    return;
+  }
+
+  const payout = Math.round(gig.fee * (0.35 + 0.65 * quality));
+  book(s, 'shows', payout);
+  const totalCargo = onSite.reduce((sum, v) => sum + sumCounts(v.cargo) + v.crew, 0) || 1;
+  onSite.forEach(v => {
+    v.profitThisYear += Math.round((payout * (sumCounts(v.cargo) + v.crew)) / totalCargo);
+  });
+  gig.status = 'done';
+  gig.result = { quality, payout, lateHours, gearCoverage, crewCoverage };
+  s.company.reputation = reputationAfterShow(s.company.reputation, gig.tier, quality);
+  s.cityRatings[gig.cityId] = Math.max(0, Math.min(100, rating + (quality - 0.5) * 30));
+  s.stats.showsPlayed += 1;
+  const verdict = quality >= 0.9 ? 'Storming show' : quality >= 0.7 ? 'Solid show' : 'Rough show';
+  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned $${payout.toLocaleString()}.`, quality >= 0.7 ? 'good' : 'info', {
+    cityId: gig.cityId,
+    gigId: gig.id,
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Daily / monthly / yearly
+// ---------------------------------------------------------------------------
+
+function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
+  const day = dayOf(s.hour);
+  const date = dateOfDay(s, day);
+
+  if (date.getUTCMonth() === 0 && date.getUTCDate() === 1) {
+    s.vehicles.forEach(v => {
+      v.profitLastYear = v.profitThisYear;
+      v.profitThisYear = 0;
+    });
+    pushNews(s, `It's ${date.getUTCFullYear()}. Last year's books are closed — check the finances.`, 'info');
+  }
+  announceModels(s, date.getUTCFullYear());
+
+  // Running costs and wages land every day — idle trucks and idle crew cost money.
+  book(s, 'wages', -totalCrew(s) * CREW_WAGE_PER_DAY);
+  s.vehicles.forEach(v => {
+    if (v.owner !== 'player') return;
+    const model = getModel(v.modelId);
+    const cost = Math.round(model.runningCostPerYear / 365);
+    book(s, 'running', -cost);
+    v.profitThisYear -= cost;
+    const decay = vehicleAgeYears(v, s.hour) > model.lifespanYears ? 0.3 : 0.12;
+    v.reliability = Math.max(10, v.reliability - decay);
+  });
+
+  dailyOffers(s, world, rng);
+  rivalsTakeOffers(s, world, rng);
+  pruneGigs(s);
+
+  // Nag about booked shows with nothing assigned two days out.
+  s.gigs.forEach(gig => {
+    if (gig.status !== 'booked' || gig.day - day !== 2) return;
+    const assigned = s.vehicles.some(v => v.owner === 'player' && v.orders.includes(gig.id));
+    if (!assigned) {
+      pushNews(s, `${gig.act} plays in 2 days and no vehicles are assigned!`, 'bad', { cityId: gig.cityId, gigId: gig.id });
+    }
+  });
+
+  if (date.getUTCDate() === 1 && day > 0) monthlyTick(s);
+  s.stats.peakCash = Math.max(s.stats.peakCash, s.company.cash);
+}
+
+function monthlyTick(s: TycoonState) {
+  book(s, 'property', -s.depots.length * DEPOT_UPKEEP_PER_MONTH);
+  if (s.company.loan > 0) book(s, 'interest', -Math.round((s.company.loan * LOAN_INTEREST_PER_YEAR) / 12));
+
+  if (s.company.cash < 0) {
+    s.negativeMonths += 1;
+    if (s.negativeMonths >= NEGATIVE_MONTHS_GAME_OVER) {
+      s.gameOver = {
+        hour: s.hour,
+        reason: `${s.company.name} spent ${s.negativeMonths} months in the red and the bank has called in the receivers.`,
+      };
+      pushNews(s, s.gameOver.reason, 'big');
+    } else {
+      pushNews(
+        s,
+        `Month closed in the red. ${NEGATIVE_MONTHS_GAME_OVER - s.negativeMonths} more and the bank shuts you down.`,
+        'big',
+      );
+    }
+  } else {
+    s.negativeMonths = 0;
+  }
+}
+
+function announceModels(s: TycoonState, year: number) {
+  VEHICLE_MODELS.forEach(model => {
+    if (model.introYear > year || s.announcedModels.includes(model.id)) return;
+    s.announcedModels.push(model.id);
+    pushNews(s, `New vehicle available: the ${model.name} (${model.gearCapacity} gear, ${model.crewSeats} seats).`, 'big');
+  });
+}
+
+export function describeDate(s: TycoonState): string {
+  return formatDay(s, dayOf(s.hour));
+}

@@ -1,0 +1,375 @@
+import { useState } from 'react';
+import { buildDepot, buyGear, buyVehicle, fireCrew, hireCrew, sellGear } from '@/world/actions';
+import {
+  CREW_HIRE_COST,
+  CREW_WAGE_PER_DAY,
+  DEPOT_BUILD_COST,
+  DEPOT_UPKEEP_PER_MONTH,
+  DEPT_LABELS,
+  GEAR_PRICES,
+  GEAR_RESALE_RATE,
+  companyTier,
+  getModel,
+} from '@/world/catalog';
+import { dayOf, depotInCity, formatDay } from '@/world/core';
+import { getWorld } from '@/world/mapgen';
+import { vehicleActivity } from '@/world/queries';
+import { DEPTS, type Gig } from '@/world/types';
+import { Bar, DeptDot, Stat, TierChip } from './bits';
+import { kmoney, money, ratingLabel } from './format';
+import type { WinCtx } from './types';
+
+const VENUE_KIND_LABEL: Record<string, string> = {
+  pub: 'Pub',
+  hall: 'Town hall',
+  club: 'Club',
+  theatre: 'Theatre',
+  arena: 'Arena',
+  stadium: 'Stadium',
+};
+
+function GigRow({ ctx, gig }: { ctx: WinCtx; gig: Gig }) {
+  const today = dayOf(ctx.state.hour);
+  const locked = gig.tier > companyTier(ctx.state.company.reputation);
+  const venue = getWorld(ctx.state.mapSeed).venueById.get(gig.venueId);
+  return (
+    <div className="tt-item clickable" onClick={() => ctx.open('gig', gig.id)}>
+      <div className="grow">
+        <div style={{ fontWeight: 700 }}>{gig.act}</div>
+        <div className="tt-dim">
+          {venue?.name} · {formatDay(ctx.state, gig.day)} ({gig.day - today}d)
+        </div>
+      </div>
+      {gig.status === 'booked' ? (
+        <span className="tt-chip" style={{ background: ctx.state.company.color, color: '#fff' }}>
+          BOOKED
+        </span>
+      ) : (
+        <TierChip tier={gig.tier} locked={locked} />
+      )}
+      <span style={{ fontWeight: 800 }}>{kmoney(gig.fee)}</span>
+    </div>
+  );
+}
+
+export function CityWindow({ ctx, cityId }: { ctx: WinCtx; cityId: string }) {
+  const { state } = ctx;
+  const world = getWorld(state.mapSeed);
+  const city = world.cityById.get(cityId);
+  if (!city) return null;
+  const rating = state.cityRatings[cityId] ?? 50;
+  const depot = depotInCity(state, cityId);
+  const rival = state.rivals.find(r => r.hqCityId === cityId);
+  const today = dayOf(state.hour);
+  const gigs = state.gigs
+    .filter(g => g.cityId === cityId && ((g.status === 'offer' && g.acceptByDay >= today) || g.status === 'booked'))
+    .sort((a, b) => a.day - b.day);
+  const tier = companyTier(state.company.reputation);
+
+  return (
+    <div>
+      <div className="tt-row" style={{ marginBottom: 4 }}>
+        <span className="tt-dim" style={{ textTransform: 'capitalize' }}>{city.size}</span>
+        <button className="tt-btn sm" onClick={() => ctx.goTo(city.x, city.y)}>
+          Show on map
+        </button>
+      </div>
+      <Stat label="Population">{city.population.toLocaleString()}</Stat>
+      <Stat label="Your local rating">
+        <span className={rating >= 50 ? 'tt-good' : 'tt-bad'}>{ratingLabel(rating)}</span>
+      </Stat>
+      <h4>Venues</h4>
+      <div className="tt-list">
+        {city.venues.map(v => (
+          <div key={v.id} className="tt-item clickable" onClick={() => ctx.open('venue', v.id)}>
+            <div className="grow">
+              <div style={{ fontWeight: 700 }}>{v.name}</div>
+              <div className="tt-dim">
+                {VENUE_KIND_LABEL[v.kind]} · {v.capacity.toLocaleString()} cap
+              </div>
+            </div>
+            <TierChip tier={v.tier} locked={v.tier > tier} />
+          </div>
+        ))}
+      </div>
+      <h4>Shows here</h4>
+      {gigs.length ? (
+        <div className="tt-list">
+          {gigs.map(g => (
+            <GigRow key={g.id} ctx={ctx} gig={g} />
+          ))}
+        </div>
+      ) : (
+        <div className="tt-dim">No open offers right now.</div>
+      )}
+      <h4>Warehouse</h4>
+      {depot ? (
+        <button className="tt-btn sm" onClick={() => ctx.open('depot', depot.id)}>
+          Open your {city.name} warehouse
+        </button>
+      ) : rival ? (
+        <div className="tt-dim">
+          <span style={{ color: rival.color, fontWeight: 800 }}>{rival.name}</span> runs its HQ from the only warehouse lot here.
+        </div>
+      ) : (
+        <div className="tt-row">
+          <span className="tt-dim">
+            Build here to base trucks, gear and crew locally. Upkeep {money(DEPOT_UPKEEP_PER_MONTH)}/mo.
+          </span>
+          <button
+            className="tt-btn sm primary"
+            disabled={state.company.cash < DEPOT_BUILD_COST}
+            onClick={() => {
+              const r = ctx.dispatch(s => buildDepot(s, cityId));
+              ctx.toast(r.message ?? '', r.ok);
+            }}
+          >
+            Build {kmoney(DEPOT_BUILD_COST)}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function VenueWindow({ ctx, venueId }: { ctx: WinCtx; venueId: string }) {
+  const { state } = ctx;
+  const world = getWorld(state.mapSeed);
+  const venue = world.venueById.get(venueId);
+  if (!venue) return null;
+  const city = world.cityById.get(venue.cityId)!;
+  const today = dayOf(state.hour);
+  const gigs = state.gigs
+    .filter(g => g.venueId === venueId && ((g.status === 'offer' && g.acceptByDay >= today) || g.status === 'booked'))
+    .sort((a, b) => a.day - b.day);
+  const history = state.gigs.filter(g => g.venueId === venueId && (g.status === 'done' || g.status === 'failed' || (g.status === 'rival' && g.result)));
+  const tier = companyTier(state.company.reputation);
+  return (
+    <div>
+      <div className="tt-row">
+        <span>
+          {VENUE_KIND_LABEL[venue.kind]} in{' '}
+          <a style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => ctx.open('city', city.id)}>
+            {city.name}
+          </a>
+        </span>
+        <TierChip tier={venue.tier} locked={venue.tier > tier} />
+      </div>
+      <Stat label="Capacity">{venue.capacity.toLocaleString()}</Stat>
+      <h4>Upcoming</h4>
+      {gigs.length ? (
+        <div className="tt-list">
+          {gigs.map(g => (
+            <GigRow key={g.id} ctx={ctx} gig={g} />
+          ))}
+        </div>
+      ) : (
+        <div className="tt-dim">Nothing on offer here at the moment.</div>
+      )}
+      {history.length > 0 && (
+        <>
+          <h4>Recent shows</h4>
+          <div className="tt-list">
+            {history.slice(-4).reverse().map(g => {
+              const rival = state.rivals.find(r => r.id === g.rivalId);
+              return (
+                <div key={g.id} className="tt-item">
+                  <div className="grow">
+                    <div>{g.act}</div>
+                    <div className="tt-dim">{formatDay(state, g.day)}</div>
+                  </div>
+                  {rival ? (
+                    <span style={{ color: rival.color, fontWeight: 700 }}>{rival.name}</span>
+                  ) : (
+                    <span className={g.status === 'done' ? 'tt-good' : 'tt-bad'}>
+                      {g.status === 'done' ? `${Math.round((g.result?.quality ?? 0) * 100)}%` : 'Failed'}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+export function DepotWindow({ ctx, depotId }: { ctx: WinCtx; depotId: string }) {
+  const { state } = ctx;
+  const [tab, setTab] = useState<'stock' | 'buy'>('stock');
+  const depot = state.depots.find(d => d.id === depotId);
+  if (!depot) return null;
+  const world = getWorld(state.mapSeed);
+  const fleet = state.vehicles.filter(v => v.owner === 'player' && v.homeCityId === depot.cityId);
+  const act = (fn: Parameters<WinCtx['dispatch']>[0]) => {
+    const r = ctx.dispatch(fn);
+    if (!r.ok || r.message) ctx.toast(r.message ?? 'Done', r.ok);
+  };
+
+  return (
+    <div>
+      <div className="tt-tabs">
+        <button className="tt-btn sm" data-on={tab === 'stock'} onClick={() => setTab('stock')}>
+          Stock & crew
+        </button>
+        <button className="tt-btn sm" data-on={tab === 'buy'} onClick={() => setTab('buy')}>
+          Buy vehicles
+        </button>
+      </div>
+      {tab === 'stock' ? (
+        <>
+          <h4>Gear in the warehouse (units)</h4>
+          <div className="tt-list">
+            {DEPTS.map(d => (
+              <div key={d} className="tt-item">
+                <DeptDot dept={d} />
+                <span className="grow">{DEPT_LABELS[d]}</span>
+                <b style={{ minWidth: 22, textAlign: 'right' }}>{depot.gear[d]}</b>
+                <button className="tt-btn sm" title={`Sell for ${money(GEAR_PRICES[d] * GEAR_RESALE_RATE)}`} onClick={() => act(s => sellGear(s, depot.id, d))}>
+                  −
+                </button>
+                <button className="tt-btn sm" title={`Buy for ${money(GEAR_PRICES[d])}`} onClick={() => act(s => buyGear(s, depot.id, d))}>
+                  + {kmoney(GEAR_PRICES[d])}
+                </button>
+              </div>
+            ))}
+          </div>
+          <h4>Crew</h4>
+          <div className="tt-item">
+            <span className="grow">
+              {depot.crew} idle here <span className="tt-dim">· {money(CREW_WAGE_PER_DAY)}/day each</span>
+            </span>
+            <button className="tt-btn sm" onClick={() => act(s => fireCrew(s, depot.id))}>
+              −
+            </button>
+            <button className="tt-btn sm" onClick={() => act(s => hireCrew(s, depot.id))}>
+              Hire {money(CREW_HIRE_COST)}
+            </button>
+          </div>
+          <h4>Vehicles based here ({fleet.length})</h4>
+          <div className="tt-list">
+            {fleet.map(v => (
+              <div key={v.id} className="tt-item clickable" onClick={() => ctx.open('vehicle', v.id)}>
+                <div className="grow">
+                  <div style={{ fontWeight: 700 }}>
+                    {v.name} <span className="tt-dim">{getModel(v.modelId).name}</span>
+                  </div>
+                  <div className="tt-dim">{vehicleActivity(state, v)}</div>
+                </div>
+              </div>
+            ))}
+            {!fleet.length && <div className="tt-dim">No vehicles yet — buy one from the next tab.</div>}
+          </div>
+        </>
+      ) : (
+        <div className="tt-list">
+          {state.announcedModels.map(id => {
+            const m = getModel(id);
+            return (
+              <div key={id} className="tt-item">
+                <div className="grow">
+                  <div style={{ fontWeight: 700 }}>{m.name}</div>
+                  <div className="tt-dim">
+                    {m.gearCapacity} gear · {m.crewSeats} seats · {Math.round(m.speed * 24)} tiles/day · {kmoney(m.runningCostPerYear)}/yr
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}>
+                    <span className="tt-dim" style={{ fontSize: 11 }}>
+                      Reliability
+                    </span>
+                    <Bar value={m.reliability} max={100} color="#4ade80" />
+                  </div>
+                </div>
+                <button
+                  className="tt-btn sm primary"
+                  disabled={state.company.cash < m.price}
+                  onClick={() => act(s => buyVehicle(s, depot.id, id))}
+                >
+                  {kmoney(m.price)}
+                </button>
+              </div>
+            );
+          })}
+          <div className="tt-dim" style={{ marginTop: 4 }}>
+            New models arrive as the years go by.
+          </div>
+        </div>
+      )}
+      <div className="tt-dim" style={{ marginTop: 8 }}>
+        {world.cityById.get(depot.cityId)?.name} · opened {formatDay(state, Math.floor(depot.builtHour / 24))}
+      </div>
+    </div>
+  );
+}
+
+export function DepotListWindow({ ctx }: { ctx: WinCtx }) {
+  const { state } = ctx;
+  const world = getWorld(state.mapSeed);
+  return (
+    <div>
+      <div className="tt-list">
+        {state.depots.map(d => {
+          const units = DEPTS.reduce((s, x) => s + d.gear[x], 0);
+          return (
+            <div key={d.id} className="tt-item clickable" onClick={() => ctx.open('depot', d.id)}>
+              <div className="grow">
+                <div style={{ fontWeight: 700 }}>
+                  {world.cityById.get(d.cityId)?.name}
+                  {d.cityId === state.company.hqCityId ? ' (HQ)' : ''}
+                </div>
+                <div className="tt-dim">
+                  {units} gear units · {d.crew} crew idle · {state.vehicles.filter(v => v.owner === 'player' && v.homeCityId === d.cityId).length} vehicles
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="tt-dim" style={{ marginTop: 8 }}>
+        To open another warehouse, click any town on the map and choose <b>Build</b>. Regional warehouses cut drive times and
+        let you base gear where the work is.
+      </div>
+    </div>
+  );
+}
+
+export function TownsWindow({ ctx }: { ctx: WinCtx }) {
+  const { state } = ctx;
+  const world = getWorld(state.mapSeed);
+  const today = dayOf(state.hour);
+  const tier = companyTier(state.company.reputation);
+  const towns = [...world.cities].sort((a, b) => b.population - a.population);
+  return (
+    <div className="tt-list">
+      {towns.map(c => {
+        const rating = state.cityRatings[c.id] ?? 50;
+        const offers = state.gigs.filter(g => g.cityId === c.id && g.status === 'offer' && g.acceptByDay >= today).length;
+        const topTier = Math.max(...c.venues.map(v => v.tier));
+        const rival = state.rivals.find(r => r.hqCityId === c.id);
+        return (
+          <div
+            key={c.id}
+            className="tt-item clickable"
+            onClick={() => {
+              ctx.goTo(c.x, c.y);
+              ctx.open('city', c.id);
+            }}
+          >
+            <div className="grow">
+              <div style={{ fontWeight: 700 }}>
+                {c.name}
+                {depotInCity(state, c.id) ? ' 🏭' : ''}
+                {rival ? <span style={{ color: rival.color }}> ●</span> : null}
+              </div>
+              <div className="tt-dim">
+                {c.population.toLocaleString()} · {ratingLabel(rating)}
+                {offers ? ` · ${offers} offer${offers > 1 ? 's' : ''}` : ''}
+              </div>
+            </div>
+            <TierChip tier={topTier} locked={topTier > tier} />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
