@@ -7,6 +7,11 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GameProvider } from "./contexts/GameContext";
 import { GameShell } from "./components/shell/GameShell";
 
+// The Transport-Tycoon-style map game is the main experience; the original
+// dashboard-driven build lives on at /classic (its own router basename, so
+// none of its absolute links needed to change).
+const TycoonGame = lazy(() => import("./tycoon/TycoonGame"));
+
 const Dashboard = lazy(() => import("./pages/Dashboard"));
 const Calendar = lazy(() => import("./pages/Calendar"));
 const EventDetail = lazy(() => import("./pages/EventDetail"));
@@ -17,6 +22,7 @@ const Inventory = lazy(() => import("./pages/Inventory"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
+const CLASSIC_BASE = `${import.meta.env.BASE_URL}classic`;
 
 function RouteFallback() {
   return (
@@ -26,13 +32,13 @@ function RouteFallback() {
   );
 }
 
-const App = () => (
+const ClassicApp = () => (
   <QueryClientProvider client={queryClient}>
     <GameProvider>
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter basename={import.meta.env.BASE_URL}>
+        <BrowserRouter basename={CLASSIC_BASE}>
           <GameShell>
             <Suspense fallback={<RouteFallback />}>
               <Routes>
@@ -53,5 +59,15 @@ const App = () => (
     </GameProvider>
   </QueryClientProvider>
 );
+
+const App = () => {
+  const isClassic = window.location.pathname.startsWith(CLASSIC_BASE);
+  if (isClassic) return <ClassicApp />;
+  return (
+    <Suspense fallback={<div style={{ position: "fixed", inset: 0, background: "#10131a" }} />}>
+      <TycoonGame />
+    </Suspense>
+  );
+};
 
 export default App;

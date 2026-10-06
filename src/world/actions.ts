@@ -1,0 +1,303 @@
+/**
+ * Player commands. Each takes the current state and returns
+ * `{ state, result }` — a new state on success, the untouched one on failure.
+ */
+import {
+  CREW_HIRE_COST,
+  DEPOT_BUILD_COST,
+  GEAR_RESALE_RATE,
+  LOAN_STEP,
+  MAX_LOAN,
+  companyTier,
+  getModel,
+  tierInfo,
+} from './catalog';
+import {
+  book,
+  cloneState,
+  dayOf,
+  depotInCity,
+  freeLot,
+  formatMoney,
+  gigById,
+  loadInHour,
+  newId,
+  pushNews,
+  sellValue,
+  yearOf,
+  showEndHour,
+} from './core';
+import { worldOf } from './mapgen';
+import { roadDistance } from './pathfinding';
+import { serviceNow } from './sim';
+import { makeVehicle } from './state';
+import { canBookTour, tourMaxTier } from './tours';
+import { getTech, techsActiveIn } from './content/techs';
+import type { ActionOutcome, TycoonState } from './types';
+import { getProduct } from './content/gear';
+
+const fail = (state: TycoonState, message: string): ActionOutcome => ({ state, result: { ok: false, message } });
+const ok = (state: TycoonState, message?: string): ActionOutcome => ({ state, result: { ok: true, message } });
+
+export function bookTour(state: TycoonState, tourId: string): ActionOutcome {
+  const tour = state.tours.find(t => t.id === tourId);
+  if (!tour || tour.status !== 'offer') return fail(state, 'That tour is no longer on offer.');
+  if (tour.acceptByDay < dayOf(state.hour)) return fail(state, 'The booking deadline has passed.');
+  const needed = tierInfo(tourMaxTier(state, tour));
+  if (!canBookTour(state, tour)) {
+    return fail(state, `Promoters want reputation ${needed.minReputation}+ for this tour's ${needed.label} dates.`);
+  }
+  const s = cloneState(state);
+  const t = s.tours.find(x => x.id === tourId)!;
+  t.status = 'booked';
+  t.gigIds.forEach(id => {
+    const g = gigById(s, id);
+    if (g) g.status = 'booked';
+  });
+  return ok(s, `Booked ${tour.name}! Assign vehicles to the dates — or the whole tour at once.`);
+}
+
+/** Puts one vehicle on every date of a booked tour (in order), skipping dates it's already on. */
+export function assignVehicleToTour(state: TycoonState, vehicleId: string, tourId: string): ActionOutcome {
+  const tour = state.tours.find(t => t.id === tourId);
+  if (!tour || tour.status !== 'booked') return fail(state, 'Book the tour first.');
+  let s = state;
+  let added = 0;
+  tour.gigIds.forEach(id => {
+    const g = gigById(s, id);
+    const v = s.vehicles.find(x => x.id === vehicleId);
+    if (!g || !v || v.orders.includes(id) || g.status !== 'booked' || s.hour >= showEndHour(g)) return;
+    const out = assignVehicle(s, vehicleId, id);
+    if (out.result.ok) {
+      s = out.state;
+      added += 1;
+    }
+  });
+  if (!added) return fail(state, 'Nothing left on this tour to assign.');
+  const v = s.vehicles.find(x => x.id === vehicleId)!;
+  return ok(s, `${v.name} is on ${added} date${added > 1 ? 's' : ''} of ${tour.name}.`);
+}
+
+export function bookGig(state: TycoonState, gigId: string): ActionOutcome {
+  const gig = gigById(state, gigId);
+  if (gig?.tourId) return bookTour(state, gig.tourId);
+  if (!gig || gig.status !== 'offer') return fail(state, 'That offer is no longer available.');
+  if (gig.acceptByDay < dayOf(state.hour)) return fail(state, 'The booking deadline has passed.');
+  const needed = tierInfo(gig.tier);
+  if (companyTier(state.company.reputation) < gig.tier) {
+    return fail(state, `Promoters want reputation ${needed.minReputation}+ for ${needed.label} venues.`);
+  }
+  const s = cloneState(state);
+  gigById(s, gigId)!.status = 'booked';
+  return ok(s, `Booked ${gig.act}. Now assign vehicles to get the gear there.`);
+}
+
+export function assignVehicle(state: TycoonState, vehicleId: string, gigId: string): ActionOutcome {
+  const v0 = state.vehicles.find(v => v.id === vehicleId && v.owner === 'player');
+  const gig0 = gigById(state, gigId);
+  if (!v0 || !gig0) return fail(state, 'Unknown vehicle or show.');
+  if (gig0.status !== 'booked') return fail(state, 'Book the show first.');
+  if (v0.orders.includes(gigId)) return fail(state, `${v0.name} is already on that job.`);
+  if (state.hour >= showEndHour(gig0)) return fail(state, 'That show is already over.');
+  const world = worldOf(state);
+  if (!Number.isFinite(roadDistance(world, v0.homeCityId, gig0.cityId))) {
+    return fail(state, 'There is no road from this vehicle’s depot to that venue.');
+  }
+
+  const s = cloneState(state);
+  const v = s.vehicles.find(x => x.id === vehicleId)!;
+  // The current leg (if already under way) stays first; the rest is kept in show order.
+  const locked = v.status === 'driving' || v.status === 'broken' || v.status === 'on-site' ? v.orders.slice(0, 1) : [];
+  const loadIn = (id: string) => {
+    const g = gigById(s, id);
+    return g ? loadInHour(g) : 0;
+  };
+  const rest = [...v.orders.slice(locked.length), gigId].sort((a, b) => loadIn(a) - loadIn(b));
+  v.orders = [...locked, ...rest];
+  return ok(s, `${v.name} added to ${gig0.act}.`);
+}
+
+export function unassignVehicle(state: TycoonState, vehicleId: string, gigId: string): ActionOutcome {
+  const v0 = state.vehicles.find(v => v.id === vehicleId && v.owner === 'player');
+  if (!v0 || !v0.orders.includes(gigId)) return fail(state, 'Not assigned.');
+  const s = cloneState(state);
+  const v = s.vehicles.find(x => x.id === vehicleId)!;
+  v.orders = v.orders.filter(id => id !== gigId);
+  if (v.status === 'on-site' && v0.orders[0] === gigId) {
+    v.status = 'parked';
+    v.arrivedHour = undefined;
+  }
+  return ok(s);
+}
+
+export function sendHome(state: TycoonState, vehicleId: string): ActionOutcome {
+  const s = cloneState(state);
+  const v = s.vehicles.find(x => x.id === vehicleId && x.owner === 'player');
+  if (!v) return fail(state, 'Unknown vehicle.');
+  v.orders = [];
+  if (v.status === 'on-site' || v.status === 'scheduled') v.status = 'parked';
+  return ok(s, `${v.name} is heading home.`);
+}
+
+export function buyVehicle(state: TycoonState, depotId: string, modelId: string): ActionOutcome {
+  const depot = state.depots.find(d => d.id === depotId);
+  const model = getModel(modelId);
+  if (!depot) return fail(state, 'Unknown depot.');
+  if (!state.announcedModels.includes(modelId)) return fail(state, `${model.name} isn't on sale yet.`);
+  if (state.company.cash < model.price) return fail(state, `Not enough cash — the ${model.name} costs ${formatMoney(state, model.price)}.`);
+  const s = cloneState(state);
+  const v = makeVehicle(s, modelId, depot.cityId);
+  s.vehicles.push(v);
+  book(s, 'purchases', -model.price);
+  return ok(s, `Bought ${v.name} (${model.name}).`);
+}
+
+export function sellVehicle(state: TycoonState, vehicleId: string): ActionOutcome {
+  const v0 = state.vehicles.find(v => v.id === vehicleId && v.owner === 'player');
+  if (!v0) return fail(state, 'Unknown vehicle.');
+  if (v0.cityId !== v0.homeCityId || !(v0.status === 'parked' || v0.status === 'scheduled')) {
+    return fail(state, 'Vehicles can only be sold while parked at their depot.');
+  }
+  const s = cloneState(state);
+  const value = sellValue(v0, s.hour);
+  const depot = depotInCity(s, v0.homeCityId);
+  if (depot) depot.crew += v0.crew;
+  s.vehicles = s.vehicles.filter(v => v.id !== vehicleId);
+  s.techs = s.techs.map(t => (t.vehicleId === vehicleId ? { techId: t.techId } : t));
+  book(s, 'sales', value);
+  return ok(s, `Sold ${v0.name} for ${formatMoney(state, value)}.`);
+}
+
+export function serviceVehicle(state: TycoonState, vehicleId: string): ActionOutcome {
+  const v0 = state.vehicles.find(v => v.id === vehicleId && v.owner === 'player');
+  if (!v0) return fail(state, 'Unknown vehicle.');
+  if (v0.cityId !== v0.homeCityId || !(v0.status === 'parked' || v0.status === 'scheduled')) {
+    return fail(state, 'Vehicles are serviced at their depot.');
+  }
+  const s = cloneState(state);
+  serviceNow(s, s.vehicles.find(v => v.id === vehicleId)!);
+  return ok(s, `${v0.name} is in the workshop.`);
+}
+
+export function rehomeVehicle(state: TycoonState, vehicleId: string, depotId: string): ActionOutcome {
+  const depot = state.depots.find(d => d.id === depotId);
+  const v0 = state.vehicles.find(v => v.id === vehicleId && v.owner === 'player');
+  if (!depot || !v0) return fail(state, 'Unknown vehicle or depot.');
+  if (v0.orders.length) return fail(state, 'Finish or clear its orders first.');
+  if (v0.status !== 'parked' || v0.cityId !== v0.homeCityId) return fail(state, 'Vehicle must be parked at its depot.');
+  const s = cloneState(state);
+  const v = s.vehicles.find(x => x.id === vehicleId)!;
+  v.homeCityId = depot.cityId;
+  return ok(s, `${v.name} is relocating.`);
+}
+
+export function buyGear(state: TycoonState, depotId: string, productId: string, qty = 1): ActionOutcome {
+  const product = getProduct(productId);
+  if (!state.announcedGear.includes(productId)) return fail(state, `${product.brand} ${product.name} isn't out yet.`);
+  const cost = product.price * qty;
+  if (state.company.cash < cost) return fail(state, `Not enough cash (${formatMoney(state, cost)}).`);
+  const s = cloneState(state);
+  const depot = s.depots.find(d => d.id === depotId);
+  if (!depot) return fail(state, 'Unknown depot.');
+  depot.gear[productId] = (depot.gear[productId] ?? 0) + qty;
+  book(s, 'purchases', -cost);
+  return ok(s);
+}
+
+export function sellGear(state: TycoonState, depotId: string, productId: string, qty = 1): ActionOutcome {
+  const s = cloneState(state);
+  const depot = s.depots.find(d => d.id === depotId);
+  if (!depot || (depot.gear[productId] ?? 0) < qty) return fail(state, 'Nothing in the warehouse to sell.');
+  depot.gear[productId] -= qty;
+  if (!depot.gear[productId]) delete depot.gear[productId];
+  book(s, 'sales', Math.round(getProduct(productId).price * GEAR_RESALE_RATE * qty));
+  return ok(s);
+}
+
+export function hireCrew(state: TycoonState, depotId: string, qty = 1): ActionOutcome {
+  const cost = CREW_HIRE_COST * qty;
+  if (state.company.cash < cost) return fail(state, 'Not enough cash to hire.');
+  const s = cloneState(state);
+  const depot = s.depots.find(d => d.id === depotId);
+  if (!depot) return fail(state, 'Unknown depot.');
+  depot.crew += qty;
+  book(s, 'wages', -cost);
+  return ok(s);
+}
+
+export function fireCrew(state: TycoonState, depotId: string, qty = 1): ActionOutcome {
+  const s = cloneState(state);
+  const depot = s.depots.find(d => d.id === depotId);
+  if (!depot || depot.crew < qty) return fail(state, 'No idle crew at this depot.');
+  depot.crew -= qty;
+  return ok(s);
+}
+
+export function buildDepot(state: TycoonState, cityId: string): ActionOutcome {
+  const world = worldOf(state);
+  const city = world.cityById.get(cityId);
+  if (!city) return fail(state, 'Unknown city.');
+  if (depotInCity(state, cityId)) return fail(state, `You already have a warehouse in ${city.name}.`);
+  const lot = freeLot(state, world, cityId);
+  if (lot < 0) return fail(state, `Every warehouse lot in ${city.name} is taken.`);
+  if (state.company.cash < DEPOT_BUILD_COST) return fail(state, `A warehouse costs ${formatMoney(state, DEPOT_BUILD_COST)}.`);
+  const s = cloneState(state);
+  s.depots.push({
+    id: newId(s, 'depot'),
+    cityId,
+    lot,
+    gear: {},
+    crew: 0,
+    builtHour: s.hour,
+  });
+  book(s, 'property', -DEPOT_BUILD_COST);
+  pushNews(s, `${s.company.name} opens a warehouse in ${city.name}.`, 'good', { cityId });
+  return ok(s, `Warehouse built in ${city.name}.`);
+}
+
+export function borrow(state: TycoonState): ActionOutcome {
+  if (state.company.loan + LOAN_STEP > MAX_LOAN) return fail(state, `The bank won't lend more than ${formatMoney(state, MAX_LOAN)}.`);
+  const s = cloneState(state);
+  s.company.loan += LOAN_STEP;
+  s.company.cash += LOAN_STEP;
+  return ok(s);
+}
+
+export function repay(state: TycoonState): ActionOutcome {
+  if (state.company.loan <= 0) return fail(state, 'No loan to repay.');
+  const amount = Math.min(LOAN_STEP, state.company.loan);
+  if (state.company.cash < amount) return fail(state, 'Not enough cash.');
+  const s = cloneState(state);
+  s.company.loan -= amount;
+  s.company.cash -= amount;
+  return ok(s);
+}
+
+export function hireTech(state: TycoonState, techId: string): ActionOutcome {
+  const tech = getTech(techId);
+  const year = yearOf(state, state.hour);
+  if (!techsActiveIn(year, state.country).some(t => t.id === techId)) return fail(state, `${tech.name} isn't taking work right now.`);
+  if (state.techs.some(t => t.techId === techId)) return fail(state, `${tech.name} already works for you.`);
+  if (state.company.cash < tech.fee) return fail(state, `${tech.name} wants ${formatMoney(state, tech.fee)} to sign.`);
+  const s = cloneState(state);
+  s.techs.push({ techId });
+  book(s, 'wages', -tech.fee);
+  pushNews(s, `${tech.name} joins ${s.company.name} as ${tech.role.replace(/^[A-Z][a-z]/, m => m.toLowerCase())}.`, 'good');
+  return ok(s, `${tech.name} signed. Put them on a truck to bring them to the shows.`);
+}
+
+export function releaseTech(state: TycoonState, techId: string): ActionOutcome {
+  if (!state.techs.some(t => t.techId === techId)) return fail(state, 'Not on your payroll.');
+  const s = cloneState(state);
+  s.techs = s.techs.filter(t => t.techId !== techId);
+  return ok(s, `${getTech(techId).name} has moved on.`);
+}
+
+/** Put a star tech on a truck (or back at base with `vehicleId` null). */
+export function assignTech(state: TycoonState, techId: string, vehicleId: string | null): ActionOutcome {
+  if (!state.techs.some(t => t.techId === techId)) return fail(state, 'Not on your payroll.');
+  if (vehicleId && !state.vehicles.some(v => v.id === vehicleId && v.owner === 'player')) return fail(state, 'Unknown vehicle.');
+  const s = cloneState(state);
+  s.techs = s.techs.map(t => (t.techId === techId ? { ...t, vehicleId: vehicleId ?? undefined } : t));
+  return ok(s);
+}
