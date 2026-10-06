@@ -1,6 +1,9 @@
 /** Read-only projections for the UI — nothing here mutates state. */
-import { GEAR_PRICES, GEAR_RESALE_RATE, getModel } from './catalog';
+import { GEAR_RESALE_RATE, getModel } from './catalog';
+import { getProduct } from './content/gear';
+import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize, type GearEvaluation } from './loading';
 import {
+  dateOfDay,
   depotInCity,
   emptyCounts,
   formatHour,
@@ -13,7 +16,7 @@ import {
 } from './core';
 import { getWorld } from './mapgen';
 import { roadDistance } from './pathfinding';
-import { DEPTS, type DeptCounts, type Gig, type TycoonState, type Vehicle } from './types';
+import { DEPTS, type DeptCounts, type GearStock, type Gig, type TycoonState, type Vehicle } from './types';
 
 export function vehicleActivity(state: TycoonState, v: Vehicle): string {
   const world = getWorld(state.mapSeed);
@@ -55,7 +58,7 @@ export function estimateArrival(state: TycoonState, v: Vehicle, gig: Gig): numbe
     return start + travelHours(world, v.modelId, to, gig.cityId);
   }
   const from = v.cityId ?? v.homeCityId;
-  const loaded = v.cargo.audio + v.cargo.lighting + v.cargo.video + v.cargo.stage + v.crew > 0;
+  const loaded = stockSize(v.cargo) + v.crew > 0;
   if (from === gig.cityId && (loaded || from !== v.homeCityId)) return state.hour;
   const depart = Math.max(state.hour, plannedDepartureHour(world, v, from, gig));
   return depart + travelHours(world, v.modelId, from, gig.cityId);
@@ -67,58 +70,66 @@ export interface CoverageProjection {
   latestArrival: number;
   onTime: boolean;
   vehicles: Vehicle[];
+  /** Kit vs expectations and rider, from the same evaluation the sim uses. */
+  evaluation: GearEvaluation;
+  /** Expected show quality (0-1) if everything goes to plan. */
+  expectedQuality: number;
 }
 
-/** What would turn up at `gig` if things go to plan — mirrors the sim's greedy loading. */
+/** What would turn up at `gig` if things go to plan — runs the sim's own loading and scoring. */
 export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjection {
   const vehicles = state.vehicles.filter(v => v.owner === 'player' && v.orders.includes(gig.id));
   const stock = new Map(state.depots.map(d => [d.cityId, { gear: { ...d.gear }, crew: d.crew }]));
-  const gear = emptyCounts();
+  const delivered: GearStock = {};
   let crew = 0;
   let latestArrival = 0;
 
   // Already-loaded vehicles first (that's what the sim nets out), then the rest.
-  const ordered = [...vehicles].sort((a, b) => Number(sumOf(b.cargo) + b.crew > 0) - Number(sumOf(a.cargo) + a.crew > 0));
+  const isLoaded = (v: Vehicle) => stockSize(v.cargo) + v.crew > 0;
+  const ordered = [...vehicles].sort((a, b) => Number(isLoaded(b)) - Number(isLoaded(a)));
   ordered.forEach(v => {
     latestArrival = Math.max(latestArrival, estimateArrival(state, v, gig));
-    const loaded = sumOf(v.cargo) + v.crew > 0;
-    if (loaded) {
-      DEPTS.forEach(d => (gear[d] += v.cargo[d]));
+    if (isLoaded(v)) {
+      addStock(delivered, v.cargo);
       crew += v.crew;
       return;
     }
     const model = getModel(v.modelId);
     const depot = stock.get(v.homeCityId);
     if (!depot) return;
-    let space = model.gearCapacity;
-    while (space > 0) {
-      const dept = [...DEPTS]
-        .filter(d => gig.needs[d] - gear[d] > 0 && depot.gear[d] > 0)
-        .sort((a, b) => gig.needs[b] - gear[b] - (gig.needs[a] - gear[a]))[0];
-      if (!dept) break;
-      gear[dept] += 1;
-      depot.gear[dept] -= 1;
-      space -= 1;
-    }
+    const have = deptTotals(delivered);
+    const remaining = emptyCounts();
+    DEPTS.forEach(d => (remaining[d] = Math.max(0, gig.needs[d] - have[d])));
+    addStock(delivered, pickGear(depot.gear, remaining, model.gearCapacity, gig.rider));
     const seats = Math.min(model.crewSeats, Math.max(0, gig.crewNeeded - crew), depot.crew);
     crew += seats;
     depot.crew -= seats;
   });
 
-  return { gear, crew, latestArrival, onTime: !vehicles.length || latestArrival <= loadInHour(gig), vehicles };
+  const evaluation = evaluateGear(delivered, gig, dateOfDay(state, gig.day).getUTCFullYear());
+  const onTime = !vehicles.length || latestArrival <= loadInHour(gig);
+  const expectedQuality = vehicles.length
+    ? baseShowQuality({
+        gearCoverage: evaluation.coverage,
+        crewCoverage: Math.min(1, crew / Math.max(1, gig.crewNeeded)),
+        lateHours: Math.max(0, latestArrival - loadInHour(gig)),
+        gearQuality: evaluation.quality,
+        riderMet: evaluation.riderMet,
+      })
+    : 0;
+  return { gear: evaluation.delivered, crew, latestArrival, onTime, vehicles, evaluation, expectedQuality };
 }
 
-const sumOf = (c: DeptCounts) => c.audio + c.lighting + c.video + c.stage;
+export function stockValue(stock: GearStock): number {
+  let total = 0;
+  for (const id in stock) total += getProduct(id).price * GEAR_RESALE_RATE * stock[id];
+  return total;
+}
 
 export function companyValue(state: TycoonState): number {
   const fleet = state.vehicles.filter(v => v.owner === 'player').reduce((sum, v) => sum + sellValue(v, state.hour), 0);
-  const gear = state.depots.reduce(
-    (sum, d) => sum + DEPTS.reduce((s2, dept) => s2 + d.gear[dept] * GEAR_PRICES[dept] * GEAR_RESALE_RATE, 0),
-    0,
-  );
-  const inTransit = state.vehicles
-    .filter(v => v.owner === 'player')
-    .reduce((sum, v) => sum + DEPTS.reduce((s2, dept) => s2 + v.cargo[dept] * GEAR_PRICES[dept] * GEAR_RESALE_RATE, 0), 0);
+  const gear = state.depots.reduce((sum, d) => sum + stockValue(d.gear), 0);
+  const inTransit = state.vehicles.filter(v => v.owner === 'player').reduce((sum, v) => sum + stockValue(v.cargo), 0);
   return Math.round(state.company.cash - state.company.loan + fleet + gear + inTransit + state.depots.length * 20000);
 }
 

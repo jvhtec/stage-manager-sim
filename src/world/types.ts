@@ -13,6 +13,8 @@ import type { Department } from '@/types/game';
 export type Dept = Department;
 export const DEPTS: Dept[] = ['audio', 'lighting', 'video', 'stage'];
 export type DeptCounts = Record<Dept, number>;
+/** Gear units held, keyed by product id (see content/gear.ts). */
+export type GearStock = Record<string, number>;
 
 // ---------------------------------------------------------------------------
 // Map (derived from seed)
@@ -113,7 +115,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
 export interface Depot {
   id: string;
   cityId: string;
-  gear: DeptCounts;
+  gear: GearStock;
   crew: number;
   builtHour: number;
 }
@@ -151,7 +153,7 @@ export interface Vehicle {
   busyUntil?: number;
   /** Booked gig ids in the order they'll be played — a tour is just a long order list. */
   orders: string[];
-  cargo: DeptCounts;
+  cargo: GearStock;
   crew: number;
   arrivedHour?: number;
   profitThisYear: number;
@@ -166,6 +168,15 @@ export interface GigResult {
   lateHours: number;
   gearCoverage: number;
   crewCoverage: number;
+  /** How well the delivered kit met this show's expectations (0.6-1.08). */
+  gearQuality?: number;
+  riderMet?: boolean;
+}
+
+/** An artist's rider asking for a particular brand in one department. */
+export interface Rider {
+  dept: Dept;
+  brand: string;
 }
 
 export interface Gig {
@@ -180,6 +191,9 @@ export interface Gig {
   needs: DeptCounts;
   crewNeeded: number;
   fee: number;
+  rider?: Rider;
+  /** The act has worked with you before and asked for you by name. */
+  asksForYou?: boolean;
   status: GigStatus;
   rivalId?: string;
   result?: GigResult;
@@ -189,6 +203,9 @@ export interface Rival {
   id: string;
   name: string;
   color: string;
+  specialty: Dept;
+  minTier: number;
+  maxTier: number;
   hqCityId: string;
   reputation: number;
   showsPlayed: number;
@@ -233,6 +250,10 @@ export interface TycoonState {
   ledger: Record<number, Partial<Record<LedgerCategory, number>>>;
   /** Vehicle model ids already announced as available. */
   announcedModels: string[];
+  /** Gear product ids already announced as available. */
+  announcedGear: string[];
+  /** Artist name → number of good shows you've done for them. */
+  artistRelations: Record<string, number>;
   negativeMonths: number;
   nextId: number;
   stats: { showsPlayed: number; showsFailed: number; peakCash: number };

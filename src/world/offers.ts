@@ -4,10 +4,12 @@
  * geography *is* the demand curve. Rivals snap up offers they're close to.
  */
 import type { Rng } from '@/lib/rng';
-import { companyTier, tierInfo } from './catalog';
-import { dayOf, newId, pushNews } from './core';
+import { tierInfo } from './catalog';
+import { dateOfDay, dayOf, newId, pushNews } from './core';
+import { artistsTouringAt } from './content/artists';
+import { expectedQuality, productsAvailableIn } from './content/gear';
 import { roadDistance } from './pathfinding';
-import type { City, DeptCounts, Gig, TycoonState, Vehicle, WorldMap } from './types';
+import type { City, DeptCounts, Gig, Rider, TycoonState, Vehicle, WorldMap } from './types';
 import { DEPTS } from './types';
 
 const ACT_ADJ = ['Velvet', 'Electric', 'Midnight', 'Neon', 'Broken', 'Golden', 'Silent', 'Wild', 'Paper', 'Crimson', 'Lunar', 'Static'];
@@ -51,12 +53,19 @@ export function generateOffer(
   });
   const today = dayOf(state.hour);
   const day = today + rng.nextRange(minLeadDays, minLeadDays + 14);
+  const year = dateOfDay(state, day).getUTCFullYear();
   const rating = state.cityRatings[city.id] ?? 50;
-  const fee = Math.round((info.baseFee * (0.85 + rng.next() * 0.4) * (0.9 + rating / 500)) / 50) * 50;
+
+  const { act, real } = pickAct(state, venue.tier, year, rng);
+  const asksForYou = real && (state.artistRelations[act] ?? 0) > 0;
+  const rider = venue.tier >= 2 && rng.chance(real ? 0.55 : 0.25) ? pickRider(needs, venue.tier, year, rng) : undefined;
+  const star = real ? 1.15 : 1;
+  const loyalty = asksForYou ? 1.1 : 1;
+  const fee = Math.round((info.baseFee * (0.85 + rng.next() * 0.4) * (0.9 + rating / 500) * star * loyalty) / 50) * 50;
 
   return {
     id: newId(state, 'gig'),
-    act: actName(rng),
+    act,
     venueId: venue.id,
     cityId: city.id,
     tier: venue.tier,
@@ -65,8 +74,39 @@ export function generateOffer(
     needs,
     crewNeeded: info.crew + rng.nextInt(venue.tier),
     fee,
+    rider,
+    asksForYou: asksForYou || undefined,
     status: 'offer',
   };
+}
+
+/** Share of shows at each tier played by real touring acts (the rest are local bands). */
+const REAL_ACT_SHARE = [0, 0.3, 0.7, 1, 1];
+
+function pickAct(state: TycoonState, tier: number, year: number, rng: Rng): { act: string; real: boolean } {
+  const touring = artistsTouringAt(year, tier);
+  if (!touring.length || !rng.chance(REAL_ACT_SHARE[tier])) return { act: actName(rng), real: false };
+  // Acts you've done well by are more likely to come back to you.
+  const weights = touring.map(a => 1 + (state.artistRelations[a.name] ?? 0) * 2);
+  let roll = rng.next() * weights.reduce((x, y) => x + y, 0);
+  for (let i = 0; i < touring.length; i++) {
+    roll -= weights[i];
+    if (roll <= 0) return { act: touring[i].name, real: true };
+  }
+  return { act: touring[touring.length - 1].name, real: true };
+}
+
+/** Riders name a current, decent brand in one of the show's departments. */
+function pickRider(needs: DeptCounts, tier: number, year: number, rng: Rng): Rider | undefined {
+  const depts = DEPTS.filter(d => needs[d] > 0 && d !== 'stage');
+  if (!depts.length) return undefined;
+  const dept = rng.pick(depts);
+  const bar = expectedQuality(tier, year) - 1.5;
+  const products = productsAvailableIn(year, dept);
+  const good = products.filter(p => p.quality >= bar);
+  const brands = [...new Set((good.length ? good : products).map(p => p.brand))].sort();
+  if (!brands.length) return undefined;
+  return { dept, brand: rng.pick(brands) };
 }
 
 export function dailyOffers(state: TycoonState, world: WorldMap, rng: Rng) {
@@ -99,8 +139,11 @@ export function rivalsTakeOffers(state: TycoonState, world: WorldMap, rng: Rng) 
       const dist = roadDistance(world, rival.hqCityId, gig.cityId);
       if (!Number.isFinite(dist)) continue;
       const proximity = dist < 14 ? 1.6 : dist < 32 ? 1 : 0.45;
-      const fit = companyTier(rival.reputation) >= gig.tier ? 1 : 0.12;
-      const chance = 0.06 * proximity * fit * (1.15 - (rating / 100) * 0.6);
+      const fit = gig.tier >= rival.minTier && gig.tier <= rival.maxTier ? 1 : 0.05;
+      const mainDept = DEPTS.reduce((a, b) => (gig.needs[b] > gig.needs[a] ? b : a));
+      const specialty = mainDept === rival.specialty ? 1.3 : 1;
+      const loyalty = gig.asksForYou ? 0.25 : 1;
+      const chance = 0.05 * proximity * fit * specialty * loyalty * (1.15 - (rating / 100) * 0.6);
       if (!rng.chance(chance)) continue;
 
       gig.status = 'rival';
@@ -123,7 +166,7 @@ export function rivalsTakeOffers(state: TycoonState, world: WorldMap, rng: Rng) 
         status: 'parked',
         cityId: rival.hqCityId,
         orders: [gig.id],
-        cargo: { audio: 0, lighting: 0, video: 0, stage: 0 },
+        cargo: {},
         crew: 0,
         profitThisYear: 0,
         profitLastYear: 0,

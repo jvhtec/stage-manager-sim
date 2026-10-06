@@ -5,7 +5,6 @@
 import {
   CREW_HIRE_COST,
   DEPOT_BUILD_COST,
-  GEAR_PRICES,
   GEAR_RESALE_RATE,
   LOAN_STEP,
   MAX_LOAN,
@@ -28,7 +27,8 @@ import { getWorld } from './mapgen';
 import { roadDistance } from './pathfinding';
 import { serviceNow } from './sim';
 import { makeVehicle } from './state';
-import type { ActionOutcome, Dept, TycoonState } from './types';
+import type { ActionOutcome, TycoonState } from './types';
+import { getProduct } from './content/gear';
 
 const fail = (state: TycoonState, message: string): ActionOutcome => ({ state, result: { ok: false, message } });
 const ok = (state: TycoonState, message?: string): ActionOutcome => ({ state, result: { ok: true, message } });
@@ -143,23 +143,26 @@ export function rehomeVehicle(state: TycoonState, vehicleId: string, depotId: st
   return ok(s, `${v.name} is relocating.`);
 }
 
-export function buyGear(state: TycoonState, depotId: string, dept: Dept, qty = 1): ActionOutcome {
-  const cost = GEAR_PRICES[dept] * qty;
+export function buyGear(state: TycoonState, depotId: string, productId: string, qty = 1): ActionOutcome {
+  const product = getProduct(productId);
+  if (!state.announcedGear.includes(productId)) return fail(state, `${product.brand} ${product.name} isn't out yet.`);
+  const cost = product.price * qty;
   if (state.company.cash < cost) return fail(state, `Not enough cash (${money(cost)}).`);
   const s = cloneState(state);
   const depot = s.depots.find(d => d.id === depotId);
   if (!depot) return fail(state, 'Unknown depot.');
-  depot.gear[dept] += qty;
+  depot.gear[productId] = (depot.gear[productId] ?? 0) + qty;
   book(s, 'purchases', -cost);
   return ok(s);
 }
 
-export function sellGear(state: TycoonState, depotId: string, dept: Dept, qty = 1): ActionOutcome {
+export function sellGear(state: TycoonState, depotId: string, productId: string, qty = 1): ActionOutcome {
   const s = cloneState(state);
   const depot = s.depots.find(d => d.id === depotId);
-  if (!depot || depot.gear[dept] < qty) return fail(state, 'Nothing in the warehouse to sell.');
-  depot.gear[dept] -= qty;
-  book(s, 'sales', Math.round(GEAR_PRICES[dept] * GEAR_RESALE_RATE * qty));
+  if (!depot || (depot.gear[productId] ?? 0) < qty) return fail(state, 'Nothing in the warehouse to sell.');
+  depot.gear[productId] -= qty;
+  if (!depot.gear[productId]) delete depot.gear[productId];
+  book(s, 'sales', Math.round(getProduct(productId).price * GEAR_RESALE_RATE * qty));
   return ok(s);
 }
 
@@ -194,7 +197,7 @@ export function buildDepot(state: TycoonState, cityId: string): ActionOutcome {
   s.depots.push({
     id: newId(s, 'depot'),
     cityId,
-    gear: { audio: 0, lighting: 0, video: 0, stage: 0 },
+    gear: {},
     crew: 0,
     builtHour: s.hour,
   });

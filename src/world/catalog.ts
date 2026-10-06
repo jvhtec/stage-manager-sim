@@ -35,10 +35,11 @@ export interface VehicleModel {
   introYear: number;
 }
 
+// Real-world vans, trucks and buses (launch years approximate, for flavour).
 export const VEHICLE_MODELS: VehicleModel[] = [
   {
     id: 'splitter-van',
-    name: 'Splitter Van',
+    name: 'Ford Transit Splitter',
     kind: 'van',
     gearCapacity: 3,
     crewSeats: 6,
@@ -51,7 +52,7 @@ export const VEHICLE_MODELS: VehicleModel[] = [
   },
   {
     id: 'luton-box',
-    name: 'Luton Box Van',
+    name: 'Iveco Daily Luton',
     kind: 'truck',
     gearCapacity: 6,
     crewSeats: 2,
@@ -64,7 +65,7 @@ export const VEHICLE_MODELS: VehicleModel[] = [
   },
   {
     id: 'rigid-7t',
-    name: '7.5t Rigid Truck',
+    name: 'Leyland DAF 45 7.5t',
     kind: 'truck',
     gearCapacity: 12,
     crewSeats: 2,
@@ -77,7 +78,7 @@ export const VEHICLE_MODELS: VehicleModel[] = [
   },
   {
     id: 'artic-40',
-    name: 'Artic 40ft Trailer',
+    name: 'Volvo FH12 + 40ft trailer',
     kind: 'semi',
     gearCapacity: 28,
     crewSeats: 2,
@@ -86,11 +87,11 @@ export const VEHICLE_MODELS: VehicleModel[] = [
     runningCostPerYear: 21000,
     reliability: 86,
     lifespanYears: 15,
-    introYear: 1992,
+    introYear: 1993,
   },
   {
     id: 'sleeper-bus',
-    name: 'Crew Sleeper Bus',
+    name: 'Neoplan Skyliner sleeper',
     kind: 'bus',
     gearCapacity: 2,
     crewSeats: 12,
@@ -103,7 +104,7 @@ export const VEHICLE_MODELS: VehicleModel[] = [
   },
   {
     id: 'euro-van',
-    name: 'EuroSprint Van',
+    name: 'Mercedes-Benz Sprinter',
     kind: 'van',
     gearCapacity: 4,
     crewSeats: 7,
@@ -112,11 +113,11 @@ export const VEHICLE_MODELS: VehicleModel[] = [
     runningCostPerYear: 3800,
     reliability: 92,
     lifespanYears: 9,
-    introYear: 1998,
+    introYear: 1995,
   },
   {
     id: 'megaliner',
-    name: 'Megaliner 45ft',
+    name: 'Scania R + Megaliner',
     kind: 'semi',
     gearCapacity: 40,
     crewSeats: 2,
@@ -139,12 +140,6 @@ export function modelsAvailableIn(year: number): VehicleModel[] {
   return VEHICLE_MODELS.filter(m => m.introYear <= year);
 }
 
-export const GEAR_PRICES: Record<Dept, number> = {
-  audio: 2600,
-  lighting: 2100,
-  video: 4200,
-  stage: 1500,
-};
 export const GEAR_RESALE_RATE = 0.5;
 
 export const DEPT_LABELS: Record<Dept, string> = {

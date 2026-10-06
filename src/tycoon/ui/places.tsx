@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { buildDepot, buyGear, buyVehicle, fireCrew, hireCrew, sellGear } from '@/world/actions';
+import { buildDepot, buyVehicle, fireCrew, hireCrew } from '@/world/actions';
+import { stockSize } from '@/world/loading';
+import { GearShop, WarehouseGear } from './gear';
 import {
   CREW_HIRE_COST,
   CREW_WAGE_PER_DAY,
   DEPOT_BUILD_COST,
   DEPOT_UPKEEP_PER_MONTH,
-  DEPT_LABELS,
-  GEAR_PRICES,
-  GEAR_RESALE_RATE,
   companyTier,
   getModel,
 } from '@/world/catalog';
@@ -35,7 +34,10 @@ function GigRow({ ctx, gig }: { ctx: WinCtx; gig: Gig }) {
   return (
     <div className="tt-item clickable" onClick={() => ctx.open('gig', gig.id)}>
       <div className="grow">
-        <div style={{ fontWeight: 700 }}>{gig.act}</div>
+        <div style={{ fontWeight: 700 }}>
+          {gig.asksForYou ? '♥ ' : ''}
+          {gig.act}
+        </div>
         <div className="tt-dim">
           {venue?.name} · {formatDay(ctx.state, gig.day)} ({gig.day - today}d)
         </div>
@@ -197,7 +199,7 @@ export function VenueWindow({ ctx, venueId }: { ctx: WinCtx; venueId: string }) 
 
 export function DepotWindow({ ctx, depotId }: { ctx: WinCtx; depotId: string }) {
   const { state } = ctx;
-  const [tab, setTab] = useState<'stock' | 'buy'>('stock');
+  const [tab, setTab] = useState<'stock' | 'shop' | 'buy'>('stock');
   const depot = state.depots.find(d => d.id === depotId);
   if (!depot) return null;
   const world = getWorld(state.mapSeed);
@@ -211,30 +213,21 @@ export function DepotWindow({ ctx, depotId }: { ctx: WinCtx; depotId: string }) 
     <div>
       <div className="tt-tabs">
         <button className="tt-btn sm" data-on={tab === 'stock'} onClick={() => setTab('stock')}>
-          Stock & crew
+          Warehouse
+        </button>
+        <button className="tt-btn sm" data-on={tab === 'shop'} onClick={() => setTab('shop')}>
+          Gear shop
         </button>
         <button className="tt-btn sm" data-on={tab === 'buy'} onClick={() => setTab('buy')}>
-          Buy vehicles
+          Vehicles
         </button>
       </div>
-      {tab === 'stock' ? (
+      {tab === 'shop' ? (
+        <GearShop ctx={ctx} depot={depot} />
+      ) : tab === 'stock' ? (
         <>
-          <h4>Gear in the warehouse (units)</h4>
-          <div className="tt-list">
-            {DEPTS.map(d => (
-              <div key={d} className="tt-item">
-                <DeptDot dept={d} />
-                <span className="grow">{DEPT_LABELS[d]}</span>
-                <b style={{ minWidth: 22, textAlign: 'right' }}>{depot.gear[d]}</b>
-                <button className="tt-btn sm" title={`Sell for ${money(GEAR_PRICES[d] * GEAR_RESALE_RATE)}`} onClick={() => act(s => sellGear(s, depot.id, d))}>
-                  −
-                </button>
-                <button className="tt-btn sm" title={`Buy for ${money(GEAR_PRICES[d])}`} onClick={() => act(s => buyGear(s, depot.id, d))}>
-                  + {kmoney(GEAR_PRICES[d])}
-                </button>
-              </div>
-            ))}
-          </div>
+          <h4>Gear in the warehouse</h4>
+          <WarehouseGear ctx={ctx} depot={depot} />
           <h4>Crew</h4>
           <div className="tt-item">
             <span className="grow">
@@ -309,7 +302,7 @@ export function DepotListWindow({ ctx }: { ctx: WinCtx }) {
     <div>
       <div className="tt-list">
         {state.depots.map(d => {
-          const units = DEPTS.reduce((s, x) => s + d.gear[x], 0);
+          const units = stockSize(d.gear);
           return (
             <div key={d.id} className="tt-item clickable" onClick={() => ctx.open('depot', d.id)}>
               <div className="grow">

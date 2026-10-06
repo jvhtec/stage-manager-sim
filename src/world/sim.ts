@@ -37,16 +37,20 @@ import {
   pushNews,
   showEndHour,
   showStartHour,
-  sumCounts,
   totalCrew,
   travelHours,
   vehicleAgeYears,
   withRng,
+  yearOf,
 } from './core';
 import { getWorld } from './mapgen';
+import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize } from './loading';
+import { GEAR_PRODUCTS } from './content/gear';
+import { RIVAL_COMPANIES } from './content/companies';
 import { dailyOffers, pruneGigs, rivalsTakeOffers } from './offers';
 import { getCityPath } from './pathfinding';
-import { DEPTS, type Gig, type TycoonState, type Vehicle, type WorldMap } from './types';
+import { DEPTS, type GearStock, type Gig, type TycoonState, type Vehicle, type WorldMap } from './types';
+import { findArtist } from './content/artists';
 
 const TIER_WEIGHT = [0, 1, 1.3, 1.7, 2.2];
 /** Playing pubs can only get you so far — each venue tier caps the reputation it can earn you. */
@@ -112,7 +116,6 @@ function startDrive(s: TycoonState, world: WorldMap, v: Vehicle, to: string) {
 
 function loadVehicle(s: TycoonState, v: Vehicle, gig: Gig) {
   if (v.owner !== 'player') {
-    v.cargo = { ...gig.needs };
     v.crew = gig.crewNeeded;
     return;
   }
@@ -128,25 +131,20 @@ function loadVehicle(s: TycoonState, v: Vehicle, gig: Gig) {
     const g = gigById(s, gigId);
     if (!g || g.status !== 'booked') return;
     const others = s.vehicles.filter(o => o !== v && o.owner === 'player' && o.orders.includes(gigId));
+    const brought = emptyCounts();
+    others.forEach(o => {
+      const t = deptTotals(o.cargo);
+      DEPTS.forEach(d => (brought[d] += t[d]));
+    });
     DEPTS.forEach(d => {
-      const brought = others.reduce((sum, o) => sum + o.cargo[d], 0);
-      remaining[d] = Math.max(remaining[d], g.needs[d] - brought);
+      remaining[d] = Math.max(remaining[d], g.needs[d] - brought[d]);
     });
     const crewBrought = others.reduce((sum, o) => sum + o.crew, 0);
     crewRemaining = Math.max(crewRemaining, g.crewNeeded - crewBrought);
   });
 
-  let space = model.gearCapacity - sumCounts(v.cargo);
-  while (space > 0) {
-    const dept = [...DEPTS]
-      .filter(d => remaining[d] > 0 && depot.gear[d] > 0)
-      .sort((a, b) => remaining[b] - remaining[a])[0];
-    if (!dept) break;
-    remaining[dept] -= 1;
-    depot.gear[dept] -= 1;
-    v.cargo[dept] += 1;
-    space -= 1;
-  }
+  const picked = pickGear(depot.gear, remaining, model.gearCapacity - stockSize(v.cargo), gig.rider);
+  addStock(v.cargo, picked);
   const seats = Math.min(model.crewSeats - v.crew, crewRemaining, depot.crew);
   if (seats > 0) {
     depot.crew -= seats;
@@ -154,17 +152,15 @@ function loadVehicle(s: TycoonState, v: Vehicle, gig: Gig) {
   }
 }
 
-const isLoaded = (v: Vehicle) => sumCounts(v.cargo) + v.crew > 0;
+const isLoaded = (v: Vehicle) => stockSize(v.cargo) + v.crew > 0;
 
 function unloadVehicle(s: TycoonState, v: Vehicle) {
   if (v.owner !== 'player') return;
   const depot = depotInCity(s, v.homeCityId);
   if (!depot) return;
-  DEPTS.forEach(d => {
-    depot.gear[d] += v.cargo[d];
-  });
+  addStock(depot.gear, v.cargo);
   depot.crew += v.crew;
-  v.cargo = emptyCounts();
+  v.cargo = {};
   v.crew = 0;
 }
 
@@ -327,24 +323,26 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
       (v.arrivedHour ?? Infinity) <= showStartHour(gig),
   );
 
-  const delivered = emptyCounts();
+  const delivered: GearStock = {};
   let crew = 0;
   onSite.forEach(v => {
-    DEPTS.forEach(d => {
-      delivered[d] += v.cargo[d];
-    });
+    addStock(delivered, v.cargo);
     crew += v.crew;
   });
-  const gearNeed = Math.max(1, sumCounts(gig.needs));
-  const gearCoverage = DEPTS.reduce((sum, d) => sum + Math.min(delivered[d], gig.needs[d]), 0) / gearNeed;
+  const gear = evaluateGear(delivered, gig, yearOf(s, s.hour));
+  const gearCoverage = gear.coverage;
   const crewCoverage = Math.min(1, crew / Math.max(1, gig.crewNeeded));
   const lastArrival = Math.max(...onSite.map(v => v.arrivedHour ?? 0), 0);
   const lateHours = onSite.length ? Math.max(0, lastArrival - loadInHour(gig)) : 0;
-  const punctuality = lateHours <= 0 ? 1 : Math.max(0.35, 1 - lateHours / 12);
   const quality = Math.max(
     0,
-    Math.min(1, (gearCoverage * 0.65 + crewCoverage * 0.35) * punctuality + (rng.next() - 0.5) * 0.08),
+    Math.min(
+      1,
+      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet }) +
+        (rng.next() - 0.5) * 0.08,
+    ),
   );
+  const resultExtras = { gearQuality: gear.quality, riderMet: gear.riderMet };
   const tw = TIER_WEIGHT[gig.tier];
   const rating = s.cityRatings[gig.cityId] ?? 50;
 
@@ -352,7 +350,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     const penalty = Math.round(gig.fee * NO_SHOW_PENALTY_RATE);
     book(s, 'penalties', -penalty);
     gig.status = 'failed';
-    gig.result = { quality, payout: -penalty, lateHours, gearCoverage, crewCoverage };
+    gig.result = { quality, payout: -penalty, lateHours, gearCoverage, crewCoverage, ...resultExtras };
     s.company.reputation = Math.max(0, s.company.reputation - 4 * tw);
     s.cityRatings[gig.cityId] = Math.max(0, rating - 20);
     s.stats.showsFailed += 1;
@@ -369,17 +367,23 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
 
   const payout = Math.round(gig.fee * (0.35 + 0.65 * quality));
   book(s, 'shows', payout);
-  const totalCargo = onSite.reduce((sum, v) => sum + sumCounts(v.cargo) + v.crew, 0) || 1;
+  const totalCargo = onSite.reduce((sum, v) => sum + stockSize(v.cargo) + v.crew, 0) || 1;
   onSite.forEach(v => {
-    v.profitThisYear += Math.round((payout * (sumCounts(v.cargo) + v.crew)) / totalCargo);
+    v.profitThisYear += Math.round((payout * (stockSize(v.cargo) + v.crew)) / totalCargo);
   });
+  // Acts remember who did them proud — they'll ask for you again.
+  if (quality >= 0.75 && findArtist(gig.act)) {
+    s.artistRelations[gig.act] = (s.artistRelations[gig.act] ?? 0) + 1;
+  }
   gig.status = 'done';
-  gig.result = { quality, payout, lateHours, gearCoverage, crewCoverage };
+  gig.result = { quality, payout, lateHours, gearCoverage, crewCoverage, ...resultExtras };
   s.company.reputation = reputationAfterShow(s.company.reputation, gig.tier, quality);
   s.cityRatings[gig.cityId] = Math.max(0, Math.min(100, rating + (quality - 0.5) * 30));
   s.stats.showsPlayed += 1;
   const verdict = quality >= 0.9 ? 'Storming show' : quality >= 0.7 ? 'Solid show' : 'Rough show';
-  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned $${payout.toLocaleString()}.`, quality >= 0.7 ? 'good' : 'info', {
+  const riderNote = gear.riderMet === undefined ? '' : gear.riderMet ? ` Rider (${gig.rider!.brand}) honoured.` : ` They wanted ${gig.rider!.brand} and didn't get it.`;
+  const kitNote = gear.quality < 0.8 ? ' Reviewers called the kit dated.' : '';
+  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned $${payout.toLocaleString()}.${riderNote}${kitNote}`, quality >= 0.7 ? 'good' : 'info', {
     cityId: gig.cityId,
     gigId: gig.id,
   });
@@ -401,6 +405,8 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     pushNews(s, `It's ${date.getUTCFullYear()}. Last year's books are closed — check the finances.`, 'info');
   }
   announceModels(s, date.getUTCFullYear());
+  announceGear(s, date.getUTCFullYear());
+  updateRivals(s, world, date.getUTCFullYear());
 
   // Running costs and wages land every day — idle trucks and idle crew cost money.
   book(s, 'wages', -totalCrew(s) * CREW_WAGE_PER_DAY);
@@ -460,6 +466,45 @@ function announceModels(s: TycoonState, year: number) {
     if (model.introYear > year || s.announcedModels.includes(model.id)) return;
     s.announcedModels.push(model.id);
     pushNews(s, `New vehicle available: the ${model.name} (${model.gearCapacity} gear, ${model.crewSeats} seats).`, 'big');
+  });
+}
+
+function announceGear(s: TycoonState, year: number) {
+  GEAR_PRODUCTS.forEach(p => {
+    if (p.introYear > year || s.announcedGear.includes(p.id)) return;
+    s.announcedGear.push(p.id);
+    pushNews(s, `${p.brand} launches the ${p.name} — now in the gear catalogue (quality ${p.quality}/10).`, 'big');
+  });
+}
+
+/** New companies set up shop and old ones rebrand as the years go by. */
+export function updateRivals(s: TycoonState, world: WorldMap, year: number) {
+  RIVAL_COMPANIES.forEach(t => {
+    const rival = s.rivals.find(r => r.id === t.id);
+    if (!rival) {
+      if (t.enters > year) return;
+      const taken = new Set([...s.rivals.map(r => r.hqCityId), ...s.depots.map(d => d.cityId)]);
+      const city = [...world.cities].sort((a, b) => b.population - a.population).find(c => !taken.has(c.id));
+      if (!city) return;
+      s.rivals.push({
+        id: t.id,
+        name: t.name,
+        color: t.color,
+        specialty: t.specialty,
+        minTier: t.minTier,
+        maxTier: t.maxTier,
+        hqCityId: city.id,
+        reputation: t.startingReputation,
+        showsPlayed: 0,
+      });
+      if (s.hour > 24) pushNews(s, `${t.name} opens a base in ${city.name} and starts bidding for work.`, 'big', { cityId: city.id });
+      return;
+    }
+    const latest = (t.renames ?? []).filter(r => r.year <= year).pop();
+    if (latest && rival.name !== latest.name) {
+      rival.name = latest.name;
+      if (s.hour > 24) pushNews(s, latest.news, 'big', { cityId: rival.hqCityId });
+    }
   });
 }
 

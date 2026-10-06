@@ -583,7 +583,7 @@ function drawGigMarkers(rc: RC, state: TycoonState, venueTop: Map<string, Pt>, h
       bg = state.company.color;
     } else if (g.status === 'offer') {
       const locked = g.tier > tier;
-      label = `${locked ? '🔒 ' : ''}$${g.fee >= 10000 ? `${Math.round(g.fee / 1000)}k` : `${(g.fee / 1000).toFixed(1)}k`}`;
+      label = `${locked ? '🔒 ' : g.asksForYou ? '♥ ' : ''}$${g.fee >= 10000 ? `${Math.round(g.fee / 1000)}k` : `${(g.fee / 1000).toFixed(1)}k`}`;
       bg = locked ? '#3f3f46' : tierInfo(g.tier).color;
       fg = locked ? '#a1a1aa' : '#0b0d12';
     } else {

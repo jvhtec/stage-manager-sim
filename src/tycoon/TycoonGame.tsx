@@ -11,6 +11,7 @@ import {
   Newspaper,
   Pause,
   Play,
+  Trophy,
   Truck,
   Wallet,
   ZoomIn,
@@ -28,7 +29,7 @@ import { money } from './ui/format';
 import { CityWindow, DepotListWindow, DepotWindow, TownsWindow, VenueWindow } from './ui/places';
 import { VehicleListWindow, VehicleWindow } from './ui/fleet';
 import { GigWindow, ShowsWindow } from './ui/shows';
-import { FinanceWindow, GameOverPanel, HelpWindow, NewGameForm, NewsWindow } from './ui/company';
+import { FinanceWindow, GameOverPanel, HelpWindow, LeagueWindow, NewGameForm, NewsWindow } from './ui/company';
 import type { WinCtx, WindowKind } from './ui/types';
 import './tycoon.css';
 
@@ -179,6 +180,8 @@ export default function TycoonGame() {
         return 'News';
       case 'towns':
         return 'Towns';
+      case 'league':
+        return 'Company league';
       case 'help':
         return 'How to play';
     }
@@ -208,6 +211,8 @@ export default function TycoonGame() {
         return <NewsWindow ctx={ctx} />;
       case 'towns':
         return <TownsWindow ctx={ctx} />;
+      case 'league':
+        return <LeagueWindow ctx={ctx} />;
       case 'help':
         return <HelpWindow />;
     }
@@ -268,6 +273,9 @@ export default function TycoonGame() {
               <button className="tt-btn" onClick={() => open('finance')} title="Finances">
                 <Wallet /> <span className="tt-label">Finances</span>
               </button>
+              <button className="tt-btn" onClick={() => open('league')} title="Company league">
+                <Trophy />
+              </button>
               <button className="tt-btn" onClick={() => open('news')} title="News">
                 <Newspaper />
               </button>
@@ -326,7 +334,7 @@ export default function TycoonGame() {
                 x={w.x}
                 y={w.y}
                 z={w.z}
-                width={w.kind === 'finance' ? 440 : 340}
+                width={w.kind === 'finance' || w.kind === 'league' ? 440 : 340}
                 onMove={(x, y) => setWindows(prev => prev.map(o => (o.key === w.key ? { ...o, x, y } : o)))}
                 onFocus={() => focusWindow(w.key)}
                 onClose={() => closeWindow(w.key)}

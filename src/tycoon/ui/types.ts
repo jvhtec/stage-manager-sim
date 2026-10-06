@@ -12,6 +12,7 @@ export type WindowKind =
   | 'finance'
   | 'news'
   | 'towns'
+  | 'league'
   | 'help';
 
 export interface WinCtx {

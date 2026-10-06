@@ -158,6 +158,14 @@ export function HelpWindow() {
         </li>
         <li>Late trucks, missing gear and short crews all cut the fee. A no-show costs a penalty.</li>
         <li>Assign one truck to several shows and it tours — straight from venue to venue.</li>
+        <li>
+          Gear is real kit — Martin, Meyer, L-Acoustics, Vari-Lite, MA… Crowds expect better every year, and artists' riders ask
+          for brands. Yesterday's flagship becomes tomorrow's pub rig.
+        </li>
+        <li>
+          Real acts tour at the size their career is at. Book a band in a pub, do them proud, and they'll ask for you when
+          they're filling arenas.
+        </li>
         <li>Buy bigger trucks and more gear, open regional warehouses, and win reputation to unlock arenas and stadiums.</li>
       </ol>
       <p className="tt-dim" style={{ marginBottom: 0 }}>
@@ -256,6 +264,65 @@ export function GameOverPanel({ state, onRestart }: { state: TycoonState; onRest
       <button className="tt-btn primary" style={{ marginTop: 10 }} onClick={onRestart}>
         Start a new company
       </button>
+    </div>
+  );
+}
+
+export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
+  const { state } = ctx;
+  const world = getWorld(state.mapSeed);
+  const rows = [
+    {
+      id: 'player',
+      name: state.company.name,
+      color: state.company.color,
+      reputation: state.company.reputation,
+      shows: state.stats.showsPlayed,
+      base: world.cityById.get(state.company.hqCityId)?.name,
+      note: 'You',
+    },
+    ...state.rivals.map(r => ({
+      id: r.id,
+      name: r.name,
+      color: r.color,
+      reputation: r.reputation,
+      shows: r.showsPlayed,
+      base: world.cityById.get(r.hqCityId)?.name,
+      note: `${r.specialty} · ${tierInfo(r.minTier).label}${r.maxTier !== r.minTier ? `–${tierInfo(r.maxTier).label}` : ''}`,
+    })),
+  ].sort((a, b) => b.reputation - a.reputation);
+  return (
+    <div>
+      <table className="tt-table">
+        <thead>
+          <tr>
+            <th>Company</th>
+            <th>Rep</th>
+            <th>Shows</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={r.id} style={r.id === 'player' ? { background: 'rgba(255,255,255,0.06)' } : undefined}>
+              <td>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <span className="tt-dim">{i + 1}.</span>
+                  <span style={{ width: 10, height: 10, background: r.color, display: 'inline-block', flexShrink: 0 }} />
+                  <span style={{ fontWeight: 700 }}>{r.name}</span>
+                </div>
+                <div className="tt-dim" style={{ fontSize: 11, paddingLeft: 30 }}>
+                  {r.base} · {r.note}
+                </div>
+              </td>
+              <td>{Math.round(r.reputation)}</td>
+              <td>{r.shows}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="tt-dim" style={{ marginTop: 6, whiteSpace: 'normal' }}>
+        Rivals chase the venue sizes they specialise in, and new firms set up as the years go by.
+      </div>
     </div>
   );
 }

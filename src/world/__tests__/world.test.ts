@@ -7,6 +7,7 @@ import { assignVehicle, bookGig, buildDepot, buyVehicle, borrow, repay } from '.
 import { HOURS_PER_DAY, LOAD_IN_HOUR, SHOW_END_HOUR } from '../catalog';
 import { Terrain, type Gig, type TycoonState } from '../types';
 import { projectCoverage } from '../queries';
+import { stockSize } from '../loading';
 
 const SEED = 12345;
 
@@ -107,7 +108,7 @@ describe('simulation', () => {
     state = advanceHours(state, 24 * 4);
     const back = state.vehicles.find(v => v.id === van.id)!;
     expect(back.cityId).toBe(back.homeCityId);
-    expect(back.cargo.audio + back.cargo.lighting + back.cargo.stage).toBe(0);
+    expect(stockSize(back.cargo)).toBe(0);
   });
 
   it('penalises a booked show nobody drives to', () => {
@@ -159,7 +160,7 @@ describe('simulation', () => {
 
   it('announces new vehicle models as the years pass', () => {
     const rich = newGame();
-    const s = advanceHours({ ...rich, company: { ...rich.company, cash: 10_000_000 } }, 24 * 365 * 3);
+    const s = advanceHours({ ...rich, company: { ...rich.company, cash: 10_000_000 } }, 24 * 365 * 4);
     expect(s.announcedModels).toContain('artic-40');
   });
 });

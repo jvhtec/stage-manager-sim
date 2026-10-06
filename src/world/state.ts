@@ -6,14 +6,18 @@ import {
   VEHICLE_MODELS,
   getModel,
 } from './catalog';
-import { emptyCounts, newId } from './core';
+import { newId } from './core';
+import { productsAvailableIn } from './content/gear';
+import { updateRivals } from './sim';
 import { getWorld } from './mapgen';
 import { generateOffer } from './offers';
 import { roadDistance } from './pathfinding';
-import type { Rival, TycoonState, Vehicle } from './types';
+import type { TycoonState, Vehicle } from './types';
 
 export const TYCOON_SAVE_KEY = 'stage-manager-sim:tycoon';
-export const TYCOON_SAVE_VERSION = 1;
+// v2: gear became real products (GearStock), plus artist relations, riders
+// and rival specialties — v1 saves are discarded rather than half-migrated.
+export const TYCOON_SAVE_VERSION = 2;
 
 export interface NewGameOptions {
   companyName: string;
@@ -21,14 +25,6 @@ export interface NewGameOptions {
   seed?: number;
   hqCityId?: string;
 }
-
-// Deliberately muted liveries that don't clash with any colour on the
-// new-company palette, so a rival's warehouse never looks like yours.
-const RIVAL_TEMPLATES = [
-  { name: 'Pulsewave Collective', color: '#0e7490' },
-  { name: 'LumenLyric Studios', color: '#854d0e' },
-  { name: 'Deck & Drape Co-op', color: '#4d7c0f' },
-];
 
 /** Towns make the best starting HQ: busy enough for work, not in a rival's back yard. */
 export function suggestedHqCities(seed: number) {
@@ -52,7 +48,7 @@ export function makeVehicle(state: TycoonState, modelId: string, homeCityId: str
     status: 'parked',
     cityId: homeCityId,
     orders: [],
-    cargo: emptyCounts(),
+    cargo: {},
     crew: 0,
     profitThisYear: 0,
     profitLastYear: 0,
@@ -91,6 +87,8 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     news: [],
     ledger: {},
     announcedModels: VEHICLE_MODELS.filter(m => m.introYear <= START_YEAR).map(m => m.id),
+    announcedGear: productsAvailableIn(START_YEAR).map(p => p.id),
+    artistRelations: {},
     negativeMonths: 0,
     nextId: 0,
     stats: { showsPlayed: 0, showsFailed: 0, peakCash: STARTING_CASH },
@@ -99,26 +97,17 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
   state.depots.push({
     id: newId(state, 'depot'),
     cityId: hq.id,
-    gear: { audio: 5, lighting: 4, video: 1, stage: 3 },
+    // A 1990 starter kit: a Martin F2 PA, PAR cans and a couple of Vari-Lites,
+    // a projector and some Steeldeck.
+    gear: { 'martin-f2': 5, par64: 2, 'vari-lite-vl2': 2, 'barco-projector': 1, steeldeck: 3 },
     crew: 5,
     builtHour: 0,
   });
   state.vehicles.push(makeVehicle(state, 'splitter-van', hq.id));
   state.vehicles.push(makeVehicle(state, 'luton-box', hq.id));
 
-  // Rivals set up in the biggest places that aren't your home town.
-  const rivalCities = [...world.cities]
-    .filter(c => c.id !== hq.id)
-    .sort((a, b) => b.population - a.population)
-    .slice(0, RIVAL_TEMPLATES.length);
-  state.rivals = rivalCities.map((city, i): Rival => ({
-    id: `rival-${i}`,
-    name: RIVAL_TEMPLATES[i].name,
-    color: RIVAL_TEMPLATES[i].color,
-    hqCityId: city.id,
-    reputation: 30 + rng.nextInt(25),
-    showsPlayed: 0,
-  }));
+  // Rivals (real production houses) set up in the biggest places that aren't your home town.
+  updateRivals(state, world, START_YEAR);
 
   // An opening market: a couple of small shows close to home so the first
   // week has something bookable, plus a spread across the map.

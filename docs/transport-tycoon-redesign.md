@@ -77,7 +77,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/world.test.ts`, 18 tests):
+(`src/world/__tests__/*.test.ts`, 28 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -86,12 +86,40 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 - All randomness goes through the seeded `rngState` (same discipline as `src/lib/rng.ts`).
 - Actions (`src/world/actions.ts`) are `(state, …) → { state, result }`, same pattern as
   `src/engine/**`.
-- Save key `stage-manager-sim:tycoon` (v1) — separate from the classic save, so nothing is lost.
+- Save key `stage-manager-sim:tycoon` (v2 since real gear products) — separate from the classic save.
 
 A headless bot played two in-game years on three seeds during tuning: it survives, but stalls at
 Local Circuit unless it buys bigger trucks and more gear. That upgrade pressure is intended.
 
-## 5. Not ported yet (and where each lands)
+## 5. Real-world content (personal build)
+
+All of it lives in plain data files under `src/world/content/` so it's easy to edit:
+
+- **Artists** (`artists.ts`) — ~75 real acts with approximate career arcs as `[year, tier]`
+  breakpoints (tier 0 = split/hiatus). In 1990 U2 and the Stones play stadiums; Oasis appears
+  in pubs in 1993 and is filling stadiums by 1996; Coldplay, Arctic Monkeys, Ed Sheeran, Billie
+  Eilish arrive in their eras. Pubs mix real early-career acts with fictional local bands;
+  arenas and stadiums are always real acts. Do an act proud (≥75%) and they remember: their
+  later offers come to you more often, pay 10% more, are marked **♥ Asked for you**, and rivals
+  are far less likely to poach them.
+- **Rival companies** (`companies.ts`) — Clair Brothers, Britannia Row, Light & Sound Design,
+  Neg Earth Lights and Wigwam Acoustics trade from day one, each with a specialty department and
+  the venue tiers they chase. Solotech sets up in 2005; Light & Sound Design becomes PRG (2001)
+  and Clair Brothers becomes Clair Global (2010). Shown in a TT-style **company league**.
+- **Gear brands** (`gear.ts`) — gear is now real product units (Martin Audio F2, Meyer MSL-3,
+  L-Acoustics V-DOSC → K1 → K2, d&b J/GSL; PAR cans, Vari-Lite VL2, Martin MAC 500/2000, Clay
+  Paky Sharpy, Robe BMFL, grandMA2/3; JumboTron → LED → ROE Black Pearl; Steeldeck, Prolyte,
+  Tomcat, Kinesys, TAIT), each with a launch year and a 1-10 quality. Crowds' expectations rise
+  every year (`expectedQuality`), so the kit you started with goes from flagship to pub rig;
+  dated kit scales the show down. Artist **riders** name a brand in one department — honour it
+  for a bonus, ignore it for a penalty. Trucks load the rider brand first, then the best kit.
+- **Vehicles** carry real names: Ford Transit, Iveco Daily, Leyland DAF 45, Volvo FH12, Neoplan
+  Skyliner, Mercedes Sprinter, Scania R.
+
+Years and careers are approximate and for flavour. This uses real names for personal play;
+note that pushing to `main` publishes the build to GitHub Pages.
+
+## 6. Not ported yet (and where each lands)
 
 The classic build has systems that don't exist in the map game yet. Each has an obvious home:
 
@@ -104,7 +132,7 @@ The classic build has systems that don't exist in the map game yet. Each has an 
 | Rentals | Local hire at the venue town when you're short — expensive, but saves a no-show |
 | Festivals | Multi-stage events at the stadium city needing several trucks arriving in a window |
 
-## 6. Next steps (PR-sized)
+## 7. Next steps (PR-sized)
 
 1. **Playtest & balance pass** — fee/wage/running-cost tuning, offer density, rival aggression.
 2. **Named crew at warehouses** — port crew progression and hiring into the map game.

@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { rehomeVehicle, sellVehicle, sendHome, serviceVehicle, unassignVehicle } from '@/world/actions';
-import { DEPT_LABELS, SERVICE_INTERVAL_DAYS, getModel } from '@/world/catalog';
+import { SERVICE_INTERVAL_DAYS, getModel } from '@/world/catalog';
+import { stockSize } from '@/world/loading';
+import { StockLines } from './gear';
 import { formatDay, gigById, sellValue, vehicleAgeYears } from '@/world/core';
 import { getWorld } from '@/world/mapgen';
 import { vehicleActivity } from '@/world/queries';
-import { DEPTS } from '@/world/types';
-import { Bar, DeptDot, Stat } from './bits';
+import { Bar, Stat } from './bits';
 import { kmoney, money } from './format';
 import type { WinCtx } from './types';
 
@@ -56,15 +57,10 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
       </Stat>
       <Stat label="Profit last year">{money(v.profitLastYear)}</Stat>
 
-      <h4>Load ({model.gearCapacity} gear · {model.crewSeats} seats)</h4>
-      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        {DEPTS.map(d => (
-          <span key={d} style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }} title={DEPT_LABELS[d]}>
-            <DeptDot dept={d} /> {v.cargo[d]}
-          </span>
-        ))}
-        <span>👷 {v.crew}</span>
-      </div>
+      <h4>
+        Load ({stockSize(v.cargo)}/{model.gearCapacity} gear · {v.crew}/{model.crewSeats} crew)
+      </h4>
+      <StockLines stock={v.cargo} state={state} />
 
       <h4>Orders</h4>
       {v.orders.length ? (

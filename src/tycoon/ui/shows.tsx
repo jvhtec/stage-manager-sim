@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { assignVehicle, bookGig, unassignVehicle } from '@/world/actions';
 import { DEPT_COLORS, DEPT_LABELS, LOAD_IN_HOUR, SHOW_END_HOUR, SHOW_START_HOUR, companyTier, getModel, tierInfo } from '@/world/catalog';
-import { dayOf, formatDay, formatHour, loadInHour, sumCounts } from '@/world/core';
+import { dateOfDay, dayOf, formatDay, formatHour, loadInHour, sumCounts } from '@/world/core';
+import { artistTierIn, findArtist } from '@/world/content/artists';
+import { expectedQuality } from '@/world/content/gear';
 import { getWorld } from '@/world/mapgen';
 import { roadDistance } from '@/world/pathfinding';
 import { estimateArrival, projectCoverage } from '@/world/queries';
@@ -36,6 +38,9 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
   const gearHave = shown ? DEPTS.reduce((s, d) => s + Math.min(shown[d], gig.needs[d]), 0) : 0;
   const rival = state.rivals.find(r => r.id === gig.rivalId);
   const candidates = state.vehicles.filter(v => v.owner === 'player' && !v.orders.includes(gig.id));
+  const artist = findArtist(gig.act);
+  const gigYear = dateOfDay(state, gig.day).getUTCFullYear();
+  const artistTierLabel = artist ? `currently touring ${['', 'pubs', 'clubs & theatres', 'arenas', 'stadiums'][artistTierIn(artist, gigYear)] ?? ''}` : '';
 
   return (
     <div>
@@ -61,6 +66,25 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
       <Stat label="Fee">
         <b>{money(gig.fee)}</b>
       </Stat>
+      {(artist || gig.asksForYou) && (
+        <div className="tt-row" style={{ marginTop: 2 }}>
+          <span className="tt-dim">{artist ? `${artist.genre} · ${artistTierLabel}` : ''}</span>
+          {gig.asksForYou && (
+            <span className="tt-chip" style={{ background: '#fda4af' }} title="You've done great shows for them before — rivals are less likely to steal this one">
+              ♥ Asked for you
+            </span>
+          )}
+        </div>
+      )}
+      <Stat label="Kit expected">
+        Quality {expectedQuality(gig.tier, gigYear).toFixed(1)}+
+        {gig.rider && (
+          <>
+            {' · '}
+            <b>{gig.rider.brand}</b> {DEPT_LABELS[gig.rider.dept].toLowerCase()} on the rider
+          </>
+        )}
+      </Stat>
       {gig.status === 'offer' && (
         <Stat label="Book by">
           {formatDay(state, gig.acceptByDay)}{' '}
@@ -68,7 +92,7 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
         </Stat>
       )}
 
-      <h4>Rider</h4>
+      <h4>Requirements</h4>
       <div className="tt-grid">
         {DEPTS.filter(d => gig.needs[d] > 0).map(d => (
           <Row key={d} label={DEPT_LABELS[d]} color={DEPT_COLORS[d]} need={gig.needs[d]} have={shown?.[d]} />
@@ -108,6 +132,27 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
               )}
             </span>
           </div>
+          {projection.vehicles.length > 0 && (
+            <div style={{ marginTop: 6 }}>
+              <Stat label="Kit vs expectations">
+                <span className={projection.evaluation.quality >= 0.95 ? 'tt-good' : projection.evaluation.quality >= 0.8 ? 'tt-warn' : 'tt-bad'}>
+                  {Math.round(projection.evaluation.quality * 100)}%
+                </span>
+              </Stat>
+              {gig.rider && (
+                <Stat label="Rider">
+                  {projection.evaluation.riderMet ? (
+                    <span className="tt-good">✓ {gig.rider.brand} going out</span>
+                  ) : (
+                    <span className="tt-bad">✗ no {gig.rider.brand} loaded</span>
+                  )}
+                </Stat>
+              )}
+              <Stat label="Expected show">
+                <b>{Math.round(projection.expectedQuality * 100)}%</b>
+              </Stat>
+            </div>
+          )}
           <h4>Assigned</h4>
           <div className="tt-list">
             {projection.vehicles.map(v => {
@@ -174,6 +219,10 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
           <Stat label="Gear delivered">{Math.round(gig.result.gearCoverage * 100)}%</Stat>
           <Stat label="Crew delivered">{Math.round(gig.result.crewCoverage * 100)}%</Stat>
           <Stat label="Late to load-in">{gig.result.lateHours ? `${gig.result.lateHours}h` : 'On time'}</Stat>
+          {gig.result.gearQuality !== undefined && <Stat label="Kit vs expectations">{Math.round(gig.result.gearQuality * 100)}%</Stat>}
+          {gig.result.riderMet !== undefined && (
+            <Stat label="Rider">{gig.result.riderMet ? <span className="tt-good">Honoured</span> : <span className="tt-bad">Not met</span>}</Stat>
+          )}
           <Stat label={gig.result.payout >= 0 ? 'Paid' : 'Penalty'}>
             <b className={gig.result.payout >= 0 ? 'tt-good' : 'tt-bad'}>{money(gig.result.payout)}</b>
           </Stat>
@@ -262,7 +311,10 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
           return (
             <div key={g.id} className="tt-item clickable" onClick={() => ctx.open('gig', g.id)}>
               <div className="grow">
-                <div style={{ fontWeight: 700 }}>{g.act}</div>
+                <div style={{ fontWeight: 700 }}>
+                  {g.asksForYou ? '♥ ' : ''}
+                  {g.act}
+                </div>
                 <div className="tt-dim">
                   {venue?.name}, {city?.name} · {formatDay(state, g.day)}
                   {tab === 'offers' ? ` · ${Math.round(dist)} tiles` : ''}
