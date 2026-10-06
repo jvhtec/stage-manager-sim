@@ -14,7 +14,8 @@ export type WindowKind =
   | 'news'
   | 'towns'
   | 'league'
-  | 'help';
+  | 'help'
+  | 'menu';
 
 export interface WinCtx {
   state: TycoonState;

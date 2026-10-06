@@ -76,7 +76,9 @@ export function WarehouseGear({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
               <span style={{ display: 'flex', gap: 6, alignItems: 'center', fontWeight: 700 }}>
                 <DeptDot dept={d} /> {DEPT_LABELS[d]}
               </span>
-              <b>{totals[d]} units</b>
+              <b>
+                {totals[d]} unit{totals[d] === 1 ? '' : 's'}
+              </b>
             </div>
             {owned.map(id => {
               const p = getProduct(id);

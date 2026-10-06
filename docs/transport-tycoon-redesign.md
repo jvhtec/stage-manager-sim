@@ -131,7 +131,25 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
 Years and careers are approximate and for flavour. This uses real names for personal play;
 note that pushing to `main` publishes the build to GitHub Pages.
 
-## 6. Not ported yet (and where each lands)
+## 6. Phones & tablets (PWA)
+
+- **Installable**: `public/manifest.webmanifest` (standalone, any orientation, maskable
+  icons generated from `public/icons/icon.svg`), iOS home-screen meta tags and
+  `apple-touch-icon`. Android/Chrome shows an **Install app** button (More menu / toolbar);
+  iOS players use Share → Add to Home Screen (explained in-game).
+- **Offline**: `public/sw.js` — network-first app shell, cache-first hashed assets. Saves are
+  localStorage, so a game in progress keeps working offline. Registered only in production
+  builds, scoped to the Pages base path.
+- **Compact layout** (`max-width: 760px` or `max-height: 520px`, `src/tycoon/useLayout.ts`): a
+  top HUD (play/pause, speed, date, rep, cash), a bottom tab bar (Shows · Fleet · Towns · Bases
+  · Money · More), floating map controls, and windows as a single stack of sheets with **Back**
+  — docked to the bottom in portrait, to the right in landscape. Bigger touch targets, finger
+  hit-slop on map markers and vehicles, notch/home-indicator safe areas, no iOS zoom-on-focus or
+  rubber-banding. "Show on map" aims at the part of the map the sheet doesn't cover.
+- **Battery**: the canvas redraws every frame only while something moves; when paused it idles
+  at ~12 fps for the ambient animation.
+
+## 7. Not ported yet (and where each lands)
 
 The classic build has systems that don't exist in the map game yet. Each has an obvious home:
 
@@ -144,7 +162,7 @@ The classic build has systems that don't exist in the map game yet. Each has an 
 | Rentals | Local hire at the venue town when you're short — expensive, but saves a no-show |
 | Festivals | Multi-stage events at the stadium city needing several trucks arriving in a window |
 
-## 7. Next steps (PR-sized)
+## 8. Next steps (PR-sized)
 
 1. **Playtest & balance pass** — fee/wage/running-cost tuning, offer density, rival aggression.
 2. **Named crew at warehouses** — port crew progression and hiring into the map game.

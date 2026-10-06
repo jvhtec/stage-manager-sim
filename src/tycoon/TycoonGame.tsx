@@ -4,6 +4,8 @@ import {
   CalendarDays,
   CircleHelp,
   Crosshair,
+  Download,
+  Ellipsis,
   FastForward,
   Home,
   LogOut,
@@ -18,12 +20,13 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import { companyTier, tierInfo } from '@/world/catalog';
-import { formatHour } from '@/world/core';
+import { formatDay, formatHour } from '@/world/core';
 import { getWorld } from '@/world/mapgen';
 import type { NewsItem } from '@/world/types';
 import { MapCanvas, type MapHandle, type Pick } from './MapCanvas';
 import type { Selection } from './render/renderer';
-import { useTycoon } from './useTycoon';
+import { useTycoon, SPEEDS } from './useTycoon';
+import { useInstallPrompt, useLayout } from './useLayout';
 import { Window } from './ui/Window';
 import { money } from './ui/format';
 import { CityWindow, DepotListWindow, DepotWindow, TownsWindow, VenueWindow } from './ui/places';
@@ -57,6 +60,8 @@ export default function TycoonGame() {
   const [confirmQuit, setConfirmQuit] = useState(false);
 
   const showNewGame = !state || game.isPreview;
+  const { compact, landscape } = useLayout();
+  const installer = useInstallPrompt();
 
   const open = useCallback((kind: WindowKind, refId?: string) => {
     setWindows(prev => {
@@ -79,6 +84,16 @@ export default function TycoonGame() {
     });
   }, []);
 
+  /** Tab-bar navigation on phones: start a fresh stack (tapping the open tab closes it). */
+  const openRoot = (kind: WindowKind) => {
+    if (windows.length && windows[0].kind === kind) {
+      setWindows([]);
+      return;
+    }
+    setWindows([]);
+    open(kind);
+  };
+
   const closeWindow = (key: string) => setWindows(prev => prev.filter(w => w.key !== key));
   const focusWindow = (key: string) => {
     zCounter.current += 1;
@@ -92,10 +107,19 @@ export default function TycoonGame() {
     window.setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3200);
   }, []);
 
-  const goTo = useCallback((x: number, y: number) => {
-    setFollow(null);
-    mapRef.current?.centreOnTile(x, y);
-  }, []);
+  const goTo = useCallback(
+    (x: number, y: number) => {
+      setFollow(null);
+      // On phones a sheet covers part of the map — aim for the visible part.
+      const offset = !compact
+        ? undefined
+        : landscape
+          ? { x: Math.min(420, window.innerWidth * 0.58) / 2, y: 0 }
+          : { x: 0, y: window.innerHeight * 0.3 };
+      mapRef.current?.centreOnTile(x, y, offset);
+    },
+    [compact, landscape],
+  );
 
   const onPick = useCallback(
     (pick: Pick | null) => {
@@ -187,6 +211,8 @@ export default function TycoonGame() {
         return 'Company league';
       case 'help':
         return 'How to play';
+      case 'menu':
+        return state.company.name;
     }
   };
 
@@ -220,6 +246,36 @@ export default function TycoonGame() {
         return <LeagueWindow ctx={ctx} />;
       case 'help':
         return <HelpWindow />;
+      case 'menu':
+        return (
+          <div className="tt-menu">
+            <button className="tt-btn" onClick={() => open('league')}>
+              <Trophy /> League
+            </button>
+            <button className="tt-btn" onClick={() => open('news')}>
+              <Newspaper /> News
+            </button>
+            <button className="tt-btn" onClick={() => open('help')}>
+              <CircleHelp /> How to play
+            </button>
+            <button className="tt-btn" onClick={() => hq && goTo(hq.x, hq.y)}>
+              <Home /> Go to HQ
+            </button>
+            {installer.canPrompt && (
+              <button className="tt-btn primary" onClick={() => installer.install()}>
+                <Download /> Install app
+              </button>
+            )}
+            <button className="tt-btn" onClick={() => setConfirmQuit(true)}>
+              <LogOut /> New company
+            </button>
+            {!installer.standalone && installer.isIos && (
+              <div className="tt-dim" style={{ gridColumn: '1 / -1', whiteSpace: 'normal' }}>
+                Install on iPhone/iPad: tap <b>Share</b> → <b>Add to Home Screen</b>.
+              </div>
+            )}
+          </div>
+        );
     }
   };
 
@@ -228,7 +284,10 @@ export default function TycoonGame() {
   const hq = state && world ? world.cityById.get(state.company.hqCityId) : undefined;
 
   return (
-    <div className="tt-root" style={{ ['--tt-brand' as string]: brand }}>
+    <div
+      className={['tt-root', compact && 'compact', compact && landscape && 'landscape', !windows.length && 'no-sheet'].filter(Boolean).join(' ')}
+      style={{ ['--tt-brand' as string]: brand }}
+    >
       <MapCanvas
         ref={mapRef}
         stateRef={game.stateRef}
@@ -241,6 +300,78 @@ export default function TycoonGame() {
 
       {state && !showNewGame && (
         <>
+          {compact ? (
+            <>
+              <div className="tt-hud">
+                <button
+                  className="tt-btn"
+                  data-on={game.speed === 0}
+                  onClick={() => game.setSpeed(game.speed ? 0 : lastSpeed.current || 1)}
+                  aria-label={game.speed ? 'Pause' : 'Play'}
+                >
+                  {game.speed ? <Pause /> : <Play />}
+                </button>
+                <button
+                  className="tt-btn"
+                  style={{ minWidth: 46 }}
+                  onClick={() => {
+                    const next = game.speed >= 4 || game.speed === 0 ? 1 : game.speed + 1;
+                    lastSpeed.current = next;
+                    game.setSpeed(next);
+                  }}
+                  aria-label="Change speed"
+                >
+                  {game.speed === 0 ? '||' : game.speed === 4 ? 'FF' : `${SPEEDS[game.speed]}×`}
+                </button>
+                <div className="date">
+                  {formatDay(state, Math.floor(state.hour / 24))}
+                  <small>{String(state.hour % 24).padStart(2, '0')}:00</small>
+                </div>
+                <span className="spacer" />
+                <span className="tt-chip" style={{ background: tierInfo(tier).color }} onClick={() => open('league')}>
+                  ★ {Math.round(state.company.reputation)}
+                </span>
+                <span className={`cash ${state.company.cash < 0 ? 'neg' : ''}`} onClick={() => openRoot('finance')}>
+                  {money(state.company.cash)}
+                </span>
+              </div>
+
+              <div className="tt-mapctl">
+                {follow && (
+                  <button className="tt-btn" data-on onClick={() => setFollow(null)} aria-label="Stop following">
+                    <Crosshair />
+                  </button>
+                )}
+                <button className="tt-btn" onClick={() => mapRef.current?.zoomBy(1.25)} aria-label="Zoom in">
+                  <ZoomIn />
+                </button>
+                <button className="tt-btn" onClick={() => mapRef.current?.zoomBy(1 / 1.25)} aria-label="Zoom out">
+                  <ZoomOut />
+                </button>
+                <button className="tt-btn" onClick={() => hq && goTo(hq.x, hq.y)} aria-label="Go to HQ">
+                  <Home />
+                </button>
+              </div>
+
+              <nav className="tt-tabbar">
+                {(
+                  [
+                    ['shows', 'Shows', CalendarDays],
+                    ['vehicles', 'Fleet', Truck],
+                    ['towns', 'Towns', MapPin],
+                    ['depots', 'Bases', Building2],
+                    ['finance', 'Money', Wallet],
+                    ['menu', 'More', Ellipsis],
+                  ] as const
+                ).map(([kind, label, Icon]) => (
+                  <button key={kind} className="tt-tab" data-on={windows[0]?.kind === kind} onClick={() => openRoot(kind)}>
+                    <Icon />
+                    {label}
+                  </button>
+                ))}
+              </nav>
+            </>
+          ) : (
           <div className="tt-toolbar">
             <div className="tt-group">
               <button className="tt-btn" data-on={game.speed === 0} onClick={() => game.setSpeed(0)} title="Pause (space)">
@@ -307,19 +438,25 @@ export default function TycoonGame() {
               <button className="tt-btn" onClick={() => open('help')} title="How to play">
                 <CircleHelp />
               </button>
+              {installer.canPrompt && (
+                <button className="tt-btn" onClick={() => installer.install()} title="Install as an app">
+                  <Download />
+                </button>
+              )}
               <button className="tt-btn" onClick={() => setConfirmQuit(true)} title="New company">
                 <LogOut />
               </button>
             </div>
           </div>
+          )}
 
-          {game.speed !== 1 && (
+          {!compact && game.speed !== 1 && (
             <div className="tt-speed-badge tt-bevel" style={{ color: game.speed === 0 ? '#fbbf24' : '#fff' }}>
               {SPEED_LABELS[game.speed]}
             </div>
           )}
 
-          {windows.map(w => {
+          {(compact ? windows.filter(w => w === top) : windows).map(w => {
             const ctx: WinCtx = {
               state,
               dispatch: game.dispatch,
@@ -342,7 +479,9 @@ export default function TycoonGame() {
                 width={w.kind === 'finance' || w.kind === 'league' ? 440 : 340}
                 onMove={(x, y) => setWindows(prev => prev.map(o => (o.key === w.key ? { ...o, x, y } : o)))}
                 onFocus={() => focusWindow(w.key)}
-                onClose={() => closeWindow(w.key)}
+                onClose={() => (compact ? setWindows([]) : closeWindow(w.key))}
+                onBack={compact && windows.length > 1 ? () => closeWindow(w.key) : undefined}
+                sheet={compact}
               >
                 {renderWindow(w, ctx)}
               </Window>
@@ -350,12 +489,12 @@ export default function TycoonGame() {
           })}
 
           <div className="tt-popups">
-            {toasts.map(t => (
+            {(compact ? toasts.slice(-1) : toasts).map(t => (
               <div key={t.id} className={`tt-popup ${t.ok ? 'good' : 'bad'}`} style={{ fontFamily: 'inherit', background: '#e9ecf2' }}>
                 <div>{t.text}</div>
               </div>
             ))}
-            {game.popups.map(p => (
+            {(compact ? (toasts.length ? [] : game.popups.slice(-1)) : game.popups).map(p => (
               <div
                 key={p.id}
                 className={`tt-popup ${p.tone}`}
@@ -375,6 +514,7 @@ export default function TycoonGame() {
             ))}
           </div>
 
+          {!compact && (
           <div className="tt-status">
             <div className="tt-inset" style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 700 }}>
               {formatHour(state, state.hour)}
@@ -389,6 +529,7 @@ export default function TycoonGame() {
               <span className={`tt-money ${state.company.cash < 0 ? 'neg' : ''}`}>{money(state.company.cash)}</span>
             </div>
           </div>
+          )}
         </>
       )}
 

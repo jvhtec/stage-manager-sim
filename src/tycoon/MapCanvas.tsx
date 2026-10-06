@@ -13,7 +13,8 @@ export type Pick =
   | { kind: 'depot'; id: string };
 
 export interface MapHandle {
-  centreOnTile: (x: number, y: number) => void;
+  /** `offset` (screen px) shifts the target so it lands in the part of the map a sheet doesn't cover. */
+  centreOnTile: (x: number, y: number, offset?: { x: number; y: number }) => void;
   zoomBy: (factor: number) => void;
 }
 
@@ -42,10 +43,15 @@ export const MapCanvas = forwardRef<MapHandle, Props>(function MapCanvas(
   propsRef.current = { selection, followVehicleId, onPick, onUserPan };
 
   useImperativeHandle(ref, () => ({
-    centreOnTile: (x, y) => {
+    centreOnTile: (x, y, offset) => {
       const s = stateRef.current;
       if (!s) return;
-      camRef.current = centreOn(camRef.current, getWorld(s.mapSeed), x + 0.5, y + 0.5);
+      const cam = centreOn(camRef.current, getWorld(s.mapSeed), x + 0.5, y + 0.5);
+      if (offset) {
+        cam.x += offset.x / cam.zoom;
+        cam.y += offset.y / cam.zoom;
+      }
+      camRef.current = cam;
     },
     zoomBy: factor => {
       const cam = camRef.current;
@@ -58,8 +64,18 @@ export const MapCanvas = forwardRef<MapHandle, Props>(function MapCanvas(
     const canvas = canvasRef.current!;
     const ctx = canvas.getContext('2d')!;
     let raf = 0;
+    let lastDraw = 0;
+    let lastSig = '';
     const draw = (time: number) => {
+      raf = requestAnimationFrame(draw);
       const s = stateRef.current;
+      // Battery: when nothing is moving (paused, no panning), redraw only
+      // ~12 times a second for the ambient animation (water, flags, beams).
+      const cam0 = camRef.current;
+      const sig = `${s?.hour}|${alphaRef.current.toFixed(3)}|${cam0.x.toFixed(1)}|${cam0.y.toFixed(1)}|${cam0.zoom}|${canvas.clientWidth}x${canvas.clientHeight}|${hoverRef.current?.x},${hoverRef.current?.y}|${JSON.stringify(propsRef.current.selection)}|${propsRef.current.followVehicleId}|${s?.vehicles.length}|${s?.gigs.length}|${s?.company.cash}`;
+      if (sig === lastSig && time - lastDraw < 80) return;
+      lastSig = sig;
+      lastDraw = time;
       const dpr = Math.min(2, window.devicePixelRatio || 1);
       const w = canvas.clientWidth;
       const h = canvas.clientHeight;
@@ -77,6 +93,7 @@ export const MapCanvas = forwardRef<MapHandle, Props>(function MapCanvas(
         if (centredOn.current !== key) {
           centredOn.current = key;
           const hq = map.cityById.get(s.company.hqCityId);
+          if (Math.min(w, h) < 600) cam.zoom = 1.6;
           if (hq) camRef.current = centreOn(cam, map, hq.x + 0.5, hq.y + 0.5);
         }
         const follow = propsRef.current.followVehicleId;
@@ -112,7 +129,6 @@ export const MapCanvas = forwardRef<MapHandle, Props>(function MapCanvas(
         ctx.fillStyle = '#10131a';
         ctx.fillRect(0, 0, w, h);
       }
-      raf = requestAnimationFrame(draw);
     };
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
@@ -178,7 +194,7 @@ export const MapCanvas = forwardRef<MapHandle, Props>(function MapCanvas(
       const wasClick = pointers.size === 1 && dragDist <= 5;
       pointers.delete(e.pointerId);
       if (pointers.size < 2) pinchStart = null;
-      if (wasClick) propsRef.current.onPick(pick(local(e)));
+      if (wasClick) propsRef.current.onPick(pick(local(e), e.pointerType !== 'mouse'));
     };
     const onLeave = () => {
       hoverRef.current = null;
@@ -189,16 +205,19 @@ export const MapCanvas = forwardRef<MapHandle, Props>(function MapCanvas(
       zoomAt(e.deltaY < 0 ? 1.15 : 1 / 1.15, p.x, p.y);
     };
 
-    const pick = ({ x, y }: { x: number; y: number }): Pick | null => {
+    const pick = ({ x, y }: { x: number; y: number }, touch = false): Pick | null => {
       const s = stateRef.current;
       if (!s) return null;
       const hits = hitsRef.current;
-      const inRect = (r: { x: number; y: number; w: number; h: number }) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
+      // Fingers are fatter than cursors.
+      const slop = touch ? 10 : 0;
+      const inRect = (r: { x: number; y: number; w: number; h: number }) =>
+        x >= r.x - slop && x <= r.x + r.w + slop && y >= r.y - slop && y <= r.y + r.h + slop;
       const marker = [...hits.markers].reverse().find(inRect);
       if (marker) return { kind: 'gigs', gigIds: marker.gigIds, venueId: marker.venueId };
       const label = hits.labels.find(inRect);
       if (label) return { kind: 'city', id: label.cityId };
-      const radius = Math.max(10, 9 * camRef.current.zoom);
+      const radius = Math.max(touch ? 24 : 10, 9 * camRef.current.zoom);
       let best: { id: string; d: number } | null = null;
       hits.vehicles.forEach(v => {
         const d = Math.hypot(v.x - x, v.y - y);

@@ -9,15 +9,19 @@ interface Props {
   onMove: (x: number, y: number) => void;
   onFocus: () => void;
   onClose?: () => void;
+  /** Shown in sheet mode when there's a window underneath to go back to. */
+  onBack?: () => void;
+  /** Phone layout: docked sheet, no dragging. */
+  sheet?: boolean;
   children: ReactNode;
 }
 
 /** A draggable, bevelled TT-style window. */
-export function Window({ title, x, y, z, width, onMove, onFocus, onClose, children }: Props) {
+export function Window({ title, x, y, z, width, onMove, onFocus, onClose, onBack, sheet, children }: Props) {
   const drag = useRef<{ dx: number; dy: number } | null>(null);
 
   const onDown = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest('button')) return;
+    if (sheet || (e.target as HTMLElement).closest('button')) return;
     onFocus();
     drag.current = { dx: e.clientX - x, dy: e.clientY - y };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -45,6 +49,11 @@ export function Window({ title, x, y, z, width, onMove, onFocus, onClose, childr
           </button>
         )}
         <span className="title">{title}</span>
+        {onBack && (
+          <button className="tt-back" onClick={onBack} aria-label="Back">
+            ‹ Back
+          </button>
+        )}
       </div>
       <div className="tt-body">{children}</div>
     </div>

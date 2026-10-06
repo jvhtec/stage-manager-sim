@@ -229,16 +229,6 @@
 .tt-swatch { width: 26px; height: 26px; border: 2px solid var(--tt-lo); cursor: pointer; padding: 0; }
 .tt-swatch[data-on='true'] { outline: 2px solid #fff; outline-offset: 1px; }
 
-@media (max-width: 640px) {
-  .tt-window {
-    left: 6px !important;
-    right: 6px !important;
-    top: auto !important;
-    bottom: 40px !important;
-    max-width: none;
-    max-height: 58vh;
-  }
-}
 
 /* ---- News popups ---------------------------------------------------------- */
 .tt-popups {
@@ -285,9 +275,6 @@
   backdrop-filter: blur(2px);
 }
 .tt-overlay .tt-window { position: relative; max-width: 460px; width: 100%; }
-@media (max-width: 640px) {
-  .tt-overlay .tt-window { left: auto !important; right: auto !important; bottom: auto !important; max-height: 90vh; }
-}
 .tt-speed-badge {
   position: absolute;
   top: 46px;
@@ -298,4 +285,171 @@
   font-size: 11px;
   letter-spacing: 0.1em;
   pointer-events: none;
+}
+
+/* ======================================================================= */
+/* Installed-app / iOS niceties                                            */
+/* ======================================================================= */
+html,
+body {
+  overscroll-behavior: none;
+  background: #10131a;
+}
+.tt-root {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-text-size-adjust: 100%;
+}
+.tt-toolbar { padding-top: max(4px, env(safe-area-inset-top)); padding-left: max(6px, env(safe-area-inset-left)); padding-right: max(6px, env(safe-area-inset-right)); }
+.tt-status { padding-bottom: max(3px, env(safe-area-inset-bottom)); padding-left: max(4px, env(safe-area-inset-left)); padding-right: max(4px, env(safe-area-inset-right)); }
+.tt-input { font-size: 16px; } /* < 16px makes iOS zoom the page on focus */
+
+/* ======================================================================= */
+/* Compact (phone) layout — toggled by .compact on the root                 */
+/* ======================================================================= */
+.tt-root.compact { --hud-h: 48px; --tab-h: 60px; font-size: 14px; }
+.tt-root.compact.landscape { --hud-h: 42px; --tab-h: 48px; }
+
+.tt-hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: calc(var(--hud-h) + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) max(8px, env(safe-area-inset-right)) 0 max(8px, env(safe-area-inset-left));
+  background: linear-gradient(#2c313c, #252a33);
+  border-bottom: 2px solid var(--tt-lo);
+}
+.tt-hud .date { font-weight: 800; font-variant-numeric: tabular-nums; font-size: 13px; line-height: 1.1; }
+.tt-hud .date small { display: block; font-weight: 600; color: var(--tt-dim); font-size: 11px; }
+.tt-hud .spacer { flex: 1; }
+.tt-hud .cash { font-weight: 800; font-variant-numeric: tabular-nums; font-size: 15px; }
+.tt-hud .cash.neg { color: var(--tt-bad); }
+
+.tt-tabbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 20;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  height: calc(var(--tab-h) + env(safe-area-inset-bottom));
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background: var(--tt-panel);
+  border-top: 2px solid var(--tt-hi);
+}
+.tt-tab {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: none;
+  border: 0;
+  color: var(--tt-dim);
+  font: inherit;
+  font-size: 10.5px;
+  font-weight: 700;
+  padding: 0;
+  cursor: pointer;
+}
+.tt-tab svg { width: 22px; height: 22px; }
+.tt-tab[data-on='true'] { color: #fff; box-shadow: inset 0 3px 0 var(--tt-brand); }
+.tt-root.compact.landscape .tt-tab { flex-direction: row; gap: 6px; font-size: 12px; }
+.tt-root.compact.landscape .tt-tab svg { width: 18px; height: 18px; }
+
+.tt-mapctl {
+  position: absolute;
+  right: max(10px, env(safe-area-inset-right));
+  bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 12px);
+  z-index: 15;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tt-mapctl .tt-btn { width: 42px; height: 42px; padding: 0; border-radius: 0; }
+
+/* Sheets: one window at a time, docked to the bottom (portrait) or right (landscape). */
+.tt-root.compact .tt-window {
+  left: 0 !important;
+  right: 0 !important;
+  top: auto !important;
+  bottom: calc(var(--tab-h) + env(safe-area-inset-bottom)) !important;
+  width: auto !important;
+  max-width: none;
+  max-height: min(66dvh, calc(100dvh - var(--hud-h) - var(--tab-h) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 24px));
+  border-left: 0;
+  border-right: 0;
+  box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.45);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+.tt-root.compact.landscape .tt-window {
+  left: auto !important;
+  right: 0 !important;
+  top: calc(var(--hud-h) + env(safe-area-inset-top)) !important;
+  bottom: calc(var(--tab-h) + env(safe-area-inset-bottom)) !important;
+  width: min(420px, 58vw) !important;
+  max-height: none;
+  border-right: 0;
+  padding-left: 0;
+}
+.tt-root.compact.landscape .tt-mapctl { right: calc(min(420px, 58vw) + 10px); }
+.tt-root.compact.landscape.no-sheet .tt-mapctl { right: max(10px, env(safe-area-inset-right)); }
+.tt-root.compact .tt-titlebar { height: 42px; font-size: 15px; padding: 0 6px; cursor: default; }
+.tt-root.compact .tt-close { width: 30px; height: 30px; font-size: 14px; }
+.tt-back {
+  height: 30px;
+  padding: 0 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+.tt-root.compact .tt-body { padding: 10px 12px 14px; }
+.tt-root.compact .tt-btn { min-height: 40px; }
+.tt-root.compact .tt-btn.sm { min-height: 34px; padding: 0 10px; font-size: 13px; }
+.tt-root.compact .tt-item { padding: 8px; }
+.tt-root.compact .tt-tabs { flex-wrap: wrap; }
+
+.tt-root.compact .tt-popups {
+  top: calc(var(--hud-h) + env(safe-area-inset-top) + 8px);
+  bottom: auto;
+  width: calc(100vw - 16px);
+}
+.tt-root.compact .tt-popup { padding: 6px 9px; font-size: 13px; }
+.tt-root.compact .tt-popup div[style] { font-size: 13px !important; }
+
+.tt-menu { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.tt-menu .tt-btn { justify-content: flex-start; height: 46px; }
+
+/* The New company / game over dialogs stay centred dialogs on phones. */
+.tt-root.compact .tt-overlay .tt-window {
+  position: relative;
+  left: auto !important;
+  right: auto !important;
+  bottom: auto !important;
+  top: auto !important;
+  width: 100% !important;
+  max-height: calc(100dvh - 32px);
+  border: 2px solid;
+  border-color: var(--tt-hi) var(--tt-lo) var(--tt-lo) var(--tt-hi);
+}
+
+/* Short landscape screens: tighten the new-company dialog so its buttons fit. */
+.tt-root.compact.landscape .tt-intro { display: none; }
+.tt-root.compact.landscape .tt-newgame { gap: 6px !important; }
+.tt-root.compact.landscape .tt-overlay { padding: 8px; }
+/* Keep pop-ups clear of the docked side panel. */
+.tt-root.compact.landscape:not(.no-sheet) .tt-popups {
+  left: 8px;
+  transform: none;
+  width: calc(100vw - min(420px, 58vw) - 24px);
 }

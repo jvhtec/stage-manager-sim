@@ -173,7 +173,8 @@ export function HelpWindow() {
         <li>Buy bigger trucks and more gear, open regional warehouses, and win reputation to unlock arenas and stadiums.</li>
       </ol>
       <p className="tt-dim" style={{ marginBottom: 0 }}>
-        Drag to pan, scroll or pinch to zoom. Space pauses; 1–4 set the speed. Vehicles break down more as they age — keep them
+        Drag to pan, scroll or pinch to zoom. Space pauses; 1–4 set the speed. Install it as an app: on iPhone/iPad use Share →
+        Add to Home Screen; on Android use the browser's Install prompt. Vehicles break down more as they age — keep them
         serviced. Wages and running costs tick every day, and three months in the red ends the company.
       </p>
     </div>
@@ -201,8 +202,8 @@ export function NewGameForm({
   useEffect(() => onPreview(seed, hqId), [seed, hqId, onPreview]);
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+    <div className="tt-newgame" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="tt-dim tt-intro" style={{ whiteSpace: 'normal' }}>
         It's 1990. You've got two vans, a warehouse and a few flight cases. Build a touring empire.
       </div>
       <label>
