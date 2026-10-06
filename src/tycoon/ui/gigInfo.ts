@@ -1,5 +1,5 @@
 import { getRegion } from '@/world/content/world';
-import { getWorld } from '@/world/mapgen';
+import { worldOf } from '@/world/mapgen';
 import { projectCoverage } from '@/world/queries';
 import { DEPTS, type Gig, type TycoonState } from '@/world/types';
 
@@ -9,7 +9,7 @@ export function gigWhere(state: TycoonState, gig: Gig): string {
     const region = getRegion(gig.overseas.regionId);
     return `✈ ${region.name}: ${gig.overseas.stops.map(s => s.city).join(', ')}`;
   }
-  const world = getWorld(state.mapSeed);
+  const world = worldOf(state);
   return `${world.venueById.get(gig.venueId)?.name}, ${world.cityById.get(gig.cityId)?.name}`;
 }
 

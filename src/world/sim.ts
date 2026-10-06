@@ -30,6 +30,7 @@ import {
   emptyCounts,
   freeLot,
   formatDay,
+  formatMoney,
   gigById,
   loadInHour,
   loadOutDoneHour,
@@ -44,10 +45,10 @@ import {
   withRng,
   yearOf,
 } from './core';
-import { getWorld } from './mapgen';
+import { worldOf } from './mapgen';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize } from './loading';
 import { GEAR_PRODUCTS } from './content/gear';
-import { RIVAL_COMPANIES } from './content/companies';
+import { rivalsFor } from './content/companies';
 import { dailyOffers, pruneGigs, rivalsTakeOffers } from './offers';
 import { dailyTours } from './tours';
 import { getRegion } from './content/world';
@@ -71,7 +72,7 @@ export function reputationAfterShow(rep: number, tier: number, quality: number):
 export function advanceHours(state: TycoonState, hours: number): TycoonState {
   if (state.gameOver || hours <= 0) return state;
   const s = cloneState(state);
-  const world = getWorld(s.mapSeed);
+  const world = worldOf(s);
   withRng(s, rng => {
     for (let i = 0; i < hours && !s.gameOver; i++) stepHour(s, world, rng);
   });
@@ -362,8 +363,8 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     pushNews(
       s,
       onSite.length
-        ? `Disaster at ${where}: ${gig.act} played to a half-built rig. Penalty $${penalty.toLocaleString()}.`
-        : `No-show! Nobody turned up for ${gig.act} at ${where}. Penalty $${penalty.toLocaleString()}.`,
+        ? `Disaster at ${where}: ${gig.act} played to a half-built rig. Penalty ${formatMoney(s, penalty)}.`
+        : `No-show! Nobody turned up for ${gig.act} at ${where}. Penalty ${formatMoney(s, penalty)}.`,
       'bad',
       { cityId: gig.cityId, gigId: gig.id },
     );
@@ -396,7 +397,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const verdict = quality >= 0.9 ? 'Storming show' : quality >= 0.7 ? 'Solid show' : 'Rough show';
   const riderNote = gear.riderMet === undefined ? '' : gear.riderMet ? ` Rider (${gig.rider!.brand}) honoured.` : ` They wanted ${gig.rider!.brand} and didn't get it.`;
   const kitNote = gear.quality < 0.8 ? ' Reviewers called the kit dated.' : '';
-  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned $${payout.toLocaleString()}.${riderNote}${kitNote}`, quality >= 0.7 ? 'good' : 'info', {
+  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}.${riderNote}${kitNote}`, quality >= 0.7 ? 'good' : 'info', {
     cityId: gig.cityId,
     gigId: gig.id,
   });
@@ -493,7 +494,7 @@ function announceGear(s: TycoonState, year: number) {
 
 /** New companies set up shop and old ones rebrand as the years go by. */
 export function updateRivals(s: TycoonState, world: WorldMap, year: number) {
-  RIVAL_COMPANIES.forEach(t => {
+  rivalsFor(s.country).forEach(t => {
     const rival = s.rivals.find(r => r.id === t.id);
     const gone = t.exits && year >= t.exits.year;
     if (rival && gone) {
@@ -513,7 +514,8 @@ export function updateRivals(s: TycoonState, world: WorldMap, year: number) {
       if (!pick) return;
       s.rivals.push({
         id: t.id,
-        name: t.name,
+        // Already renamed by the time they show up? Use the current name.
+        name: (t.renames ?? []).filter(r => r.year <= year).pop()?.name ?? t.name,
         color: t.color,
         specialty: t.specialty,
         minTier: t.minTier,

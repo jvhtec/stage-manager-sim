@@ -10,12 +10,22 @@ import {
   tierInfo,
 } from '@/world/catalog';
 import { formatHour, yearOf } from '@/world/core';
-import { getWorld } from '@/world/mapgen';
+import { worldOf } from '@/world/mapgen';
 import { companyValue } from '@/world/queries';
 import { suggestedHqCities } from '@/world/state';
 import { LEDGER_LABELS, type LedgerCategory, type TycoonState } from '@/world/types';
 import { createRandomSeed } from '@/lib/rng';
+import { COUNTRIES, type CountryCode } from '@/world/content/countries';
+
+/** Default the picker to the player's browser locale when we support it. */
+function guessCountry(): CountryCode {
+  const lang = (typeof navigator !== 'undefined' ? navigator.language : 'en-GB').toUpperCase();
+  const region = lang.split('-')[1] ?? lang.split('-')[0];
+  const byLang: Record<string, CountryCode> = { ES: 'ES', GB: 'GB', US: 'US', DE: 'DE', FR: 'FR', IT: 'IT', EN: 'GB' };
+  return byLang[region] ?? 'GB';
+}
 import { Bar, Stat } from './bits';
+import { BrandBadge } from './brands';
 import { money } from './format';
 import type { WinCtx } from './types';
 
@@ -112,7 +122,7 @@ export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
 
 export function NewsWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
-  const world = getWorld(state.mapSeed);
+  const world = worldOf(state);
   return (
     <div className="tt-list">
       {state.news.map(n => {
@@ -188,18 +198,19 @@ export function NewGameForm({
   onStart,
   onCancel,
 }: {
-  onPreview: (seed: number, hqCityId?: string) => void;
-  onStart: (opts: { companyName: string; color: string; seed: number; hqCityId: string }) => void;
+  onPreview: (seed: number, hqCityId?: string, country?: CountryCode) => void;
+  onStart: (opts: { companyName: string; color: string; seed: number; hqCityId: string; country: CountryCode }) => void;
   onCancel?: () => void;
 }) {
   const [name, setName] = useState('Roadcase & Rigging');
   const [color, setColor] = useState(COLORS[0]);
   const [seed, setSeed] = useState(() => createRandomSeed());
-  const cities = useMemo(() => suggestedHqCities(seed), [seed]);
+  const [country, setCountry] = useState<CountryCode>(() => guessCountry());
+  const cities = useMemo(() => suggestedHqCities(seed, country), [seed, country]);
   const [hq, setHq] = useState<string>('');
   const hqId = cities.find(c => c.id === hq)?.id ?? cities.find(c => c.size === 'town')?.id ?? cities[0]?.id;
 
-  useEffect(() => onPreview(seed, hqId), [seed, hqId, onPreview]);
+  useEffect(() => onPreview(seed, hqId, country), [seed, hqId, country, onPreview]);
 
   return (
     <div className="tt-newgame" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -219,6 +230,27 @@ export function NewGameForm({
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
           {COLORS.map(c => (
             <button key={c} className="tt-swatch" style={{ background: c }} data-on={c === color} onClick={() => setColor(c)} aria-label={c} />
+          ))}
+        </div>
+      </div>
+      <div>
+        <div className="tt-dim" style={{ marginBottom: 3 }}>
+          Country
+        </div>
+        <div className="tt-countries">
+          {COUNTRIES.map(c => (
+            <button
+              key={c.code}
+              className="tt-btn sm"
+              data-on={c.code === country}
+              title={c.name}
+              onClick={() => {
+                setCountry(c.code);
+                setHq('');
+              }}
+            >
+              <span style={{ fontSize: 16 }}>{c.flag}</span> {c.short}
+            </button>
           ))}
         </div>
       </div>
@@ -247,7 +279,7 @@ export function NewGameForm({
           <button
             className="tt-btn primary"
             disabled={!name.trim() || !hqId}
-            onClick={() => onStart({ companyName: name.trim(), color, seed, hqCityId: hqId! })}
+            onClick={() => onStart({ companyName: name.trim(), color, seed, hqCityId: hqId!, country })}
           >
             Start company
           </button>
@@ -275,7 +307,7 @@ export function GameOverPanel({ state, onRestart }: { state: TycoonState; onRest
 
 export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
-  const world = getWorld(state.mapSeed);
+  const world = worldOf(state);
   const rows = [
     {
       id: 'player',
@@ -312,8 +344,7 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
               <td>
                 <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                   <span className="tt-dim">{i + 1}.</span>
-                  <span style={{ width: 10, height: 10, background: r.color, display: 'inline-block', flexShrink: 0 }} />
-                  <span style={{ fontWeight: 700 }}>{r.name}</span>
+                  <BrandBadge brand={r.name} color={r.color} size="md" />
                 </div>
                 <div className="tt-dim" style={{ fontSize: 11, paddingLeft: 30 }}>
                   {r.base} · {r.note}

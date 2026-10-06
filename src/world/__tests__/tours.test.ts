@@ -65,7 +65,7 @@ function plantTour(state: TycoonState): { state: TycoonState; tour: Tour } {
     tier: 1,
     day: today + 3 + i * 2,
     acceptByDay: today + 1,
-    needs: { audio: 2, lighting: 1, video: 0, stage: 1 },
+    needs: { audio: 2, console: 1, lighting: 1, video: 0, stage: 1 },
     crewNeeded: 2,
     fee: 3000,
     status: 'offer',
@@ -126,7 +126,7 @@ describe('playing tours', () => {
       tier: 1,
       day: today + 8,
       acceptByDay: today + 1,
-      needs: { audio: 2, lighting: 1, video: 0, stage: 1 },
+      needs: { audio: 2, console: 1, lighting: 1, video: 0, stage: 1 },
       crewNeeded: 2,
       fee: 9000,
       status: 'booked',
@@ -158,3 +158,20 @@ function assignTo(s: TycoonState, vehicleId: string, gigId: string): TycoonState
   if (!out.result.ok) throw new Error(out.result.message);
   return out.state;
 }
+
+describe('rival tour bids', () => {
+  it('only lets rivals win tours in their own league', () => {
+    let s = newGame();
+    const world = getWorld(s.mapSeed);
+    const rng = createRng(21);
+    // Lots of small club tours, then let a few months of bidding play out.
+    for (let i = 0; i < 25; i++) generateNationalTour(s, world, rng, 1);
+    s = advanceHours(s, 24 * 30);
+    s.tours.filter(t => t.status === 'rival').forEach(t => {
+      const rival = s.rivals.find(r => r.id === t.rivalId)!;
+      const maxTier = Math.max(...tourGigs(s, t).map(g => g.tier));
+      expect(maxTier).toBeGreaterThanOrEqual(rival.minTier);
+      expect(maxTier).toBeLessThanOrEqual(rival.maxTier);
+    });
+  });
+});

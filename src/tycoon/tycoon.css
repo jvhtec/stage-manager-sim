@@ -453,3 +453,9 @@ body {
   transform: none;
   width: calc(100vw - min(420px, 58vw) - 24px);
 }
+.tt-countries { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; }
+.tt-countries .tt-btn { justify-content: flex-start; overflow: hidden; }
+.tt-root.compact.landscape .tt-countries { grid-template-columns: repeat(6, 1fr); }
+.tt-root.compact.landscape .tt-countries .tt-btn { font-size: 0; justify-content: center; }
+.tt-root.compact.landscape .tt-countries .tt-btn span { font-size: 18px; }
+.tt-root.compact:not(.landscape) .tt-countries { grid-template-columns: repeat(2, 1fr); }

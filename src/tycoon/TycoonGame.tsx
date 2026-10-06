@@ -21,14 +21,15 @@ import {
 } from 'lucide-react';
 import { companyTier, tierInfo } from '@/world/catalog';
 import { formatDay, formatHour } from '@/world/core';
-import { getWorld } from '@/world/mapgen';
+import { worldOf } from '@/world/mapgen';
 import type { NewsItem } from '@/world/types';
 import { MapCanvas, type MapHandle, type Pick } from './MapCanvas';
 import type { Selection } from './render/renderer';
 import { useTycoon, SPEEDS } from './useTycoon';
 import { useInstallPrompt, useLayout } from './useLayout';
 import { Window } from './ui/Window';
-import { money } from './ui/format';
+import { money, setCurrency } from './ui/format';
+import { getCountry } from '@/world/content/countries';
 import { CityWindow, DepotListWindow, DepotWindow, TownsWindow, VenueWindow } from './ui/places';
 import { VehicleListWindow, VehicleWindow } from './ui/fleet';
 import { GigWindow, ShowsWindow } from './ui/shows';
@@ -176,7 +177,8 @@ export default function TycoonGame() {
         : null;
 
   const brand = state && !game.isPreview ? state.company.color : '#64748b';
-  const world = state ? getWorld(state.mapSeed) : null;
+  setCurrency(getCountry(state?.country).currency);
+  const world = state ? worldOf(state) : null;
 
   const titleFor = (w: OpenWindow): string => {
     if (!state || !world) return '';

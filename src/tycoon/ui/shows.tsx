@@ -5,18 +5,19 @@ import { dateOfDay, dayOf, formatDay, formatHour, loadInHour, loadOutDoneHour, s
 import { getRegion } from '@/world/content/world';
 import { artistTierIn, findArtist } from '@/world/content/artists';
 import { expectedQuality } from '@/world/content/gear';
-import { getWorld } from '@/world/mapgen';
+import { worldOf } from '@/world/mapgen';
 import { roadDistance } from '@/world/pathfinding';
 import { estimateArrival, projectCoverage } from '@/world/queries';
 import { DEPTS, type Gig, type TycoonState } from '@/world/types';
 import { Bar, Stat, TierChip } from './bits';
+import { BrandBadge } from './brands';
 import { kmoney, money } from './format';
 import type { WinCtx } from './types';
 import { READINESS_CLASS, gigReadiness, gigWhere } from './gigInfo';
 import { TourList } from './tours';
 
 function nearestDepotDistance(state: TycoonState, gig: Gig): number {
-  const world = getWorld(state.mapSeed);
+  const world = worldOf(state);
   return Math.min(...state.depots.map(d => roadDistance(world, d.cityId, gig.cityId)));
 }
 
@@ -24,7 +25,7 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
   const { state } = ctx;
   const gig = state.gigs.find(g => g.id === gigId);
   if (!gig) return <div className="tt-dim">This show has dropped off the books.</div>;
-  const world = getWorld(state.mapSeed);
+  const world = worldOf(state);
   const venue = world.venueById.get(gig.venueId)!;
   const city = world.cityById.get(gig.cityId)!;
   const today = dayOf(state.hour);
@@ -109,15 +110,14 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
           )}
         </div>
       )}
-      <Stat label="Kit expected">
-        Quality {expectedQuality(gig.tier, gigYear).toFixed(1)}+
-        {gig.rider && (
-          <>
-            {' · '}
-            <b>{gig.rider.brand}</b> {DEPT_LABELS[gig.rider.dept].toLowerCase()} on the rider
-          </>
-        )}
-      </Stat>
+      <Stat label="Kit expected">Quality {expectedQuality(gig.tier, gigYear).toFixed(1)}+</Stat>
+      {gig.rider && (
+        <Stat label="Rider asks for">
+          <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
+            <BrandBadge brand={gig.rider.brand} /> {DEPT_LABELS[gig.rider.dept].toLowerCase()}
+          </span>
+        </Stat>
+      )}
       {gig.status === 'offer' && (
         <Stat label="Book by">
           {formatDay(state, gig.acceptByDay)}{' '}
@@ -295,7 +295,7 @@ function Row({ label, color, need, have }: { label: string; color: string; need:
 export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
   const [tab, setTab] = useState<'offers' | 'tours' | 'booked' | 'history'>('offers');
-  const world = getWorld(state.mapSeed);
+  const world = worldOf(state);
   const today = dayOf(state.hour);
   const tier = companyTier(state.company.reputation);
   const offers = state.gigs

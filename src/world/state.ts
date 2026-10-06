@@ -8,6 +8,7 @@ import {
 } from './catalog';
 import { newId } from './core';
 import { productsAvailableIn } from './content/gear';
+import { DEFAULT_COUNTRY, type CountryCode } from './content/countries';
 import { updateRivals } from './sim';
 import { generateNationalTour } from './tours';
 import { getWorld } from './mapgen';
@@ -19,18 +20,20 @@ export const TYCOON_SAVE_KEY = 'stage-manager-sim:tycoon';
 // v2: gear became real products (GearStock), plus artist relations, riders
 // and rival specialties — v1 saves are discarded rather than half-migrated.
 // v3: warehouse lots (several per town), airports, tours.
-export const TYCOON_SAVE_VERSION = 3;
+// v4: home country, audio consoles.
+export const TYCOON_SAVE_VERSION = 4;
 
 export interface NewGameOptions {
   companyName: string;
   color: string;
   seed?: number;
   hqCityId?: string;
+  country?: CountryCode;
 }
 
 /** Towns make the best starting HQ: busy enough for work, not in a rival's back yard. */
-export function suggestedHqCities(seed: number) {
-  const world = getWorld(seed);
+export function suggestedHqCities(seed: number, country: CountryCode = DEFAULT_COUNTRY) {
+  const world = getWorld(seed, country);
   return world.cities.filter(c => c.size === 'town' || c.size === 'city');
 }
 
@@ -59,10 +62,11 @@ export function makeVehicle(state: TycoonState, modelId: string, homeCityId: str
 
 export function createTycoonGame(options: NewGameOptions): TycoonState {
   const seed = options.seed ?? createRandomSeed();
-  const world = getWorld(seed);
+  const country = options.country ?? DEFAULT_COUNTRY;
+  const world = getWorld(seed, country);
   const rng = createRng(seed ^ 0xa11ce);
 
-  const hqCandidates = suggestedHqCities(seed);
+  const hqCandidates = suggestedHqCities(seed, country);
   const hq =
     world.cityById.get(options.hqCityId ?? '') ??
     hqCandidates.find(c => c.size === 'town') ??
@@ -70,6 +74,7 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
 
   const state: TycoonState = {
     mapSeed: seed,
+    country,
     rngState: rng.getState(),
     hour: 8,
     startYear: START_YEAR,
@@ -101,9 +106,10 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     id: newId(state, 'depot'),
     cityId: hq.id,
     lot: 0,
-    // A 1990 starter kit: a Martin F2 PA, PAR cans and a couple of Vari-Lites,
+    // A 1990 starter kit: a Martin F2 PA, two Yamaha PM3000s (FOH + monitors),
+    // PAR cans and a couple of Vari-Lites,
     // a projector and some Steeldeck.
-    gear: { 'martin-f2': 5, par64: 2, 'vari-lite-vl2': 2, 'barco-projector': 1, steeldeck: 3 },
+    gear: { 'martin-f2': 5, 'yamaha-pm3000': 2, par64: 2, 'vari-lite-vl2': 2, 'barco-projector': 1, steeldeck: 3 },
     crew: 5,
     builtHour: 0,
   });

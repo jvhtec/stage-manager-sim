@@ -11,9 +11,9 @@
  */
 import type { Rng } from '@/lib/rng';
 import { companyTier, getModel } from './catalog';
-import { artistsTouringAt, type Artist } from './content/artists';
+import { artistsTouringAt, homeWeight, type Artist } from './content/artists';
 import { REGIONS } from './content/world';
-import { book, dateOfDay, dayOf, gigById, newId, pushNews } from './core';
+import { book, dateOfDay, dayOf, formatMoney, gigById, newId, pushNews } from './core';
 import { buildGig } from './offers';
 import { roadDistance } from './pathfinding';
 import type { Gig, OverseasStop, Tour, TycoonState, Venue, Vehicle, WorldMap } from './types';
@@ -35,9 +35,9 @@ function shuffled<T>(items: readonly T[], rng: Rng): T[] {
 }
 
 function pickTourArtist(state: TycoonState, year: number, tier: number, rng: Rng): Artist | null {
-  const touring = artistsTouringAt(year, tier);
+  const touring = artistsTouringAt(year, tier, state.country);
   if (!touring.length) return null;
-  const weights = touring.map(a => 1 + (state.artistRelations[a.name] ?? 0) * 2);
+  const weights = touring.map(a => (1 + (state.artistRelations[a.name] ?? 0) * 2) * homeWeight(a));
   let roll = rng.next() * weights.reduce((x, y) => x + y, 0);
   for (let i = 0; i < touring.length; i++) {
     roll -= weights[i];
@@ -121,7 +121,9 @@ export function generateWorldTour(state: TycoonState, world: WorldMap, rng: Rng)
   const gigs = domesticRun(state, world, rng, artist.name, tourId, route, today + 16 + rng.nextInt(8));
 
   // Then one or two legs abroad, flown out of the airport.
-  const legs = shuffled(REGIONS, rng).slice(0, rng.chance(0.4) ? 2 : 1);
+  // Legs abroad never "fly" to your own country's cities.
+  const regions = REGIONS.map(r => ({ ...r, cities: r.cities.filter(c => c.code !== state.country) })).filter(r => r.cities.length >= 3);
+  const legs = shuffled(regions, rng).slice(0, rng.chance(0.4) ? 2 : 1);
   let lastDay = gigs[gigs.length - 1].day;
   let lastCity = gigs[gigs.length - 1].cityId;
   let homeFreight = 0;
@@ -226,7 +228,7 @@ export function dailyTours(state: TycoonState, world: WorldMap, rng: Rng) {
       const maxTier = Math.max(...gigs.map(g => g.tier));
       const asked = gigs.some(g => g.asksForYou);
       for (const rival of state.rivals) {
-        if (rival.maxTier < maxTier) continue;
+        if (maxTier > rival.maxTier || maxTier < rival.minTier) continue; // only tours in their league
         if (!rng.chance(0.07 * crowding * (asked ? 0.25 : 1))) continue;
         tour.status = 'rival';
         tour.rivalId = rival.id;
@@ -246,7 +248,7 @@ export function dailyTours(state: TycoonState, world: WorldMap, rng: Rng) {
       book(state, 'shows', tour.bonus);
       state.artistRelations[tour.act] = (state.artistRelations[tour.act] ?? 0) + 2;
       state.company.reputation = Math.min(100, state.company.reputation + (tour.kind === 'world' ? 3 : 1.5));
-      pushNews(state, `Tour complete! ${tour.name} wrapped — completion bonus $${tour.bonus.toLocaleString()}.`, 'good');
+      pushNews(state, `Tour complete! ${tour.name} wrapped — completion bonus ${formatMoney(state, tour.bonus)}.`, 'good');
     } else {
       tour.status = 'failed';
       pushNews(state, `${tour.name} finished with dropped dates — no completion bonus.`, 'bad');

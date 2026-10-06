@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ARTISTS, artistTierIn, artistsTouringAt, findArtist } from '../content/artists';
 import { GEAR_PRODUCTS, expectedQuality, getProduct } from '../content/gear';
-import { RIVAL_COMPANIES } from '../content/companies';
+import { rivalsFor } from '../content/companies';
 import { baseShowQuality, evaluateGear, pickGear } from '../loading';
 import { createTycoonGame } from '../state';
 import { advanceHours, updateRivals } from '../sim';
@@ -22,7 +22,7 @@ const baseGig = (over: Partial<Gig> = {}): Gig => ({
   tier: 2,
   day: 10,
   acceptByDay: 5,
-  needs: { audio: 4, lighting: 2, video: 0, stage: 0 },
+  needs: { audio: 4, console: 0, lighting: 2, video: 0, stage: 0 },
   crewNeeded: 4,
   fee: 8000,
   status: 'booked',
@@ -75,7 +75,7 @@ describe('artists', () => {
       venueId: venue.id,
       cityId: hq.id,
       day: 3,
-      needs: { audio: 2, lighting: 1, video: 0, stage: 1 },
+      needs: { audio: 2, console: 1, lighting: 1, video: 0, stage: 1 },
       crewNeeded: 2,
       status: 'offer',
     });
@@ -106,7 +106,7 @@ describe('gear', () => {
   it('loads the rider brand first and checks the rider', () => {
     const stock = { 'meyer-msl3': 4, 'martin-f2': 4 };
     const rider = { dept: 'audio' as const, brand: 'Martin Audio' };
-    const picked = pickGear(stock, { audio: 4, lighting: 0, video: 0, stage: 0 }, 4, rider);
+    const picked = pickGear(stock, { audio: 4, console: 0, lighting: 0, video: 0, stage: 0 }, 4, rider);
     expect(picked['martin-f2']).toBe(4);
     const gig = baseGig({ rider });
     expect(evaluateGear(picked, gig, 1990).riderMet).toBe(true);
@@ -125,8 +125,8 @@ describe('gear', () => {
 describe('rival companies', () => {
   it('starts with the real firms already trading in 1990', () => {
     const s = newGame();
-    const expected = RIVAL_COMPANIES.filter(r => r.enters <= 1990).map(r => r.name).sort();
-    expect(s.rivals.map(r => r.name).sort()).toEqual(expected);
+    const expected = rivalsFor('GB').filter(r => r.enters <= 1990 && !(r.exits && r.exits.year <= 1990)).map(r => r.id).sort();
+    expect(s.rivals.map(r => r.id).sort()).toEqual(expected);
     expect(new Set(s.rivals.map(r => `${r.hqCityId}:${r.lot}`)).size).toBe(s.rivals.length);
   });
 

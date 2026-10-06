@@ -5,6 +5,7 @@ import { yearOf } from '@/world/core';
 import { deptTotals } from '@/world/loading';
 import { DEPTS, type Depot, type GearStock, type TycoonState } from '@/world/types';
 import { DeptDot } from './bits';
+import { BrandBadge, GearSprite } from './brands';
 import { kmoney, money } from './format';
 import type { WinCtx } from './types';
 
@@ -41,7 +42,7 @@ export function StockLines({ stock, state }: { stock: GearStock; state: TycoonSt
               const p = getProduct(id);
               return (
                 <div key={id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
-                  <DeptDot dept={d} />
+                  <GearSprite productId={id} size={24} />
                   <span className="grow" style={{ flex: 1 }}>
                     {p.brand} {p.name}
                   </span>
@@ -84,6 +85,7 @@ export function WarehouseGear({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
               const p = getProduct(id);
               return (
                 <div key={id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                  <GearSprite productId={id} size={30} />
                   <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {p.brand} <span className="tt-dim">{p.name}</span>
                   </span>
@@ -131,9 +133,11 @@ export function GearShop({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
               .sort((a, b) => b.quality - a.quality)
               .map(p => (
                 <div key={p.id} className="tt-item">
+                  <GearSprite productId={p.id} size={40} />
                   <div className="grow">
-                    <div style={{ fontWeight: 700 }}>
-                      {p.brand} <span style={{ fontWeight: 500 }}>{p.name}</span>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      <BrandBadge brand={p.brand} />
+                      <span style={{ fontWeight: 700 }}>{p.name}</span>
                     </div>
                     <div className="tt-dim">
                       Since {p.introYear}

@@ -18,6 +18,7 @@ import {
   dayOf,
   depotInCity,
   freeLot,
+  formatMoney,
   gigById,
   loadInHour,
   newId,
@@ -25,7 +26,7 @@ import {
   sellValue,
   showEndHour,
 } from './core';
-import { getWorld } from './mapgen';
+import { worldOf } from './mapgen';
 import { roadDistance } from './pathfinding';
 import { serviceNow } from './sim';
 import { makeVehicle } from './state';
@@ -35,7 +36,6 @@ import { getProduct } from './content/gear';
 
 const fail = (state: TycoonState, message: string): ActionOutcome => ({ state, result: { ok: false, message } });
 const ok = (state: TycoonState, message?: string): ActionOutcome => ({ state, result: { ok: true, message } });
-const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
 export function bookTour(state: TycoonState, tourId: string): ActionOutcome {
   const tour = state.tours.find(t => t.id === tourId);
@@ -97,7 +97,7 @@ export function assignVehicle(state: TycoonState, vehicleId: string, gigId: stri
   if (gig0.status !== 'booked') return fail(state, 'Book the show first.');
   if (v0.orders.includes(gigId)) return fail(state, `${v0.name} is already on that job.`);
   if (state.hour >= showEndHour(gig0)) return fail(state, 'That show is already over.');
-  const world = getWorld(state.mapSeed);
+  const world = worldOf(state);
   if (!Number.isFinite(roadDistance(world, v0.homeCityId, gig0.cityId))) {
     return fail(state, 'There is no road from this vehicle’s depot to that venue.');
   }
@@ -142,7 +142,7 @@ export function buyVehicle(state: TycoonState, depotId: string, modelId: string)
   const model = getModel(modelId);
   if (!depot) return fail(state, 'Unknown depot.');
   if (!state.announcedModels.includes(modelId)) return fail(state, `${model.name} isn't on sale yet.`);
-  if (state.company.cash < model.price) return fail(state, `Not enough cash — the ${model.name} costs ${money(model.price)}.`);
+  if (state.company.cash < model.price) return fail(state, `Not enough cash — the ${model.name} costs ${formatMoney(state, model.price)}.`);
   const s = cloneState(state);
   const v = makeVehicle(s, modelId, depot.cityId);
   s.vehicles.push(v);
@@ -162,7 +162,7 @@ export function sellVehicle(state: TycoonState, vehicleId: string): ActionOutcom
   if (depot) depot.crew += v0.crew;
   s.vehicles = s.vehicles.filter(v => v.id !== vehicleId);
   book(s, 'sales', value);
-  return ok(s, `Sold ${v0.name} for ${money(value)}.`);
+  return ok(s, `Sold ${v0.name} for ${formatMoney(state, value)}.`);
 }
 
 export function serviceVehicle(state: TycoonState, vehicleId: string): ActionOutcome {
@@ -192,7 +192,7 @@ export function buyGear(state: TycoonState, depotId: string, productId: string, 
   const product = getProduct(productId);
   if (!state.announcedGear.includes(productId)) return fail(state, `${product.brand} ${product.name} isn't out yet.`);
   const cost = product.price * qty;
-  if (state.company.cash < cost) return fail(state, `Not enough cash (${money(cost)}).`);
+  if (state.company.cash < cost) return fail(state, `Not enough cash (${formatMoney(state, cost)}).`);
   const s = cloneState(state);
   const depot = s.depots.find(d => d.id === depotId);
   if (!depot) return fail(state, 'Unknown depot.');
@@ -231,13 +231,13 @@ export function fireCrew(state: TycoonState, depotId: string, qty = 1): ActionOu
 }
 
 export function buildDepot(state: TycoonState, cityId: string): ActionOutcome {
-  const world = getWorld(state.mapSeed);
+  const world = worldOf(state);
   const city = world.cityById.get(cityId);
   if (!city) return fail(state, 'Unknown city.');
   if (depotInCity(state, cityId)) return fail(state, `You already have a warehouse in ${city.name}.`);
   const lot = freeLot(state, world, cityId);
   if (lot < 0) return fail(state, `Every warehouse lot in ${city.name} is taken.`);
-  if (state.company.cash < DEPOT_BUILD_COST) return fail(state, `A warehouse costs ${money(DEPOT_BUILD_COST)}.`);
+  if (state.company.cash < DEPOT_BUILD_COST) return fail(state, `A warehouse costs ${formatMoney(state, DEPOT_BUILD_COST)}.`);
   const s = cloneState(state);
   s.depots.push({
     id: newId(s, 'depot'),
@@ -253,7 +253,7 @@ export function buildDepot(state: TycoonState, cityId: string): ActionOutcome {
 }
 
 export function borrow(state: TycoonState): ActionOutcome {
-  if (state.company.loan + LOAN_STEP > MAX_LOAN) return fail(state, `The bank won't lend more than ${money(MAX_LOAN)}.`);
+  if (state.company.loan + LOAN_STEP > MAX_LOAN) return fail(state, `The bank won't lend more than ${formatMoney(state, MAX_LOAN)}.`);
   const s = cloneState(state);
   s.company.loan += LOAN_STEP;
   s.company.cash += LOAN_STEP;

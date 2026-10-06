@@ -4,7 +4,7 @@ import { SERVICE_INTERVAL_DAYS, getModel } from '@/world/catalog';
 import { stockSize } from '@/world/loading';
 import { StockLines } from './gear';
 import { formatDay, gigById, sellValue, vehicleAgeYears } from '@/world/core';
-import { getWorld } from '@/world/mapgen';
+import { worldOf } from '@/world/mapgen';
 import { vehicleActivity } from '@/world/queries';
 import { Bar, Stat } from './bits';
 import { kmoney, money } from './format';
@@ -15,7 +15,7 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
   const [relocating, setRelocating] = useState(false);
   const v = state.vehicles.find(x => x.id === vehicleId);
   if (!v) return <div className="tt-dim">This vehicle has been sold.</div>;
-  const world = getWorld(state.mapSeed);
+  const world = worldOf(state);
   const model = getModel(v.modelId);
   const age = vehicleAgeYears(v, state.hour);
   const atHome = v.cityId === v.homeCityId && (v.status === 'parked' || v.status === 'scheduled');

@@ -11,7 +11,7 @@ import {
   getModel,
 } from '@/world/catalog';
 import { dayOf, depotInCity, formatDay, freeLot } from '@/world/core';
-import { getWorld } from '@/world/mapgen';
+import { worldOf } from '@/world/mapgen';
 import { vehicleActivity } from '@/world/queries';
 import { DEPTS, type Gig } from '@/world/types';
 import { Bar, DeptDot, Stat, TierChip } from './bits';
@@ -31,7 +31,7 @@ const VENUE_KIND_LABEL: Record<string, string> = {
 function GigRow({ ctx, gig }: { ctx: WinCtx; gig: Gig }) {
   const today = dayOf(ctx.state.hour);
   const locked = gig.tier > companyTier(ctx.state.company.reputation);
-  const venue = getWorld(ctx.state.mapSeed).venueById.get(gig.venueId);
+  const venue = worldOf(ctx.state).venueById.get(gig.venueId);
   return (
     <div className="tt-item clickable" onClick={() => ctx.open('gig', gig.id)}>
       <div className="grow">
@@ -57,7 +57,7 @@ function GigRow({ ctx, gig }: { ctx: WinCtx; gig: Gig }) {
 
 export function CityWindow({ ctx, cityId }: { ctx: WinCtx; cityId: string }) {
   const { state } = ctx;
-  const world = getWorld(state.mapSeed);
+  const world = worldOf(state);
   const city = world.cityById.get(cityId);
   if (!city) return null;
   const rating = state.cityRatings[cityId] ?? 50;
@@ -157,7 +157,7 @@ export function CityWindow({ ctx, cityId }: { ctx: WinCtx; cityId: string }) {
 
 export function VenueWindow({ ctx, venueId }: { ctx: WinCtx; venueId: string }) {
   const { state } = ctx;
-  const world = getWorld(state.mapSeed);
+  const world = worldOf(state);
   const venue = world.venueById.get(venueId);
   if (!venue) return null;
   const city = world.cityById.get(venue.cityId)!;
@@ -223,7 +223,7 @@ export function DepotWindow({ ctx, depotId }: { ctx: WinCtx; depotId: string }) 
   const [tab, setTab] = useState<'stock' | 'shop' | 'buy'>('stock');
   const depot = state.depots.find(d => d.id === depotId);
   if (!depot) return null;
-  const world = getWorld(state.mapSeed);
+  const world = worldOf(state);
   const fleet = state.vehicles.filter(v => v.owner === 'player' && v.homeCityId === depot.cityId);
   const act = (fn: Parameters<WinCtx['dispatch']>[0]) => {
     const r = ctx.dispatch(fn);
@@ -318,7 +318,7 @@ export function DepotWindow({ ctx, depotId }: { ctx: WinCtx; depotId: string }) 
 
 export function DepotListWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
-  const world = getWorld(state.mapSeed);
+  const world = worldOf(state);
   return (
     <div>
       <div className="tt-list">
@@ -349,7 +349,7 @@ export function DepotListWindow({ ctx }: { ctx: WinCtx }) {
 
 export function TownsWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
-  const world = getWorld(state.mapSeed);
+  const world = worldOf(state);
   const today = dayOf(state.hour);
   const tier = companyTier(state.company.reputation);
   const towns = [...world.cities].sort((a, b) => b.population - a.population);

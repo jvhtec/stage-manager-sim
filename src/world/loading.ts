@@ -13,7 +13,7 @@ export function stockSize(stock: GearStock): number {
 }
 
 export function deptTotals(stock: GearStock): DeptCounts {
-  const out: DeptCounts = { audio: 0, lighting: 0, video: 0, stage: 0 };
+  const out: DeptCounts = { audio: 0, console: 0, lighting: 0, video: 0, stage: 0 };
   for (const id in stock) if (stock[id] > 0) out[getProduct(id).dept] += stock[id];
   return out;
 }
@@ -69,12 +69,12 @@ export interface GearEvaluation {
 
 export function evaluateGear(delivered: GearStock, gig: Gig, year: number): GearEvaluation {
   const totals = deptTotals(delivered);
-  const qualitySum: DeptCounts = { audio: 0, lighting: 0, video: 0, stage: 0 };
+  const qualitySum: DeptCounts = { audio: 0, console: 0, lighting: 0, video: 0, stage: 0 };
   for (const id in delivered) {
     const p = getProduct(id);
     qualitySum[p.dept] += p.quality * delivered[id];
   }
-  const avgQuality: DeptCounts = { audio: 0, lighting: 0, video: 0, stage: 0 };
+  const avgQuality: DeptCounts = { audio: 0, console: 0, lighting: 0, video: 0, stage: 0 };
   const need = DEPTS.reduce((s, d) => s + gig.needs[d], 0) || 1;
   const coverage = DEPTS.reduce((s, d) => s + Math.min(totals[d], gig.needs[d]), 0) / need;
   const expected = expectedQuality(gig.tier, year);

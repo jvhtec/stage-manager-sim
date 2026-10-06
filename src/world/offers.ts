@@ -6,7 +6,7 @@
 import type { Rng } from '@/lib/rng';
 import { tierInfo } from './catalog';
 import { dateOfDay, dayOf, newId, pushNews } from './core';
-import { artistsTouringAt } from './content/artists';
+import { artistsTouringAt, homeWeight } from './content/artists';
 import { expectedQuality, productsAvailableIn } from './content/gear';
 import { roadDistance } from './pathfinding';
 import type { City, DeptCounts, Gig, Rider, TycoonState, Vehicle, Venue, WorldMap } from './types';
@@ -71,6 +71,11 @@ export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
   const needs = {} as DeptCounts;
   DEPTS.forEach(d => {
     const base = info.needs[d];
+    if (d === 'console') {
+      // FOH always; monitor world from club level up; a spare/broadcast desk at stadiums.
+      needs[d] = base;
+      return;
+    }
     const swing = base === 0 ? (rng.chance(0.15) ? 1 : 0) : rng.nextRange(-1, Math.ceil(base * 0.25) + 1);
     needs[d] = Math.max(0, base + swing);
   });
@@ -105,10 +110,10 @@ export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
 const REAL_ACT_SHARE = [0, 0.3, 0.7, 1, 1];
 
 export function pickAct(state: TycoonState, tier: number, year: number, rng: Rng): { act: string; real: boolean } {
-  const touring = artistsTouringAt(year, tier);
+  const touring = artistsTouringAt(year, tier, state.country);
   if (!touring.length || !rng.chance(REAL_ACT_SHARE[tier])) return { act: actName(rng), real: false };
   // Acts you've done well by are more likely to come back to you.
-  const weights = touring.map(a => 1 + (state.artistRelations[a.name] ?? 0) * 2);
+  const weights = touring.map(a => (1 + (state.artistRelations[a.name] ?? 0) * 2) * homeWeight(a));
   let roll = rng.next() * weights.reduce((x, y) => x + y, 0);
   for (let i = 0; i < touring.length; i++) {
     roll -= weights[i];

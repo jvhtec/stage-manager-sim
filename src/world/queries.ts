@@ -14,12 +14,12 @@ import {
   sellValue,
   travelHours,
 } from './core';
-import { getWorld } from './mapgen';
+import { worldOf } from './mapgen';
 import { roadDistance } from './pathfinding';
 import { DEPTS, type DeptCounts, type GearStock, type Gig, type TycoonState, type Vehicle } from './types';
 
 export function vehicleActivity(state: TycoonState, v: Vehicle): string {
-  const world = getWorld(state.mapSeed);
+  const world = worldOf(state);
   const cityName = (id?: string) => (id ? world.cityById.get(id)?.name ?? '?' : '?');
   const next = v.orders.length ? gigById(state, v.orders[0]) : undefined;
   switch (v.status) {
@@ -43,7 +43,7 @@ export function vehicleActivity(state: TycoonState, v: Vehicle): string {
 
 /** Rough arrival hour if `v` were sent to `gig` given its current orders. */
 export function estimateArrival(state: TycoonState, v: Vehicle, gig: Gig): number {
-  const world = getWorld(state.mapSeed);
+  const world = worldOf(state);
   const earlier = v.orders
     .map(id => gigById(state, id))
     .filter((g): g is Gig => !!g && g.id !== gig.id && g.day <= gig.day);

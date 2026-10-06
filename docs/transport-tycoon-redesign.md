@@ -77,7 +77,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 33 tests):
+(`src/world/__tests__/*.test.ts`, 41 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 - All randomness goes through the seeded `rngState` (same discipline as `src/lib/rng.ts`).
 - Actions (`src/world/actions.ts`) are `(state, …) → { state, result }`, same pattern as
   `src/engine/**`.
-- Save key `stage-manager-sim:tycoon` (v3: warehouse lots, airport, tours) — separate from the classic save.
+- Save key `stage-manager-sim:tycoon` (v4: country, consoles) — separate from the classic save.
 
 A headless bot played two in-game years on three seeds during tuning: it survives, but stalls at
 Local Circuit unless it buys bigger trucks and more gear. That upgrade pressure is intended.
@@ -127,6 +127,24 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
   for a bonus, ignore it for a penalty. Trucks load the rider brand first, then the best kit.
 - **Vehicles** carry real names: Ford Transit, Iveco Daily, Leyland DAF 45, Volvo FH12, Neoplan
   Skyliner, Mercedes Sprinter, Scania R.
+
+- **Countries** (`content/countries.ts`) — pick España, UK, USA, Deutschland, France or Italia
+  at new game. Same procedural geography, but towns take real city names (biggest town = the
+  capital/largest city), venues are named the local way (Sala…, Zénith de…, PalaSport di…) and
+  famous rooms appear where the map puts them (Bernabéu, WiZink, Wembley, MSG, Bercy, San
+  Siro…). Prices show in €, £ or $. Rivals are the local firms of that country plus the
+  international giants (Clair, PRG, Solotech); local acts (Héroes del Silencio, Estopa, Rosalía…;
+  Die Toten Hosen; Indochine; Vasco Rossi…) only tour at home and come up more often there.
+  World-tour legs never fly to your own country.
+- **Consoles** — mixing desks are their own gear slot: every show needs a FOH desk, monitors
+  from club level up and a spare at stadiums. 17 desks from the Yamaha PM3000 and Midas XL3
+  through PM1D, D5, VENUE, XL8, SD7 to RIVAGE PM10, S6L and Quantum7. Riders can name a console
+  brand.
+- **Gear art** — every product has a pixel-art sprite (point source, line array, analogue and
+  digital desks, PARs, moving heads, beams, LED walls, projectors, truss, hoists…) tinted in
+  its brand colour, and brands/companies show as typographic badges in their colours. For a
+  personal build, official logo files can be dropped into `public/brands/` and listed in
+  `public/brands/index.json` — they then replace the badges (see the README there).
 
 Years and careers are approximate and for flavour. This uses real names for personal play;
 note that pushing to `main` publishes the build to GitHub Pages.

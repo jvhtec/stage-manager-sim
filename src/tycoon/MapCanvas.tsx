@@ -1,5 +1,5 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
-import { getWorld } from '@/world/mapgen';
+import { worldOf } from '@/world/mapgen';
 import { getCityPath, positionOnPath } from '@/world/pathfinding';
 import type { TycoonState } from '@/world/types';
 import { centreOn, pickTile, type Camera } from './render/iso';
@@ -46,7 +46,7 @@ export const MapCanvas = forwardRef<MapHandle, Props>(function MapCanvas(
     centreOnTile: (x, y, offset) => {
       const s = stateRef.current;
       if (!s) return;
-      const cam = centreOn(camRef.current, getWorld(s.mapSeed), x + 0.5, y + 0.5);
+      const cam = centreOn(camRef.current, worldOf(s), x + 0.5, y + 0.5);
       if (offset) {
         cam.x += offset.x / cam.zoom;
         cam.y += offset.y / cam.zoom;
@@ -88,7 +88,7 @@ export const MapCanvas = forwardRef<MapHandle, Props>(function MapCanvas(
       cam.w = w;
       cam.h = h;
       if (s) {
-        const map = getWorld(s.mapSeed);
+        const map = worldOf(s);
         const key = `${s.mapSeed}:${s.company.hqCityId}`;
         if (centredOn.current !== key) {
           centredOn.current = key;
@@ -169,7 +169,7 @@ export const MapCanvas = forwardRef<MapHandle, Props>(function MapCanvas(
     const onMove = (e: PointerEvent) => {
       const p = local(e);
       const s = stateRef.current;
-      if (s && e.pointerType === 'mouse') hoverRef.current = pickTile(camRef.current, getWorld(s.mapSeed), p.x, p.y);
+      if (s && e.pointerType === 'mouse') hoverRef.current = pickTile(camRef.current, worldOf(s), p.x, p.y);
       const prev = pointers.get(e.pointerId);
       if (!prev) return;
       pointers.set(e.pointerId, p);
@@ -225,7 +225,7 @@ export const MapCanvas = forwardRef<MapHandle, Props>(function MapCanvas(
       });
       if (best) return { kind: 'vehicle', id: (best as { id: string }).id };
 
-      const map = getWorld(s.mapSeed);
+      const map = worldOf(s);
       const tile = pickTile(camRef.current, map, x, y);
       if (!tile) return null;
       for (const city of map.cities) {

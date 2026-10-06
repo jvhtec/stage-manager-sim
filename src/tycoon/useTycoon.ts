@@ -14,6 +14,7 @@ import {
   type NewGameOptions,
 } from '@/world/state';
 import type { ActionOutcome, ActionResult, NewsItem, TycoonState } from '@/world/types';
+import type { CountryCode } from '@/world/content/countries';
 
 /** Game hours per real second at each speed setting (0 = paused). */
 export const SPEEDS = [0, 1, 3, 8, 24] as const;
@@ -29,7 +30,7 @@ export interface Tycoon {
   setSpeed: (s: number) => void;
   dispatch: (fn: (s: TycoonState) => ActionOutcome) => ActionResult;
   newGame: (opts: NewGameOptions) => void;
-  preview: (seed: number, hqCityId?: string) => void;
+  preview: (seed: number, hqCityId?: string, country?: CountryCode) => void;
   isPreview: boolean;
   abandon: () => void;
   popups: NewsItem[];
@@ -139,9 +140,9 @@ export function useTycoon(): Tycoon {
     [collectNews, setSpeed],
   );
 
-  const preview = useCallback((seed: number, hqCityId?: string) => {
+  const preview = useCallback((seed: number, hqCityId?: string, country?: CountryCode) => {
     previewRef.current = true;
-    stateRef.current = createTycoonGame({ companyName: '', color: '#9ca3af', seed, hqCityId });
+    stateRef.current = createTycoonGame({ companyName: '', color: '#9ca3af', seed, hqCityId, country });
     refresh();
   }, []);
 

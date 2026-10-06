@@ -143,7 +143,8 @@ export function modelsAvailableIn(year: number): VehicleModel[] {
 export const GEAR_RESALE_RATE = 0.5;
 
 export const DEPT_LABELS: Record<Dept, string> = {
-  audio: 'Audio',
+  audio: 'PA',
+  console: 'Consoles',
   lighting: 'Lighting',
   video: 'Video',
   stage: 'Staging',
@@ -151,6 +152,7 @@ export const DEPT_LABELS: Record<Dept, string> = {
 
 export const DEPT_COLORS: Record<Dept, string> = {
   audio: '#3b82f6',
+  console: '#22d3ee',
   lighting: '#f59e0b',
   video: '#a855f7',
   stage: '#10b981',
@@ -172,7 +174,7 @@ export const TIERS: TierInfo[] = [
     label: 'Local Circuit',
     minReputation: 0,
     baseFee: 3200,
-    needs: { audio: 2, lighting: 1, video: 0, stage: 1 },
+    needs: { audio: 2, console: 1, lighting: 1, video: 0, stage: 1 },
     crew: 2,
     color: '#94a3b8',
   },
@@ -181,7 +183,7 @@ export const TIERS: TierInfo[] = [
     label: 'Regional',
     minReputation: 25,
     baseFee: 8500,
-    needs: { audio: 4, lighting: 3, video: 1, stage: 2 },
+    needs: { audio: 4, console: 2, lighting: 3, video: 1, stage: 2 },
     crew: 4,
     color: '#38bdf8',
   },
@@ -190,7 +192,7 @@ export const TIERS: TierInfo[] = [
     label: 'National',
     minReputation: 55,
     baseFee: 30000,
-    needs: { audio: 8, lighting: 7, video: 4, stage: 6 },
+    needs: { audio: 8, console: 2, lighting: 7, video: 4, stage: 6 },
     crew: 8,
     color: '#f472b6',
   },
@@ -199,7 +201,7 @@ export const TIERS: TierInfo[] = [
     label: 'World Class',
     minReputation: 80,
     baseFee: 95000,
-    needs: { audio: 16, lighting: 14, video: 10, stage: 12 },
+    needs: { audio: 16, console: 3, lighting: 14, video: 10, stage: 12 },
     crew: 16,
     color: '#facc15',
   },

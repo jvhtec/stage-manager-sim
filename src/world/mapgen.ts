@@ -18,6 +18,7 @@ import {
   type WorldMap,
 } from './types';
 import { MinHeap } from './heap';
+import { DEFAULT_COUNTRY, getCountry, type Country } from './content/countries';
 
 export const MAP_WIDTH = 72;
 export const MAP_HEIGHT = 56;
@@ -286,15 +287,56 @@ function layRoad(
 // Main entry
 // ---------------------------------------------------------------------------
 
-const worldCache = new Map<number, WorldMap>();
+const baseCache = new Map<number, WorldMap>();
+const worldCache = new Map<string, WorldMap>();
 
-/** Memoised — the renderer, the sim and the UI all share one instance per seed. */
-export function getWorld(seed: number): WorldMap {
-  let world = worldCache.get(seed);
+/**
+ * Memoised — the renderer, the sim and the UI all share one instance per
+ * (seed, country). Geometry depends only on the seed; the country renames
+ * towns and venues.
+ */
+export function getWorld(seed: number, country: string = DEFAULT_COUNTRY): WorldMap {
+  const key = `${seed}:${country}`;
+  let world = worldCache.get(key);
   if (!world) {
-    world = generateWorld(seed);
-    worldCache.set(seed, world);
+    let base = baseCache.get(seed);
+    if (!base) {
+      base = generateWorld(seed);
+      baseCache.set(seed, base);
+    }
+    world = localizeWorld(base, getCountry(country));
+    worldCache.set(key, world);
   }
+  return world;
+}
+
+/** The world a saved game is played on. */
+export function worldOf(state: { mapSeed: number; country?: string }): WorldMap {
+  return getWorld(state.mapSeed, state.country);
+}
+
+/** Real town names (biggest first), local venue naming and famous rooms in the big towns. */
+function localizeWorld(base: WorldMap, country: Country): WorldMap {
+  const rng = createRng(base.seed ^ 0xc0de ^ country.code.charCodeAt(0) * 131 ^ country.code.charCodeAt(1));
+  const byPop = [...base.cities].sort((a, b) => b.population - a.population);
+  const names = new Map(byPop.map((c, i) => [c.id, country.cities[i] ?? `${country.cities[i % country.cities.length]} ${Math.floor(i / country.cities.length) + 1}`]));
+  const cities: City[] = base.cities.map(c => {
+    const name = names.get(c.id)!;
+    const landmarks = country.landmarks[name] ?? {};
+    return {
+      ...c,
+      name,
+      venues: c.venues.map(v => ({ ...v, name: landmarks[v.kind] ?? country.venueNames[v.kind](name, rng) })),
+    };
+  });
+  const world: WorldMap = {
+    ...base,
+    cities,
+    cityById: new Map(cities.map(c => [c.id, c])),
+    venueById: new Map(cities.flatMap(c => c.venues).map(v => [v.id, v])),
+    // Same roads, same routes.
+    pathCache: base.pathCache,
+  };
   return world;
 }
 

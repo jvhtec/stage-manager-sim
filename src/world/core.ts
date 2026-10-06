@@ -16,6 +16,7 @@ import {
 } from './catalog';
 import { roadDistance } from './pathfinding';
 import { getRegion } from './content/world';
+import { getCountry } from './content/countries';
 import type {
   DeptCounts,
   Gig,
@@ -34,11 +35,11 @@ export function cloneState(state: TycoonState): TycoonState {
 }
 
 export function emptyCounts(): DeptCounts {
-  return { audio: 0, lighting: 0, video: 0, stage: 0 };
+  return { audio: 0, console: 0, lighting: 0, video: 0, stage: 0 };
 }
 
 export function sumCounts(c: DeptCounts): number {
-  return c.audio + c.lighting + c.video + c.stage;
+  return c.audio + c.console + c.lighting + c.video + c.stage;
 }
 
 // Time ----------------------------------------------------------------------
@@ -171,4 +172,10 @@ export function freeLot(state: TycoonState, world: WorldMap, cityId: string): nu
     ...state.rivals.filter(r => r.hqCityId === cityId).map(r => r.lot),
   ]);
   return city.lots.findIndex((_, i) => !used.has(i));
+}
+
+/** Money in the home country's currency, e.g. "€12,500". */
+export function formatMoney(state: Pick<TycoonState, 'country'>, amount: number): string {
+  const symbol = getCountry(state.country).currency;
+  return `${amount < 0 ? '-' : ''}${symbol}${Math.abs(Math.round(amount)).toLocaleString('en-US')}`;
 }

@@ -1,7 +1,16 @@
-export const money = (n: number) => `${n < 0 ? '-' : ''}$${Math.abs(Math.round(n)).toLocaleString()}`;
+let symbol = '$';
+
+/** Set once per render from the save's home country (€, £, $). */
+export function setCurrency(next: string) {
+  symbol = next;
+}
+
+export const currencySymbol = () => symbol;
+
+export const money = (n: number) => `${n < 0 ? '-' : ''}${symbol}${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
 
 export const kmoney = (n: number) =>
-  Math.abs(n) >= 10000 ? `$${Math.round(n / 1000)}k` : `$${(n / 1000).toFixed(1)}k`;
+  Math.abs(n) >= 10000 ? `${symbol}${Math.round(n / 1000)}k` : `${symbol}${(n / 1000).toFixed(1)}k`;
 
 const RATING_LABELS = ['Appalling', 'Very Poor', 'Poor', 'Mediocre', 'Good', 'Very Good', 'Excellent', 'Outstanding'];
 

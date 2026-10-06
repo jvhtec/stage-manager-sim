@@ -9,9 +9,11 @@
  *   and is what gets persisted.
  */
 import type { Department } from '@/types/game';
+import type { CountryCode } from './content/countries';
 
-export type Dept = Department;
-export const DEPTS: Dept[] = ['audio', 'lighting', 'video', 'stage'];
+/** Gear slots: the classic departments plus mixing consoles (FOH / monitors). */
+export type Dept = Department | 'console';
+export const DEPTS: Dept[] = ['audio', 'console', 'lighting', 'video', 'stage'];
 export type DeptCounts = Record<Dept, number>;
 /** Gear units held, keyed by product id (see content/gear.ts). */
 export type GearStock = Record<string, number>;
@@ -271,6 +273,8 @@ export interface Company {
 
 export interface TycoonState {
   mapSeed: number;
+  /** Home country (content/countries.ts): town names, local rivals and acts, currency. */
+  country: CountryCode;
   rngState: number;
   /** Hours since 00:00 on day 0. */
   hour: number;
