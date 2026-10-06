@@ -212,9 +212,9 @@ export const MapCanvas = forwardRef<MapHandle, Props>(function MapCanvas(
       for (const city of map.cities) {
         const venue = city.venues.find(v => tile.x >= v.x && tile.x < v.x + v.w && tile.y >= v.y && tile.y < v.y + v.h);
         if (venue) return { kind: 'venue', id: venue.id, cityId: city.id };
-        const site = city.depotSite;
         const depot = s.depots.find(d => d.cityId === city.id);
-        if (depot && tile.x >= site.x && tile.x < site.x + 2 && tile.y >= site.y && tile.y < site.y + 2) {
+        const site = depot ? city.lots[depot.lot] : undefined;
+        if (depot && site && tile.x >= site.x && tile.x < site.x + 2 && tile.y >= site.y && tile.y < site.y + 2) {
           return { kind: 'depot', id: depot.id };
         }
         if (Math.hypot(tile.x - city.x, tile.y - city.y) <= city.radius + 1) return { kind: 'city', id: city.id };

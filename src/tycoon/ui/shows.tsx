@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { assignVehicle, bookGig, unassignVehicle } from '@/world/actions';
 import { DEPT_COLORS, DEPT_LABELS, LOAD_IN_HOUR, SHOW_END_HOUR, SHOW_START_HOUR, companyTier, getModel, tierInfo } from '@/world/catalog';
-import { dateOfDay, dayOf, formatDay, formatHour, loadInHour, sumCounts } from '@/world/core';
+import { dateOfDay, dayOf, formatDay, formatHour, loadInHour, loadOutDoneHour, sumCounts } from '@/world/core';
+import { getRegion } from '@/world/content/world';
 import { artistTierIn, findArtist } from '@/world/content/artists';
 import { expectedQuality } from '@/world/content/gear';
 import { getWorld } from '@/world/mapgen';
@@ -11,6 +12,8 @@ import { DEPTS, type Gig, type TycoonState } from '@/world/types';
 import { Bar, Stat, TierChip } from './bits';
 import { kmoney, money } from './format';
 import type { WinCtx } from './types';
+import { READINESS_CLASS, gigReadiness, gigWhere } from './gigInfo';
+import { TourList } from './tours';
 
 function nearestDepotDistance(state: TycoonState, gig: Gig): number {
   const world = getWorld(state.mapSeed);
@@ -39,6 +42,8 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
   const rival = state.rivals.find(r => r.id === gig.rivalId);
   const candidates = state.vehicles.filter(v => v.owner === 'player' && !v.orders.includes(gig.id));
   const artist = findArtist(gig.act);
+  const tour = gig.tourId ? state.tours.find(t => t.id === gig.tourId) : undefined;
+  const region = gig.overseas ? getRegion(gig.overseas.regionId) : undefined;
   const gigYear = dateOfDay(state, gig.day).getUTCFullYear();
   const artistTierLabel = artist ? `currently touring ${['', 'pubs', 'clubs & theatres', 'arenas', 'stadiums'][artistTierIn(artist, gigYear)] ?? ''}` : '';
 
@@ -60,9 +65,37 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
         {formatDay(state, gig.day)}{' '}
         <span className="tt-dim">({gig.day - today >= 0 ? `in ${gig.day - today}d` : `${today - gig.day}d ago`})</span>
       </Stat>
-      <Stat label="Timetable">
-        Load-in {LOAD_IN_HOUR}:00 · Show {SHOW_START_HOUR}:00–{SHOW_END_HOUR}:00
-      </Stat>
+      {tour && (
+        <div className="tt-item clickable" style={{ margin: '4px 0' }} onClick={() => ctx.open('tour', tour.id)}>
+          <span className="grow">
+            {tour.kind === 'world' ? '🌍' : '🎫'} Part of <b>{tour.name}</b>
+          </span>
+          <span className="tt-dim">open ›</span>
+        </div>
+      )}
+      {region && gig.overseas ? (
+        <>
+          <div className="tt-list" style={{ margin: '4px 0' }}>
+            {gig.overseas.stops.map(st => (
+              <div key={st.city} className="tt-row">
+                <span>
+                  {st.venue}, {st.city} <span className="tt-dim">({st.country})</span>
+                </span>
+                <span className="tt-dim">{formatDay(state, st.day)}</span>
+              </div>
+            ))}
+          </div>
+          <Stat label="Rig at airport by">{formatHour(state, loadInHour(gig))}</Stat>
+          <Stat label="Freight back">{formatHour(state, loadOutDoneHour(gig))}</Stat>
+          <Stat label="Freight + flights">
+            ≈ {money(sumCounts(gig.needs) * region.freightPerUnit + gig.crewNeeded * region.flightPerCrew)}
+          </Stat>
+        </>
+      ) : (
+        <Stat label="Timetable">
+          Load-in {LOAD_IN_HOUR}:00 · Show {SHOW_START_HOUR}:00–{SHOW_END_HOUR}:00
+        </Stat>
+      )}
       <Stat label="Fee">
         <b>{money(gig.fee)}</b>
       </Stat>
@@ -109,7 +142,7 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
             </div>
           ) : (
             <button className="tt-btn primary" onClick={() => act(s => bookGig(s, gig.id))}>
-              Book this show
+              {tour ? 'Book the whole tour' : 'Book this show'}
             </button>
           )}
         </div>
@@ -261,12 +294,12 @@ function Row({ label, color, need, have }: { label: string; color: string; need:
 
 export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
-  const [tab, setTab] = useState<'offers' | 'booked' | 'history'>('offers');
+  const [tab, setTab] = useState<'offers' | 'tours' | 'booked' | 'history'>('offers');
   const world = getWorld(state.mapSeed);
   const today = dayOf(state.hour);
   const tier = companyTier(state.company.reputation);
   const offers = state.gigs
-    .filter(g => g.status === 'offer' && g.acceptByDay >= today)
+    .filter(g => g.status === 'offer' && g.acceptByDay >= today && !g.tourId)
     .sort((a, b) => Number(a.tier > tier) - Number(b.tier > tier) || nearestDepotDistance(state, a) - nearestDepotDistance(state, b));
   const booked = state.gigs.filter(g => g.status === 'booked').sort((a, b) => a.day - b.day);
   const history = state.gigs
@@ -280,6 +313,9 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
         <button className="tt-btn sm" data-on={tab === 'offers'} onClick={() => setTab('offers')}>
           Offers ({offers.length})
         </button>
+        <button className="tt-btn sm" data-on={tab === 'tours'} onClick={() => setTab('tours')}>
+          Tours ({state.tours.filter(t => (t.status === 'offer' && t.acceptByDay >= today) || t.status === 'booked').length})
+        </button>
         <button className="tt-btn sm" data-on={tab === 'booked'} onClick={() => setTab('booked')}>
           Booked ({booked.length})
         </button>
@@ -287,6 +323,9 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
           History
         </button>
       </div>
+      {tab === 'tours' ? (
+        <TourList ctx={ctx} />
+      ) : (
       <div className="tt-list">
         {list.map(g => {
           const venue = world.venueById.get(g.venueId);
@@ -294,11 +333,10 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
           const dist = nearestDepotDistance(state, g);
           let right: React.ReactNode = <b>{kmoney(g.fee)}</b>;
           if (tab === 'booked') {
-            const p = projectCoverage(state, g);
-            const ok = p.vehicles.length > 0 && p.onTime && DEPTS.every(d => p.gear[d] >= g.needs[d]) && p.crew >= g.crewNeeded;
+            const r = gigReadiness(state, g);
             right = (
-              <span className={!p.vehicles.length || !p.onTime ? 'tt-bad' : ok ? 'tt-good' : 'tt-warn'} style={{ fontWeight: 800 }}>
-                {!p.vehicles.length ? 'UNASSIGNED' : !p.onTime ? 'LATE' : ok ? 'READY' : 'SHORT'}
+              <span className={READINESS_CLASS[r]} style={{ fontWeight: 800 }}>
+                {r}
               </span>
             );
           } else if (tab === 'history') {
@@ -316,7 +354,8 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
                   {g.act}
                 </div>
                 <div className="tt-dim">
-                  {venue?.name}, {city?.name} · {formatDay(state, g.day)}
+                  {g.tourId ? '🎫 ' : ''}
+                  {g.overseas ? gigWhere(state, g) : `${venue?.name}, ${city?.name}`} · {formatDay(state, g.day)}
                   {tab === 'offers' ? ` · ${Math.round(dist)} tiles` : ''}
                 </div>
               </div>
@@ -327,6 +366,7 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
         })}
         {!list.length && <div className="tt-dim">Nothing here yet.</div>}
       </div>
+      )}
     </div>
   );
 }

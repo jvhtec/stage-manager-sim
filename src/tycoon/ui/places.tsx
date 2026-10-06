@@ -10,7 +10,7 @@ import {
   companyTier,
   getModel,
 } from '@/world/catalog';
-import { dayOf, depotInCity, formatDay } from '@/world/core';
+import { dayOf, depotInCity, formatDay, freeLot } from '@/world/core';
 import { getWorld } from '@/world/mapgen';
 import { vehicleActivity } from '@/world/queries';
 import { DEPTS, type Gig } from '@/world/types';
@@ -25,6 +25,7 @@ const VENUE_KIND_LABEL: Record<string, string> = {
   theatre: 'Theatre',
   arena: 'Arena',
   stadium: 'Stadium',
+  airport: 'International airport',
 };
 
 function GigRow({ ctx, gig }: { ctx: WinCtx; gig: Gig }) {
@@ -61,7 +62,8 @@ export function CityWindow({ ctx, cityId }: { ctx: WinCtx; cityId: string }) {
   if (!city) return null;
   const rating = state.cityRatings[cityId] ?? 50;
   const depot = depotInCity(state, cityId);
-  const rival = state.rivals.find(r => r.hqCityId === cityId);
+  const rivalsHere = state.rivals.filter(r => r.hqCityId === cityId);
+  const lotFree = freeLot(state, world, cityId) >= 0;
   const today = dayOf(state.hour);
   const gigs = state.gigs
     .filter(g => g.cityId === cityId && ((g.status === 'offer' && g.acceptByDay >= today) || g.status === 'booked'))
@@ -82,7 +84,7 @@ export function CityWindow({ ctx, cityId }: { ctx: WinCtx; cityId: string }) {
       </Stat>
       <h4>Venues</h4>
       <div className="tt-list">
-        {city.venues.map(v => (
+        {city.venues.filter(v => v.kind !== 'airport').map(v => (
           <div key={v.id} className="tt-item clickable" onClick={() => ctx.open('venue', v.id)}>
             <div className="grow">
               <div style={{ fontWeight: 700 }}>{v.name}</div>
@@ -94,6 +96,12 @@ export function CityWindow({ ctx, cityId }: { ctx: WinCtx; cityId: string }) {
           </div>
         ))}
       </div>
+      {city.venues.some(v => v.kind === 'airport') && (
+        <div className="tt-item" style={{ marginTop: 3 }}>
+          <span>✈</span>
+          <span className="grow">International airport — world-tour freight flies out from here.</span>
+        </div>
+      )}
       <h4>Shows here</h4>
       {gigs.length ? (
         <div className="tt-list">
@@ -104,32 +112,45 @@ export function CityWindow({ ctx, cityId }: { ctx: WinCtx; cityId: string }) {
       ) : (
         <div className="tt-dim">No open offers right now.</div>
       )}
-      <h4>Warehouse</h4>
-      {depot ? (
-        <button className="tt-btn sm" onClick={() => ctx.open('depot', depot.id)}>
-          Open your {city.name} warehouse
-        </button>
-      ) : rival ? (
-        <div className="tt-dim">
-          <span style={{ color: rival.color, fontWeight: 800 }}>{rival.name}</span> runs its HQ from the only warehouse lot here.
-        </div>
-      ) : (
-        <div className="tt-row">
-          <span className="tt-dim">
-            Build here to base trucks, gear and crew locally. Upkeep {money(DEPOT_UPKEEP_PER_MONTH)}/mo.
-          </span>
-          <button
-            className="tt-btn sm primary"
-            disabled={state.company.cash < DEPOT_BUILD_COST}
-            onClick={() => {
-              const r = ctx.dispatch(s => buildDepot(s, cityId));
-              ctx.toast(r.message ?? '', r.ok);
-            }}
-          >
-            Build {kmoney(DEPOT_BUILD_COST)}
+      <h4>Warehouse lots ({city.lots.length})</h4>
+      <div className="tt-list">
+        {rivalsHere.map(r => (
+          <div key={r.id} className="tt-item">
+            <span style={{ width: 10, height: 10, background: r.color, display: 'inline-block' }} />
+            <span className="grow" style={{ fontWeight: 700 }}>
+              {r.name}
+            </span>
+            <span className="tt-dim">{r.specialty}</span>
+          </div>
+        ))}
+        {depot && (
+          <button className="tt-btn sm" onClick={() => ctx.open('depot', depot.id)}>
+            Open your {city.name} warehouse
           </button>
-        </div>
-      )}
+        )}
+      </div>
+      {!depot &&
+        (lotFree ? (
+          <div className="tt-row" style={{ marginTop: 6 }}>
+            <span className="tt-dim">
+              Build here to base trucks, gear and crew locally. Upkeep {money(DEPOT_UPKEEP_PER_MONTH)}/mo.
+            </span>
+            <button
+              className="tt-btn sm primary"
+              disabled={state.company.cash < DEPOT_BUILD_COST}
+              onClick={() => {
+                const r = ctx.dispatch(s => buildDepot(s, cityId));
+                ctx.toast(r.message ?? '', r.ok);
+              }}
+            >
+              Build {kmoney(DEPOT_BUILD_COST)}
+            </button>
+          </div>
+        ) : (
+          <div className="tt-dim" style={{ marginTop: 6 }}>
+            Every lot here is taken.
+          </div>
+        ))}
     </div>
   );
 }

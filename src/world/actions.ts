@@ -17,7 +17,9 @@ import {
   cloneState,
   dayOf,
   depotInCity,
+  freeLot,
   gigById,
+  loadInHour,
   newId,
   pushNews,
   sellValue,
@@ -27,6 +29,7 @@ import { getWorld } from './mapgen';
 import { roadDistance } from './pathfinding';
 import { serviceNow } from './sim';
 import { makeVehicle } from './state';
+import { canBookTour, tourMaxTier } from './tours';
 import type { ActionOutcome, TycoonState } from './types';
 import { getProduct } from './content/gear';
 
@@ -34,8 +37,48 @@ const fail = (state: TycoonState, message: string): ActionOutcome => ({ state, r
 const ok = (state: TycoonState, message?: string): ActionOutcome => ({ state, result: { ok: true, message } });
 const money = (n: number) => `$${Math.round(n).toLocaleString()}`;
 
+export function bookTour(state: TycoonState, tourId: string): ActionOutcome {
+  const tour = state.tours.find(t => t.id === tourId);
+  if (!tour || tour.status !== 'offer') return fail(state, 'That tour is no longer on offer.');
+  if (tour.acceptByDay < dayOf(state.hour)) return fail(state, 'The booking deadline has passed.');
+  const needed = tierInfo(tourMaxTier(state, tour));
+  if (!canBookTour(state, tour)) {
+    return fail(state, `Promoters want reputation ${needed.minReputation}+ for this tour's ${needed.label} dates.`);
+  }
+  const s = cloneState(state);
+  const t = s.tours.find(x => x.id === tourId)!;
+  t.status = 'booked';
+  t.gigIds.forEach(id => {
+    const g = gigById(s, id);
+    if (g) g.status = 'booked';
+  });
+  return ok(s, `Booked ${tour.name}! Assign vehicles to the dates — or the whole tour at once.`);
+}
+
+/** Puts one vehicle on every date of a booked tour (in order), skipping dates it's already on. */
+export function assignVehicleToTour(state: TycoonState, vehicleId: string, tourId: string): ActionOutcome {
+  const tour = state.tours.find(t => t.id === tourId);
+  if (!tour || tour.status !== 'booked') return fail(state, 'Book the tour first.');
+  let s = state;
+  let added = 0;
+  tour.gigIds.forEach(id => {
+    const g = gigById(s, id);
+    const v = s.vehicles.find(x => x.id === vehicleId);
+    if (!g || !v || v.orders.includes(id) || g.status !== 'booked' || s.hour >= showEndHour(g)) return;
+    const out = assignVehicle(s, vehicleId, id);
+    if (out.result.ok) {
+      s = out.state;
+      added += 1;
+    }
+  });
+  if (!added) return fail(state, 'Nothing left on this tour to assign.');
+  const v = s.vehicles.find(x => x.id === vehicleId)!;
+  return ok(s, `${v.name} is on ${added} date${added > 1 ? 's' : ''} of ${tour.name}.`);
+}
+
 export function bookGig(state: TycoonState, gigId: string): ActionOutcome {
   const gig = gigById(state, gigId);
+  if (gig?.tourId) return bookTour(state, gig.tourId);
   if (!gig || gig.status !== 'offer') return fail(state, 'That offer is no longer available.');
   if (gig.acceptByDay < dayOf(state.hour)) return fail(state, 'The booking deadline has passed.');
   const needed = tierInfo(gig.tier);
@@ -63,9 +106,11 @@ export function assignVehicle(state: TycoonState, vehicleId: string, gigId: stri
   const v = s.vehicles.find(x => x.id === vehicleId)!;
   // The current leg (if already under way) stays first; the rest is kept in show order.
   const locked = v.status === 'driving' || v.status === 'broken' || v.status === 'on-site' ? v.orders.slice(0, 1) : [];
-  const rest = [...v.orders.slice(locked.length), gigId].sort(
-    (a, b) => (gigById(s, a)?.day ?? 0) - (gigById(s, b)?.day ?? 0),
-  );
+  const loadIn = (id: string) => {
+    const g = gigById(s, id);
+    return g ? loadInHour(g) : 0;
+  };
+  const rest = [...v.orders.slice(locked.length), gigId].sort((a, b) => loadIn(a) - loadIn(b));
   v.orders = [...locked, ...rest];
   return ok(s, `${v.name} added to ${gig0.act}.`);
 }
@@ -190,13 +235,14 @@ export function buildDepot(state: TycoonState, cityId: string): ActionOutcome {
   const city = world.cityById.get(cityId);
   if (!city) return fail(state, 'Unknown city.');
   if (depotInCity(state, cityId)) return fail(state, `You already have a warehouse in ${city.name}.`);
-  const rival = state.rivals.find(r => r.hqCityId === cityId);
-  if (rival) return fail(state, `${rival.name} owns the only warehouse lot in ${city.name}.`);
+  const lot = freeLot(state, world, cityId);
+  if (lot < 0) return fail(state, `Every warehouse lot in ${city.name} is taken.`);
   if (state.company.cash < DEPOT_BUILD_COST) return fail(state, `A warehouse costs ${money(DEPOT_BUILD_COST)}.`);
   const s = cloneState(state);
   s.depots.push({
     id: newId(s, 'depot'),
     cityId,
+    lot,
     gear: {},
     crew: 0,
     builtHour: s.hour,

@@ -9,7 +9,7 @@ import { dateOfDay, dayOf, newId, pushNews } from './core';
 import { artistsTouringAt } from './content/artists';
 import { expectedQuality, productsAvailableIn } from './content/gear';
 import { roadDistance } from './pathfinding';
-import type { City, DeptCounts, Gig, Rider, TycoonState, Vehicle, WorldMap } from './types';
+import type { City, DeptCounts, Gig, Rider, TycoonState, Vehicle, Venue, WorldMap } from './types';
 import { DEPTS } from './types';
 
 const ACT_ADJ = ['Velvet', 'Electric', 'Midnight', 'Neon', 'Broken', 'Golden', 'Silent', 'Wild', 'Paper', 'Crimson', 'Lunar', 'Static'];
@@ -29,7 +29,7 @@ export function generateOffer(
   opts: { minLeadDays?: number; maxTier?: number } = {},
 ): Gig | null {
   const minLeadDays = opts.minLeadDays ?? 6;
-  const venues = city.venues.filter(v => v.tier <= (opts.maxTier ?? 4));
+  const venues = city.venues.filter(v => v.kind !== 'airport' && v.tier <= (opts.maxTier ?? 4));
   if (!venues.length) return null;
   // Smaller rooms book far more often than stadiums.
   const weights = venues.map(v => 5 - v.tier);
@@ -44,38 +44,59 @@ export function generateOffer(
     }
   }
 
-  const info = tierInfo(venue.tier);
+  const today = dayOf(state.hour);
+  const day = today + rng.nextRange(minLeadDays, minLeadDays + 14);
+  const year = dateOfDay(state, day).getUTCFullYear();
+  const { act, real } = pickAct(state, venue.tier, year, rng);
+  const gig = buildGig(state, rng, { venue, day, act, real });
+  gig.acceptByDay = Math.min(day - 3, today + rng.nextRange(3, 7));
+  return gig;
+}
+
+export interface GigSpec {
+  venue: Venue;
+  day: number;
+  act: string;
+  real: boolean;
+  /** Override the tier used for the rider/fee (overseas legs). */
+  tier?: number;
+  feeMultiplier?: number;
+  tourId?: string;
+}
+
+/** Rolls the rider, needs and fee for one show. */
+export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
+  const tier = spec.tier ?? spec.venue.tier;
+  const info = tierInfo(tier);
   const needs = {} as DeptCounts;
   DEPTS.forEach(d => {
     const base = info.needs[d];
     const swing = base === 0 ? (rng.chance(0.15) ? 1 : 0) : rng.nextRange(-1, Math.ceil(base * 0.25) + 1);
     needs[d] = Math.max(0, base + swing);
   });
-  const today = dayOf(state.hour);
-  const day = today + rng.nextRange(minLeadDays, minLeadDays + 14);
-  const year = dateOfDay(state, day).getUTCFullYear();
-  const rating = state.cityRatings[city.id] ?? 50;
-
-  const { act, real } = pickAct(state, venue.tier, year, rng);
-  const asksForYou = real && (state.artistRelations[act] ?? 0) > 0;
-  const rider = venue.tier >= 2 && rng.chance(real ? 0.55 : 0.25) ? pickRider(needs, venue.tier, year, rng) : undefined;
-  const star = real ? 1.15 : 1;
+  const year = dateOfDay(state, spec.day).getUTCFullYear();
+  const rating = state.cityRatings[spec.venue.cityId] ?? 50;
+  const asksForYou = spec.real && (state.artistRelations[spec.act] ?? 0) > 0;
+  const rider = tier >= 2 && rng.chance(spec.real ? 0.55 : 0.25) ? pickRider(needs, tier, year, rng) : undefined;
+  const star = spec.real ? 1.15 : 1;
   const loyalty = asksForYou ? 1.1 : 1;
-  const fee = Math.round((info.baseFee * (0.85 + rng.next() * 0.4) * (0.9 + rating / 500) * star * loyalty) / 50) * 50;
+  const fee =
+    Math.round((info.baseFee * (0.85 + rng.next() * 0.4) * (0.9 + rating / 500) * star * loyalty * (spec.feeMultiplier ?? 1)) / 50) * 50;
 
   return {
     id: newId(state, 'gig'),
-    act,
-    venueId: venue.id,
-    cityId: city.id,
-    tier: venue.tier,
-    day,
-    acceptByDay: Math.min(day - 3, today + rng.nextRange(3, 7)),
+    act: spec.act,
+    venueId: spec.venue.id,
+    cityId: spec.venue.cityId,
+    tier,
+    day: spec.day,
+    acceptByDay: spec.day - 3,
     needs,
-    crewNeeded: info.crew + rng.nextInt(venue.tier),
+    crewNeeded: info.crew + rng.nextInt(tier),
     fee,
     rider,
     asksForYou: asksForYou || undefined,
+    tourId: spec.tourId,
     status: 'offer',
   };
 }
@@ -83,7 +104,7 @@ export function generateOffer(
 /** Share of shows at each tier played by real touring acts (the rest are local bands). */
 const REAL_ACT_SHARE = [0, 0.3, 0.7, 1, 1];
 
-function pickAct(state: TycoonState, tier: number, year: number, rng: Rng): { act: string; real: boolean } {
+export function pickAct(state: TycoonState, tier: number, year: number, rng: Rng): { act: string; real: boolean } {
   const touring = artistsTouringAt(year, tier);
   if (!touring.length || !rng.chance(REAL_ACT_SHARE[tier])) return { act: actName(rng), real: false };
   // Acts you've done well by are more likely to come back to you.
@@ -129,7 +150,7 @@ function rivalVehicleModel(tier: number): string {
 export function rivalsTakeOffers(state: TycoonState, world: WorldMap, rng: Rng) {
   const today = dayOf(state.hour);
   state.gigs.forEach(gig => {
-    if (gig.status !== 'offer') return;
+    if (gig.status !== 'offer' || gig.tourId) return; // tours are bid on as a whole
     if (gig.acceptByDay < today) {
       gig.status = 'expired';
       return;
@@ -143,7 +164,9 @@ export function rivalsTakeOffers(state: TycoonState, world: WorldMap, rng: Rng) 
       const mainDept = DEPTS.reduce((a, b) => (gig.needs[b] > gig.needs[a] ? b : a));
       const specialty = mainDept === rival.specialty ? 1.3 : 1;
       const loyalty = gig.asksForYou ? 0.25 : 1;
-      const chance = 0.05 * proximity * fit * specialty * loyalty * (1.15 - (rating / 100) * 0.6);
+      // More firms in the market split the work between them.
+      const crowding = Math.min(1, 5 / state.rivals.length);
+      const chance = 0.05 * crowding * proximity * fit * specialty * loyalty * (1.15 - (rating / 100) * 0.6);
       if (!rng.chance(chance)) continue;
 
       gig.status = 'rival';

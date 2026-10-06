@@ -22,8 +22,8 @@ import { MinHeap } from './heap';
 export const MAP_WIDTH = 72;
 export const MAP_HEIGHT = 56;
 const MAX_LEVEL = 5;
-const CITY_COUNT = 14;
-const CITY_SPACING = 11;
+const CITY_COUNT = 16;
+const CITY_SPACING = 10;
 
 const idx = (x: number, y: number, w: number) => y * w + x;
 
@@ -95,6 +95,8 @@ function venueName(kind: VenueKind, city: string, rng: Rng): string {
       return `${city} Arena`;
     case 'stadium':
       return `${city} Stadium`;
+    case 'airport':
+      return `${city} International Airport`;
   }
 }
 
@@ -103,6 +105,7 @@ function venueName(kind: VenueKind, city: string, rng: Rng): string {
 // ---------------------------------------------------------------------------
 
 const SIZE_RADIUS: Record<CitySize, number> = { village: 2, town: 3, city: 4, metropolis: 6 };
+const LOTS_PER_SIZE: Record<CitySize, number> = { village: 1, town: 2, city: 3, metropolis: 3 };
 
 const VENUE_SPECS: Record<VenueKind, { tier: number; w: number; h: number; capacity: [number, number] }> = {
   pub: { tier: 1, w: 1, h: 1, capacity: [120, 300] },
@@ -111,13 +114,15 @@ const VENUE_SPECS: Record<VenueKind, { tier: number; w: number; h: number; capac
   theatre: { tier: 2, w: 2, h: 1, capacity: [1200, 2600] },
   arena: { tier: 3, w: 2, h: 2, capacity: [8000, 16000] },
   stadium: { tier: 4, w: 3, h: 3, capacity: [45000, 80000] },
+  // Not a show venue: where world-tour freight flies out from.
+  airport: { tier: 4, w: 3, h: 2, capacity: [0, 1] },
 };
 
 const SIZE_VENUES: Record<CitySize, VenueKind[]> = {
   village: ['pub'],
   town: ['pub', 'hall', 'club'],
   city: ['pub', 'club', 'theatre', 'arena'],
-  metropolis: ['pub', 'club', 'theatre', 'arena', 'stadium'],
+  metropolis: ['pub', 'club', 'theatre', 'arena', 'stadium', 'airport'],
 };
 
 function sizeForRank(rank: number): CitySize {
@@ -391,7 +396,7 @@ export function generateWorld(seed: number): WorldMap {
       radius,
       venues: [],
       buildings: [],
-      depotSite: { x: center.x, y: center.y },
+      lots: [],
     });
   });
   // Ramp the land up to meet raised town plateaus, then settle any clashes
@@ -519,8 +524,11 @@ export function generateWorld(seed: number): WorldMap {
       map.venueById.set(venue.id, venue);
     });
     city.venues.sort((a, b) => a.tier - b.tier);
-    const depotLot = claimLot(city, 2, 2) ?? claimLot(city, 1, 1);
-    if (depotLot) city.depotSite = depotLot;
+    // Warehouse lots: room for you and rivals to share the bigger towns.
+    for (let i = 0; i < LOTS_PER_SIZE[city.size]; i++) {
+      const lot = claimLot(city, 2, 2);
+      if (lot) city.lots.push(lot);
+    }
   });
 
   // 6. Cosmetic buildings, denser and taller toward the centre of big places.

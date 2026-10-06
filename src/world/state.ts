@@ -9,6 +9,7 @@ import {
 import { newId } from './core';
 import { productsAvailableIn } from './content/gear';
 import { updateRivals } from './sim';
+import { generateNationalTour } from './tours';
 import { getWorld } from './mapgen';
 import { generateOffer } from './offers';
 import { roadDistance } from './pathfinding';
@@ -17,7 +18,8 @@ import type { TycoonState, Vehicle } from './types';
 export const TYCOON_SAVE_KEY = 'stage-manager-sim:tycoon';
 // v2: gear became real products (GearStock), plus artist relations, riders
 // and rival specialties — v1 saves are discarded rather than half-migrated.
-export const TYCOON_SAVE_VERSION = 2;
+// v3: warehouse lots (several per town), airports, tours.
+export const TYCOON_SAVE_VERSION = 3;
 
 export interface NewGameOptions {
   companyName: string;
@@ -84,6 +86,7 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     gigs: [],
     cityRatings: Object.fromEntries(world.cities.map(c => [c.id, 50])),
     rivals: [],
+    tours: [],
     news: [],
     ledger: {},
     announcedModels: VEHICLE_MODELS.filter(m => m.introYear <= START_YEAR).map(m => m.id),
@@ -97,6 +100,7 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
   state.depots.push({
     id: newId(state, 'depot'),
     cityId: hq.id,
+    lot: 0,
     // A 1990 starter kit: a Martin F2 PA, PAR cans and a couple of Vari-Lites,
     // a projector and some Steeldeck.
     gear: { 'martin-f2': 5, par64: 2, 'vari-lite-vl2': 2, 'barco-projector': 1, steeldeck: 3 },
@@ -122,6 +126,8 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     const gig = generateOffer(state, world, rng.pick(world.cities), rng);
     if (gig) state.gigs.push(gig);
   }
+  // And one small-venue tour, so touring is on the table from day one.
+  for (let i = 0; i < 6 && !state.tours.length; i++) generateNationalTour(state, world, rng, 1);
   state.rngState = rng.getState();
 
   state.news.push({

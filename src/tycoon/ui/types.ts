@@ -4,6 +4,7 @@ export type WindowKind =
   | 'city'
   | 'venue'
   | 'gig'
+  | 'tour'
   | 'vehicle'
   | 'vehicles'
   | 'depot'

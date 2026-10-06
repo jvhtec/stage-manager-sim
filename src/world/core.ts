@@ -15,6 +15,7 @@ import {
   getModel,
 } from './catalog';
 import { roadDistance } from './pathfinding';
+import { getRegion } from './content/world';
 import type {
   DeptCounts,
   Gig,
@@ -64,10 +65,18 @@ export function formatHour(state: Pick<TycoonState, 'startYear'>, hour: number):
   return `${formatDay(state, dayOf(hour))} ${String(h).padStart(2, '0')}:00`;
 }
 
-export const loadInHour = (gig: Gig) => gig.day * HOURS_PER_DAY + LOAD_IN_HOUR;
-export const showStartHour = (gig: Gig) => gig.day * HOURS_PER_DAY + SHOW_START_HOUR;
-export const showEndHour = (gig: Gig) => gig.day * HOURS_PER_DAY + SHOW_END_HOUR;
-export const loadOutDoneHour = (gig: Gig) => gig.day * HOURS_PER_DAY + LOAD_OUT_DONE_HOUR;
+// Overseas legs: trucks hand the rig over at the airport `freightDays`
+// before the first date (that's "load-in"), and it comes back
+// `freightDays` after the last one.
+const freightDays = (gig: Gig) => (gig.overseas ? getRegion(gig.overseas.regionId).freightDays : 0);
+export const lastShowDay = (gig: Gig) => (gig.overseas ? gig.overseas.stops[gig.overseas.stops.length - 1].day : gig.day);
+
+export const loadInHour = (gig: Gig) => (gig.day - freightDays(gig)) * HOURS_PER_DAY + LOAD_IN_HOUR;
+/** Anything that arrives after this misses the show (or, overseas, the last flight out). */
+export const showStartHour = (gig: Gig) =>
+  gig.overseas ? loadInHour(gig) + 10 : gig.day * HOURS_PER_DAY + SHOW_START_HOUR;
+export const showEndHour = (gig: Gig) => lastShowDay(gig) * HOURS_PER_DAY + SHOW_END_HOUR;
+export const loadOutDoneHour = (gig: Gig) => (lastShowDay(gig) + freightDays(gig)) * HOURS_PER_DAY + LOAD_OUT_DONE_HOUR;
 
 // Travel --------------------------------------------------------------------
 
@@ -151,4 +160,15 @@ export function totalCrew(state: TycoonState): number {
     state.depots.reduce((sum, d) => sum + d.crew, 0) +
     playerVehicles(state).reduce((sum, v) => sum + v.crew, 0)
   );
+}
+
+/** Index of an unclaimed warehouse lot in a city, or -1 if every lot is taken. */
+export function freeLot(state: TycoonState, world: WorldMap, cityId: string): number {
+  const city = world.cityById.get(cityId);
+  if (!city) return -1;
+  const used = new Set([
+    ...state.depots.filter(d => d.cityId === cityId).map(d => d.lot),
+    ...state.rivals.filter(r => r.hqCityId === cityId).map(r => r.lot),
+  ]);
+  return city.lots.findIndex((_, i) => !used.has(i));
 }

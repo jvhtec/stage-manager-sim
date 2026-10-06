@@ -157,7 +157,11 @@ export function HelpWindow() {
           <b>Assign</b> one or more vehicles. Trucks load gear and crew from their depot and leave in time to make load-in.
         </li>
         <li>Late trucks, missing gear and short crews all cut the fee. A no-show costs a penalty.</li>
-        <li>Assign one truck to several shows and it tours — straight from venue to venue.</li>
+        <li>
+          <b>Tours</b> (Shows → Tours) bundle a run of dates with a completion bonus — put a truck on the whole tour and it
+          drives the route. <b>World tours</b> add legs abroad: get the rig to the international airport in time and it's
+          flown out, plays Madrid, New York or Tokyo, and flies home.
+        </li>
         <li>
           Gear is real kit — Martin, Meyer, L-Acoustics, Vari-Lite, MA… Crowds expect better every year, and artists' riders ask
           for brands. Yesterday's flagship becomes tomorrow's pub rig.

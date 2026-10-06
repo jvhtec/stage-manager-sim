@@ -339,9 +339,55 @@ export function venue(rc: RC, v: VenueDraw): Pt {
       });
       return P(rc, cx, cy, z + 7);
     }
+    case 'airport': {
+      // Runway along x with centreline dashes and threshold bars.
+      groundQuad(rc, x + 0.02, y + 0.12, x + w - 0.02, y + 0.88, z + 0.01, paint([70, 72, 78]));
+      if (rc.cam.zoom >= 0.9) {
+        rc.ctx.strokeStyle = paint(C.white, 1, 0.9);
+        rc.ctx.lineWidth = Math.max(0.6, rc.cam.zoom * 0.5);
+        rc.ctx.setLineDash([rc.cam.zoom * 4, rc.cam.zoom * 3]);
+        rc.ctx.beginPath();
+        const a = P(rc, x + 0.2, y + 0.5, z + 0.02);
+        const b = P(rc, x + w - 0.2, y + 0.5, z + 0.02);
+        rc.ctx.moveTo(a[0], a[1]);
+        rc.ctx.lineTo(b[0], b[1]);
+        rc.ctx.stroke();
+        rc.ctx.setLineDash([]);
+      }
+      // Terminal, control tower, and a jet on the apron.
+      const terminal: Box = { x0: x + 0.15, y0: y + 1.12, x1: x + 1.7, y1: y + 1.88, z0: z, z1: z + 1.5 };
+      prism(rc, terminal, [200, 214, 228], [170, 180, 194]);
+      windows(rc, terminal, 1, v.seed, 5);
+      prism(rc, { x0: x + 2.35, y0: y + 1.35, x1: x + 2.6, y1: y + 1.6, z0: z, z1: z + 4.2 }, [214, 214, 210], [190, 190, 186]);
+      prism(rc, { x0: x + 2.25, y0: y + 1.25, x1: x + 2.7, y1: y + 1.7, z0: z + 4.2, z1: z + 4.9 }, [80, 110, 140], [200, 200, 196]);
+      plane(rc, x + 2.0, y + 1.45, z, 0.6);
+      if (v.live) {
+        // A freighter taking off every few seconds while a rig is abroad.
+        const t = (rc.time / 5000 + v.seed * 0.1) % 1;
+        const px = x + 0.3 + t * (w + 1.5);
+        const pz = z + Math.max(0, t - 0.45) * 22;
+        plane(rc, px, y + 0.5, pz, 0.8);
+      }
+      return P(rc, x + w / 2, y + h / 2, z + 5.5);
+    }
     default:
       return P(rc, x + w / 2, y + h / 2, z + 2);
   }
+}
+
+/** A jet pointing along +x. */
+function plane(rc: RC, x: number, y: number, z: number, size: number) {
+  const L = 0.9 * size;
+  const W = 0.13 * size;
+  // Wings first (they sit behind the fuselage from this view).
+  poly(
+    rc,
+    [P(rc, x - 0.05 * size, y - 0.55 * size, z + 0.35 * size), P(rc, x + 0.12 * size, y - 0.05 * size, z + 0.35 * size), P(rc, x + 0.12 * size, y + 0.05 * size, z + 0.35 * size), P(rc, x - 0.05 * size, y + 0.55 * size, z + 0.35 * size), P(rc, x - 0.2 * size, y, z + 0.35 * size)],
+    paint([210, 214, 222]),
+  );
+  prism(rc, { x0: x - L / 2, y0: y - W / 2, x1: x + L / 2, y1: y + W / 2, z0: z + 0.2 * size, z1: z + 0.5 * size }, [236, 238, 242], [246, 247, 250]);
+  // Tail fin.
+  poly(rc, [P(rc, x - L / 2, y, z + 0.5 * size), P(rc, x - L / 2 + 0.18 * size, y, z + 0.5 * size), P(rc, x - L / 2, y, z + 0.95 * size)], paint([200, 40, 60]));
 }
 
 // ---------------------------------------------------------------------------

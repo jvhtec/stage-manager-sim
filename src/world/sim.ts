@@ -28,6 +28,7 @@ import {
   dayOf,
   depotInCity,
   emptyCounts,
+  freeLot,
   formatDay,
   gigById,
   loadInHour,
@@ -48,6 +49,8 @@ import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSiz
 import { GEAR_PRODUCTS } from './content/gear';
 import { RIVAL_COMPANIES } from './content/companies';
 import { dailyOffers, pruneGigs, rivalsTakeOffers } from './offers';
+import { dailyTours } from './tours';
+import { getRegion } from './content/world';
 import { getCityPath } from './pathfinding';
 import { DEPTS, type GearStock, type Gig, type TycoonState, type Vehicle, type WorldMap } from './types';
 import { findArtist } from './content/artists';
@@ -313,7 +316,9 @@ function resolveShows(s: TycoonState, world: WorldMap, rng: Rng) {
 function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const venue = world.venueById.get(gig.venueId);
   const city = world.cityById.get(gig.cityId);
-  const where = `${venue?.name}, ${city?.name}`;
+  const where = gig.overseas
+    ? `the ${getRegion(gig.overseas.regionId).name} (${gig.overseas.stops.map(st => st.city).join(', ')})`
+    : `${venue?.name}, ${city?.name}`;
   const onSite = s.vehicles.filter(
     v =>
       v.owner === 'player' &&
@@ -367,6 +372,14 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
 
   const payout = Math.round(gig.fee * (0.35 + 0.65 * quality));
   book(s, 'shows', payout);
+  if (gig.overseas) {
+    // Air freight for the rig and flights for the crew, there and back.
+    const region = getRegion(gig.overseas.regionId);
+    const units = onSite.reduce((sum, v) => sum + stockSize(v.cargo), 0);
+    const freight = units * region.freightPerUnit + crew * region.flightPerCrew;
+    book(s, 'freight', -freight);
+    onSite.forEach(v => (v.profitThisYear -= Math.round(freight / onSite.length)));
+  }
   const totalCargo = onSite.reduce((sum, v) => sum + stockSize(v.cargo) + v.crew, 0) || 1;
   onSite.forEach(v => {
     v.profitThisYear += Math.round((payout * (stockSize(v.cargo) + v.crew)) / totalCargo);
@@ -422,6 +435,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
 
   dailyOffers(s, world, rng);
   rivalsTakeOffers(s, world, rng);
+  dailyTours(s, world, rng);
   pruneGigs(s);
 
   // Nag about booked shows with nothing assigned two days out.
@@ -481,11 +495,22 @@ function announceGear(s: TycoonState, year: number) {
 export function updateRivals(s: TycoonState, world: WorldMap, year: number) {
   RIVAL_COMPANIES.forEach(t => {
     const rival = s.rivals.find(r => r.id === t.id);
+    const gone = t.exits && year >= t.exits.year;
+    if (rival && gone) {
+      s.rivals = s.rivals.filter(r => r.id !== t.id);
+      s.vehicles = s.vehicles.filter(v => v.owner !== t.id);
+      if (s.hour > 24) pushNews(s, t.exits!.news, 'big', { cityId: rival.hqCityId });
+      return;
+    }
     if (!rival) {
-      if (t.enters > year) return;
-      const taken = new Set([...s.rivals.map(r => r.hqCityId), ...s.depots.map(d => d.cityId)]);
-      const city = [...world.cities].sort((a, b) => b.population - a.population).find(c => !taken.has(c.id));
-      if (!city) return;
+      if (t.enters > year || gone) return;
+      // Spread out: emptiest big town with a free warehouse lot.
+      const candidates = world.cities
+        .map(c => ({ c, lot: freeLot(s, world, c.id), crowd: s.rivals.filter(r => r.hqCityId === c.id).length }))
+        .filter(x => x.lot >= 0 && x.c.id !== s.company.hqCityId)
+        .sort((a, b) => a.crowd - b.crowd || b.c.population - a.c.population);
+      const pick = candidates[0];
+      if (!pick) return;
       s.rivals.push({
         id: t.id,
         name: t.name,
@@ -493,11 +518,12 @@ export function updateRivals(s: TycoonState, world: WorldMap, year: number) {
         specialty: t.specialty,
         minTier: t.minTier,
         maxTier: t.maxTier,
-        hqCityId: city.id,
+        hqCityId: pick.c.id,
+        lot: pick.lot,
         reputation: t.startingReputation,
         showsPlayed: 0,
       });
-      if (s.hour > 24) pushNews(s, `${t.name} opens a base in ${city.name} and starts bidding for work.`, 'big', { cityId: city.id });
+      if (s.hour > 24) pushNews(s, `${t.name} opens a base in ${pick.c.name} and starts bidding for work.`, 'big', { cityId: pick.c.id });
       return;
     }
     const latest = (t.renames ?? []).filter(r => r.year <= year).pop();

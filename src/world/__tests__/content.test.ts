@@ -127,7 +127,7 @@ describe('rival companies', () => {
     const s = newGame();
     const expected = RIVAL_COMPANIES.filter(r => r.enters <= 1990).map(r => r.name).sort();
     expect(s.rivals.map(r => r.name).sort()).toEqual(expected);
-    expect(new Set(s.rivals.map(r => r.hqCityId)).size).toBe(s.rivals.length);
+    expect(new Set(s.rivals.map(r => `${r.hqCityId}:${r.lot}`)).size).toBe(s.rivals.length);
   });
 
   it('renames and adds companies as the years pass', () => {
@@ -136,7 +136,9 @@ describe('rival companies', () => {
     updateRivals(s, world, 2006);
     expect(s.rivals.find(r => r.id === 'lsd')!.name).toBe('PRG');
     expect(s.rivals.some(r => r.id === 'solotech')).toBe(true);
+    expect(s.rivals.some(r => r.id === 'xlvideo')).toBe(true);
     updateRivals(s, world, 2011);
     expect(s.rivals.find(r => r.id === 'clair')!.name).toBe('Clair Global');
+    expect(s.rivals.some(r => r.id === 'xlvideo')).toBe(false);
   });
 });

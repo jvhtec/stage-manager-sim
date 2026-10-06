@@ -29,7 +29,7 @@ export enum Terrain {
 }
 
 export type CitySize = 'village' | 'town' | 'city' | 'metropolis';
-export type VenueKind = 'pub' | 'hall' | 'club' | 'theatre' | 'arena' | 'stadium';
+export type VenueKind = 'pub' | 'hall' | 'club' | 'theatre' | 'arena' | 'stadium' | 'airport';
 
 export interface Venue {
   id: string;
@@ -66,8 +66,8 @@ export interface City {
   radius: number;
   venues: Venue[];
   buildings: Building[];
-  /** 2x2 lot reserved for a warehouse, should anyone build one here. */
-  depotSite: { x: number; y: number };
+  /** 2x2 warehouse lots (top-left tiles). You and rivals each take one. */
+  lots: { x: number; y: number }[];
 }
 
 export interface WorldMap {
@@ -98,6 +98,7 @@ export type LedgerCategory =
   | 'property'
   | 'purchases'
   | 'interest'
+  | 'freight'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -109,12 +110,15 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   property: 'Depots & property',
   purchases: 'New vehicles & gear',
   interest: 'Loan interest',
+  freight: 'Air freight & flights',
   sales: 'Asset sales',
 };
 
 export interface Depot {
   id: string;
   cityId: string;
+  /** Index into the city's warehouse lots. */
+  lot: number;
   gear: GearStock;
   crew: number;
   builtHour: number;
@@ -173,6 +177,34 @@ export interface GigResult {
   riderMet?: boolean;
 }
 
+export interface OverseasStop {
+  city: string;
+  country: string;
+  venue: string;
+  day: number;
+}
+
+/** A run of dates abroad, played from one shipment of gear flown out of the airport. */
+export interface OverseasLeg {
+  regionId: string;
+  stops: OverseasStop[];
+}
+
+export type TourStatus = 'offer' | 'booked' | 'done' | 'failed' | 'expired' | 'rival';
+
+export interface Tour {
+  id: string;
+  act: string;
+  name: string;
+  kind: 'national' | 'world';
+  gigIds: string[];
+  /** Paid on top of the show fees if every date is played. */
+  bonus: number;
+  acceptByDay: number;
+  status: TourStatus;
+  rivalId?: string;
+}
+
 /** An artist's rider asking for a particular brand in one department. */
 export interface Rider {
   dept: Dept;
@@ -194,6 +226,9 @@ export interface Gig {
   rider?: Rider;
   /** The act has worked with you before and asked for you by name. */
   asksForYou?: boolean;
+  tourId?: string;
+  /** Set for world-tour legs abroad; the gig's venue/city is then the airport. */
+  overseas?: OverseasLeg;
   status: GigStatus;
   rivalId?: string;
   result?: GigResult;
@@ -207,6 +242,8 @@ export interface Rival {
   minTier: number;
   maxTier: number;
   hqCityId: string;
+  /** Index into the HQ city's warehouse lots. */
+  lot: number;
   reputation: number;
   showsPlayed: number;
 }
@@ -245,6 +282,7 @@ export interface TycoonState {
   /** The player's standing with each city's local scene, 0-100 (cf. TT town ratings). */
   cityRatings: Record<string, number>;
   rivals: Rival[];
+  tours: Tour[];
   news: NewsItem[];
   /** Year → category → signed amount (income positive, costs negative). */
   ledger: Record<number, Partial<Record<LedgerCategory, number>>>;

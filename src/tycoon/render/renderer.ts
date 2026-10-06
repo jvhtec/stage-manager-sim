@@ -8,7 +8,7 @@
  * beams go on top afterwards. Returns screen-space hit targets for picking.
  */
 import { getModel, SHOW_END_HOUR, SHOW_START_HOUR, tierInfo, companyTier } from '@/world/catalog';
-import { dayOf } from '@/world/core';
+import { dayOf, loadInHour, loadOutDoneHour } from '@/world/core';
 import { tileCorners } from '@/world/mapgen';
 import { getCityPath, positionOnPath } from '@/world/pathfinding';
 import { Terrain, type City, type Gig, type TycoonState, type Venue, type Vehicle, type WorldMap } from '@/world/types';
@@ -49,12 +49,11 @@ type StaticObj =
   | { t: 'tree'; x: number; y: number; size: number; conifer: boolean }
   | { t: 'rock'; x: number; y: number }
   | { t: 'venue'; venue: Venue }
-  | { t: 'site'; city: City };
+  | { t: 'site'; city: City; lot: number };
 
 interface StaticIndex {
   objs: Map<number, StaticObj[]>;
   urban: Uint8Array;
-  siteAnchor: Map<string, number>;
 }
 
 const staticCache = new WeakMap<WorldMap, StaticIndex>();
@@ -71,7 +70,6 @@ function staticIndex(map: WorldMap): StaticIndex {
   };
   const urban = new Uint8Array(map.width * map.height);
   const occupied = new Uint8Array(map.width * map.height);
-  const siteAnchor = new Map<string, number>();
 
   map.cities.forEach(city => {
     const r = city.radius + 1;
@@ -88,10 +86,10 @@ function staticIndex(map: WorldMap): StaticIndex {
       add(v.x + v.w - 1, v.y + v.h - 1, { t: 'venue', venue: v });
       for (let j = 0; j < v.h; j++) for (let i = 0; i < v.w; i++) occupied[(v.y + j) * map.width + v.x + i] = 1;
     });
-    const s = city.depotSite;
-    add(s.x + 1, s.y + 1, { t: 'site', city });
-    siteAnchor.set(city.id, (s.y + 1) * map.width + s.x + 1);
-    for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) occupied[(s.y + j) * map.width + s.x + i] = 1;
+    city.lots.forEach((s, lot) => {
+      add(s.x + 1, s.y + 1, { t: 'site', city, lot });
+      for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) occupied[(s.y + j) * map.width + s.x + i] = 1;
+    });
   });
 
   for (let y = 0; y < map.height; y++) {
@@ -119,7 +117,7 @@ function staticIndex(map: WorldMap): StaticIndex {
   }
   // Within a tile, draw back objects first.
   objs.forEach(list => list.sort((a, b) => objDepth(a) - objDepth(b)));
-  const index = { objs, urban, siteAnchor };
+  const index = { objs, urban };
   staticCache.set(map, index);
   return index;
 }
@@ -276,7 +274,7 @@ interface PlacedVehicle {
 
 function placeVehicles(state: TycoonState, map: WorldMap, alpha: number) {
   const onRoad = new Map<number, PlacedVehicle[]>();
-  const atSite = new Map<string, PlacedVehicle[]>(); // cityId of depot site
+  const atSite = new Map<string, PlacedVehicle[]>(); // `${cityId}:${lot}` of the owner's warehouse
   const atVenue = new Map<string, PlacedVehicle[]>();
   const loose = new Map<number, PlacedVehicle[]>();
   const push = <K>(m: Map<K, PlacedVehicle[]>, k: K, p: PlacedVehicle) => {
@@ -309,9 +307,12 @@ function placeVehicles(state: TycoonState, map: WorldMap, alpha: number) {
         return;
       }
     }
-    const hasSite = v.owner === 'player' ? state.depots.some(d => d.cityId === city.id) : state.rivals.some(r => r.hqCityId === city.id);
-    if (hasSite) {
-      push(atSite, city.id, { v, x: 0, y: 0, z: 0, dir: 0 });
+    const lot =
+      v.owner === 'player'
+        ? state.depots.find(d => d.cityId === city.id)?.lot
+        : state.rivals.find(r => r.id === v.owner && r.hqCityId === city.id)?.lot;
+    if (lot !== undefined) {
+      push(atSite, `${city.id}:${lot}`, { v, x: 0, y: 0, z: 0, dir: 0 });
     } else {
       push(loose, city.y * map.width + city.x, { v, x: city.x + 0.5, y: city.y + 0.5, z: groundZ(map, city.x + 0.5, city.y + 0.5), dir: 0 });
     }
@@ -350,14 +351,20 @@ export function renderWorld(ctx: CanvasRenderingContext2D, input: RenderInput): 
   const today = dayOf(state.hour);
   const liveVenues = new Map<string, RGB>();
   state.gigs.forEach(g => {
-    if (g.day !== today || hourOfDay < SHOW_START_HOUR - 1 || hourOfDay >= SHOW_END_HOUR + 1) return;
+    if (g.overseas || g.day !== today || hourOfDay < SHOW_START_HOUR - 1 || hourOfDay >= SHOW_END_HOUR + 1) return;
     if (g.status === 'booked' || g.status === 'done') liveVenues.set(g.venueId, companyRgb);
     else if (g.status === 'rival') liveVenues.set(g.venueId, colorFor(g.rivalId ?? ''));
   });
 
-  const depotsByCity = new Map<string, { brand: RGB; hq: boolean; seed: number }>();
-  state.rivals.forEach((r, i) => depotsByCity.set(r.hqCityId, { brand: hexToRgb(r.color), hq: true, seed: 50 + i }));
-  state.depots.forEach((d, i) => depotsByCity.set(d.cityId, { brand: companyRgb, hq: d.cityId === state.company.hqCityId, seed: i }));
+  // The airport "lights up" (freighters taking off) while any rig is abroad.
+  state.gigs.forEach(g => {
+    if (!g.overseas || (g.status !== 'booked' && g.status !== 'rival' && g.status !== 'done')) return;
+    if (state.hour >= loadInHour(g) && state.hour < loadOutDoneHour(g)) liveVenues.set(g.venueId, companyRgb);
+  });
+
+  const lotOwners = new Map<string, { brand: RGB; hq: boolean; seed: number }>();
+  state.rivals.forEach((r, i) => lotOwners.set(`${r.hqCityId}:${r.lot}`, { brand: hexToRgb(r.color), hq: true, seed: 50 + i }));
+  state.depots.forEach((d, i) => lotOwners.set(`${d.cityId}:${d.lot}`, { brand: companyRgb, hq: d.cityId === state.company.hqCityId, seed: i }));
 
   const placed = placeVehicles(state, map, alpha);
   const selectedVehicle = input.selection?.kind === 'vehicle' ? input.selection.id : null;
@@ -432,12 +439,13 @@ export function renderWorld(ctx: CanvasRenderingContext2D, input: RenderInput): 
             break;
           }
           case 'site': {
-            const owner = depotsByCity.get(o.city.id);
-            const s = o.city.depotSite;
+            const key = `${o.city.id}:${o.lot}`;
+            const owner = lotOwners.get(key);
+            const s = o.city.lots[o.lot];
             if (!owner) break;
             const z = tileCorners(map, s.x, s.y)[0];
             warehouse(rc, s.x, s.y, z, owner.brand, owner.seed, owner.hq);
-            placed.atSite.get(o.city.id)?.forEach((p, k) => {
+            placed.atSite.get(key)?.forEach((p, k) => {
               const px = s.x + 0.32 + (k % 4) * 0.42;
               const py = s.y + 1.68;
               drawPlaced({ ...p, x: px, y: py, z, dir: 0 });
@@ -579,11 +587,11 @@ function drawGigMarkers(rc: RC, state: TycoonState, venueTop: Map<string, Pt>, h
     let fg = '#fff';
     if (g.status === 'booked') {
       const days = g.day - today;
-      label = days <= 0 ? '★ TONIGHT' : `★ ${days}d`;
+      label = g.overseas ? `★ ✈ ${Math.max(0, days)}d` : days <= 0 ? '★ TONIGHT' : `★ ${days}d`;
       bg = state.company.color;
     } else if (g.status === 'offer') {
       const locked = g.tier > tier;
-      label = `${locked ? '🔒 ' : g.asksForYou ? '♥ ' : ''}$${g.fee >= 10000 ? `${Math.round(g.fee / 1000)}k` : `${(g.fee / 1000).toFixed(1)}k`}`;
+      label = `${g.tourId ? 'TOUR ' : ''}${locked ? '🔒 ' : g.asksForYou ? '♥ ' : ''}$${g.fee >= 10000 ? `${Math.round(g.fee / 1000)}k` : `${(g.fee / 1000).toFixed(1)}k`}`;
       bg = locked ? '#3f3f46' : tierInfo(g.tier).color;
       fg = locked ? '#a1a1aa' : '#0b0d12';
     } else {

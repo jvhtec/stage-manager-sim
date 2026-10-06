@@ -77,7 +77,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 28 tests):
+(`src/world/__tests__/*.test.ts`, 33 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 - All randomness goes through the seeded `rngState` (same discipline as `src/lib/rng.ts`).
 - Actions (`src/world/actions.ts`) are `(state, …) → { state, result }`, same pattern as
   `src/engine/**`.
-- Save key `stage-manager-sim:tycoon` (v2 since real gear products) — separate from the classic save.
+- Save key `stage-manager-sim:tycoon` (v3: warehouse lots, airport, tours) — separate from the classic save.
 
 A headless bot played two in-game years on three seeds during tuning: it survives, but stalls at
 Local Circuit unless it buys bigger trucks and more gear. That upgrade pressure is intended.
@@ -102,10 +102,22 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
   arenas and stadiums are always real acts. Do an act proud (≥75%) and they remember: their
   later offers come to you more often, pay 10% more, are marked **♥ Asked for you**, and rivals
   are far less likely to poach them.
-- **Rival companies** (`companies.ts`) — Clair Brothers, Britannia Row, Light & Sound Design,
-  Neg Earth Lights and Wigwam Acoustics trade from day one, each with a specialty department and
-  the venue tiers they chase. Solotech sets up in 2005; Light & Sound Design becomes PRG (2001)
-  and Clair Brothers becomes Clair Global (2010). Shown in a TT-style **company league**.
+- **Rival companies** (`companies.ts`) — Clair Brothers, Sound Image, Britannia Row, Wigwam,
+  Thunder Audio, Light & Sound Design, Neg Earth, Eighth Day Sound, Tycho Brahe, Delta and
+  Silverfish trade from day one, each with a specialty department and the venue tiers they
+  chase. XL Video (1993), Christie Lites (1994), Creative Technology (1996) and Solotech (2005)
+  arrive later; LSD becomes PRG (2001), Clair becomes Clair Global (2010), XL Video is absorbed
+  into PRG (2011). Entries marked `// verify` are guesses. Towns have several warehouse lots
+  (1 in villages, 2 in towns, 3 in cities) shared between you and rivals. Shown in a TT-style
+  **company league**.
+- **Tours** (`tours.ts`, `content/world.ts`) — club, theatre and arena tours bundle 3-6 dates
+  in different towns with a completion bonus; put one truck on the whole tour and it drives the
+  route. **World tours** for stadium and arena acts add one or two overseas legs (Europe, North
+  America, Latin America, Asia-Pacific) played in real venues — Bernabéu, Madison Square Garden,
+  Tokyo Dome… The rig is trucked to the metropolis's international airport by a freight cutoff,
+  flown out for the run (days of freight each way, per-unit freight and crew flights charged),
+  and flown back for collection. The airport is on the map; freighters take off while a rig is
+  abroad.
 - **Gear brands** (`gear.ts`) — gear is now real product units (Martin Audio F2, Meyer MSL-3,
   L-Acoustics V-DOSC → K1 → K2, d&b J/GSL; PAR cans, Vari-Lite VL2, Martin MAC 500/2000, Clay
   Paky Sharpy, Robe BMFL, grandMA2/3; JumboTron → LED → ROE Black Pearl; Steeldeck, Prolyte,

@@ -29,6 +29,7 @@ import { money } from './ui/format';
 import { CityWindow, DepotListWindow, DepotWindow, TownsWindow, VenueWindow } from './ui/places';
 import { VehicleListWindow, VehicleWindow } from './ui/fleet';
 import { GigWindow, ShowsWindow } from './ui/shows';
+import { TourWindow } from './ui/tours';
 import { FinanceWindow, GameOverPanel, HelpWindow, LeagueWindow, NewGameForm, NewsWindow } from './ui/company';
 import type { WinCtx, WindowKind } from './ui/types';
 import './tycoon.css';
@@ -162,6 +163,8 @@ export default function TycoonGame() {
         return world.venueById.get(w.refId!)?.name ?? 'Venue';
       case 'gig':
         return state.gigs.find(g => g.id === w.refId)?.act ?? 'Show';
+      case 'tour':
+        return state.tours.find(t => t.id === w.refId)?.name ?? 'Tour';
       case 'vehicle':
         return state.vehicles.find(v => v.id === w.refId)?.name ?? 'Vehicle';
       case 'depot': {
@@ -195,6 +198,8 @@ export default function TycoonGame() {
         return <VenueWindow ctx={ctx} venueId={w.refId!} />;
       case 'gig':
         return <GigWindow ctx={ctx} gigId={w.refId!} />;
+      case 'tour':
+        return <TourWindow ctx={ctx} tourId={w.refId!} />;
       case 'vehicle':
         return <VehicleWindow ctx={ctx} vehicleId={w.refId!} />;
       case 'vehicles':
