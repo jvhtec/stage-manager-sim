@@ -15,7 +15,7 @@ import { worldOf } from '@/world/mapgen';
 import { vehicleActivity } from '@/world/queries';
 import { DEPTS, type Gig } from '@/world/types';
 import { Bar, DeptDot, Stat, TierChip } from './bits';
-import { kmoney, money, ratingLabel } from './format';
+import { formatPopulation, kmoney, marketLabel, money, ratingLabel } from './format';
 import type { WinCtx } from './types';
 
 const VENUE_KIND_LABEL: Record<string, string> = {
@@ -73,12 +73,12 @@ export function CityWindow({ ctx, cityId }: { ctx: WinCtx; cityId: string }) {
   return (
     <div>
       <div className="tt-row" style={{ marginBottom: 4 }}>
-        <span className="tt-dim" style={{ textTransform: 'capitalize' }}>{city.size}</span>
+        <span className="tt-dim">{marketLabel(city.size)}</span>
         <button className="tt-btn sm" onClick={() => ctx.goTo(city.x, city.y)}>
           Show on map
         </button>
       </div>
-      <Stat label="Population">{city.population.toLocaleString()}</Stat>
+      <Stat label="Population (metro)">{city.population.toLocaleString('en-US')}</Stat>
       <Stat label="Your local rating">
         <span className={rating >= 50 ? 'tt-good' : 'tt-bad'}>{ratingLabel(rating)}</span>
       </Stat>
@@ -376,7 +376,7 @@ export function TownsWindow({ ctx }: { ctx: WinCtx }) {
                 {rival ? <span style={{ color: rival.color }}> ●</span> : null}
               </div>
               <div className="tt-dim">
-                {c.population.toLocaleString()} · {ratingLabel(rating)}
+                {formatPopulation(c.population)} · {ratingLabel(rating)}
                 {offers ? ` · ${offers} offer${offers > 1 ? 's' : ''}` : ''}
               </div>
             </div>

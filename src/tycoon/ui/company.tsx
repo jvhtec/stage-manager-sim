@@ -27,7 +27,7 @@ function guessCountry(): CountryCode {
 }
 import { Bar, Stat } from './bits';
 import { BrandBadge } from './brands';
-import { money } from './format';
+import { formatPopulation, money } from './format';
 import type { WinCtx } from './types';
 
 export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
@@ -181,6 +181,10 @@ export function HelpWindow() {
           Real acts tour at the size their career is at. Book a band in a pub, do them proud, and they'll ask for you when
           they're filling arenas.
         </li>
+        <li>
+          <b>Star techs</b> — real big names (FOH engineers, lighting and show designers, production managers) join in their era.
+          Put one on a truck and the shows it plays get better, especially for the acts they're known for.
+        </li>
         <li>Buy bigger trucks and more gear, open regional warehouses, and win reputation to unlock arenas and stadiums.</li>
       </ol>
       <p className="tt-dim" style={{ marginBottom: 0 }}>
@@ -275,7 +279,7 @@ export function NewGameForm({
         <select className="tt-input" value={hqId} onChange={e => setHq(e.target.value)}>
           {cities.map(c => (
             <option key={c.id} value={c.id}>
-              {c.name} ({c.size}, {Math.round(c.population / 1000)}k)
+              {c.name} ({formatPopulation(c.population)})
             </option>
           ))}
         </select>

@@ -5,6 +5,7 @@ import { dateOfDay, dayOf, formatDay, formatHour, loadInHour, loadOutDoneHour, s
 import { getRegion } from '@/world/content/world';
 import { artistTierIn, findArtist } from '@/world/content/artists';
 import { expectedQuality } from '@/world/content/gear';
+import { getTech } from '@/world/content/techs';
 import { worldOf } from '@/world/mapgen';
 import { roadDistance } from '@/world/pathfinding';
 import { estimateArrival, projectCoverage } from '@/world/queries';
@@ -179,6 +180,12 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
                   ) : (
                     <span className="tt-bad">✗ no {gig.rider.brand} loaded</span>
                   )}
+                </Stat>
+              )}
+              {projection.techIds.length > 0 && (
+                <Stat label="Star techs">
+                  {projection.techIds.map(id => getTech(id).name).join(', ')}
+                  {projection.techIds.some(id => getTech(id).knownFor.includes(gig.act)) ? ' ♥' : ''}
                 </Stat>
               )}
               <Stat label="Expected show">

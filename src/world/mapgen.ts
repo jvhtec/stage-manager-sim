@@ -318,14 +318,23 @@ export function worldOf(state: { mapSeed: number; country?: string }): WorldMap 
 /** Real town names (biggest first), local venue naming and famous rooms in the big towns. */
 function localizeWorld(base: WorldMap, country: Country): WorldMap {
   const rng = createRng(base.seed ^ 0xc0de ^ country.code.charCodeAt(0) * 131 ^ country.code.charCodeAt(1));
+  // The procedural populations rank the towns by size class; the biggest
+  // real market takes the biggest town, and its real population with it.
+  const real = [...country.cities].sort((a, b) => b[1] - a[1]);
   const byPop = [...base.cities].sort((a, b) => b.population - a.population);
-  const names = new Map(byPop.map((c, i) => [c.id, country.cities[i] ?? `${country.cities[i % country.cities.length]} ${Math.floor(i / country.cities.length) + 1}`]));
+  const assigned = new Map(
+    byPop.map((c, i) => {
+      const [name, population] = real[i % real.length];
+      return [c.id, { name: i < real.length ? name : `${name} ${Math.floor(i / real.length) + 1}`, population }];
+    }),
+  );
   const cities: City[] = base.cities.map(c => {
-    const name = names.get(c.id)!;
+    const { name, population } = assigned.get(c.id)!;
     const landmarks = country.landmarks[name] ?? {};
     return {
       ...c,
       name,
+      population,
       venues: c.venues.map(v => ({ ...v, name: landmarks[v.kind] ?? country.venueNames[v.kind](name, rng) })),
     };
   });

@@ -14,6 +14,7 @@ export type WindowKind =
   | 'news'
   | 'towns'
   | 'league'
+  | 'talent'
   | 'help'
   | 'menu';
 

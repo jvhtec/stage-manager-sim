@@ -112,9 +112,11 @@ export function baseShowQuality(opts: {
   lateHours: number;
   gearQuality: number;
   riderMet?: boolean;
+  /** Star techs on site (content/techs.ts techBonus). */
+  bonus?: number;
 }): number {
   const punctuality = opts.lateHours <= 0 ? 1 : Math.max(0.35, 1 - opts.lateHours / 12);
   const rider = opts.riderMet === undefined ? 0 : opts.riderMet ? RIDER_BONUS : -RIDER_PENALTY;
-  const q = (opts.gearCoverage * 0.65 + opts.crewCoverage * 0.35) * punctuality * Math.min(1.04, opts.gearQuality) + rider;
+  const q = (opts.gearCoverage * 0.65 + opts.crewCoverage * 0.35) * punctuality * Math.min(1.04, opts.gearQuality) + rider + (opts.bonus ?? 0);
   return Math.max(0, Math.min(1, q));
 }

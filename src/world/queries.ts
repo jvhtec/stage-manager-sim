@@ -1,6 +1,7 @@
 /** Read-only projections for the UI — nothing here mutates state. */
 import { GEAR_RESALE_RATE, getModel } from './catalog';
 import { getProduct } from './content/gear';
+import { techBonus } from './content/techs';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize, type GearEvaluation } from './loading';
 import {
   dateOfDay,
@@ -74,6 +75,8 @@ export interface CoverageProjection {
   evaluation: GearEvaluation;
   /** Expected show quality (0-1) if everything goes to plan. */
   expectedQuality: number;
+  /** Star techs riding with the assigned trucks. */
+  techIds: string[];
 }
 
 /** What would turn up at `gig` if things go to plan — runs the sim's own loading and scoring. */
@@ -107,6 +110,8 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
   });
 
   const evaluation = evaluateGear(delivered, gig, dateOfDay(state, gig.day).getUTCFullYear());
+  const vehicleIds = new Set(vehicles.map(v => v.id));
+  const techIds = state.techs.filter(t => t.vehicleId && vehicleIds.has(t.vehicleId)).map(t => t.techId);
   const onTime = !vehicles.length || latestArrival <= loadInHour(gig);
   const expectedQuality = vehicles.length
     ? baseShowQuality({
@@ -115,9 +120,10 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
         lateHours: Math.max(0, latestArrival - loadInHour(gig)),
         gearQuality: evaluation.quality,
         riderMet: evaluation.riderMet,
+        bonus: techBonus(techIds, gig.act),
       })
     : 0;
-  return { gear: evaluation.delivered, crew, latestArrival, onTime, vehicles, evaluation, expectedQuality };
+  return { gear: evaluation.delivered, crew, latestArrival, onTime, vehicles, evaluation, expectedQuality, techIds };
 }
 
 export function stockValue(stock: GearStock): number {

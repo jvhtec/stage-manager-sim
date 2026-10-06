@@ -531,7 +531,7 @@ function drawCityLabels(rc: RC, state: TycoonState, hits: HitTargets) {
     const sy = sy0 + 12;
     if (sx < -100 || sx > cam.w + 100 || sy < -40 || sy > cam.h + 40) return;
     const name = city.name;
-    const pop = city.population >= 1_000_000 ? `${(city.population / 1e6).toFixed(1)}M` : `${Math.round(city.population / 1000)}k`;
+    const pop = city.population >= 1_000_000 ? `${(city.population / 1e6).toFixed(city.population >= 1e7 ? 0 : 1)}M` : `${Math.round(city.population / 1000)}k`;
     ctx.font = `700 ${Math.round(12 * scale)}px ui-rounded, system-ui, sans-serif`;
     const w = ctx.measureText(name).width + 34 * scale;
     const h = 18 * scale;

@@ -20,8 +20,8 @@ export const TYCOON_SAVE_KEY = 'stage-manager-sim:tycoon';
 // v2: gear became real products (GearStock), plus artist relations, riders
 // and rival specialties — v1 saves are discarded rather than half-migrated.
 // v3: warehouse lots (several per town), airports, tours.
-// v4: home country, audio consoles.
-export const TYCOON_SAVE_VERSION = 4;
+// v4: home country, audio consoles. v5: star techs, real populations.
+export const TYCOON_SAVE_VERSION = 5;
 
 export interface NewGameOptions {
   companyName: string;
@@ -126,6 +126,7 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     cityRatings: Object.fromEntries(world.cities.map(c => [c.id, 50])),
     rivals: [],
     tours: [],
+    techs: [],
     news: [],
     ledger: {},
     announcedModels: VEHICLE_MODELS.filter(m => m.introYear <= startYear).map(m => m.id),

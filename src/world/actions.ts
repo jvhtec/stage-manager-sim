@@ -24,6 +24,7 @@ import {
   newId,
   pushNews,
   sellValue,
+  yearOf,
   showEndHour,
 } from './core';
 import { worldOf } from './mapgen';
@@ -31,6 +32,7 @@ import { roadDistance } from './pathfinding';
 import { serviceNow } from './sim';
 import { makeVehicle } from './state';
 import { canBookTour, tourMaxTier } from './tours';
+import { getTech, techsActiveIn } from './content/techs';
 import type { ActionOutcome, TycoonState } from './types';
 import { getProduct } from './content/gear';
 
@@ -161,6 +163,7 @@ export function sellVehicle(state: TycoonState, vehicleId: string): ActionOutcom
   const depot = depotInCity(s, v0.homeCityId);
   if (depot) depot.crew += v0.crew;
   s.vehicles = s.vehicles.filter(v => v.id !== vehicleId);
+  s.techs = s.techs.map(t => (t.vehicleId === vehicleId ? { techId: t.techId } : t));
   book(s, 'sales', value);
   return ok(s, `Sold ${v0.name} for ${formatMoney(state, value)}.`);
 }
@@ -267,5 +270,34 @@ export function repay(state: TycoonState): ActionOutcome {
   const s = cloneState(state);
   s.company.loan -= amount;
   s.company.cash -= amount;
+  return ok(s);
+}
+
+export function hireTech(state: TycoonState, techId: string): ActionOutcome {
+  const tech = getTech(techId);
+  const year = yearOf(state, state.hour);
+  if (!techsActiveIn(year, state.country).some(t => t.id === techId)) return fail(state, `${tech.name} isn't taking work right now.`);
+  if (state.techs.some(t => t.techId === techId)) return fail(state, `${tech.name} already works for you.`);
+  if (state.company.cash < tech.fee) return fail(state, `${tech.name} wants ${formatMoney(state, tech.fee)} to sign.`);
+  const s = cloneState(state);
+  s.techs.push({ techId });
+  book(s, 'wages', -tech.fee);
+  pushNews(s, `${tech.name} joins ${s.company.name} as ${tech.role.replace(/^[A-Z][a-z]/, m => m.toLowerCase())}.`, 'good');
+  return ok(s, `${tech.name} signed. Put them on a truck to bring them to the shows.`);
+}
+
+export function releaseTech(state: TycoonState, techId: string): ActionOutcome {
+  if (!state.techs.some(t => t.techId === techId)) return fail(state, 'Not on your payroll.');
+  const s = cloneState(state);
+  s.techs = s.techs.filter(t => t.techId !== techId);
+  return ok(s, `${getTech(techId).name} has moved on.`);
+}
+
+/** Put a star tech on a truck (or back at base with `vehicleId` null). */
+export function assignTech(state: TycoonState, techId: string, vehicleId: string | null): ActionOutcome {
+  if (!state.techs.some(t => t.techId === techId)) return fail(state, 'Not on your payroll.');
+  if (vehicleId && !state.vehicles.some(v => v.id === vehicleId && v.owner === 'player')) return fail(state, 'Unknown vehicle.');
+  const s = cloneState(state);
+  s.techs = s.techs.map(t => (t.techId === techId ? { ...t, vehicleId: vehicleId ?? undefined } : t));
   return ok(s);
 }

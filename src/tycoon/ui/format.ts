@@ -18,3 +18,13 @@ const RATING_LABELS = ['Appalling', 'Very Poor', 'Poor', 'Mediocre', 'Good', 'Ve
 export function ratingLabel(rating: number): string {
   return RATING_LABELS[Math.max(0, Math.min(7, Math.floor(rating / 12.5)))];
 }
+
+/** 6.8M / 480k */
+export function formatPopulation(n: number): string {
+  return n >= 1_000_000 ? `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1)}M` : `${Math.round(n / 1000)}k`;
+}
+
+/** What the town's venue scene amounts to — the map's size classes, in plain words. */
+export function marketLabel(size: string): string {
+  return { metropolis: 'Major market', city: 'Large market', town: 'Mid-size market', village: 'Small market' }[size] ?? size;
+}

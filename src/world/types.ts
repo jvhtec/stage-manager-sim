@@ -177,6 +177,8 @@ export interface GigResult {
   /** How well the delivered kit met this show's expectations (0.6-1.08). */
   gearQuality?: number;
   riderMet?: boolean;
+  /** Star techs who worked the show. */
+  techs?: string[];
 }
 
 export interface OverseasStop {
@@ -262,6 +264,13 @@ export interface NewsItem {
   gigId?: string;
 }
 
+/** A star tech on the payroll (see content/techs.ts). */
+export interface HiredTech {
+  techId: string;
+  /** Truck they ride with — they only help at shows that truck is at. */
+  vehicleId?: string;
+}
+
 export interface Company {
   name: string;
   color: string;
@@ -287,6 +296,7 @@ export interface TycoonState {
   cityRatings: Record<string, number>;
   rivals: Rival[];
   tours: Tour[];
+  techs: HiredTech[];
   news: NewsItem[];
   /** Year → category → signed amount (income positive, costs negative). */
   ledger: Record<number, Partial<Record<LedgerCategory, number>>>;

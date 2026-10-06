@@ -9,7 +9,7 @@ import { dateOfDay, dayOf, newId, pushNews } from './core';
 import { artistsTouringAt, homeWeight } from './content/artists';
 import { expectedQuality, productsAvailableIn } from './content/gear';
 import { roadDistance } from './pathfinding';
-import type { City, DeptCounts, Gig, Rider, TycoonState, Vehicle, Venue, WorldMap } from './types';
+import type { City, CitySize, DeptCounts, Gig, Rider, TycoonState, Vehicle, Venue, WorldMap } from './types';
 import { DEPTS } from './types';
 
 const ACT_ADJ = ['Velvet', 'Electric', 'Midnight', 'Neon', 'Broken', 'Golden', 'Silent', 'Wild', 'Paper', 'Crimson', 'Lunar', 'Static'];
@@ -141,9 +141,12 @@ function pickRider(needs: DeptCounts, tier: number, year: number, rng: Rng): Rid
   return { dept, brand: rng.pick(brands) };
 }
 
+/** Daily chance of a new show offer, by how much venue a town has (not raw population). */
+const OFFER_RATE: Record<CitySize, number> = { village: 0.05, town: 0.075, city: 0.15, metropolis: 0.36 };
+
 export function dailyOffers(state: TycoonState, world: WorldMap, rng: Rng) {
   world.cities.forEach(city => {
-    const chance = 0.045 + (city.population / 1_300_000) * 0.35;
+    const chance = OFFER_RATE[city.size];
     if (rng.chance(chance)) {
       const gig = generateOffer(state, world, city, rng);
       if (gig) state.gigs.push(gig);

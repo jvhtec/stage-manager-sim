@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createRng } from '@/lib/rng';
 import { createTycoonGame } from '../state';
 import { getWorld, worldOf } from '../mapgen';
-import { COUNTRIES } from '../content/countries';
+import { COUNTRIES, cityNames } from '../content/countries';
 import { ARTISTS, findArtist } from '../content/artists';
 import { rivalsFor } from '../content/companies';
 import { generateOffer } from '../offers';
@@ -21,6 +21,11 @@ describe('countries', () => {
     const metroEs = es.cities.find(c => c.size === 'metropolis')!;
     expect(metroEs.name).toBe('Madrid');
     expect(gb.cities.find(c => c.size === 'metropolis')!.name).toBe('London');
+    // Real (metro-area) populations, in size order.
+    expect(metroEs.population).toBe(6_800_000);
+    const sorted = [...es.cities].sort((a, b) => b.population - a.population);
+    expect(sorted[0].size).toBe('metropolis');
+    expect(sorted.every((c, i) => i === 0 || c.population <= sorted[i - 1].population)).toBe(true);
     // Same roads and positions, different names.
     expect(es.cities.map(c => [c.x, c.y])).toEqual(gb.cities.map(c => [c.x, c.y]));
     expect(Array.from(es.road)).toEqual(Array.from(gb.road));
@@ -32,7 +37,7 @@ describe('countries', () => {
     COUNTRIES.forEach(c => {
       expect(c.cities.length).toBeGreaterThanOrEqual(16);
       const s = game(c.code);
-      expect(worldOf(s).cities.every(city => c.cities.includes(city.name))).toBe(true);
+      expect(worldOf(s).cities.every(city => cityNames(c).includes(city.name))).toBe(true);
       expect(s.rivals.length).toBeGreaterThanOrEqual(4);
     });
   });

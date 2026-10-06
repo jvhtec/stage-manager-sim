@@ -3,6 +3,7 @@ import { rehomeVehicle, sellVehicle, sendHome, serviceVehicle, unassignVehicle }
 import { SERVICE_INTERVAL_DAYS, getModel } from '@/world/catalog';
 import { stockSize } from '@/world/loading';
 import { StockLines } from './gear';
+import { getTech } from '@/world/content/techs';
 import { formatDay, gigById, sellValue, vehicleAgeYears } from '@/world/core';
 import { worldOf } from '@/world/mapgen';
 import { vehicleActivity } from '@/world/queries';
@@ -25,6 +26,7 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
     if (r.message) ctx.toast(r.message, r.ok);
   };
   const following = ctx.followingId === v.id;
+  const aboard = state.techs.filter(t => t.vehicleId === v.id);
 
   return (
     <div>
@@ -37,6 +39,14 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
           {following ? 'Following' : 'Follow'}
         </button>
       </div>
+      {aboard.length > 0 && (
+        <div className="tt-item clickable" style={{ marginBottom: 6 }} onClick={() => ctx.open('talent')}>
+          <span>🎧</span>
+          <span className="grow">
+            {aboard.map(t => `${getTech(t.techId).name} (${getTech(t.techId).role})`).join(', ')} riding along
+          </span>
+        </div>
+      )}
       <Stat label="Model">{model.name}</Stat>
       <Stat label="Home depot">{world.cityById.get(v.homeCityId)?.name}</Stat>
       <Stat label="Age">

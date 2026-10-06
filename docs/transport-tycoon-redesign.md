@@ -77,7 +77,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 44 tests):
+(`src/world/__tests__/*.test.ts`, 47 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 - All randomness goes through the seeded `rngState` (same discipline as `src/lib/rng.ts`).
 - Actions (`src/world/actions.ts`) are `(state, …) → { state, result }`, same pattern as
   `src/engine/**`.
-- Save key `stage-manager-sim:tycoon` (v4: country, consoles) — separate from the classic save.
+- Save key `stage-manager-sim:tycoon` (v5: star techs, real populations) — separate from the classic save.
 
 A headless bot played two in-game years on three seeds during tuning: it survives, but stalls at
 Local Circuit unless it buys bigger trucks and more gear. That upgrade pressure is intended.
@@ -154,6 +154,18 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
   Spain LIL Service (1979, later Twin Cam Audio), Milán Acústica (1981), Berenice, Sorter,
   Apogee, then Fluge (1991); in the US Tycobrahe Sound (1968–81) and Silverfish (→ Sound Image,
   1984). Rivals set up in their real home city when it's on the map.
+
+- **Real populations** — towns carry approximate real metro-area populations (Madrid 6.8M,
+  London 9.8M, New York 19.5M…), ranked so the biggest market gets the stadium. Show offers
+  scale with each town's venue scene (its size class), not raw population, so the economy
+  stays balanced; the UI calls towns major / large / mid-size / small markets.
+- **Star techs** (`content/techs.ts`) — a handful of real big-name crew per era, in their
+  professional roles only: FOH engineers (Bruce Jackson, Buford Jones, Joe O'Herlihy, Dave
+  Natale, Big Mick Hughes, Robert Scovill), lighting/show designers (Marc Brickman, Patrick
+  Woodroffe, Willie Williams, LeRoy Bennett, Peter Morse), staging/production (Mark Fisher,
+  Jake Berry, Es Devlin). They're hireable during their career window for a signing fee and a
+  day rate, ride with a truck, and lift every show that truck plays (more for acts they're
+  known for); they retire when their careers did. Add local legends with `countries`.
 
 Years and careers are approximate and for flavour. This uses real names for personal play;
 note that pushing to `main` publishes the build to GitHub Pages.

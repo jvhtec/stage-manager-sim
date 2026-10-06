@@ -49,6 +49,7 @@ import { worldOf } from './mapgen';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize } from './loading';
 import { GEAR_PRODUCTS } from './content/gear';
 import { rivalsFor } from './content/companies';
+import { getTech, techBonus, techsActiveIn } from './content/techs';
 import { dailyOffers, pruneGigs, rivalsTakeOffers } from './offers';
 import { dailyTours } from './tours';
 import { getRegion } from './content/world';
@@ -336,6 +337,8 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     crew += v.crew;
   });
   const gear = evaluateGear(delivered, gig, yearOf(s, s.hour));
+  const onSiteIds = new Set(onSite.map(v => v.id));
+  const techIds = s.techs.filter(t => t.vehicleId && onSiteIds.has(t.vehicleId)).map(t => t.techId);
   const gearCoverage = gear.coverage;
   const crewCoverage = Math.min(1, crew / Math.max(1, gig.crewNeeded));
   const lastArrival = Math.max(...onSite.map(v => v.arrivedHour ?? 0), 0);
@@ -344,11 +347,11 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     0,
     Math.min(
       1,
-      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet }) +
+      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) }) +
         (rng.next() - 0.5) * 0.08,
     ),
   );
-  const resultExtras = { gearQuality: gear.quality, riderMet: gear.riderMet };
+  const resultExtras = { gearQuality: gear.quality, riderMet: gear.riderMet, techs: techIds.length ? techIds : undefined };
   const tw = TIER_WEIGHT[gig.tier];
   const rating = s.cityRatings[gig.cityId] ?? 50;
 
@@ -397,7 +400,8 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const verdict = quality >= 0.9 ? 'Storming show' : quality >= 0.7 ? 'Solid show' : 'Rough show';
   const riderNote = gear.riderMet === undefined ? '' : gear.riderMet ? ` Rider (${gig.rider!.brand}) honoured.` : ` They wanted ${gig.rider!.brand} and didn't get it.`;
   const kitNote = gear.quality < 0.8 ? ' Reviewers called the kit dated.' : '';
-  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}.${riderNote}${kitNote}`, quality >= 0.7 ? 'good' : 'info', {
+  const techNote = techIds.length ? ` ${techIds.map(id => getTech(id).name).join(' & ')} on the crew.` : '';
+  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}.${riderNote}${kitNote}${techNote}`, quality >= 0.7 ? 'good' : 'info', {
     cityId: gig.cityId,
     gigId: gig.id,
   });
@@ -423,7 +427,8 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   updateRivals(s, world, date.getUTCFullYear());
 
   // Running costs and wages land every day — idle trucks and idle crew cost money.
-  book(s, 'wages', -totalCrew(s) * CREW_WAGE_PER_DAY);
+  book(s, 'wages', -totalCrew(s) * CREW_WAGE_PER_DAY - s.techs.reduce((sum, t) => sum + getTech(t.techId).wagePerDay, 0));
+  updateTechs(s, date.getUTCFullYear());
   s.vehicles.forEach(v => {
     if (v.owner !== 'player') return;
     const model = getModel(v.modelId);
@@ -535,6 +540,22 @@ export function updateRivals(s: TycoonState, world: WorldMap, year: number) {
       if (s.hour > 24) pushNews(s, latest.news, 'big', { cityId: rival.hqCityId });
     }
   });
+}
+
+/** Star techs retire at the end of their career; new names come onto the market. */
+function updateTechs(s: TycoonState, year: number) {
+  s.techs = s.techs.filter(h => {
+    const t = getTech(h.techId);
+    if (year <= t.to) return true;
+    pushNews(s, `${t.name} hangs up the headphones — thanks for the shows.`, 'big');
+    return false;
+  });
+  if (s.hour <= 24) return;
+  const first = dateOfDay(s, dayOf(s.hour));
+  if (first.getUTCMonth() !== 0 || first.getUTCDate() !== 1) return;
+  techsActiveIn(year, s.country)
+    .filter(t => t.from === year)
+    .forEach(t => pushNews(s, `${t.name} (${t.role}) is taking calls — see Star techs.`, 'big'));
 }
 
 export function describeDate(s: TycoonState): string {
