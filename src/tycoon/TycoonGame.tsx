@@ -13,6 +13,7 @@ import {
   MapPin,
   Newspaper,
   Pause,
+  SlidersHorizontal,
   Play,
   TrendingUp,
   Trophy,
@@ -38,6 +39,7 @@ import { GigWindow, ShowsWindow } from './ui/shows';
 import { TourWindow } from './ui/tours';
 import { TalentWindow } from './ui/talent';
 import { MarketWindow } from './ui/market';
+import { PoliciesWindow } from './ui/policies';
 import { FinanceWindow, GameOverPanel, HelpWindow, LeagueWindow, NewGameForm, NewsWindow } from './ui/company';
 import type { WinCtx, WindowKind } from './ui/types';
 import './tycoon.css';
@@ -219,6 +221,8 @@ export default function TycoonGame() {
         return 'Star techs';
       case 'market':
         return 'Market';
+      case 'policies':
+        return 'Company policies';
       case 'help':
         return 'How to play';
       case 'menu':
@@ -258,6 +262,8 @@ export default function TycoonGame() {
         return <TalentWindow ctx={ctx} />;
       case 'market':
         return <MarketWindow ctx={ctx} />;
+      case 'policies':
+        return <PoliciesWindow ctx={ctx} />;
       case 'help':
         return <HelpWindow />;
       case 'menu':
@@ -265,6 +271,9 @@ export default function TycoonGame() {
           <div className="tt-menu">
             <button className="tt-btn" onClick={() => open('market')}>
               <TrendingUp /> Market
+            </button>
+            <button className="tt-btn" onClick={() => open('policies')}>
+              <SlidersHorizontal /> Policies
             </button>
             <button className="tt-btn" onClick={() => open('talent')}>
               <Headphones /> Star techs
@@ -431,6 +440,9 @@ export default function TycoonGame() {
               </button>
               <button className="tt-btn" onClick={() => open('market')} title="Market">
                 <TrendingUp />
+              </button>
+              <button className="tt-btn" onClick={() => open('policies')} title="Company policies">
+                <SlidersHorizontal />
               </button>
               <button className="tt-btn" onClick={() => open('talent')} title="Star techs">
                 <Headphones />

@@ -1,6 +1,6 @@
 import { tourBookingBar } from '@/world/standing';
 import { assignVehicleToTour, bookTour } from '@/world/actions';
-import { getModel, tierInfo } from '@/world/catalog';
+import { getModel } from '@/world/catalog';
 import { dayOf, formatDay, lastShowDay } from '@/world/core';
 import { findArtist } from '@/world/content/artists';
 import { getRegion } from '@/world/content/world';

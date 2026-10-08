@@ -7,8 +7,8 @@
  * vehicles at the tile they're on). Labels, show markers and floodlight
  * beams go on top afterwards. Returns screen-space hit targets for picking.
  */
-import { gigBookingBar, tourBookingBar } from '@/world/standing';
-import { getModel, SHOW_END_HOUR, SHOW_START_HOUR, tierInfo, companyTier } from '@/world/catalog';
+import { gigBookingBar } from '@/world/standing';
+import { getModel, SHOW_END_HOUR, SHOW_START_HOUR, tierInfo } from '@/world/catalog';
 import { dayOf, loadInHour, loadOutDoneHour } from '@/world/core';
 import { getCountry } from '@/world/content/countries';
 import { tileCorners } from '@/world/mapgen';

@@ -14,9 +14,9 @@ import {
 import { dayOf, depotInCity, formatDay, freeLot } from '@/world/core';
 import { worldOf } from '@/world/mapgen';
 import { vehicleActivity } from '@/world/queries';
-import { DEPTS, type Gig } from '@/world/types';
+import type { Gig } from '@/world/types';
 import { gigDates } from './gigInfo';
-import { Bar, DeptDot, Stat, TierChip } from './bits';
+import { Bar, Stat, TierChip } from './bits';
 import { formatPopulation, kmoney, marketLabel, money, ratingLabel } from './format';
 import type { WinCtx } from './types';
 

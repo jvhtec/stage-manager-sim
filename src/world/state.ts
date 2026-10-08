@@ -15,7 +15,7 @@ import { getWorld } from './mapgen';
 import { generateOffer } from './offers';
 import { marketNow } from './market';
 import { roadDistance } from './pathfinding';
-import { DEPTS, type GearStock, type TycoonState, type Vehicle } from './types';
+import { DEPTS, type GearStock, type Policies, type TycoonState, type Vehicle } from './types';
 
 export const TYCOON_SAVE_KEY = 'stage-manager-sim:tycoon';
 // v2: gear became real products (GearStock), plus artist relations, riders
@@ -26,6 +26,8 @@ export const TYCOON_SAVE_KEY = 'stage-manager-sim:tycoon';
 // v5 saves are migrated by filling in the new fields.
 export const TYCOON_SAVE_VERSION = 6;
 const OLDEST_MIGRATABLE = 5;
+
+export const DEFAULT_POLICIES: Policies = { workshop: 'basic', pay: 'standard', insurance: 'none' };
 
 export interface NewGameOptions {
   companyName: string;
@@ -135,6 +137,8 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     ledger: {},
     announcedModels: VEHICLE_MODELS.filter(m => m.introYear <= startYear).map(m => m.id),
     announcedGear: productsAvailableIn(startYear).map(p => p.id),
+    policies: { ...DEFAULT_POLICIES },
+    gearCondition: {},
     festivalsPosted: [],
     announcedClimate: [],
     artistRelations: {},
@@ -215,6 +219,8 @@ export function migrate(state: Partial<TycoonState>): TycoonState {
   const s = state as TycoonState;
   s.announcedClimate ??= [];
   s.festivalsPosted ??= [];
+  s.policies = { ...DEFAULT_POLICIES, ...s.policies };
+  s.gearCondition ??= {};
   return s;
 }
 

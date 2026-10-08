@@ -5,12 +5,9 @@
 import {
   CREW_HIRE_COST,
   DEPOT_BUILD_COST,
-  GEAR_RESALE_RATE,
   LOAN_STEP,
   MAX_LOAN,
-  companyTier,
   getModel,
-  tierInfo,
 } from './catalog';
 import {
   book,
@@ -34,7 +31,8 @@ import { makeVehicle } from './state';
 import { tourMaxTier } from './tours';
 import { gigBookingBar, tourBookingBar } from './standing';
 import { getTech, techsActiveIn } from './content/techs';
-import type { ActionOutcome, TycoonState } from './types';
+import type { ActionOutcome, Policies, TycoonState } from './types';
+import { onBought, ownedStock, refurbishCost, resaleValue } from './wear';
 import { getProduct } from './content/gear';
 
 const fail = (state: TycoonState, message: string): ActionOutcome => ({ state, result: { ok: false, message } });
@@ -197,6 +195,7 @@ export function buyGear(state: TycoonState, depotId: string, productId: string, 
   const depot = s.depots.find(d => d.id === depotId);
   if (!depot) return fail(state, 'Unknown depot.');
   depot.gear[productId] = (depot.gear[productId] ?? 0) + qty;
+  onBought(s, productId, qty);
   book(s, 'purchases', -cost);
   return ok(s);
 }
@@ -207,7 +206,26 @@ export function sellGear(state: TycoonState, depotId: string, productId: string,
   if (!depot || (depot.gear[productId] ?? 0) < qty) return fail(state, 'Nothing in the warehouse to sell.');
   depot.gear[productId] -= qty;
   if (!depot.gear[productId]) delete depot.gear[productId];
-  book(s, 'sales', Math.round(getProduct(productId).price * GEAR_RESALE_RATE * qty));
+  book(s, 'sales', resaleValue(state, productId) * qty);
+  if (!ownedStock(s)[productId]) delete s.gearCondition[productId];
+  return ok(s);
+}
+
+/** Restores a whole product line to as-new condition. */
+export function refurbishGear(state: TycoonState, productId: string): ActionOutcome {
+  const cost = refurbishCost(state, productId);
+  if (cost <= 0) return fail(state, 'That kit is already in perfect condition.');
+  if (state.company.cash < cost) return fail(state, `Refurbishing costs ${formatMoney(state, cost)} — not enough cash.`);
+  const s = cloneState(state);
+  s.gearCondition[productId] = 100;
+  book(s, 'workshop', -cost);
+  const p = getProduct(productId);
+  return ok(s, `Every ${p.brand} ${p.name} is back to as-new (${formatMoney(state, cost)}).`);
+}
+
+export function setPolicy<K extends keyof Policies>(state: TycoonState, key: K, value: Policies[K]): ActionOutcome {
+  const s = cloneState(state);
+  s.policies[key] = value;
   return ok(s);
 }
 

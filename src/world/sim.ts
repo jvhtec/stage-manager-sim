@@ -46,7 +46,8 @@ import {
 } from './core';
 import { worldOf } from './mapgen';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize } from './loading';
-import { GEAR_PRODUCTS } from './content/gear';
+import { GEAR_PRODUCTS, getProduct } from './content/gear';
+import { dailyWorkshop, monthlyWorkshop, rollFailure, wearFromShow, type Failure } from './wear';
 import { rivalsFor } from './content/companies';
 import { getTech, techBonus, techsActiveIn } from './content/techs';
 import { dailyOffers, pruneGigs, rivalsTakeOffers } from './offers';
@@ -339,7 +340,19 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     addStock(delivered, v.cargo);
     crew += v.crew;
   });
-  const gear = evaluateGear(delivered, gig, yearOf(s, s.hour));
+  // Worn kit can pack up on the night (once per show day).
+  const working: GearStock = { ...delivered };
+  const showDays = gig.overseas ? gig.overseas.stops.length : (gig.days ?? 1);
+  const failures: Failure[] = [];
+  for (let d = 0; d < Math.min(4, showDays); d++) {
+    const f = rollFailure(s, working, rng);
+    if (f) failures.push(f);
+  }
+  const gear = evaluateGear(working, gig, yearOf(s, s.hour), s.gearCondition);
+  wearFromShow(s, delivered, showDays, !!gig.overseas);
+  const failureNote = failures.length
+    ? ` ${failures.map(f => `${getProduct(f.productId).brand} ${getProduct(f.productId).name}`).join(' and ')} died mid-set.`
+    : '';
   const onSiteIds = new Set(onSite.map(v => v.id));
   const techIds = s.techs.filter(t => t.vehicleId && onSiteIds.has(t.vehicleId)).map(t => t.techId);
   const gearCoverage = gear.coverage;
@@ -369,7 +382,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     pushNews(
       s,
       onSite.length
-        ? `Disaster at ${where}: ${gig.act} played to a half-built rig. Penalty ${formatMoney(s, penalty)}.`
+        ? `Disaster at ${where}: ${gig.act} played to a half-built rig.${failureNote} Penalty ${formatMoney(s, penalty)}.`
         : `No-show! Nobody turned up for ${gig.act} at ${where}. Penalty ${formatMoney(s, penalty)}.`,
       'bad',
       { cityId: gig.cityId, gigId: gig.id },
@@ -404,7 +417,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const riderNote = gear.riderMet === undefined ? '' : gear.riderMet ? ` Rider (${gig.rider!.brand}) honoured.` : ` They wanted ${gig.rider!.brand} and didn't get it.`;
   const kitNote = gear.quality < 0.8 ? ' Reviewers called the kit dated.' : '';
   const techNote = techIds.length ? ` ${techIds.map(id => getTech(id).name).join(' & ')} on the crew.` : '';
-  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}.${riderNote}${kitNote}${techNote}`, quality >= 0.7 ? 'good' : 'info', {
+  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}.${failureNote}${riderNote}${kitNote}${techNote}`, quality >= 0.7 ? 'good' : 'info', {
     cityId: gig.cityId,
     gigId: gig.id,
   });
@@ -434,6 +447,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   book(s, 'wages', -wages);
   dailyMarket(s, wages);
   updateTechs(s, date.getUTCFullYear());
+  dailyWorkshop(s);
   s.vehicles.forEach(v => {
     if (v.owner !== 'player') return;
     const model = getModel(v.modelId);
@@ -465,6 +479,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
 
 function monthlyTick(s: TycoonState) {
   book(s, 'property', -s.depots.length * DEPOT_UPKEEP_PER_MONTH);
+  monthlyWorkshop(s);
   if (s.company.loan > 0) book(s, 'interest', -monthlyInterest(s));
 
   // During a shutdown the banks give everyone a repayment holiday.

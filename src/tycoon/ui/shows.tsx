@@ -1,11 +1,13 @@
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
 import { assignVehicle, bookGig, unassignVehicle } from '@/world/actions';
-import { DEPT_COLORS, DEPT_LABELS, LOAD_IN_HOUR, SHOW_END_HOUR, SHOW_START_HOUR, companyTier, getModel, tierInfo } from '@/world/catalog';
+import { DEPT_COLORS, DEPT_LABELS, LOAD_IN_HOUR, SHOW_END_HOUR, SHOW_START_HOUR, getModel } from '@/world/catalog';
 import { dateOfDay, dayOf, formatDay, formatHour, loadInHour, loadOutDoneHour, sumCounts } from '@/world/core';
 import { getRegion } from '@/world/content/world';
 import { artistTierIn, findArtist } from '@/world/content/artists';
 import { expectedQuality } from '@/world/content/gear';
+import { averageCondition, failureChance } from '@/world/wear';
+import { ConditionChip } from './gear';
 import { getTech } from '@/world/content/techs';
 import { worldOf } from '@/world/mapgen';
 import { roadDistance } from '@/world/pathfinding';
@@ -174,6 +176,15 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
                   {Math.round(projection.evaluation.quality * 100)}%
                 </span>
               </Stat>
+              <Stat label="Kit condition">
+                <ConditionChip value={averageCondition(state, projection.delivered)} />{' '}
+                <span className="tt-dim">
+                  {Math.round(
+                    (1 - (1 - failureChance(averageCondition(state, projection.delivered))) ** Math.min(4, gig.overseas ? gig.overseas.stops.length : (gig.days ?? 1))) * 100,
+                  )}
+                  % failure risk
+                </span>
+              </Stat>
               {gig.rider && (
                 <Stat label="Rider">
                   {projection.evaluation.riderMet ? (
@@ -303,7 +314,6 @@ function Row({ label, color, need, have }: { label: string; color: string; need:
 export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
   const [tab, setTab] = useState<'offers' | 'tours' | 'booked' | 'history'>('offers');
-  const world = worldOf(state);
   const today = dayOf(state.hour);
   const isLocked = (g: Gig) => Number(!!gigBookingBar(state, g).reason);
   const offers = state.gigs
@@ -336,8 +346,6 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
       ) : (
       <div className="tt-list">
         {list.map(g => {
-          const venue = world.venueById.get(g.venueId);
-          const city = world.cityById.get(g.cityId);
           const dist = nearestDepotDistance(state, g);
           let right: React.ReactNode = <b>{kmoney(g.fee)}</b>;
           if (tab === 'booked') {

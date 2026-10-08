@@ -77,6 +77,8 @@ export interface CoverageProjection {
   expectedQuality: number;
   /** Star techs riding with the assigned trucks. */
   techIds: string[];
+  /** The kit that would go out, by product. */
+  delivered: GearStock;
 }
 
 /** What would turn up at `gig` if things go to plan — runs the sim's own loading and scoring. */
@@ -109,7 +111,7 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
     depot.crew -= seats;
   });
 
-  const evaluation = evaluateGear(delivered, gig, dateOfDay(state, gig.day).getUTCFullYear());
+  const evaluation = evaluateGear(delivered, gig, dateOfDay(state, gig.day).getUTCFullYear(), state.gearCondition);
   const vehicleIds = new Set(vehicles.map(v => v.id));
   const techIds = state.techs.filter(t => t.vehicleId && vehicleIds.has(t.vehicleId)).map(t => t.techId);
   const onTime = !vehicles.length || latestArrival <= loadInHour(gig);
@@ -123,19 +125,20 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
         bonus: techBonus(techIds, gig.act),
       })
     : 0;
-  return { gear: evaluation.delivered, crew, latestArrival, onTime, vehicles, evaluation, expectedQuality, techIds };
+  return { gear: evaluation.delivered, crew, latestArrival, onTime, vehicles, evaluation, expectedQuality, techIds, delivered };
 }
 
-export function stockValue(stock: GearStock): number {
+/** What a pile of kit would fetch, given its condition. */
+export function stockValue(stock: GearStock, condition: Record<string, number> = {}): number {
   let total = 0;
-  for (const id in stock) total += getProduct(id).price * GEAR_RESALE_RATE * stock[id];
+  for (const id in stock) total += getProduct(id).price * GEAR_RESALE_RATE * (0.5 + 0.5 * ((condition[id] ?? 100) / 100)) * stock[id];
   return total;
 }
 
 export function companyValue(state: TycoonState): number {
   const fleet = state.vehicles.filter(v => v.owner === 'player').reduce((sum, v) => sum + sellValue(v, state.hour), 0);
-  const gear = state.depots.reduce((sum, d) => sum + stockValue(d.gear), 0);
-  const inTransit = state.vehicles.filter(v => v.owner === 'player').reduce((sum, v) => sum + stockValue(v.cargo), 0);
+  const gear = state.depots.reduce((sum, d) => sum + stockValue(d.gear, state.gearCondition), 0);
+  const inTransit = state.vehicles.filter(v => v.owner === 'player').reduce((sum, v) => sum + stockValue(v.cargo, state.gearCondition), 0);
   return Math.round(state.company.cash - state.company.loan + fleet + gear + inTransit + state.depots.length * 20000);
 }
 

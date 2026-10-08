@@ -102,6 +102,7 @@ export type LedgerCategory =
   | 'interest'
   | 'freight'
   | 'support'
+  | 'workshop'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -115,6 +116,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   interest: 'Loan interest',
   freight: 'Air freight & flights',
   support: 'Government support',
+  workshop: 'Gear maintenance',
   sales: 'Asset sales',
 };
 
@@ -277,6 +279,17 @@ export interface HiredTech {
   vehicleId?: string;
 }
 
+export type WorkshopLevel = 'none' | 'basic' | 'full';
+export type PayLevel = 'low' | 'standard' | 'high';
+export type InsuranceLevel = 'none' | 'basic' | 'full';
+
+/** Standing company policies — the levers you set once and live with. */
+export interface Policies {
+  workshop: WorkshopLevel;
+  pay: PayLevel;
+  insurance: InsuranceLevel;
+}
+
 export interface Company {
   name: string;
   color: string;
@@ -310,6 +323,9 @@ export interface TycoonState {
   announcedModels: string[];
   /** Gear product ids already announced as available. */
   announcedGear: string[];
+  policies: Policies;
+  /** Product id → average condition (0-100) of the units you own; missing = 100. */
+  gearCondition: Record<string, number>;
   /** Festival tenders already opened, as "festivalId-year". */
   festivalsPosted: string[];
   /** Economy periods (content/economy.ts) already announced. */
