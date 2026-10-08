@@ -7,7 +7,7 @@ import { getTech } from '@/world/content/techs';
 import { formatDay, gigById, sellValue, vehicleAgeYears } from '@/world/core';
 import { worldOf } from '@/world/mapgen';
 import { vehicleActivity } from '@/world/queries';
-import { Bar, Stat } from './bits';
+import { Bar, FatigueChip, Stat } from './bits';
 import { kmoney, money } from './format';
 import type { WinCtx } from './types';
 
@@ -70,6 +70,11 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
       <h4>
         Load ({stockSize(v.cargo)}/{model.gearCapacity} gear · {v.crew}/{model.crewSeats} crew)
       </h4>
+      {v.crew > 0 && (
+        <Stat label="Crew aboard">
+          <FatigueChip value={v.crewFatigue ?? 0} />
+        </Stat>
+      )}
       <StockLines stock={v.cargo} state={state} />
 
       <h4>Orders</h4>

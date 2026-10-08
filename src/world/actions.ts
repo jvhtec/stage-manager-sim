@@ -32,6 +32,7 @@ import { tourMaxTier } from './tours';
 import { gigBookingBar, tourBookingBar } from './standing';
 import { getTech, techsActiveIn } from './content/techs';
 import type { ActionOutcome, Policies, TycoonState } from './types';
+import { mixFatigue } from './crew';
 import { onBought, ownedStock, refurbishCost, resaleValue } from './wear';
 import { getProduct } from './content/gear';
 
@@ -235,6 +236,7 @@ export function hireCrew(state: TycoonState, depotId: string, qty = 1): ActionOu
   const s = cloneState(state);
   const depot = s.depots.find(d => d.id === depotId);
   if (!depot) return fail(state, 'Unknown depot.');
+  depot.fatigue = mixFatigue(depot.crew, depot.fatigue ?? 0, qty, 0);
   depot.crew += qty;
   book(s, 'wages', -cost);
   return ok(s);

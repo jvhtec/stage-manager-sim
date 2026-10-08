@@ -138,6 +138,7 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     announcedModels: VEHICLE_MODELS.filter(m => m.introYear <= startYear).map(m => m.id),
     announcedGear: productsAvailableIn(startYear).map(p => p.id),
     policies: { ...DEFAULT_POLICIES },
+    crewMorale: 65,
     gearCondition: {},
     festivalsPosted: [],
     announcedClimate: [],
@@ -221,6 +222,7 @@ export function migrate(state: Partial<TycoonState>): TycoonState {
   s.festivalsPosted ??= [];
   s.policies = { ...DEFAULT_POLICIES, ...s.policies };
   s.gearCondition ??= {};
+  s.crewMorale ??= 65;
   return s;
 }
 

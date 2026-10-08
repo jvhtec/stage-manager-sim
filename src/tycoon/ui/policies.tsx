@@ -1,6 +1,8 @@
 import { setPolicy } from '@/world/actions';
 import { WORKSHOP, WORKSHOP_LEVELS, averageCondition, monthlyWorkshopCost, ownedStock } from '@/world/wear';
-import { Stat } from './bits';
+import { Bar, FatigueChip, Stat } from './bits';
+import { CREW_WAGE_PER_DAY } from '@/world/catalog';
+import { PAY, PAY_LEVELS, averageFatigue, moraleTarget } from '@/world/crew';
 import { ConditionChip } from './gear';
 import { money } from './format';
 import type { WinCtx } from './types';
@@ -64,6 +66,33 @@ export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
       <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
         Every show wears the kit it uses — festivals and world tours most. Worn kit performs worse, sells for less and is far
         likelier to die mid-set. Refurbish a whole product line with 🔧 in a warehouse.
+      </div>
+
+      <h4>Crew pay & morale</h4>
+      <div className="tt-row">
+        <span className="tt-dim">Morale</span>
+        <span>
+          <b>{Math.round(state.crewMorale)}</b> <span className="tt-dim">→ {Math.round(moraleTarget(state))}</span>
+        </span>
+      </div>
+      <Bar value={state.crewMorale} max={100} color={state.crewMorale >= 60 ? '#22c55e' : state.crewMorale >= 40 ? '#f59e0b' : '#ef4444'} />
+      <Stat label="How tired the crews are">
+        <FatigueChip value={averageFatigue(state)} />
+      </Stat>
+      <Choice
+        value={state.policies.pay}
+        options={PAY_LEVELS.map(id => ({
+          id,
+          label: PAY[id].label,
+          detail: PAY[id].blurb,
+          note: `${money(CREW_WAGE_PER_DAY * PAY[id].wage)}/day`,
+        }))}
+        onPick={id => set('pay', id)}
+      />
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        Days on the road tire crews out (tours and festivals most) and tired crews build worse shows; they recover at home.
+        Morale drifts each month towards what you pay, less how worn out everyone is. Good morale lifts every show; below 40,
+        people start quitting.
       </div>
     </div>
   );

@@ -2,6 +2,7 @@
 import { GEAR_RESALE_RATE, getModel } from './catalog';
 import { getProduct } from './content/gear';
 import { techBonus } from './content/techs';
+import { crewEffectiveness, effectiveCrew, moraleBonus } from './crew';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize, type GearEvaluation } from './loading';
 import {
   dateOfDay,
@@ -84,9 +85,10 @@ export interface CoverageProjection {
 /** What would turn up at `gig` if things go to plan — runs the sim's own loading and scoring. */
 export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjection {
   const vehicles = state.vehicles.filter(v => v.owner === 'player' && v.orders.includes(gig.id));
-  const stock = new Map(state.depots.map(d => [d.cityId, { gear: { ...d.gear }, crew: d.crew }]));
+  const stock = new Map(state.depots.map(d => [d.cityId, { gear: { ...d.gear }, crew: d.crew, fatigue: d.fatigue ?? 0 }]));
   const delivered: GearStock = {};
   let crew = 0;
+  let effCrew = 0;
   let latestArrival = 0;
 
   // Already-loaded vehicles first (that's what the sim nets out), then the rest.
@@ -97,6 +99,7 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
     if (isLoaded(v)) {
       addStock(delivered, v.cargo);
       crew += v.crew;
+      effCrew += effectiveCrew(v);
       return;
     }
     const model = getModel(v.modelId);
@@ -108,6 +111,7 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
     addStock(delivered, pickGear(depot.gear, remaining, model.gearCapacity, gig.rider));
     const seats = Math.min(model.crewSeats, Math.max(0, gig.crewNeeded - crew), depot.crew);
     crew += seats;
+    effCrew += seats * crewEffectiveness(depot.fatigue);
     depot.crew -= seats;
   });
 
@@ -118,11 +122,11 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
   const expectedQuality = vehicles.length
     ? baseShowQuality({
         gearCoverage: evaluation.coverage,
-        crewCoverage: Math.min(1, crew / Math.max(1, gig.crewNeeded)),
+        crewCoverage: Math.min(1, effCrew / Math.max(1, gig.crewNeeded)),
         lateHours: Math.max(0, latestArrival - loadInHour(gig)),
         gearQuality: evaluation.quality,
         riderMet: evaluation.riderMet,
-        bonus: techBonus(techIds, gig.act),
+        bonus: techBonus(techIds, gig.act) + moraleBonus(state.crewMorale),
       })
     : 0;
   return { gear: evaluation.delivered, crew, latestArrival, onTime, vehicles, evaluation, expectedQuality, techIds, delivered };

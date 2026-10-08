@@ -9,7 +9,6 @@
  */
 import type { Rng } from '@/lib/rng';
 import {
-  CREW_WAGE_PER_DAY,
   DEPOT_UPKEEP_PER_MONTH,
   HOURS_PER_DAY,
   NEGATIVE_MONTHS_GAME_OVER,
@@ -47,6 +46,7 @@ import {
 import { worldOf } from './mapgen';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize } from './loading';
 import { GEAR_PRODUCTS, getProduct } from './content/gear';
+import { crewWage, dailyCrew, effectiveCrew, mixFatigue, monthlyCrew, moraleBonus } from './crew';
 import { dailyWorkshop, monthlyWorkshop, rollFailure, wearFromShow, type Failure } from './wear';
 import { rivalsFor } from './content/companies';
 import { getTech, techBonus, techsActiveIn } from './content/techs';
@@ -154,6 +154,7 @@ function loadVehicle(s: TycoonState, v: Vehicle, gig: Gig) {
   addStock(v.cargo, picked);
   const seats = Math.min(model.crewSeats - v.crew, crewRemaining, depot.crew);
   if (seats > 0) {
+    v.crewFatigue = mixFatigue(v.crew, v.crewFatigue ?? 0, seats, depot.fatigue ?? 0);
     depot.crew -= seats;
     v.crew += seats;
   }
@@ -166,7 +167,9 @@ function unloadVehicle(s: TycoonState, v: Vehicle) {
   const depot = depotInCity(s, v.homeCityId);
   if (!depot) return;
   addStock(depot.gear, v.cargo);
+  depot.fatigue = mixFatigue(depot.crew, depot.fatigue ?? 0, v.crew, v.crewFatigue ?? 0);
   depot.crew += v.crew;
+  v.crewFatigue = 0;
   v.cargo = {};
   v.crew = 0;
 }
@@ -356,14 +359,16 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const onSiteIds = new Set(onSite.map(v => v.id));
   const techIds = s.techs.filter(t => t.vehicleId && onSiteIds.has(t.vehicleId)).map(t => t.techId);
   const gearCoverage = gear.coverage;
-  const crewCoverage = Math.min(1, crew / Math.max(1, gig.crewNeeded));
+  // Tired crews are worth less on the night.
+  const effCrew = onSite.reduce((sum, v) => sum + effectiveCrew(v), 0);
+  const crewCoverage = Math.min(1, effCrew / Math.max(1, gig.crewNeeded));
   const lastArrival = Math.max(...onSite.map(v => v.arrivedHour ?? 0), 0);
   const lateHours = onSite.length ? Math.max(0, lastArrival - loadInHour(gig)) : 0;
   const quality = Math.max(
     0,
     Math.min(
       1,
-      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) }) +
+      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) }) +
         (rng.next() - 0.5) * 0.08,
     ),
   );
@@ -443,11 +448,12 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   updateRivals(s, world, date.getUTCFullYear());
 
   // Running costs and wages land every day — idle trucks and idle crew cost money.
-  const wages = totalCrew(s) * CREW_WAGE_PER_DAY + s.techs.reduce((sum, t) => sum + getTech(t.techId).wagePerDay, 0);
+  const wages = Math.round(totalCrew(s) * crewWage(s)) + s.techs.reduce((sum, t) => sum + getTech(t.techId).wagePerDay, 0);
   book(s, 'wages', -wages);
   dailyMarket(s, wages);
   updateTechs(s, date.getUTCFullYear());
   dailyWorkshop(s);
+  dailyCrew(s);
   s.vehicles.forEach(v => {
     if (v.owner !== 'player') return;
     const model = getModel(v.modelId);
@@ -473,13 +479,14 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     }
   });
 
-  if (date.getUTCDate() === 1 && day > 0) monthlyTick(s);
+  if (date.getUTCDate() === 1 && day > 0) monthlyTick(s, rng);
   s.stats.peakCash = Math.max(s.stats.peakCash, s.company.cash);
 }
 
-function monthlyTick(s: TycoonState) {
+function monthlyTick(s: TycoonState, rng: Rng) {
   book(s, 'property', -s.depots.length * DEPOT_UPKEEP_PER_MONTH);
   monthlyWorkshop(s);
+  monthlyCrew(s, rng);
   if (s.company.loan > 0) book(s, 'interest', -monthlyInterest(s));
 
   // During a shutdown the banks give everyone a repayment holiday.

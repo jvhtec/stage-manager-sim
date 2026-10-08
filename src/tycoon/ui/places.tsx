@@ -5,7 +5,6 @@ import { stockSize } from '@/world/loading';
 import { GearShop, WarehouseGear } from './gear';
 import {
   CREW_HIRE_COST,
-  CREW_WAGE_PER_DAY,
   DEPOT_BUILD_COST,
   DEPOT_UPKEEP_PER_MONTH,
   companyTier,
@@ -16,7 +15,8 @@ import { worldOf } from '@/world/mapgen';
 import { vehicleActivity } from '@/world/queries';
 import type { Gig } from '@/world/types';
 import { gigDates } from './gigInfo';
-import { Bar, Stat, TierChip } from './bits';
+import { Bar, FatigueChip, Stat, TierChip } from './bits';
+import { crewWage } from '@/world/crew';
 import { formatPopulation, kmoney, marketLabel, money, ratingLabel } from './format';
 import type { WinCtx } from './types';
 
@@ -254,7 +254,8 @@ export function DepotWindow({ ctx, depotId }: { ctx: WinCtx; depotId: string }) 
           <h4>Crew</h4>
           <div className="tt-item">
             <span className="grow">
-              {depot.crew} idle here <span className="tt-dim">· {money(CREW_WAGE_PER_DAY)}/day each</span>
+              {depot.crew} idle here <span className="tt-dim">· {money(crewWage(state))}/day each</span>{' '}
+              {depot.crew > 0 && <FatigueChip value={depot.fatigue ?? 0} />}
             </span>
             <button className="tt-btn sm" onClick={() => act(s => fireCrew(s, depot.id))}>
               −

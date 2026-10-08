@@ -21,6 +21,18 @@ export function TierChip({ tier, locked }: { tier: number; locked?: boolean }) {
   );
 }
 
+/** Crew tiredness, 0-100: fresh → weary → exhausted. */
+export function FatigueChip({ value }: { value: number }) {
+  const v = Math.round(value);
+  const label = v < 30 ? 'fresh' : v < 60 ? 'weary' : v < 85 ? 'tired' : 'exhausted';
+  const color = v < 30 ? '#22c55e' : v < 60 ? '#84cc16' : v < 85 ? '#f59e0b' : '#ef4444';
+  return (
+    <span className="tt-chip" style={{ background: color }} title={`Fatigue ${v}/100 — tired crews work worse; they recover at home`}>
+      {label}
+    </span>
+  );
+}
+
 export function DeptDot({ dept }: { dept: Dept }) {
   return (
     <span

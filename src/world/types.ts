@@ -127,6 +127,8 @@ export interface Depot {
   lot: number;
   gear: GearStock;
   crew: number;
+  /** Average fatigue (0-100) of the crew resting here. */
+  fatigue?: number;
   builtHour: number;
 }
 
@@ -165,6 +167,8 @@ export interface Vehicle {
   orders: string[];
   cargo: GearStock;
   crew: number;
+  /** Average fatigue (0-100) of the crew aboard. */
+  crewFatigue?: number;
   arrivedHour?: number;
   profitThisYear: number;
   profitLastYear: number;
@@ -324,6 +328,8 @@ export interface TycoonState {
   /** Gear product ids already announced as available. */
   announcedGear: string[];
   policies: Policies;
+  /** Company-wide crew morale, 0-100 (crew.ts). */
+  crewMorale: number;
   /** Product id → average condition (0-100) of the units you own; missing = 100. */
   gearCondition: Record<string, number>;
   /** Festival tenders already opened, as "festivalId-year". */
