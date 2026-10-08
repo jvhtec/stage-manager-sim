@@ -7,7 +7,8 @@ import { ownedStock } from './wear';
 import { freelancersFor, type FreelanceHire } from './crew';
 import { prepRatio } from './facilities';
 import { subHireFor, type SubHire } from './hire';
-import { crewEffectiveness, effectiveCrew, experienceFactor, moraleBonus } from './crew';
+import { moraleBonus } from './crew';
+import { aboard, atDepot, evaluateCrew, pickCrew, type CrewEvaluation } from './people';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize, type GearEvaluation } from './loading';
 import {
   dateOfDay,
@@ -23,7 +24,7 @@ import {
 } from './core';
 import { worldOf } from './mapgen';
 import { roadDistance } from './pathfinding';
-import { DEPTS, type DeptCounts, type GearStock, type Gig, type TycoonState, type Vehicle } from './types';
+import { DEPTS, type CrewMember, type DeptCounts, type GearStock, type Gig, type TycoonState, type Vehicle } from './types';
 
 export function vehicleActivity(state: TycoonState, v: Vehicle): string {
   const world = worldOf(state);
@@ -91,15 +92,17 @@ export interface CoverageProjection {
   prep: number;
   /** Kit you'd sub-hire from rivals to fill the gaps. */
   subhire: SubHire;
+  /** Who'd be working it, and how well they fit. */
+  people: CrewMember[];
+  crewEval: CrewEvaluation;
 }
 
 /** What would turn up at `gig` if things go to plan — runs the sim's own loading and scoring. */
 export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjection {
   const vehicles = state.vehicles.filter(v => v.owner === 'player' && v.orders.includes(gig.id));
-  const stock = new Map(state.depots.map(d => [d.cityId, { gear: { ...d.gear }, crew: d.crew, fatigue: d.fatigue ?? 0, experience: d.experience ?? 30 }]));
+  const stock = new Map(state.depots.map(d => [d.cityId, { gear: { ...d.gear }, people: atDepot(state, d.id) }]));
   const delivered: GearStock = { ...(vehicles.length ? houseRigAt(state, gig.venueId) : undefined) };
-  let crew = 0;
-  let effCrew = 0;
+  const people: CrewMember[] = [];
   let latestArrival = 0;
 
   // Already-loaded vehicles first (that's what the sim nets out), then the rest.
@@ -109,8 +112,7 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
     latestArrival = Math.max(latestArrival, estimateArrival(state, v, gig));
     if (isLoaded(v)) {
       addStock(delivered, v.cargo);
-      crew += v.crew;
-      effCrew += effectiveCrew(v);
+      people.push(...aboard(state, v.id));
       return;
     }
     const model = getModel(v.modelId);
@@ -120,11 +122,12 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
     const remaining = emptyCounts();
     DEPTS.forEach(d => (remaining[d] = Math.max(0, gig.needs[d] - have[d])));
     addStock(delivered, pickGear(depot.gear, remaining, model.gearCapacity, gig.rider));
-    const seats = Math.min(model.crewSeats, Math.max(0, gig.crewNeeded - crew), depot.crew);
-    crew += seats;
-    effCrew += seats * crewEffectiveness(depot.fatigue) * experienceFactor(depot.experience);
-    depot.crew -= seats;
+    const seats = Math.min(model.crewSeats, Math.max(0, gig.crewNeeded - people.length), depot.people.length);
+    people.push(...pickCrew(depot.people, gig, seats, people));
   });
+  const crew = people.length;
+  const crewEval = evaluateCrew(people, gig);
+  let effCrew = crewEval.effective;
 
   const subhire = vehicles.length ? subHireFor(state, worldOf(state), gig, delivered) : { stock: {}, units: 0, cost: 0, from: [] };
   const withHire: GearStock = { ...delivered };
@@ -149,10 +152,10 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
         lateHours: Math.max(0, latestArrival - loadInHour(gig)),
         gearQuality: evaluation.quality,
         riderMet: evaluation.riderMet,
-        bonus: techBonus(techIds, gig.act) + moraleBonus(state.crewMorale),
+        bonus: techBonus(techIds, gig.act) + moraleBonus(state.crewMorale) + crewEval.bonus,
       })
     : 0;
-  return { gear: evaluation.delivered, crew, latestArrival, onTime, vehicles, evaluation, expectedQuality, techIds, delivered, freelance, prep, subhire };
+  return { gear: evaluation.delivered, crew, latestArrival, onTime, vehicles, evaluation, expectedQuality, techIds, delivered, freelance, prep, subhire, people, crewEval };
 }
 
 /** What a pile of kit would fetch, given its condition. */

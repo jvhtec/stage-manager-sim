@@ -146,6 +146,28 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   sales: 'Asset sales',
 };
 
+/** Departments crew specialise in (consoles are sound work). */
+export type CrewDept = 'audio' | 'lighting' | 'video' | 'stage';
+export type CrewTrait = 'chief' | 'roadwarrior' | 'perfectionist' | 'polyglot' | 'party' | 'mentor';
+
+/** A gig technician (people.ts). */
+export interface CrewMember {
+  id: string;
+  name: string;
+  primary: CrewDept;
+  /** 0-5 per department. */
+  skills: Record<CrewDept, number>;
+  /** Shows worked per department towards the next level. */
+  xp: Record<CrewDept, number>;
+  trait?: CrewTrait;
+  fatigue: number;
+  hiredHour: number;
+  /** At a base… */
+  depotId?: string;
+  /** …or aboard a truck. */
+  vehicleId?: string;
+}
+
 export type FacilityKind = 'delegation' | 'warehouse';
 /** Full-time staff roles at a base (gig technicians are `crew`). */
 export type StaffRole = 'warehouse' | 'office';
@@ -442,6 +464,10 @@ export interface TycoonState {
   gearCondition: Record<string, number>;
   contracts: VenueContract[];
   projects: RndProject[];
+  /** Your gig technicians, by name (people.ts). */
+  people: CrewMember[];
+  /** This month's hiring market: candidates, each tagged with the base they'd join. */
+  candidates: CrewMember[];
   /** Exclusive production deals with acts (deals.ts). */
   deals: { id: string; act: string; tier: number; monthly: number; startDay: number; endDay: number; strikes: number; status: 'offer' | 'active' | 'ended'; offerExpires: number }[];
   /** Your own products (encoded ids, see content/gear.ts ownProductId). */

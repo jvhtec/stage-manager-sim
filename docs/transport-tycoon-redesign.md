@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 88 tests):
+(`src/world/__tests__/*.test.ts`, 96 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -279,9 +279,18 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   exclusive: a retainer (25% of a show fee per month), their tours come straight to you (rivals
   don't bid) and more often. A lapsed tour or a bad night (<50%) is a strike; two and they walk
   (relation reset, −3 reputation). One-year cooldown between offers.
-- **Crew experience** (`crew.ts`) — crews gain experience per show (more at big jobs), worth
-  0.85×–1.15× effectiveness; new hires start green and dilute it; training policy (courses /
-  academy) improves crew at base for a monthly fee per head.
+- **Named crew** (`people.ts`, `content/names.ts`) — gig technicians are people with names from
+  your country, a main department (sound, lighting, video, staging) at 1-5★ plus maybe a second
+  string, a trait (crew chief +0.03 show quality, perfectionist ×0.85 failures, road warrior 0.6×
+  fatigue, party animal +morale, polyglot better abroad, mentor 1.5× learning), personal fatigue,
+  and a day rate of 0.85-1.45× the going rate by level. Each show splits `crewNeeded` into slots
+  by its departments' needs (consoles count as sound); the best-matched people fill them, each
+  worth 0.55 (out of their depth) to 1.2 (5★) × fatigue. Trucks board the freshest, best-matched
+  people for the job ahead. People level up in the department they work (10/30/60/110 shows per
+  level) with a raise; training adds monthly progress at base; below 50 morale rivals poach 4★+
+  stars, below 40 people quit. A hiring market refreshes monthly per base (stars are rare, rarer
+  for small firms); old saves' headcounts become people. Depot/vehicle `crew` and averages are
+  cached by `syncCrew`.
 
 UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
 (workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the
@@ -301,7 +310,7 @@ The classic build has systems that don't exist in the map game yet. Each has an 
 ## 9. Next steps (PR-sized)
 
 1. **Playtest & balance pass** — fee/wage/running-cost tuning, offer density, rival aggression.
-2. **Named crew at warehouses** — port crew progression and hiring into the map game.
+2. **Named crew** — done (`people.ts`); next: crew pinned to trucks, crew rest rotas, star poaching counter-offers.
 3. **Road & show incidents** — port the crisis system as pop-up decisions.
 4. **Tour planner** — drag-to-order a vehicle's show list, "add next show in route" suggestions,
    route lines drawn on the map for the selected vehicle.

@@ -229,7 +229,12 @@ export function HelpWindow() {
         <li>
           <b>Growing the firm</b>: lease trucks instead of buying them; the bank lends against what you own and your rating. Fund
           <b> R&D</b> to build your own kit (and earn royalties), sign <b>production deals</b> with acts who love you, and train
-          your crews — seasoned crews build better shows.
+          your crews.
+        </li>
+        <li>
+          <b>Crew</b> are people: sound, lighting, video and staging techs rated 1–5★, with traits (crew chief, perfectionist,
+          road warrior…). Shows want the right specialists — a light-heavy arena needs LX techs — and everyone levels up by
+          working. Hire from the market each month; keep morale up or rivals poach your stars.
         </li>
         <li>
           Buy bigger trucks and more gear, and win reputation to unlock arenas and stadiums. Every January the industry awards

@@ -1,10 +1,12 @@
-import { fireCrew, fireStaff, hireCrew, hireStaff, upgradeDepot } from '@/world/actions';
+import { fireStaff, hireCrew, hireStaff, upgradeDepot } from '@/world/actions';
+import { dayRate, levelOf } from '@/world/people';
+import { PersonRow } from './crewWindow';
 import { CREW_HIRE_COST, STAFF_HIRE_COST } from '@/world/catalog';
-import { crewWage, PAY } from '@/world/crew';
+import { PAY } from '@/world/crew';
 import { STAFF, STAFF_ROLES, facilitySpec, monthlyRent, nextUpgrade, prepRatio, salesBoost, usedCapacity } from '@/world/facilities';
 import { worldOf } from '@/world/mapgen';
 import type { Depot } from '@/world/types';
-import { Bar, ExperienceChip, FatigueChip, Stat } from './bits';
+import { Bar, Stat } from './bits';
 import { kmoney, money } from './format';
 import type { WinCtx } from './types';
 import { BaseDiorama } from './scenes';
@@ -19,7 +21,8 @@ export function BaseOverview({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
   const pay = PAY[state.policies.pay].wage;
   const salaries = Math.round((depot.staff.warehouse * STAFF.warehouse.salary + depot.staff.office * STAFF.office.salary) * pay);
   const rent = monthlyRent(world, depot);
-  const techs = Math.round(depot.crew * crewWage(state) * 30);
+  const here = state.people.filter(m => m.depotId === depot.id).sort((a, b) => levelOf(b) - levelOf(a));
+  const techs = Math.round(here.reduce((sum, m) => sum + dayRate(m), 0) * pay * 30);
   const prep = prepRatio(state, depot);
   const act = (fn: Parameters<WinCtx['dispatch']>[0]) => {
     const r = ctx.dispatch(fn);
@@ -90,21 +93,19 @@ export function BaseOverview({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
         </div>
       ))}
 
-      <h4>Gig technicians on the payroll</h4>
-      <div className="tt-item">
-        <span className="grow">
-          {depot.crew} based here <span className="tt-dim">· {money(crewWage(state))}/day each</span>{' '}
-          {depot.crew > 0 && (
-            <>
-              <FatigueChip value={depot.fatigue ?? 0} /> <ExperienceChip value={depot.experience ?? 30} />
-            </>
-          )}
-        </span>
-        <button className="tt-btn sm" onClick={() => act(s => fireCrew(s, depot.id))}>
-          −
+      <h4>Gig technicians at base ({here.length})</h4>
+      <div className="tt-list">
+        {here.map(m => (
+          <PersonRow key={m.id} state={state} m={m} />
+        ))}
+        {!here.length && <div className="tt-dim">Nobody at base — they're all out on jobs, or you need to hire.</div>}
+      </div>
+      <div style={{ display: 'flex', gap: 4, marginTop: 4 }}>
+        <button className="tt-btn sm" onClick={() => ctx.open('crew')}>
+          Crew & hiring ›
         </button>
         <button className="tt-btn sm" onClick={() => act(s => hireCrew(s, depot.id))}>
-          Hire {money(CREW_HIRE_COST)}
+          Quick-hire a green tech {money(CREW_HIRE_COST)}
         </button>
       </div>
       <div className="tt-dim" style={{ whiteSpace: 'normal', marginTop: 2 }}>

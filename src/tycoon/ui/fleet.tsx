@@ -8,7 +8,8 @@ import { getTech } from '@/world/content/techs';
 import { formatDay, gigById, sellValue, vehicleAgeYears } from '@/world/core';
 import { worldOf } from '@/world/mapgen';
 import { vehicleActivity } from '@/world/queries';
-import { Bar, ExperienceChip, FatigueChip, Stat } from './bits';
+import { Bar, Stat } from './bits';
+import { PersonRow } from './crewWindow';
 import { kmoney, money } from './format';
 import type { WinCtx } from './types';
 
@@ -73,9 +74,13 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
         Load ({stockSize(v.cargo)}/{model.gearCapacity} gear · {v.crew}/{model.crewSeats} crew)
       </h4>
       {v.crew > 0 && (
-        <Stat label="Crew aboard">
-          <FatigueChip value={v.crewFatigue ?? 0} /> <ExperienceChip value={v.crewExperience ?? 30} />
-        </Stat>
+        <div className="tt-list" style={{ marginBottom: 6 }}>
+          {state.people
+            .filter(m => m.vehicleId === v.id)
+            .map(m => (
+              <PersonRow key={m.id} state={state} m={m} />
+            ))}
+        </div>
       )}
       <StockLines stock={v.cargo} state={state} />
 

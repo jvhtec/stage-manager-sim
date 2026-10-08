@@ -39,7 +39,6 @@ import {
   pushNews,
   showEndHour,
   showStartHour,
-  totalCrew,
   travelHours,
   vehicleAgeYears,
   withRng,
@@ -49,7 +48,8 @@ import { worldOf } from './mapgen';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize } from './loading';
 import { GEAR_PRODUCTS, getProduct } from './content/gear';
 import { leftBehindChance, monthlyRent, monthlySalaries, prepFailureFactor, prepOf, prepRatio } from './facilities';
-import { STARTING_EXPERIENCE, gainExperience, monthlyTraining, PAY, crewWage, freelancersFor, dailyCrew, effectiveCrew, mixFatigue, monthlyCrew, moraleBonus } from './crew';
+import { monthlyTraining, PAY, freelancersFor, monthlyCrew, moraleBonus } from './crew';
+import { aboard, atDepot, dailyPeopleFatigue, dayRate, evaluateCrew, learnFromShow, moveToDepot, moveToVehicle, pickCrew, refreshCandidates, syncCrew } from './people';
 import { dailyWorkshop, monthlyWorkshop, rollFailure, wearFromShow, type Failure } from './wear';
 import { rivalsFor } from './content/companies';
 import { getTech, techBonus, techsActiveIn } from './content/techs';
@@ -169,10 +169,9 @@ function loadVehicle(s: TycoonState, v: Vehicle, gig: Gig) {
   addStock(v.cargo, picked);
   const seats = Math.min(model.crewSeats - v.crew, crewRemaining, depot.crew);
   if (seats > 0) {
-    v.crewFatigue = mixFatigue(v.crew, v.crewFatigue ?? 0, seats, depot.fatigue ?? 0);
-    v.crewExperience = mixFatigue(v.crew, v.crewExperience ?? STARTING_EXPERIENCE, seats, depot.experience ?? STARTING_EXPERIENCE);
-    depot.crew -= seats;
-    v.crew += seats;
+    // The freshest, best-matched people for the job ahead get on board.
+    pickCrew(atDepot(s, depot.id), gig, seats, aboard(s, v.id)).forEach(m => moveToVehicle(m, v.id));
+    syncCrew(s);
   }
 }
 
@@ -183,12 +182,9 @@ function unloadVehicle(s: TycoonState, v: Vehicle) {
   const depot = depotInCity(s, v.homeCityId);
   if (!depot) return;
   addStock(depot.gear, v.cargo);
-  depot.fatigue = mixFatigue(depot.crew, depot.fatigue ?? 0, v.crew, v.crewFatigue ?? 0);
-  if (v.crew) depot.experience = mixFatigue(depot.crew, depot.experience ?? STARTING_EXPERIENCE, v.crew, v.crewExperience ?? STARTING_EXPERIENCE);
-  depot.crew += v.crew;
-  v.crewFatigue = 0;
+  aboard(s, v.id).forEach(m => moveToDepot(m, depot.id));
   v.cargo = {};
-  v.crew = 0;
+  syncCrew(s);
 }
 
 function maybeService(s: TycoonState, v: Vehicle, freeHours: number) {
@@ -375,6 +371,9 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   if (hire.cost) onSite.forEach(v => (v.profitThisYear -= Math.round(hire.cost / onSite.length)));
   const working: GearStock = { ...delivered };
   addStock(working, hire.stock);
+  // Who's working the show, and how well their skills fit its departments.
+  const people = onSite.flatMap(v => aboard(s, v.id));
+  const crewEval = evaluateCrew(people, gig);
   // Prep: every truck's kit was checked (or not) by its home base's warehouse crew.
   const prep = prepOf(s, onSite);
   const forgotten: string[] = [];
@@ -391,7 +390,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const showDays = gig.overseas ? gig.overseas.stops.length : (gig.days ?? 1);
   const failures: Failure[] = [];
   for (let d = 0; d < Math.min(4, showDays); d++) {
-    const f = rollFailure(s, working, rng, prepFailureFactor(prep));
+    const f = rollFailure(s, working, rng, prepFailureFactor(prep) * crewEval.failureFactor);
     if (f) failures.push(f);
   }
   const gear = evaluateGear(working, gig, yearOf(s, s.hour), s.gearCondition);
@@ -406,7 +405,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   // Tired crews are worth less on the night.
   // Short-handed? Local freelancers fill the gap, at a day rate.
   const freelance = onSite.length ? freelancersFor(s, world, gig, crew) : { count: 0, cost: 0, effectiveness: 0, local: false };
-  const effCrew = onSite.reduce((sum, v) => sum + effectiveCrew(v), 0) + freelance.count * freelance.effectiveness;
+  const effCrew = crewEval.effective + freelance.count * freelance.effectiveness;
   const crewCoverage = Math.min(1, effCrew / Math.max(1, gig.crewNeeded));
   if (freelance.cost) {
     book(s, 'freelance', -freelance.cost);
@@ -419,7 +418,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     0,
     Math.min(
       1,
-      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) - (weather?.penalty ?? 0) }) +
+      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) + crewEval.bonus - (weather?.penalty ?? 0) }) +
         (rng.next() - 0.5) * 0.08,
     ),
   );
@@ -476,7 +475,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   if (quality < BAD_NIGHT) strike(s, gig.act, `a bad night at ${where}`);
   s.cityRatings[gig.cityId] = Math.max(0, Math.min(100, rating + (quality - 0.5) * 30));
   s.stats.showsPlayed += 1;
-  gainExperience(onSite, gig.tier >= 3 || !!gig.festival || !!gig.event);
+  learnFromShow(s, people, crewEval.assigned, gig.tier >= 3 || !!gig.festival || !!gig.event);
   recordShow(s, yearOf(s, s.hour), quality, false, !!gig.festival);
   const verdict = quality >= 0.9 ? 'Storming show' : quality >= 0.7 ? 'Solid show' : 'Rough show';
   const riderNote = gear.riderMet === undefined ? '' : gear.riderMet ? ` Rider (${gig.rider!.brand}) honoured.` : ` They wanted ${gig.rider!.brand} and didn't get it.`;
@@ -509,13 +508,14 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   updateRivals(s, world, date.getUTCFullYear());
 
   // Running costs and wages land every day — idle trucks and idle crew cost money.
-  const wages = Math.round(totalCrew(s) * crewWage(s)) + s.techs.reduce((sum, t) => sum + getTech(t.techId).wagePerDay, 0);
+  const wages = Math.round(s.people.reduce((sum, m) => sum + dayRate(m), 0) * PAY[s.policies.pay].wage) + s.techs.reduce((sum, t) => sum + getTech(t.techId).wagePerDay, 0);
   book(s, 'wages', -wages);
   dailyMarket(s, wages);
   updateTechs(s, date.getUTCFullYear());
   dailyWorkshop(s);
   dailyRentOut(s);
-  dailyCrew(s);
+  dailyPeopleFatigue(s);
+  syncCrew(s);
   dailyIncidents(s, rng);
   s.vehicles.forEach(v => {
     if (v.owner !== 'player') return;
@@ -573,6 +573,8 @@ function monthlyTick(s: TycoonState, rng: Rng) {
   monthlyWorkshop(s);
   monthlyCrew(s, rng);
   monthlyTraining(s);
+  refreshCandidates(s, rng);
+  syncCrew(s);
   monthlyInsurance(s);
   monthlyLeases(s);
   if (s.company.loan > 0) book(s, 'interest', -monthlyInterest(s));

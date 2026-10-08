@@ -11,6 +11,7 @@ import { rentalProduct } from './hire';
 import { marketNow } from './market';
 import { worldOf } from './mapgen';
 import { ownedStock, condition } from './wear';
+import { seedPeople, sideRng, syncCrew } from './people';
 import { DEPTS, type Rival, type TycoonState } from './types';
 
 const STRUGGLING = 25;
@@ -94,7 +95,9 @@ export function absorbRival(s: TycoonState, r: Rival) {
     base!.gear[id] = (base!.gear[id] ?? 0) + n;
     s.gearCondition[id] = before ? (condition(s, id) * before + USED_KIT_CONDITION * n) / (before + n) : USED_KIT_CONDITION;
   });
-  base.crew += 3 * r.maxTier;
+  // Their crew come with the company: seasoned people, mostly.
+  seedPeople(s, sideRng(s, s.hour), base.id, 3 * r.maxTier, r.maxTier >= 3 ? 3 : 2);
+  syncCrew(s);
   s.company.reputation = Math.min(100, s.company.reputation + r.reputation * 0.06);
   s.cityRatings[r.hqCityId] = Math.min(100, (s.cityRatings[r.hqCityId] ?? 50) + 10);
   const city = worldOf(s).cityById.get(r.hqCityId)?.name;

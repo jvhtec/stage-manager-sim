@@ -24,6 +24,7 @@ import {
   sellValue,
   yearOf,
   showEndHour,
+  withRng,
 } from './core';
 import { worldOf } from './mapgen';
 import { roadDistance } from './pathfinding';
@@ -40,7 +41,7 @@ import { AMBITIONS, rndBlocker, startProject } from './rnd';
 import { DEAL_YEARS } from './deals';
 import { DEPTS, type ActionOutcome, type BidLevel, type Dept, type RndAmbition, type Vehicle, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
 import { STAFF, canBaseVehicle, facilitySpec, nextUpgrade } from './facilities';
-import { NEW_HIRE_EXPERIENCE, STARTING_EXPERIENCE, mixFatigue } from './crew';
+import { aboard, hireFee, levelOf, makePerson, moveToDepot, roleOf, syncCrew } from './people';
 import { BREAK_MONTHS, contractShortfall, installKit } from './contracts';
 import { addStock } from './loading';
 import { onBought, ownedStock, refurbishCost, resaleValue } from './wear';
@@ -187,8 +188,9 @@ export function sellVehicle(state: TycoonState, vehicleId: string): ActionOutcom
   const s = cloneState(state);
   const value = sellValue(v0, s.hour);
   const depot = depotInCity(s, v0.homeCityId);
-  if (depot) depot.crew += v0.crew;
+  if (depot) aboard(s, v0.id).forEach(m => moveToDepot(m, depot.id));
   s.vehicles = s.vehicles.filter(v => v.id !== vehicleId);
+  syncCrew(s);
   s.techs = s.techs.map(t => (t.vehicleId === vehicleId ? { techId: t.techId } : t));
   book(s, 'sales', value);
   return ok(s, `Sold ${v0.name} for ${formatMoney(state, value)}.`);
@@ -264,25 +266,57 @@ export function setPolicy<K extends keyof Policies>(state: TycoonState, key: K, 
   return ok(s);
 }
 
+/** Take on green (1★) techs straight off the street — quick and cheap. */
 export function hireCrew(state: TycoonState, depotId: string, qty = 1): ActionOutcome {
   const cost = CREW_HIRE_COST * qty;
   if (state.company.cash < cost) return fail(state, 'Not enough cash to hire.');
   const s = cloneState(state);
   const depot = s.depots.find(d => d.id === depotId);
   if (!depot) return fail(state, 'Unknown depot.');
-  depot.fatigue = mixFatigue(depot.crew, depot.fatigue ?? 0, qty, 0);
-  depot.experience = mixFatigue(depot.crew, depot.experience ?? STARTING_EXPERIENCE, qty, NEW_HIRE_EXPERIENCE);
-  depot.crew += qty;
+  withRng(s, rng => {
+    for (let i = 0; i < qty; i++) {
+      const m = makePerson(s, rng, 1);
+      m.depotId = depot.id;
+      s.people.push(m);
+    }
+  });
+  syncCrew(s);
   book(s, 'wages', -cost);
-  return ok(s);
+  return ok(s, qty === 1 ? `${s.people[s.people.length - 1].name} joins the crew.` : `${qty} new techs join the crew.`);
 }
 
-export function fireCrew(state: TycoonState, depotId: string, qty = 1): ActionOutcome {
+/** Hire someone from this month's hiring market. */
+export function hireCandidate(state: TycoonState, candidateId: string): ActionOutcome {
+  const c = state.candidates.find(x => x.id === candidateId);
+  if (!c) return fail(state, 'They’ve taken another job.');
+  const fee = hireFee(c);
+  if (state.company.cash < fee) return fail(state, `Signing ${c.name} costs ${formatMoney(state, fee)}.`);
   const s = cloneState(state);
-  const depot = s.depots.find(d => d.id === depotId);
-  if (!depot || depot.crew < qty) return fail(state, 'No idle crew at this depot.');
-  depot.crew -= qty;
-  return ok(s);
+  const m = s.candidates.find(x => x.id === candidateId)!;
+  s.candidates = s.candidates.filter(x => x.id !== candidateId);
+  m.hiredHour = s.hour;
+  s.people.push(m);
+  syncCrew(s);
+  book(s, 'wages', -fee);
+  return ok(s, `${m.name} (${levelOf(m)}★ ${roleOf(m)}) joins the crew.`);
+}
+
+/** Let someone go (only between jobs, at base). Defaults to your least experienced. */
+export function fireCrew(state: TycoonState, depotId: string, qty = 1): ActionOutcome {
+  const atBase = state.people.filter(m => m.depotId === depotId).sort((a, b) => levelOf(a) - levelOf(b) || a.hiredHour - b.hiredHour);
+  if (atBase.length < qty) return fail(state, 'Nobody idle at this base.');
+  return fireMember(state, atBase.slice(0, qty).map(m => m.id));
+}
+
+export function fireMember(state: TycoonState, ids: string | string[]): ActionOutcome {
+  const list = Array.isArray(ids) ? ids : [ids];
+  const leaving = state.people.filter(m => list.includes(m.id));
+  if (!leaving.length) return fail(state, 'Nobody to let go.');
+  if (leaving.some(m => !m.depotId)) return fail(state, 'They’re out on a job — let them go when they’re back at base.');
+  const s = cloneState(state);
+  s.people = s.people.filter(m => !list.includes(m.id));
+  syncCrew(s);
+  return ok(s, leaving.length === 1 ? `${leaving[0].name} has left the company.` : `${leaving.length} crew let go.`);
 }
 
 /** Open a delegation (branch office) or build a small warehouse in a town. */
@@ -493,8 +527,9 @@ function returnLeased(state: TycoonState, v0: Vehicle): ActionOutcome {
   const penalty = leaseReturnPenalty(state, v0);
   const s = cloneState(state);
   const depot = depotInCity(s, v0.homeCityId);
-  if (depot) depot.crew += v0.crew;
+  if (depot) aboard(s, v0.id).forEach(m => moveToDepot(m, depot.id));
   s.vehicles = s.vehicles.filter(v => v.id !== v0.id);
+  syncCrew(s);
   s.techs = s.techs.map(t => (t.vehicleId === v0.id ? { techId: t.techId } : t));
   if (penalty) book(s, 'leasing', -penalty);
   return ok(s, penalty ? `${v0.name} handed back early — ${formatMoney(s, penalty)} penalty.` : `${v0.name} handed back at the end of its lease.`);

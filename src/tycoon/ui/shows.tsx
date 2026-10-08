@@ -8,6 +8,7 @@ import { artistTierIn, findArtist } from '@/world/content/artists';
 import { expectedQuality } from '@/world/content/gear';
 import { averageCondition, failureChance } from '@/world/wear';
 import { prepFailureFactor } from '@/world/facilities';
+import { levelOf } from '@/world/people';
 import { ConditionChip } from './gear';
 import { ContractList } from './contracts';
 import { EventBid, EventList } from './events';
@@ -194,13 +195,27 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
                 <span className="tt-dim">
                   {Math.round(
                     (1 -
-                      (1 - Math.min(0.95, failureChance(averageCondition(state, projection.delivered)) * prepFailureFactor(projection.prep))) **
+                      (1 - Math.min(0.95, failureChance(averageCondition(state, projection.delivered)) * prepFailureFactor(projection.prep) * projection.crewEval.failureFactor)) **
                         Math.min(4, gig.overseas ? gig.overseas.stops.length : (gig.days ?? 1))) *
                       100,
                   )}
                   % failure risk
                 </span>
               </Stat>
+              {projection.people.length > 0 && (
+                <Stat label="Crew fit">
+                  <span className={projection.crewEval.match >= 0.75 ? 'tt-good' : projection.crewEval.match >= 0.55 ? 'tt-warn' : 'tt-bad'}>
+                    {Math.round(projection.crewEval.match * 100)}%
+                  </span>{' '}
+                  <span className="tt-dim">
+                    {projection.people
+                      .map(m => `${m.name.split(' ')[0]} ${levelOf(m)}★`)
+                      .slice(0, 6)
+                      .join(', ')}
+                    {projection.people.length > 6 ? '…' : ''}
+                  </span>
+                </Stat>
+              )}
               <Stat label="Prep">
                 <span className={projection.prep >= 1 ? 'tt-good' : projection.prep >= 0.5 ? 'tt-warn' : 'tt-bad'}>
                   {Math.round(projection.prep * 100)}%

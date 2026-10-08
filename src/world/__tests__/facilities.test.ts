@@ -7,6 +7,7 @@ import { freelancersFor } from '../crew';
 import { DELEGATION, WAREHOUSES, leftBehindChance, monthlyRent, prepFailureFactor, prepRatio, salesBoost } from '../facilities';
 import { worldOf } from '../mapgen';
 import { freeLot } from '../core';
+import { moveToVehicle, syncCrew } from '../people';
 import type { Gig, TycoonState } from '../types';
 
 const game = (): TycoonState => {
@@ -90,7 +91,8 @@ describe('gig crews and the road', () => {
     const v = s.vehicles.find(x => x.owner === 'player')!;
     const away = otherCity(s);
     // Broken down on the way home: a night away, then it limps back.
-    v.crew = 2;
+    s.people.slice(0, 2).forEach(m => moveToVehicle(m, v.id));
+    syncCrew(s);
     v.cityId = undefined;
     v.status = 'broken';
     v.brokenUntil = 30;

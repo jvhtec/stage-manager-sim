@@ -6,8 +6,9 @@
  */
 import type { Rng } from '@/lib/rng';
 import { CREW_WAGE_PER_DAY } from './catalog';
-import { book, pushNews, totalCrew } from './core';
-import type { CitySize, Gig, PayLevel, TrainingLevel, TycoonState, Vehicle, WorldMap } from './types';
+import { book, pushNews } from './core';
+import { partyBonus, peopleLeave, trainPeople } from './people';
+import type { CitySize, Gig, PayLevel, TrainingLevel, TycoonState, WorldMap } from './types';
 
 export interface PayInfo {
   label: string;
@@ -24,13 +25,8 @@ export const PAY: Record<PayLevel, PayInfo> = {
 };
 export const PAY_LEVELS: PayLevel[] = ['low', 'standard', 'high'];
 
-/** Fatigue per day: building and running a show, or just being on the road. */
-const FATIGUE_ON_SITE = 4;
-const FATIGUE_TRAVEL = 3;
-const RECOVERY_AT_HOME = 10;
-/** Below this, crews work at full effectiveness. */
+/** Below this, crews work at full effectiveness (per-person fatigue lives in people.ts). */
 const FATIGUE_GRACE = 30;
-const QUIT_BELOW = 40;
 
 export const crewWage = (state: TycoonState) => CREW_WAGE_PER_DAY * PAY[state.policies.pay].wage;
 
@@ -43,17 +39,6 @@ export const moraleBonus = (morale: number) => (morale - 60) / 400;
 /** Moves `n` crew with fatigue `f` into a pool, keeping the pool's average. */
 export function mixFatigue(poolCrew: number, poolFatigue: number, n: number, f: number): number {
   return poolCrew + n > 0 ? (poolCrew * poolFatigue + n * f) / (poolCrew + n) : 0;
-}
-
-export function dailyCrew(s: TycoonState) {
-  s.vehicles.forEach(v => {
-    if (v.owner !== 'player' || !v.crew) return;
-    const add = v.status === 'on-site' ? FATIGUE_ON_SITE : FATIGUE_TRAVEL;
-    v.crewFatigue = Math.min(100, (v.crewFatigue ?? 0) + add);
-  });
-  s.depots.forEach(d => {
-    d.fatigue = Math.max(0, (d.fatigue ?? 0) - RECOVERY_AT_HOME);
-  });
 }
 
 export function averageFatigue(state: TycoonState): number {
@@ -71,23 +56,15 @@ export function averageFatigue(state: TycoonState): number {
   return crew ? sum / crew : 0;
 }
 
-export const moraleTarget = (state: TycoonState) => Math.max(0, Math.min(100, PAY[state.policies.pay].morale - averageFatigue(state) * 0.35));
+export const moraleTarget = (state: TycoonState) => Math.max(0, Math.min(100, PAY[state.policies.pay].morale + partyBonus(state) - averageFatigue(state) * 0.35));
 
-/** Monthly: morale drifts towards what you pay (less how tired everyone is); unhappy crews quit. */
+/** Monthly: morale drifts towards what you pay (less how tired everyone is); unhappy crews quit, stars get poached. */
 export function monthlyCrew(s: TycoonState, rng: Rng) {
   s.crewMorale += (moraleTarget(s) - s.crewMorale) * 0.5;
-  if (s.crewMorale >= QUIT_BELOW || !totalCrew(s)) return;
-  let quit = 0;
-  s.depots.forEach(d => {
-    const leaving = Math.min(d.crew, Math.floor((d.crew * (QUIT_BELOW - s.crewMorale)) / 100 + rng.next()));
-    d.crew -= leaving;
-    quit += leaving;
-  });
-  if (quit) pushNews(s, `${quit} crew quit — morale is at ${Math.round(s.crewMorale)}. Pay more or give them time off.`, 'bad');
+  if (s.crewMorale >= 50) return;
+  const quit = peopleLeave(s, rng, s.crewMorale);
+  if (quit) pushNews(s, `${quit} crew gone this month — morale is at ${Math.round(s.crewMorale)}. Pay more or give them time off.`, 'bad');
 }
-
-/** Effective crew a vehicle brings, after fatigue and experience. */
-export const effectiveCrew = (v: Vehicle) => v.crew * crewEffectiveness(v.crewFatigue ?? 0) * experienceFactor(v.crewExperience ?? STARTING_EXPERIENCE);
 
 // ---------------------------------------------------------------------------
 // Local freelancers: fill crew gaps at the venue, per show day
@@ -137,33 +114,20 @@ export function experienceLabel(exp: number): string {
   return exp < 25 ? 'green' : exp < 50 ? 'capable' : exp < 75 ? 'seasoned' : 'elite';
 }
 
-/** After a show: the crew who worked it learn something (big jobs teach more). */
-export function gainExperience(vehicles: Vehicle[], big: boolean) {
-  vehicles.forEach(v => {
-    if (!v.crew) return;
-    const exp = v.crewExperience ?? STARTING_EXPERIENCE;
-    v.crewExperience = Math.min(100, exp + (big ? 2.5 : 1.2) * (1 - exp / 100));
-  });
-}
-
 export const TRAINING: Record<TrainingLevel, { label: string; perCrewMonth: number; gain: number; blurb: string }> = {
   none: { label: 'Learn on the job', perCrewMonth: 0, gain: 0, blurb: 'Crews only get better by doing shows.' },
-  courses: { label: 'Courses', perCrewMonth: 60, gain: 2, blurb: 'Rigging, safety and desk courses for the crew at base.' },
-  academy: { label: 'In-house academy', perCrewMonth: 150, gain: 5, blurb: 'Your own training rig and mentors: crews grow fast.' },
+  courses: { label: 'Courses', perCrewMonth: 60, gain: 1, blurb: 'Rigging, safety and desk courses for the crew at base.' },
+  academy: { label: 'In-house academy', perCrewMonth: 150, gain: 2.5, blurb: 'Your own training rig and mentors: crews grow fast.' },
 };
 export const TRAINING_LEVELS: TrainingLevel[] = ['none', 'courses', 'academy'];
 
-/** Monthly: pay for training, and the crew at base improve. */
+/** Monthly: pay for training, and the crew at base improve in their main department. */
 export function monthlyTraining(s: TycoonState) {
   const t = TRAINING[s.policies.training];
   if (!t.perCrewMonth) return;
-  const crew = s.depots.reduce((sum, d) => sum + d.crew, 0);
-  if (crew) book(s, 'training', -Math.round(crew * t.perCrewMonth));
-  s.depots.forEach(d => {
-    if (!d.crew) return;
-    const exp = d.experience ?? STARTING_EXPERIENCE;
-    d.experience = Math.min(100, exp + t.gain * (1 - exp / 100) * 1.5);
-  });
+  const atBase = s.people.filter(m => m.depotId).length;
+  if (atBase) book(s, 'training', -Math.round(atBase * t.perCrewMonth));
+  trainPeople(s, t.gain);
 }
 
 export function averageExperience(state: TycoonState): number {

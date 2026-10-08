@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { createTycoonGame } from '../state';
 import { advanceHours } from '../sim';
-import { answerDeal, buyGear, hireCrew, hireStaff, leaseVehicle, sellVehicle, setPolicy, startRnd } from '../actions';
+import { answerDeal, buyGear, hireStaff, leaseVehicle, sellVehicle, setPolicy, startRnd } from '../actions';
 import { HOURS_PER_DAY } from '../catalog';
 import { creditLimit, leaseMonthly } from '../finance';
 import { getProduct, isOwnProduct } from '../content/gear';
 import { monthlyRnd, rndBlocker } from '../rnd';
 import { activeDealFor, monthlyDeals, strike } from '../deals';
-import { experienceFactor, gainExperience, monthlyTraining } from '../crew';
+import { monthlyTraining } from '../crew';
 import type { TycoonState } from '../types';
 
 const game = (rep = 70): TycoonState => {
@@ -80,21 +80,13 @@ describe('production deals', () => {
   });
 });
 
-describe('crew experience', () => {
-  it('grows with shows and training, and new hires dilute it', () => {
+describe('crew training', () => {
+  it('training improves the people at base', () => {
     let s = game();
-    const v = s.vehicles[0];
-    v.crew = 3;
-    v.crewExperience = 30;
-    gainExperience([v], true);
-    expect(v.crewExperience).toBeGreaterThan(30);
-    expect(experienceFactor(90)).toBeGreaterThan(experienceFactor(10));
-    s.depots[0].experience = 60;
-    s = hireCrew(s, s.depots[0].id, 5).state;
-    expect(s.depots[0].experience).toBeLessThan(60);
-    const before = s.depots[0].experience!;
+    const before = s.people.reduce((sum, m) => sum + m.xp[m.primary], 0);
     s = setPolicy(s, 'training', 'academy').state;
     monthlyTraining(s);
-    expect(s.depots[0].experience).toBeGreaterThan(before);
+    const after = s.people.reduce((sum, m) => sum + m.xp[m.primary] + m.skills[m.primary] * 100, 0);
+    expect(after).toBeGreaterThan(before + s.people.reduce((sum, m) => sum + m.skills[m.primary] * 100, 0) - 1);
   });
 });

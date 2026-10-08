@@ -19,6 +19,7 @@ import {
   TrendingUp,
   Trophy,
   Truck,
+  Users,
   Wallet,
   ZoomIn,
   ZoomOut,
@@ -42,6 +43,7 @@ import { TalentWindow } from './ui/talent';
 import { MarketWindow } from './ui/market';
 import { PoliciesWindow } from './ui/policies';
 import { RndWindow } from './ui/rnd';
+import { CrewWindow } from './ui/crewWindow';
 import { FinanceWindow, GameOverPanel, HelpWindow, LeagueWindow, NewGameForm, NewsWindow } from './ui/company';
 import type { WinCtx, WindowKind } from './ui/types';
 import './tycoon.css';
@@ -227,6 +229,8 @@ export default function TycoonGame() {
         return 'Company policies';
       case 'rnd':
         return 'R&D';
+      case 'crew':
+        return 'Crew';
       case 'help':
         return 'How to play';
       case 'menu':
@@ -270,11 +274,16 @@ export default function TycoonGame() {
         return <PoliciesWindow ctx={ctx} />;
       case 'rnd':
         return <RndWindow ctx={ctx} />;
+      case 'crew':
+        return <CrewWindow ctx={ctx} />;
       case 'help':
         return <HelpWindow />;
       case 'menu':
         return (
           <div className="tt-menu">
+            <button className="tt-btn" onClick={() => open('crew')}>
+              <Users /> Crew
+            </button>
             <button className="tt-btn" onClick={() => open('market')}>
               <TrendingUp /> Market
             </button>
@@ -447,6 +456,9 @@ export default function TycoonGame() {
               <button className="tt-btn" onClick={() => open('finance')} title="Finances">
                 <Wallet /> <span className="tt-label">Finances</span>
               </button>
+              <button className="tt-btn" onClick={() => open('crew')} title="Crew">
+                <Users />
+              </button>
               <button className="tt-btn" onClick={() => open('market')} title="Market">
                 <TrendingUp />
               </button>
@@ -526,7 +538,7 @@ export default function TycoonGame() {
                 x={w.x}
                 y={w.y}
                 z={w.z}
-                width={w.kind === 'finance' || w.kind === 'league' || w.kind === 'market' ? 440 : 340}
+                width={w.kind === 'finance' || w.kind === 'league' || w.kind === 'market' || w.kind === 'crew' ? 440 : 340}
                 onMove={(x, y) => setWindows(prev => prev.map(o => (o.key === w.key ? { ...o, x, y } : o)))}
                 onFocus={() => focusWindow(w.key)}
                 onClose={() => (compact ? setWindows([]) : closeWindow(w.key))}

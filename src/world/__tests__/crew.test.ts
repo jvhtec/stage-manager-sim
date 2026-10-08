@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { createTycoonGame } from '../state';
 import { advanceHours } from '../sim';
-import { setPolicy } from '../actions';
+import { hireCrew, setPolicy } from '../actions';
 import { HOURS_PER_DAY } from '../catalog';
-import { totalCrew } from '../core';
-import { crewEffectiveness, dailyCrew } from '../crew';
+import { crewEffectiveness } from '../crew';
+import { dailyPeopleFatigue, fatigueFactor, moveToVehicle, syncCrew } from '../people';
 import type { TycoonState } from '../types';
 
 const game = (): TycoonState => {
@@ -16,15 +16,17 @@ describe('crew', () => {
   it('tire on the road, recover at home, and work worse when tired', () => {
     const s = game();
     const v = s.vehicles.find(x => x.owner === 'player')!;
-    v.crew = 3;
+    s.people.slice(0, 3).forEach(m => moveToVehicle(m, v.id));
     v.status = 'on-site';
-    for (let i = 0; i < 15; i++) dailyCrew(s);
-    expect(v.crewFatigue).toBeGreaterThan(50);
-    expect(crewEffectiveness(v.crewFatigue!)).toBeLessThan(0.9);
+    for (let i = 0; i < 15; i++) dailyPeopleFatigue(s);
+    syncCrew(s);
+    expect(v.crewFatigue).toBeGreaterThan(40);
+    expect(fatigueFactor(v.crewFatigue!)).toBeLessThan(0.9);
     expect(crewEffectiveness(10)).toBe(1);
-    s.depots[0].fatigue = 80;
-    for (let i = 0; i < 8; i++) dailyCrew(s);
-    expect(s.depots[0].fatigue).toBe(0);
+    const resting = s.people.find(m => m.depotId)!;
+    resting.fatigue = 80;
+    for (let i = 0; i < 8; i++) dailyPeopleFatigue(s);
+    expect(resting.fatigue).toBe(0);
   });
 
   it('pay sets wages and morale; badly paid crews quit', () => {
@@ -36,10 +38,10 @@ describe('crew', () => {
     expect(-(highPaid.ledger[1990]?.wages ?? 0)).toBeGreaterThan(-(lowPaid.ledger[1990]?.wages ?? 0));
 
     let miserable = setPolicy({ ...base, crewMorale: 10 }, 'pay', 'low').state;
-    miserable.depots[0].crew = 20;
-    const before = totalCrew(miserable);
+    miserable = hireCrew(miserable, miserable.depots[0].id, 15).state;
+    const before = miserable.people.length;
     miserable = advanceHours(miserable, 35 * HOURS_PER_DAY);
-    expect(totalCrew(miserable)).toBeLessThan(before);
-    expect(miserable.news.some(n => /crew quit/.test(n.text))).toBe(true);
+    expect(miserable.people.length).toBeLessThan(before);
+    expect(miserable.news.some(n => /crew gone/.test(n.text))).toBe(true);
   });
 });
