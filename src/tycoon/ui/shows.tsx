@@ -1,4 +1,4 @@
-import { gigBookingBar, tourBookingBar } from '@/world/standing';
+import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
 import { assignVehicle, bookGig, unassignVehicle } from '@/world/actions';
 import { DEPT_COLORS, DEPT_LABELS, LOAD_IN_HOUR, SHOW_END_HOUR, SHOW_START_HOUR, companyTier, getModel, tierInfo } from '@/world/catalog';
@@ -15,7 +15,7 @@ import { Bar, Stat, TierChip } from './bits';
 import { BrandBadge } from './brands';
 import { kmoney, money } from './format';
 import type { WinCtx } from './types';
-import { READINESS_CLASS, gigReadiness, gigWhere } from './gigInfo';
+import { READINESS_CLASS, gigDates, gigReadiness, gigWhere } from './gigInfo';
 import { TourList } from './tours';
 
 function nearestDepotDistance(state: TycoonState, gig: Gig): number {
@@ -54,8 +54,9 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
     <div>
       <div className="tt-row">
         <span>
+          {gig.festival && <b>🎪 {gig.festival.stage} · </b>}
           <a style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => ctx.open('venue', venue.id)}>
-            {venue.name}
+            {gig.festival ? 'festival site' : venue.name}
           </a>
           ,{' '}
           <a style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => ctx.open('city', city.id)}>
@@ -64,8 +65,8 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
         </span>
         <TierChip tier={gig.tier} locked={locked && gig.status === 'offer'} />
       </div>
-      <Stat label="Show day">
-        {formatDay(state, gig.day)}{' '}
+      <Stat label={(gig.days ?? 1) > 1 ? `Show days (${gig.days})` : 'Show day'}>
+        {gigDates(state, gig)}{' '}
         <span className="tt-dim">({gig.day - today >= 0 ? `in ${gig.day - today}d` : `${today - gig.day}d ago`})</span>
       </Stat>
       {tour && (
@@ -362,7 +363,7 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
                 </div>
                 <div className="tt-dim">
                   {g.tourId ? '🎫 ' : ''}
-                  {g.overseas ? gigWhere(state, g) : `${venue?.name}, ${city?.name}`} · {formatDay(state, g.day)}
+                  {gigWhere(state, g)} · {gigDates(state, g)}
                   {tab === 'offers' ? ` · ${Math.round(dist)} tiles` : ''}
                 </div>
               </div>

@@ -65,6 +65,10 @@ export interface GigSpec {
   tier?: number;
   feeMultiplier?: number;
   tourId?: string;
+  days?: number;
+  /** Scales gear and crew needs (festival main stages are bigger). */
+  needsScale?: number;
+  festival?: Gig['festival'];
 }
 
 /** Rolls the rider, needs and fee for one show. */
@@ -86,11 +90,11 @@ export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
       return;
     }
     const swing = base === 0 ? (rng.chance(0.15) ? 1 : 0) : rng.nextRange(-1, Math.ceil(base * 0.25) + 1);
-    needs[d] = Math.max(0, base + swing);
+    needs[d] = Math.max(0, Math.round((base + swing) * (spec.needsScale ?? 1)));
   });
   const year = dateOfDay(state, spec.day).getUTCFullYear();
   const rating = state.cityRatings[spec.venue.cityId] ?? 50;
-  const asksForYou = spec.real && (state.artistRelations[spec.act] ?? 0) > 0;
+  const asksForYou = (spec.real || !!spec.festival) && (state.artistRelations[spec.act] ?? 0) > 0;
   const rider = tier >= 2 && rng.chance(spec.real ? 0.55 : 0.25) ? pickRider(needs, tier, year, rng) : undefined;
   const star = spec.real ? 1.15 : 1;
   const loyalty = asksForYou ? 1.1 : 1;
@@ -106,11 +110,13 @@ export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
     day: spec.day,
     acceptByDay: spec.day - 3,
     needs,
-    crewNeeded: info.crew + rng.nextInt(tier),
+    crewNeeded: Math.round((info.crew + rng.nextInt(tier)) * (spec.needsScale ?? 1)),
     fee,
     rider,
     asksForYou: asksForYou || undefined,
     tourId: spec.tourId,
+    days: spec.days,
+    festival: spec.festival,
     status: 'offer',
   };
 }
@@ -168,7 +174,7 @@ function rivalVehicleModel(tier: number): string {
 export function rivalsTakeOffers(state: TycoonState, world: WorldMap, rng: Rng) {
   const today = dayOf(state.hour);
   state.gigs.forEach(gig => {
-    if (gig.status !== 'offer' || gig.tourId) return; // tours are bid on as a whole
+    if (gig.status !== 'offer' || gig.tourId || gig.festival) return; // tours are bid on as a whole; festivals by tender
     if (gig.acceptByDay < today) {
       gig.status = 'expired';
       return;

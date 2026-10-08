@@ -1,6 +1,10 @@
 import { LOAN_MARGIN, marketNow, monthlyInterest } from '@/world/market';
 import { SEASON, baseRate } from '@/world/content/economy';
-import { Bar, Stat } from './bits';
+import { dayOf, formatDay } from '@/world/core';
+import { TENDER_CLOSES_DAYS, TENDER_OPENS_DAYS, festivalCalendar } from '@/world/festivals';
+import { worldOf } from '@/world/mapgen';
+import type { Gig } from '@/world/types';
+import { Bar, Stat, TierChip } from './bits';
 import { money } from './format';
 import type { WinCtx } from './types';
 
@@ -57,6 +61,13 @@ export function MarketWindow({ ctx }: { ctx: WinCtx }) {
         for the winter.
       </div>
 
+      <h4>Festival season</h4>
+      <FestivalCalendar ctx={ctx} />
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        Festivals tender their stages two months out. Book one before the tender closes and it's yours — the rig is tied up for
+        the whole festival, and it pays like a run of arena dates. Do it well and they'll ask for you next year.
+      </div>
+
       <h4>Money</h4>
       <Stat label="Central bank rate">{base.toFixed(2)}%</Stat>
       <Stat label="Your loan rate">
@@ -67,6 +78,51 @@ export function MarketWindow({ ctx }: { ctx: WinCtx }) {
       <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
         Borrowing to expand is cheap some years and ruinous in others.
       </div>
+    </div>
+  );
+}
+
+export function FestivalCalendar({ ctx }: { ctx: WinCtx }) {
+  const { state } = ctx;
+  const today = dayOf(state.hour);
+  const dates = festivalCalendar(state, worldOf(state));
+  if (!dates.length) return <div className="tt-dim">No festivals on the calendar yet in this era — they'll come.</div>;
+  return (
+    <div className="tt-list">
+      {dates.map(d => {
+        const main = d.gigs.find(g => g.festival?.main);
+        const holder = (g?: Gig) =>
+          !g ? null : g.status === 'booked' || g.status === 'done' ? 'You' : g.status === 'rival' ? state.rivals.find(r => r.id === g.rivalId)?.name ?? 'A rival' : null;
+        const opens = d.startDay - TENDER_OPENS_DAYS;
+        const closes = d.startDay - TENDER_CLOSES_DAYS;
+        const status = d.gigs.length
+          ? today <= closes && d.gigs.some(g => g.status === 'offer')
+            ? `Tender open — closes in ${closes - today}d`
+            : `Main stage: ${holder(main) ?? '—'}`
+          : today < opens
+            ? `Tender opens ${formatDay(state, opens)}`
+            : 'Tender closed';
+        return (
+          <div
+            key={`${d.festival.id}-${d.year}`}
+            className={`tt-item${main ? ' clickable' : ''}`}
+            onClick={() => main && ctx.open('gig', main.id)}
+          >
+            <div className="grow">
+              <div style={{ fontWeight: 700 }}>
+                🎪 {d.festival.name} {d.year}
+              </div>
+              <div className="tt-dim">
+                {formatDay(state, d.startDay)} · {d.host.name} · {d.festival.days} day{d.festival.days > 1 ? 's' : ''}
+              </div>
+              <div className={d.gigs.some(g => g.status === 'offer') ? 'tt-good' : 'tt-dim'} style={{ fontSize: 11 }}>
+                {status}
+              </div>
+            </div>
+            <TierChip tier={d.size} />
+          </div>
+        );
+      })}
     </div>
   );
 }

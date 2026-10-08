@@ -1,4 +1,4 @@
-import { gigBookingBar, tourBookingBar } from '@/world/standing';
+import { tourBookingBar } from '@/world/standing';
 import { assignVehicleToTour, bookTour } from '@/world/actions';
 import { getModel, tierInfo } from '@/world/catalog';
 import { dayOf, formatDay, lastShowDay } from '@/world/core';

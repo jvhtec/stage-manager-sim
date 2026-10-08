@@ -1,4 +1,4 @@
-import { gigBookingBar, tourBookingBar } from '@/world/standing';
+import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
 import { buildDepot, buyVehicle, fireCrew, hireCrew } from '@/world/actions';
 import { stockSize } from '@/world/loading';
@@ -15,6 +15,7 @@ import { dayOf, depotInCity, formatDay, freeLot } from '@/world/core';
 import { worldOf } from '@/world/mapgen';
 import { vehicleActivity } from '@/world/queries';
 import { DEPTS, type Gig } from '@/world/types';
+import { gigDates } from './gigInfo';
 import { Bar, DeptDot, Stat, TierChip } from './bits';
 import { formatPopulation, kmoney, marketLabel, money, ratingLabel } from './format';
 import type { WinCtx } from './types';
@@ -41,7 +42,7 @@ function GigRow({ ctx, gig }: { ctx: WinCtx; gig: Gig }) {
           {gig.act}
         </div>
         <div className="tt-dim">
-          {venue?.name} · {formatDay(ctx.state, gig.day)} ({gig.day - today}d)
+          {gig.festival ? `🎪 ${gig.festival.stage}` : venue?.name} · {gigDates(ctx.state, gig)} ({gig.day - today}d)
         </div>
       </div>
       {gig.status === 'booked' ? (

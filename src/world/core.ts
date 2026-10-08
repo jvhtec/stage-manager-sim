@@ -70,7 +70,7 @@ export function formatHour(state: Pick<TycoonState, 'startYear'>, hour: number):
 // before the first date (that's "load-in"), and it comes back
 // `freightDays` after the last one.
 const freightDays = (gig: Gig) => (gig.overseas ? getRegion(gig.overseas.regionId).freightDays : 0);
-export const lastShowDay = (gig: Gig) => (gig.overseas ? gig.overseas.stops[gig.overseas.stops.length - 1].day : gig.day);
+export const lastShowDay = (gig: Gig) => (gig.overseas ? gig.overseas.stops[gig.overseas.stops.length - 1].day : gig.day + (gig.days ?? 1) - 1);
 
 export const loadInHour = (gig: Gig) => (gig.day - freightDays(gig)) * HOURS_PER_DAY + LOAD_IN_HOUR;
 /** Anything that arrives after this misses the show (or, overseas, the last flight out). */

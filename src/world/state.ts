@@ -135,6 +135,7 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     ledger: {},
     announcedModels: VEHICLE_MODELS.filter(m => m.introYear <= startYear).map(m => m.id),
     announcedGear: productsAvailableIn(startYear).map(p => p.id),
+    festivalsPosted: [],
     announcedClimate: [],
     artistRelations: {},
     negativeMonths: 0,
@@ -213,6 +214,7 @@ export function loadTycoonGame(): TycoonState | null {
 export function migrate(state: Partial<TycoonState>): TycoonState {
   const s = state as TycoonState;
   s.announcedClimate ??= [];
+  s.festivalsPosted ??= [];
   return s;
 }
 

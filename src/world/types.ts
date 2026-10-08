@@ -235,6 +235,10 @@ export interface Gig {
   tourId?: string;
   /** Set for world-tour legs abroad; the gig's venue/city is then the airport. */
   overseas?: OverseasLeg;
+  /** Shows that run over several days (festival stages). Default 1. */
+  days?: number;
+  /** A festival stage contract (content/festivals.ts). `act` is the festival's name. */
+  festival?: { id: string; year: number; stage: string; main: boolean };
   status: GigStatus;
   rivalId?: string;
   result?: GigResult;
@@ -306,6 +310,8 @@ export interface TycoonState {
   announcedModels: string[];
   /** Gear product ids already announced as available. */
   announcedGear: string[];
+  /** Festival tenders already opened, as "festivalId-year". */
+  festivalsPosted: string[];
   /** Economy periods (content/economy.ts) already announced. */
   announcedClimate: string[];
   /** Artist name → number of good shows you've done for them. */

@@ -51,6 +51,7 @@ import { rivalsFor } from './content/companies';
 import { getTech, techBonus, techsActiveIn } from './content/techs';
 import { dailyOffers, pruneGigs, rivalsTakeOffers } from './offers';
 import { dailyTours } from './tours';
+import { dailyFestivals } from './festivals';
 import { dailyMarket, marketNow, monthlyInterest } from './market';
 import { getRegion } from './content/world';
 import { getCityPath } from './pathfinding';
@@ -320,7 +321,9 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const city = world.cityById.get(gig.cityId);
   const where = gig.overseas
     ? `the ${getRegion(gig.overseas.regionId).name} (${gig.overseas.stops.map(st => st.city).join(', ')})`
-    : `${venue?.name}, ${city?.name}`;
+    : gig.festival
+      ? `the ${gig.festival.stage}, ${city?.name}`
+      : `${venue?.name}, ${city?.name}`;
   const onSite = s.vehicles.filter(
     v =>
       v.owner === 'player' &&
@@ -389,7 +392,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     v.profitThisYear += Math.round((payout * (stockSize(v.cargo) + v.crew)) / totalCargo);
   });
   // Acts remember who did them proud — they'll ask for you again.
-  if (quality >= 0.75 && findArtist(gig.act)) {
+  if (quality >= 0.75 && (findArtist(gig.act) || gig.festival)) {
     s.artistRelations[gig.act] = (s.artistRelations[gig.act] ?? 0) + 1;
   }
   gig.status = 'done';
@@ -444,6 +447,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   dailyOffers(s, world, rng);
   rivalsTakeOffers(s, world, rng);
   dailyTours(s, world, rng);
+  dailyFestivals(s, world, rng);
   pruneGigs(s);
 
   // Nag about booked shows with nothing assigned two days out.
