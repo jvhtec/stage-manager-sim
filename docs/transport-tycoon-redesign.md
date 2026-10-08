@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 75 tests):
+(`src/world/__tests__/*.test.ts`, 83 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -247,6 +247,25 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   racks holding your actual stock, prep crew, office, workshop bench, gig techs, trucks in the
   bays; venues by kind with the stage, era-correct PA (stacks before 1993, line arrays after),
   truss, LED screen, FOH and crowd, through load-in, show (beams) and load-out.
+
+- **Special events** (`events.ts`, `content/events.ts`) — ~65 real events per country (Live Aid,
+  the Mandela tribute, Knebworth, Live 8, The Wall in Berlin, Barcelona '92, the Bicentenaire,
+  Jarre at La Défense, Pavarotti & Friends, Olympic/World Cup ceremonies, Eurovision when hosted,
+  MTV EMAs) and recurring dates (BRITs, Super Bowl halftime, Farm Aid, Goyas, Sanremo, Primo
+  Maggio). Tendered 50-110 days ahead by department; sealed bids (sharp ×0.85 / standard /
+  premium ×1.2) scored on reputation^1.3 × specialty ÷ price against the rivals in the league;
+  organisers want reputation 45/62/75 by scale. Broadcasts take −0.15 for anything late, missing
+  or failing; ±2-7 reputation by scale; "Special Event of the Year" award. Citywide events
+  (Fête de la Musique, Love Parade) spawn extra small shows.
+- **Rental market** (`hire.ts`) — sub-hire shortfalls from rivals within 40 tiles (5 units per
+  rival per department, quality a notch below expectations, 10% of replacement value per day);
+  rent idle kit out (0.12%/day income, extra wear).
+- **Transfers** (`transfers.ts`) — courier kit between your bases (by units × distance, arrives
+  after the drive).
+- **Rival finances & takeovers** (`rivals.ts`) — monthly health from the economy, wins and mean
+  reversion (big names floored at 20); at 0 a firm goes under and frees its lot. Buy a rival
+  (price by reputation, size and health; you need reputation within 15 of theirs): their base,
+  used era kit, crew and 6% of their reputation become yours.
 
 UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
 (workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the

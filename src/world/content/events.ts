@@ -124,6 +124,11 @@ export const SPECIAL_EVENTS: SpecialEvent[] = [
   E({ id: 'eurovision-it22', name: 'Eurovision Song Contest', country: 'IT', kind: 'broadcast', year: 2022, month: 5, day: 14, near: ['Torino'], scale: 4, lots: ALL, broadcast: true }),
 ];
 
+/** "Live Aid 1985", but not "Knebworth ’90 1990". */
+export function eventTitle(e: Pick<SpecialEvent, 'name'>, year: number): string {
+  return /[’']\d\d$/.test(e.name) || e.name.includes(String(year)) ? e.name : `${e.name} ${year}`;
+}
+
 /** Whether an event runs in a given year. */
 export function eventRunsIn(e: SpecialEvent, year: number): boolean {
   if (!e.recurring) return e.year === year;

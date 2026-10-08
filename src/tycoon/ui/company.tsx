@@ -214,6 +214,14 @@ export function HelpWindow() {
           Full-time staff (prep, sales) stay at the base; gig technicians go on the road, topped up by local freelancers.
         </li>
         <li>
+          <b>Special events</b> (Shows → Events) — Live Aid, Olympic ceremonies, Eurovision, the BRITs… — are tendered
+          department by department: put in a sealed bid (sharp, standard or premium). On live TV nothing may be late or fail.
+        </li>
+        <li>
+          <b>The trade</b>: short of kit, sub-hire it from a rival nearby (or rent your idle kit out); courier kit between your
+          bases; and when a rival struggles, buy them out from the League.
+        </li>
+        <li>
           Buy bigger trucks and more gear, and win reputation to unlock arenas and stadiums. Every January the industry awards
           judge your year.
         </li>

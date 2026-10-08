@@ -14,7 +14,7 @@
 import type { Rng } from '@/lib/rng';
 import { DEPT_LABELS, tierInfo } from './catalog';
 import { dateOfDay, dayOf, formatDay, formatMoney, newId, pushNews } from './core';
-import { EVENT_NOTICE_DAYS, eventRunsIn, eventsFor, type SpecialEvent } from './content/events';
+import { EVENT_NOTICE_DAYS, eventRunsIn, eventTitle, eventsFor, type SpecialEvent } from './content/events';
 import { festivalHost } from './festivals';
 import { marketOnDay } from './market';
 import { actName, buildGig } from './offers';
@@ -98,7 +98,7 @@ function postEvent(s: TycoonState, world: WorldMap, rng: Rng, e: SpecialEvent, y
       gig.event = { id: e.id, year, name: e.name, lot: 'audio', broadcast: false, scale: e.scale, citywide: true };
       s.gigs.push(gig);
     }
-    pushNews(s, `${e.name} ${year}: ${e.bill ?? 'shows all over town'} — ${e.shows} extra shows on ${formatDay(s, start)}. Check Shows.`, 'big', { cityId: host.id });
+    pushNews(s, `${eventTitle(e, year)}: ${e.bill ?? 'shows all over town'} — ${e.shows} extra shows on ${formatDay(s, start)}. Check Shows.`, 'big', { cityId: host.id });
     return;
   }
 
@@ -126,7 +126,7 @@ function postEvent(s: TycoonState, world: WorldMap, rng: Rng, e: SpecialEvent, y
   });
   pushNews(
     s,
-    `${e.name} ${year} (${formatDay(s, start)}, ${host.name}) is tendering its production: ${e.lots.map(l => DEPT_LABELS[l].toLowerCase()).join(', ')}.${e.broadcast ? ' Live on TV.' : ''} Bids close ${formatDay(s, close)}.`,
+    `${eventTitle(e, year)} (${formatDay(s, start)}, ${host.name}) is tendering its production: ${e.lots.map(l => DEPT_LABELS[l].toLowerCase()).join(', ')}.${e.broadcast ? ' Live on TV.' : ''} Bids close ${formatDay(s, close)}.`,
     'big',
     { cityId: host.id },
   );
@@ -196,7 +196,7 @@ export function dailyEvents(s: TycoonState, world: WorldMap, rng: Rng) {
       if (today < opens || today > latest) return;
       s.eventsPosted.push(key);
       if (marketOnDay(s, start).shutdown) {
-        pushNews(s, `${e.name} ${y} is cancelled.`, 'bad');
+        pushNews(s, `${eventTitle(e, y)} is cancelled.`, 'bad');
         return;
       }
       postEvent(s, world, rng, e, y, start);

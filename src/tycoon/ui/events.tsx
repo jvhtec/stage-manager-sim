@@ -3,6 +3,7 @@ import { DEPT_COLORS, DEPT_LABELS, tierInfo } from '@/world/catalog';
 import { dayOf, formatDay } from '@/world/core';
 import { BID_LEVELS, BID_LEVEL_IDS, EVENT_PRESTIGE, EVENT_REPUTATION, eventCalendar } from '@/world/events';
 import { worldOf } from '@/world/mapgen';
+import { eventTitle } from '@/world/content/events';
 import { gigBookingBar } from '@/world/standing';
 import type { Gig } from '@/world/types';
 import { kmoney, money } from './format';
@@ -43,7 +44,7 @@ export function EventList({ ctx }: { ctx: WinCtx }) {
             <div key={`${d.event.id}-${d.year}`} className="tt-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 3 }}>
               <div className="tt-row">
                 <b style={{ whiteSpace: 'normal' }}>
-                  {citywide ? '🎉' : d.event.broadcast ? '📺' : '★'} {d.event.name} {d.year}
+                  {citywide ? '🎉' : d.event.broadcast ? '📺' : '★'} {eventTitle(d.event, d.year)}
                 </b>
                 <span className="tt-chip" style={{ background: d.event.scale === 5 ? '#facc15' : tierInfo(Math.min(4, d.event.scale)).color }}>
                   {citywide ? 'Citywide' : SCALE_LABEL[d.event.scale]}
