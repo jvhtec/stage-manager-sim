@@ -4,7 +4,7 @@
  */
 import {
   CREW_HIRE_COST,
-  DEPOT_BUILD_COST,
+  STAFF_HIRE_COST,
   LOAN_STEP,
   DEPT_LABELS,
   MAX_LOAN,
@@ -33,7 +33,8 @@ import { makeVehicle } from './state';
 import { tourMaxTier } from './tours';
 import { gigBookingBar, tourBookingBar } from './standing';
 import { getTech, techsActiveIn } from './content/techs';
-import { DEPTS, type ActionOutcome, type Policies, type TycoonState } from './types';
+import { DEPTS, type ActionOutcome, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
+import { STAFF, canBaseVehicle, facilitySpec, nextUpgrade, usedCapacity } from './facilities';
 import { mixFatigue } from './crew';
 import { BREAK_MONTHS, contractShortfall, installKit } from './contracts';
 import { addStock } from './loading';
@@ -144,6 +145,7 @@ export function buyVehicle(state: TycoonState, depotId: string, modelId: string)
   const model = getModel(modelId);
   if (!depot) return fail(state, 'Unknown depot.');
   if (!state.announcedModels.includes(modelId)) return fail(state, `${model.name} isn't on sale yet.`);
+  if (!canBaseVehicle(depot, model.kind)) return fail(state, `A delegation has no loading dock — vans and crew buses only. Upgrade to a warehouse for trucks.`);
   if (state.company.cash < model.price) return fail(state, `Not enough cash — the ${model.name} costs ${formatMoney(state, model.price)}.`);
   const s = cloneState(state);
   const v = makeVehicle(s, modelId, depot.cityId);
@@ -184,6 +186,7 @@ export function rehomeVehicle(state: TycoonState, vehicleId: string, depotId: st
   const v0 = state.vehicles.find(v => v.id === vehicleId && v.owner === 'player');
   if (!depot || !v0) return fail(state, 'Unknown vehicle or depot.');
   if (v0.orders.length) return fail(state, 'Finish or clear its orders first.');
+  if (!canBaseVehicle(depot, getModel(v0.modelId).kind)) return fail(state, 'A delegation can only base vans and crew buses.');
   if (v0.status !== 'parked' || v0.cityId !== v0.homeCityId) return fail(state, 'Vehicle must be parked at its depot.');
   const s = cloneState(state);
   const v = s.vehicles.find(x => x.id === vehicleId)!;
@@ -196,9 +199,12 @@ export function buyGear(state: TycoonState, depotId: string, productId: string, 
   if (!state.announcedGear.includes(productId)) return fail(state, `${product.brand} ${product.name} isn't out yet.`);
   const cost = product.price * qty;
   if (state.company.cash < cost) return fail(state, `Not enough cash (${formatMoney(state, cost)}).`);
+  const d0 = state.depots.find(d => d.id === depotId);
+  if (!d0) return fail(state, 'Unknown depot.');
+  const spec = facilitySpec(d0);
+  if (usedCapacity(state, d0) + qty > spec.capacity) return fail(state, `The ${spec.label.toLowerCase()} is full (${spec.capacity} units). Sell some kit, or upgrade.`);
   const s = cloneState(state);
-  const depot = s.depots.find(d => d.id === depotId);
-  if (!depot) return fail(state, 'Unknown depot.');
+  const depot = s.depots.find(d => d.id === depotId)!;
   depot.gear[productId] = (depot.gear[productId] ?? 0) + qty;
   onBought(s, productId, qty);
   book(s, 'purchases', -cost);
@@ -254,26 +260,71 @@ export function fireCrew(state: TycoonState, depotId: string, qty = 1): ActionOu
   return ok(s);
 }
 
-export function buildDepot(state: TycoonState, cityId: string): ActionOutcome {
+/** Open a delegation (branch office) or build a small warehouse in a town. */
+export function buildDepot(state: TycoonState, cityId: string, kind: FacilityKind = 'warehouse'): ActionOutcome {
   const world = worldOf(state);
   const city = world.cityById.get(cityId);
   if (!city) return fail(state, 'Unknown city.');
-  if (depotInCity(state, cityId)) return fail(state, `You already have a warehouse in ${city.name}.`);
+  if (depotInCity(state, cityId)) return fail(state, `You already have a base in ${city.name}.`);
   const lot = freeLot(state, world, cityId);
-  if (lot < 0) return fail(state, `Every warehouse lot in ${city.name} is taken.`);
-  if (state.company.cash < DEPOT_BUILD_COST) return fail(state, `A warehouse costs ${formatMoney(state, DEPOT_BUILD_COST)}.`);
+  if (lot < 0) return fail(state, `Every lot in ${city.name} is taken.`);
+  const spec = facilitySpec({ kind, size: 1 });
+  if (state.company.cash < spec.build) return fail(state, `A ${spec.label.toLowerCase()} costs ${formatMoney(state, spec.build)}.`);
   const s = cloneState(state);
   s.depots.push({
     id: newId(s, 'depot'),
+    kind,
+    size: 1,
+    staff: { warehouse: 0, office: kind === 'delegation' ? 1 : 0 },
     cityId,
     lot,
     gear: {},
     crew: 0,
     builtHour: s.hour,
   });
-  book(s, 'property', -DEPOT_BUILD_COST);
-  pushNews(s, `${s.company.name} opens a warehouse in ${city.name}.`, 'good', { cityId });
-  return ok(s, `Warehouse built in ${city.name}.`);
+  book(s, 'property', -spec.build);
+  pushNews(s, `${s.company.name} opens a ${spec.label.toLowerCase()} in ${city.name}.`, 'good', { cityId });
+  return ok(s, `${spec.label} opened in ${city.name}.`);
+}
+
+/** Delegation → small warehouse → medium → large. */
+export function upgradeDepot(state: TycoonState, depotId: string): ActionOutcome {
+  const d0 = state.depots.find(d => d.id === depotId);
+  if (!d0) return fail(state, 'Unknown base.');
+  const next = nextUpgrade(d0);
+  if (!next) return fail(state, 'This is already as big as it gets.');
+  if (state.company.reputation < next.spec.minReputation) return fail(state, `A ${next.spec.label.toLowerCase()} needs reputation ${next.spec.minReputation}+.`);
+  if (state.company.cash < next.cost) return fail(state, `Upgrading costs ${formatMoney(state, next.cost)}.`);
+  const s = cloneState(state);
+  const d = s.depots.find(x => x.id === depotId)!;
+  d.kind = next.kind;
+  d.size = next.size;
+  book(s, 'property', -next.cost);
+  const city = worldOf(s).cityById.get(d.cityId)?.name;
+  pushNews(s, `${s.company.name}'s ${city} base is now a ${next.spec.label.toLowerCase()}.`, 'good', { cityId: d.cityId });
+  return ok(s, `Upgraded to a ${next.spec.label.toLowerCase()}.`);
+}
+
+/** Hire or let go one full-time staff member (letting go costs a month's salary). */
+export function hireStaff(state: TycoonState, depotId: string, role: StaffRole): ActionOutcome {
+  const d0 = state.depots.find(d => d.id === depotId);
+  if (!d0) return fail(state, 'Unknown base.');
+  const max = facilitySpec(d0).maxStaff[role];
+  if (d0.staff[role] >= max) return fail(state, `This ${facilitySpec(d0).label.toLowerCase()} has room for ${max} ${STAFF[role].label.toLowerCase()} staff.`);
+  if (state.company.cash < STAFF_HIRE_COST) return fail(state, 'Not enough cash to recruit.');
+  const s = cloneState(state);
+  s.depots.find(d => d.id === depotId)!.staff[role] += 1;
+  book(s, 'salaries', -STAFF_HIRE_COST);
+  return ok(s);
+}
+
+export function fireStaff(state: TycoonState, depotId: string, role: StaffRole): ActionOutcome {
+  const d0 = state.depots.find(d => d.id === depotId);
+  if (!d0 || d0.staff[role] <= 0) return fail(state, 'Nobody in that role here.');
+  const s = cloneState(state);
+  s.depots.find(d => d.id === depotId)!.staff[role] -= 1;
+  book(s, 'salaries', -STAFF[role].salary);
+  return ok(s, `Let go with a month's pay (${formatMoney(s, STAFF[role].salary)}).`);
 }
 
 export function borrow(state: TycoonState): ActionOutcome {

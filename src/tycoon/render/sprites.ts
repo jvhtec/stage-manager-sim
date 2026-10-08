@@ -394,7 +394,26 @@ function plane(rc: RC, x: number, y: number, z: number, size: number) {
 // Warehouses
 // ---------------------------------------------------------------------------
 
-export function warehouse(rc: RC, x: number, y: number, z: number, brand: RGB, seed: number, isHq: boolean): Pt {
+/** A branch office: a two-storey glass-fronted block with a sign and a lock-up. */
+export function delegation(rc: RC, x: number, y: number, z: number, brand: RGB, seed: number): Pt {
+  groundQuad(rc, x + 0.04, y + 0.04, x + 1.96, y + 1.96, z, paint(C.pavement));
+  // Lock-up garage at the back.
+  const lockup: Box = { x0: x + 0.15, y0: y + 0.15, x1: x + 0.95, y1: y + 0.85, z0: z, z1: z + 1.1 };
+  prism(rc, lockup, [176, 178, 182], [150, 152, 156]);
+  poly(rc, faceQuad(rightFace(rc, lockup), 0.15, 0.85, 0, 0.75), paint([96, 100, 108]));
+  const office: Box = { x0: x + 0.95, y0: y + 0.25, x1: x + 1.85, y1: y + 1.35, z0: z, z1: z + 2.4 };
+  prism(rc, office, [214, 218, 224], [170, 174, 180]);
+  // Glass curtain wall on both faces.
+  poly(rc, faceQuad(leftFace(rc, office), 0.06, 0.94, 0.08, 0.8), paint([86, 120, 150], 1));
+  poly(rc, faceQuad(rightFace(rc, office), 0.06, 0.94, 0.08, 0.8), paint([70, 100, 128], 1));
+  windows(rc, office, 2, seed, 3);
+  // Brand fascia.
+  poly(rc, faceQuad(leftFace(rc, office), 0, 1, 0.84, 0.98), paint(brand, 1.05));
+  poly(rc, faceQuad(rightFace(rc, office), 0, 1, 0.84, 0.98), paint(brand, 0.85));
+  return P(rc, x + 1.4, y + 0.8, office.z1 + 1.5);
+}
+
+export function warehouse(rc: RC, x: number, y: number, z: number, brand: RGB, seed: number, isHq: boolean, size = 1): Pt {
   groundQuad(rc, x + 0.04, y + 0.04, x + 1.96, y + 1.96, z, paint(C.yard));
   // Yard markings for parking bays.
   if (rc.cam.zoom >= 1.4) {
@@ -409,7 +428,7 @@ export function warehouse(rc: RC, x: number, y: number, z: number, brand: RGB, s
     }
     rc.ctx.stroke();
   }
-  const b: Box = { x0: x + 0.12, y0: y + 0.12, x1: x + 1.88, y1: y + 1.25, z0: z, z1: z + 2.2 };
+  const b: Box = { x0: x + 0.12, y0: y + 0.12, x1: x + 1.88, y1: y + 1.25 + (size - 1) * 0.08, z0: z, z1: z + 2.2 + (size - 1) * 0.7 };
   prism(rc, b, [196, 198, 202], brand);
   // Brand stripe and loading-bay doors.
   poly(rc, faceQuad(leftFace(rc, b), 0, 1, 0.72, 0.86), paint(brand, 1));

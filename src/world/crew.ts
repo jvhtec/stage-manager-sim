@@ -7,7 +7,7 @@
 import type { Rng } from '@/lib/rng';
 import { CREW_WAGE_PER_DAY } from './catalog';
 import { pushNews, totalCrew } from './core';
-import type { PayLevel, TycoonState, Vehicle } from './types';
+import type { CitySize, Gig, PayLevel, TycoonState, Vehicle, WorldMap } from './types';
 
 export interface PayInfo {
   label: string;
@@ -88,3 +88,37 @@ export function monthlyCrew(s: TycoonState, rng: Rng) {
 
 /** Effective crew a vehicle brings, after fatigue. */
 export const effectiveCrew = (v: Vehicle) => v.crew * crewEffectiveness(v.crewFatigue ?? 0);
+
+// ---------------------------------------------------------------------------
+// Local freelancers: fill crew gaps at the venue, per show day
+// ---------------------------------------------------------------------------
+
+export const FREELANCE_DAY_RATE = 140;
+/** Freelancers available locally, by town size. */
+export const FREELANCE_POOL: Record<CitySize, number> = { village: 2, town: 4, city: 8, metropolis: 14 };
+/** With a base in town you know who's good — and they know you. */
+const LOCAL_CONTACTS = { extra: 4, discount: 0.75, effectiveness: 0.95 };
+const STRANGERS_EFFECTIVENESS = 0.8;
+const OVERSEAS_POOL = 8;
+
+export interface FreelanceHire {
+  count: number;
+  cost: number;
+  /** Each freelancer counts as this much of a crew member. */
+  effectiveness: number;
+  local: boolean;
+}
+
+export function freelancersFor(state: TycoonState, world: WorldMap, gig: Gig, crewOnSite: number): FreelanceHire {
+  const none = { count: 0, cost: 0, effectiveness: 0, local: false };
+  if (state.policies.freelance === 'off') return none;
+  const short = Math.max(0, gig.crewNeeded - crewOnSite);
+  if (!short) return none;
+  const local = !gig.overseas && state.depots.some(d => d.cityId === gig.cityId);
+  const city = world.cityById.get(gig.cityId);
+  const pool = gig.overseas ? OVERSEAS_POOL : FREELANCE_POOL[city?.size ?? 'town'] + (local ? LOCAL_CONTACTS.extra : 0);
+  const count = Math.min(short, pool);
+  const days = gig.overseas ? gig.overseas.stops.length : (gig.days ?? 1);
+  const rate = FREELANCE_DAY_RATE * (local ? LOCAL_CONTACTS.discount : 1);
+  return { count, cost: Math.round(count * rate * days), effectiveness: local ? LOCAL_CONTACTS.effectiveness : STRANGERS_EFFECTIVENESS, local };
+}

@@ -12,6 +12,7 @@ import { roadDistance } from './pathfinding';
 import { actReputationBar, reachWeight } from './standing';
 import { marketNow, marketOnDay } from './market';
 import { holdsContractAt } from './contracts';
+import { salesBoost } from './facilities';
 import type { City, CitySize, DeptCounts, Gig, Rider, TycoonState, Vehicle, Venue, WorldMap } from './types';
 import { DEPTS } from './types';
 
@@ -157,7 +158,7 @@ const OFFER_RATE: Record<CitySize, number> = { village: 0.05, town: 0.075, city:
 export function dailyOffers(state: TycoonState, world: WorldMap, rng: Rng) {
   const { demand } = marketNow(state);
   world.cities.forEach(city => {
-    const chance = OFFER_RATE[city.size] * demand;
+    const chance = OFFER_RATE[city.size] * demand * (1 + salesBoost(state, world, city.id));
     if (rng.chance(chance)) {
       const gig = generateOffer(state, world, city, rng);
       if (gig) state.gigs.push(gig);

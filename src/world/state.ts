@@ -27,7 +27,7 @@ export const TYCOON_SAVE_KEY = 'stage-manager-sim:tycoon';
 export const TYCOON_SAVE_VERSION = 6;
 const OLDEST_MIGRATABLE = 5;
 
-export const DEFAULT_POLICIES: Policies = { workshop: 'basic', pay: 'standard', insurance: 'none' };
+export const DEFAULT_POLICIES: Policies = { workshop: 'basic', pay: 'standard', insurance: 'none', freelance: 'fill' };
 
 export interface NewGameOptions {
   companyName: string;
@@ -153,6 +153,10 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
 
   state.depots.push({
     id: newId(state, 'depot'),
+    kind: 'warehouse',
+    size: 1,
+    // One prep tech to start; hire sales staff to bring in work.
+    staff: { warehouse: 1, office: 0 },
     cityId: hq.id,
     lot: 0,
     // A small, slightly dated rig for the era you start in.
@@ -227,6 +231,11 @@ export function migrate(state: Partial<TycoonState>): TycoonState {
   s.gearCondition ??= {};
   s.crewMorale ??= 65;
   s.contracts ??= [];
+  s.depots.forEach(d => {
+    d.kind ??= 'warehouse';
+    d.size ??= 1;
+    d.staff ??= { warehouse: 1, office: 0 };
+  });
   s.yearStats ??= {};
   s.awards ??= [];
   return s;

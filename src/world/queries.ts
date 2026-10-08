@@ -1,8 +1,10 @@
 /** Read-only projections for the UI — nothing here mutates state. */
-import { GEAR_RESALE_RATE, getModel } from './catalog';
+import { GEAR_RESALE_RATE, HOTEL_NIGHT, HOURS_PER_DAY, PER_DIEM, fuelPerTile, getModel } from './catalog';
 import { getProduct } from './content/gear';
 import { techBonus } from './content/techs';
 import { houseRigAt } from './contracts';
+import { freelancersFor, type FreelanceHire } from './crew';
+import { prepRatio } from './facilities';
 import { crewEffectiveness, effectiveCrew, moraleBonus } from './crew';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize, type GearEvaluation } from './loading';
 import {
@@ -81,6 +83,10 @@ export interface CoverageProjection {
   techIds: string[];
   /** The kit that would go out, by product. */
   delivered: GearStock;
+  /** Local freelancers who'd fill any crew gap. */
+  freelance: FreelanceHire;
+  /** How well-prepped the kit going out is (0-1). */
+  prep: number;
 }
 
 /** What would turn up at `gig` if things go to plan — runs the sim's own loading and scoring. */
@@ -117,6 +123,15 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
   });
 
   const evaluation = evaluateGear(delivered, gig, dateOfDay(state, gig.day).getUTCFullYear(), state.gearCondition);
+  const freelance = vehicles.length ? freelancersFor(state, worldOf(state), gig, crew) : { count: 0, cost: 0, effectiveness: 0, local: false };
+  effCrew += freelance.count * freelance.effectiveness;
+  // Prep is judged on the bases the trucks come from (loaded or not).
+  const prep = vehicles.length
+    ? vehicles.reduce((sum, v) => {
+        const base = depotInCity(state, v.homeCityId);
+        return sum + (base ? prepRatio(state, base) : 0);
+      }, 0) / vehicles.length
+    : 1;
   const vehicleIds = new Set(vehicles.map(v => v.id));
   const techIds = state.techs.filter(t => t.vehicleId && vehicleIds.has(t.vehicleId)).map(t => t.techId);
   const onTime = !vehicles.length || latestArrival <= loadInHour(gig);
@@ -130,7 +145,7 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
         bonus: techBonus(techIds, gig.act) + moraleBonus(state.crewMorale),
       })
     : 0;
-  return { gear: evaluation.delivered, crew, latestArrival, onTime, vehicles, evaluation, expectedQuality, techIds, delivered };
+  return { gear: evaluation.delivered, crew, latestArrival, onTime, vehicles, evaluation, expectedQuality, techIds, delivered, freelance, prep };
 }
 
 /** What a pile of kit would fetch, given its condition. */
@@ -149,4 +164,38 @@ export function companyValue(state: TycoonState): number {
 
 export function homeDepot(state: TycoonState, v: Vehicle) {
   return depotInCity(state, v.homeCityId);
+}
+
+export interface JobCosts {
+  fuel: number;
+  travel: number;
+  freelance: number;
+  total: number;
+  nights: number;
+}
+
+/**
+ * Rough road costs of a job for the trucks assigned to it: fuel there and
+ * back, a night's per diems and hotel for each crew member for every night
+ * away, and any freelancers. (Tours share the trip between dates; this
+ * counts each date as its own round trip, so it errs on the high side.)
+ */
+export function estimateJobCosts(state: TycoonState, gig: Gig, projection = projectCoverage(state, gig)): JobCosts {
+  const world = worldOf(state);
+  let fuel = 0;
+  let travel = 0;
+  let nights = 0;
+  projection.vehicles.forEach(v => {
+    const model = getModel(v.modelId);
+    const dist = roadDistance(world, v.homeCityId, gig.cityId);
+    if (!Number.isFinite(dist)) return;
+    fuel += dist * 2 * fuelPerTile(model);
+    if (v.homeCityId === gig.cityId && !gig.overseas) return;
+    const away = Math.max(1, Math.ceil((loadOutDoneHour(gig) - loadInHour(gig) + (2 * dist) / model.speed) / HOURS_PER_DAY));
+    const crew = Math.min(model.crewSeats, gig.crewNeeded);
+    nights += away;
+    travel += away * crew * (PER_DIEM + (model.kind === 'bus' ? 0 : HOTEL_NIGHT));
+  });
+  const freelance = projection.freelance.cost;
+  return { fuel: Math.round(fuel), travel: Math.round(travel), freelance, total: Math.round(fuel + travel + freelance), nights };
 }

@@ -7,12 +7,13 @@ import { getRegion } from '@/world/content/world';
 import { artistTierIn, findArtist } from '@/world/content/artists';
 import { expectedQuality } from '@/world/content/gear';
 import { averageCondition, failureChance } from '@/world/wear';
+import { prepFailureFactor } from '@/world/facilities';
 import { ConditionChip } from './gear';
 import { ContractList } from './contracts';
 import { getTech } from '@/world/content/techs';
 import { worldOf } from '@/world/mapgen';
 import { roadDistance } from '@/world/pathfinding';
-import { estimateArrival, projectCoverage } from '@/world/queries';
+import { estimateArrival, estimateJobCosts, projectCoverage } from '@/world/queries';
 import { DEPTS, type Gig, type TycoonState } from '@/world/types';
 import { Bar, Stat, TierChip } from './bits';
 import { BrandBadge } from './brands';
@@ -181,11 +182,44 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
                 <ConditionChip value={averageCondition(state, projection.delivered)} />{' '}
                 <span className="tt-dim">
                   {Math.round(
-                    (1 - (1 - failureChance(averageCondition(state, projection.delivered))) ** Math.min(4, gig.overseas ? gig.overseas.stops.length : (gig.days ?? 1))) * 100,
+                    (1 -
+                      (1 - Math.min(0.95, failureChance(averageCondition(state, projection.delivered)) * prepFailureFactor(projection.prep))) **
+                        Math.min(4, gig.overseas ? gig.overseas.stops.length : (gig.days ?? 1))) *
+                      100,
                   )}
                   % failure risk
                 </span>
               </Stat>
+              <Stat label="Prep">
+                <span className={projection.prep >= 1 ? 'tt-good' : projection.prep >= 0.5 ? 'tt-warn' : 'tt-bad'}>
+                  {Math.round(projection.prep * 100)}%
+                </span>
+              </Stat>
+              {projection.freelance.count > 0 && (
+                <Stat label="Local freelancers">
+                  +{projection.freelance.count} · {money(projection.freelance.cost)}
+                  {projection.freelance.local ? ' (your contacts)' : ''}
+                </Stat>
+              )}
+              {(() => {
+                const c = estimateJobCosts(state, gig, projection);
+                return (
+                  <>
+                    <Stat label="Road costs (est.)">
+                      {money(c.total)}{' '}
+                      <span className="tt-dim">
+                        fuel {money(c.fuel)} · {c.nights} night{c.nights === 1 ? '' : 's'} away {money(c.travel)}
+                        {c.freelance ? ` · freelancers ${money(c.freelance)}` : ''}
+                      </span>
+                    </Stat>
+                    <Stat label="Margin (est.)">
+                      <b className={gig.fee * (0.35 + 0.65 * projection.expectedQuality) - c.total >= 0 ? 'tt-good' : 'tt-bad'}>
+                        {money(Math.round(gig.fee * (0.35 + 0.65 * projection.expectedQuality) - c.total))}
+                      </b>
+                    </Stat>
+                  </>
+                );
+              })()}
               {gig.rider && (
                 <Stat label="Rider">
                   {projection.evaluation.riderMet ? (

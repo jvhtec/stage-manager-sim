@@ -2,7 +2,7 @@ import { setPolicy } from '@/world/actions';
 import { WORKSHOP, WORKSHOP_LEVELS, averageCondition, monthlyWorkshopCost, ownedStock } from '@/world/wear';
 import { Bar, FatigueChip, Stat } from './bits';
 import { CREW_WAGE_PER_DAY } from '@/world/catalog';
-import { PAY, PAY_LEVELS, averageFatigue, moraleTarget } from '@/world/crew';
+import { FREELANCE_DAY_RATE, PAY, PAY_LEVELS, averageFatigue, moraleTarget } from '@/world/crew';
 import { ConditionChip } from './gear';
 import { INSURANCE, INSURANCE_LEVELS, insuredValue, monthlyPremium } from '@/world/incidents';
 import { money } from './format';
@@ -46,7 +46,7 @@ export function Choice<T extends string>({
 
 export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
-  const set = <K extends 'workshop' | 'pay' | 'insurance'>(key: K, value: (typeof state.policies)[K]) => ctx.dispatch(s => setPolicy(s, key, value));
+  const set = <K extends 'workshop' | 'pay' | 'insurance' | 'freelance'>(key: K, value: (typeof state.policies)[K]) => ctx.dispatch(s => setPolicy(s, key, value));
   const owned = ownedStock(state);
   return (
     <div>
@@ -95,6 +95,21 @@ export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
         Morale drifts each month towards what you pay, less how worn out everyone is. Good morale lifts every show; below 40,
         people start quitting.
       </div>
+
+      <h4>Local freelancers</h4>
+      <Choice
+        value={state.policies.freelance}
+        options={[
+          {
+            id: 'fill' as const,
+            label: 'Fill crew gaps locally',
+            detail: 'Short-handed shows hire local freelancers at the venue — cheaper and better where you have a base.',
+            note: `${money(FREELANCE_DAY_RATE)}/day`,
+          },
+          { id: 'off' as const, label: 'Own crew only', detail: 'Never hire in: short-handed shows play short.' },
+        ]}
+        onPick={id => set('freelance', id)}
+      />
 
       <h4>Insurance</h4>
       <Stat label="Insured value (gear + fleet)">{money(insuredValue(state))}</Stat>

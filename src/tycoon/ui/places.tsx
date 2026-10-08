@@ -1,12 +1,9 @@
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
-import { buildDepot, buyVehicle, fireCrew, hireCrew } from '@/world/actions';
+import { buildDepot, buyVehicle } from '@/world/actions';
 import { stockSize } from '@/world/loading';
 import { GearShop, WarehouseGear } from './gear';
 import {
-  CREW_HIRE_COST,
-  DEPOT_BUILD_COST,
-  DEPOT_UPKEEP_PER_MONTH,
   companyTier,
   getModel,
 } from '@/world/catalog';
@@ -15,9 +12,10 @@ import { worldOf } from '@/world/mapgen';
 import { vehicleActivity } from '@/world/queries';
 import type { Gig } from '@/world/types';
 import { gigDates } from './gigInfo';
+import { BaseOverview } from './base';
+import { DELEGATION, RENT_FACTOR, WAREHOUSES, canBaseVehicle, facilitySpec } from '@/world/facilities';
 import { ContractCard } from './contracts';
-import { Bar, FatigueChip, Stat, TierChip } from './bits';
-import { crewWage } from '@/world/crew';
+import { Bar, Stat, TierChip } from './bits';
 import { formatPopulation, kmoney, marketLabel, money, ratingLabel } from './format';
 import type { WinCtx } from './types';
 
@@ -128,26 +126,43 @@ export function CityWindow({ ctx, cityId }: { ctx: WinCtx; cityId: string }) {
         ))}
         {depot && (
           <button className="tt-btn sm" onClick={() => ctx.open('depot', depot.id)}>
-            Open your {city.name} warehouse
+            Open your {city.name} {facilitySpec(depot).label.toLowerCase()}
           </button>
         )}
       </div>
       {!depot &&
         (lotFree ? (
-          <div className="tt-row" style={{ marginTop: 6 }}>
-            <span className="tt-dim">
-              Build here to base trucks, gear and crew locally. Upkeep {money(DEPOT_UPKEEP_PER_MONTH)}/mo.
-            </span>
-            <button
-              className="tt-btn sm primary"
-              disabled={state.company.cash < DEPOT_BUILD_COST}
-              onClick={() => {
-                const r = ctx.dispatch(s => buildDepot(s, cityId));
-                ctx.toast(r.message ?? '', r.ok);
-              }}
-            >
-              Build {kmoney(DEPOT_BUILD_COST)}
-            </button>
+          <div className="tt-list" style={{ marginTop: 6 }}>
+            {([
+              ['delegation', DELEGATION],
+              ['warehouse', WAREHOUSES[0]],
+            ] as const).map(([kind, spec]) => (
+              <div key={kind} className="tt-item">
+                <div className="grow">
+                  <div style={{ fontWeight: 700 }}>{kind === 'delegation' ? '🏢' : '🏭'} {spec.label}</div>
+                  <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+                    {spec.blurb}
+                  </div>
+                  <div className="tt-dim">
+                    Holds {spec.capacity} units · rent here {money(Math.round(spec.rent * RENT_FACTOR[city.size]))}/mo
+                  </div>
+                </div>
+                <button
+                  className="tt-btn sm primary"
+                  disabled={state.company.cash < spec.build}
+                  onClick={() => {
+                    const r = ctx.dispatch(s => buildDepot(s, cityId, kind));
+                    ctx.toast(r.message ?? '', r.ok);
+                  }}
+                >
+                  {kmoney(spec.build)}
+                </button>
+              </div>
+            ))}
+            <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+              A base here means shorter drives and fewer hotel nights for nearby shows, cheaper and better local freelancers, and
+              sales staff to bring in work — for rent and salaries every month.
+            </div>
           </div>
         ) : (
           <div className="tt-dim" style={{ marginTop: 6 }}>
@@ -230,7 +245,7 @@ export function VenueWindow({ ctx, venueId }: { ctx: WinCtx; venueId: string }) 
 
 export function DepotWindow({ ctx, depotId }: { ctx: WinCtx; depotId: string }) {
   const { state } = ctx;
-  const [tab, setTab] = useState<'stock' | 'shop' | 'buy'>('stock');
+  const [tab, setTab] = useState<'base' | 'stock' | 'shop' | 'buy'>('base');
   const depot = state.depots.find(d => d.id === depotId);
   if (!depot) return null;
   const world = worldOf(state);
@@ -243,8 +258,11 @@ export function DepotWindow({ ctx, depotId }: { ctx: WinCtx; depotId: string }) 
   return (
     <div>
       <div className="tt-tabs">
+        <button className="tt-btn sm" data-on={tab === 'base'} onClick={() => setTab('base')}>
+          Base
+        </button>
         <button className="tt-btn sm" data-on={tab === 'stock'} onClick={() => setTab('stock')}>
-          Warehouse
+          Stock
         </button>
         <button className="tt-btn sm" data-on={tab === 'shop'} onClick={() => setTab('shop')}>
           Gear shop
@@ -253,25 +271,14 @@ export function DepotWindow({ ctx, depotId }: { ctx: WinCtx; depotId: string }) 
           Vehicles
         </button>
       </div>
-      {tab === 'shop' ? (
+      {tab === 'base' ? (
+        <BaseOverview ctx={ctx} depot={depot} />
+      ) : tab === 'shop' ? (
         <GearShop ctx={ctx} depot={depot} />
       ) : tab === 'stock' ? (
         <>
-          <h4>Gear in the warehouse</h4>
+          <h4>Gear on the racks</h4>
           <WarehouseGear ctx={ctx} depot={depot} />
-          <h4>Crew</h4>
-          <div className="tt-item">
-            <span className="grow">
-              {depot.crew} idle here <span className="tt-dim">· {money(crewWage(state))}/day each</span>{' '}
-              {depot.crew > 0 && <FatigueChip value={depot.fatigue ?? 0} />}
-            </span>
-            <button className="tt-btn sm" onClick={() => act(s => fireCrew(s, depot.id))}>
-              −
-            </button>
-            <button className="tt-btn sm" onClick={() => act(s => hireCrew(s, depot.id))}>
-              Hire {money(CREW_HIRE_COST)}
-            </button>
-          </div>
           <h4>Vehicles based here ({fleet.length})</h4>
           <div className="tt-list">
             {fleet.map(v => (
@@ -307,7 +314,8 @@ export function DepotWindow({ ctx, depotId }: { ctx: WinCtx; depotId: string }) 
                 </div>
                 <button
                   className="tt-btn sm primary"
-                  disabled={state.company.cash < m.price}
+                  disabled={state.company.cash < m.price || !canBaseVehicle(depot, m.kind)}
+                  title={canBaseVehicle(depot, m.kind) ? undefined : 'Delegations have no loading dock — vans and crew buses only'}
                   onClick={() => act(s => buyVehicle(s, depot.id, id))}
                 >
                   {kmoney(m.price)}
@@ -339,11 +347,12 @@ export function DepotListWindow({ ctx }: { ctx: WinCtx }) {
             <div key={d.id} className="tt-item clickable" onClick={() => ctx.open('depot', d.id)}>
               <div className="grow">
                 <div style={{ fontWeight: 700 }}>
-                  {world.cityById.get(d.cityId)?.name}
-                  {d.cityId === state.company.hqCityId ? ' (HQ)' : ''}
+                  {d.kind === 'delegation' ? '🏢' : '🏭'} {world.cityById.get(d.cityId)?.name}
+                  {d.cityId === state.company.hqCityId ? ' (HQ)' : ''} <span className="tt-dim">· {facilitySpec(d).label}</span>
                 </div>
                 <div className="tt-dim">
-                  {units} gear units · {d.crew} crew idle · {state.vehicles.filter(v => v.owner === 'player' && v.homeCityId === d.cityId).length} vehicles
+                  {units}/{facilitySpec(d).capacity} units · {d.staff.warehouse + d.staff.office} staff · {d.crew} gig techs ·{' '}
+                  {state.vehicles.filter(v => v.owner === 'player' && v.homeCityId === d.cityId).length} vehicles
                 </div>
               </div>
             </div>
@@ -351,8 +360,8 @@ export function DepotListWindow({ ctx }: { ctx: WinCtx }) {
         })}
       </div>
       <div className="tt-dim" style={{ marginTop: 8 }}>
-        To open another warehouse, click any town on the map and choose <b>Build</b>. Regional warehouses cut drive times and
-        let you base gear where the work is.
+        To open a delegation or a warehouse, click any town on the map. Bases near the work cut fuel and hotel bills and make local
+        freelancers cheaper; each one adds rent and salaries.
       </div>
     </div>
   );

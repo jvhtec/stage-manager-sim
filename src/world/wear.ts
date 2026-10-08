@@ -112,8 +112,8 @@ export interface Failure {
 }
 
 /** Rolls for a breakdown on the night; on a failure, removes the dead units from `delivered`. */
-export function rollFailure(state: TycoonState, delivered: GearStock, rng: Rng): Failure | null {
-  if (!stockSize(delivered) || !rng.chance(failureChance(averageCondition(state, delivered)))) return null;
+export function rollFailure(state: TycoonState, delivered: GearStock, rng: Rng, factor = 1): Failure | null {
+  if (!stockSize(delivered) || !rng.chance(Math.min(0.95, failureChance(averageCondition(state, delivered)) * factor))) return null;
   // The worst-kept kit is likeliest to go.
   const ids = Object.keys(delivered).filter(id => delivered[id] > 0).sort();
   const weights = ids.map(id => (101 - condition(state, id)) * delivered[id]);

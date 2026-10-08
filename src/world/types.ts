@@ -105,6 +105,10 @@ export type LedgerCategory =
   | 'workshop'
   | 'contracts'
   | 'insurance'
+  | 'salaries'
+  | 'freelance'
+  | 'travel'
+  | 'fuel'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -121,15 +125,30 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   workshop: 'Gear maintenance',
   contracts: 'House contracts',
   insurance: 'Insurance',
+  salaries: 'Full-time staff',
+  freelance: 'Freelance crew',
+  travel: 'Per diems & hotels',
+  fuel: 'Fuel',
   sales: 'Asset sales',
 };
 
+export type FacilityKind = 'delegation' | 'warehouse';
+/** Full-time staff roles at a base (gig technicians are `crew`). */
+export type StaffRole = 'warehouse' | 'office';
+
+/** A base: a delegation (branch office) or a warehouse (facilities.ts). */
 export interface Depot {
   id: string;
+  kind: FacilityKind;
+  /** Warehouse size 1-3 (small / medium / large); delegations are 1. */
+  size: number;
+  /** Full-time staff on salary — they never go on the road. */
+  staff: Record<StaffRole, number>;
   cityId: string;
   /** Index into the city's warehouse lots. */
   lot: number;
   gear: GearStock;
+  /** Gig technicians on the payroll, based here between jobs. */
   crew: number;
   /** Average fatigue (0-100) of the crew resting here. */
   fatigue?: number;
@@ -316,6 +335,8 @@ export interface Policies {
   workshop: WorkshopLevel;
   pay: PayLevel;
   insurance: InsuranceLevel;
+  /** Fill crew gaps with local freelancers at the venue. */
+  freelance: 'off' | 'fill';
 }
 
 /** One year's record, for the company rating and the awards (awards.ts). */

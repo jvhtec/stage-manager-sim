@@ -16,7 +16,7 @@ import { getCityPath, positionOnPath } from '@/world/pathfinding';
 import { Terrain, type City, type Gig, type TycoonState, type Venue, type Vehicle, type WorldMap } from '@/world/types';
 import { TH, TW, groundZ, project, type Camera, type Pt } from './iso';
 import { C, glow, hexToRgb, paint, setNight, type RGB } from './palette';
-import { hash2, house, poly, tree, venue as drawVenue, vehicle as drawVehicle, warehouse, type RC } from './sprites';
+import { delegation, hash2, house, poly, tree, venue as drawVenue, vehicle as drawVehicle, warehouse, type RC } from './sprites';
 
 export type Selection =
   | { kind: 'vehicle'; id: string }
@@ -364,9 +364,11 @@ export function renderWorld(ctx: CanvasRenderingContext2D, input: RenderInput): 
     if (state.hour >= loadInHour(g) && state.hour < loadOutDoneHour(g)) liveVenues.set(g.venueId, companyRgb);
   });
 
-  const lotOwners = new Map<string, { brand: RGB; hq: boolean; seed: number }>();
-  state.rivals.forEach((r, i) => lotOwners.set(`${r.hqCityId}:${r.lot}`, { brand: hexToRgb(r.color), hq: true, seed: 50 + i }));
-  state.depots.forEach((d, i) => lotOwners.set(`${d.cityId}:${d.lot}`, { brand: companyRgb, hq: d.cityId === state.company.hqCityId, seed: i }));
+  const lotOwners = new Map<string, { brand: RGB; hq: boolean; seed: number; kind: 'warehouse' | 'delegation'; size: number }>();
+  state.rivals.forEach((r, i) => lotOwners.set(`${r.hqCityId}:${r.lot}`, { brand: hexToRgb(r.color), hq: true, seed: 50 + i, kind: 'warehouse', size: r.maxTier >= 4 ? 2 : 1 }));
+  state.depots.forEach((d, i) =>
+    lotOwners.set(`${d.cityId}:${d.lot}`, { brand: companyRgb, hq: d.cityId === state.company.hqCityId, seed: i, kind: d.kind ?? 'warehouse', size: d.size ?? 1 }),
+  );
 
   const placed = placeVehicles(state, map, alpha);
   const selectedVehicle = input.selection?.kind === 'vehicle' ? input.selection.id : null;
@@ -446,7 +448,8 @@ export function renderWorld(ctx: CanvasRenderingContext2D, input: RenderInput): 
             const s = o.city.lots[o.lot];
             if (!owner) break;
             const z = tileCorners(map, s.x, s.y)[0];
-            warehouse(rc, s.x, s.y, z, owner.brand, owner.seed, owner.hq);
+            if (owner.kind === 'delegation') delegation(rc, s.x, s.y, z, owner.brand, owner.seed);
+            else warehouse(rc, s.x, s.y, z, owner.brand, owner.seed, owner.hq, owner.size);
             placed.atSite.get(key)?.forEach((p, k) => {
               const px = s.x + 0.32 + (k % 4) * 0.42;
               const py = s.y + 1.68;
