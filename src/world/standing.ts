@@ -7,6 +7,7 @@
 import { tierInfo } from './catalog';
 import { yearOf } from './core';
 import { findArtist, type Artist } from './content/artists';
+import { EVENT_REPUTATION } from './events';
 import type { Gig, Tour, TycoonState } from './types';
 
 /** Reputation management wants, by the biggest tier the act has played so far. */
@@ -53,6 +54,10 @@ function bar(state: TycoonState, act: string, tier: number, what: string): Booki
 }
 
 export function gigBookingBar(state: TycoonState, gig: Gig): BookingBar {
+  if (gig.event && !gig.event.citywide) {
+    const needed = Math.max(tierInfo(gig.tier).minReputation, EVENT_REPUTATION[gig.event.scale as 3 | 4 | 5]);
+    return { needed, reason: state.company.reputation >= needed ? null : `The organisers only consider firms with reputation ${needed}+.` };
+  }
   return bar(state, gig.act, gig.tier, '');
 }
 

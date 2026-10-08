@@ -12,6 +12,7 @@ export function gigWhere(state: TycoonState, gig: Gig): string {
   }
   const world = worldOf(state);
   if (gig.festival) return `🎪 ${gig.festival.stage}, ${world.cityById.get(gig.cityId)?.name}`;
+  if (gig.event && !gig.event.citywide) return `★ ${gig.event.lot} lot, ${world.cityById.get(gig.cityId)?.name}`;
   return `${world.venueById.get(gig.venueId)?.name}, ${world.cityById.get(gig.cityId)?.name}`;
 }
 

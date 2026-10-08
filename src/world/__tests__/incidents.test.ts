@@ -1,10 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { createRng } from '@/lib/rng';
 import { createTycoonGame } from '../state';
-import { advanceHours } from '../sim';
 import { setPolicy } from '../actions';
-import { HOURS_PER_DAY } from '../catalog';
-import { dailyIncidents, monthlyPremium, rollWeather } from '../incidents';
+import { dailyIncidents, monthlyInsurance, monthlyPremium, rollWeather } from '../incidents';
 import { stockSize } from '../loading';
 import type { Gig, TycoonState } from '../types';
 
@@ -18,8 +16,10 @@ describe('incidents and insurance', () => {
     const s = game();
     expect(monthlyPremium(s, 'none')).toBe(0);
     expect(monthlyPremium(s, 'full')).toBeGreaterThan(monthlyPremium(s, 'basic'));
-    const insured = advanceHours(setPolicy(s, 'insurance', 'full').state, 40 * HOURS_PER_DAY);
-    expect(insured.ledger[1995]?.insurance ?? 0).toBeLessThan(0);
+    const insured = setPolicy(s, 'insurance', 'full').state;
+    const before = insured.company.cash;
+    monthlyInsurance(insured);
+    expect(before - insured.company.cash).toBe(monthlyPremium(insured, 'full'));
   });
 
   it('break-ins take kit, and insurance pays some of it back', () => {

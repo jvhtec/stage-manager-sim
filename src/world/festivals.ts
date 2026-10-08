@@ -26,7 +26,7 @@ export function festivalStartDay(state: Pick<TycoonState, 'startYear'>, f: Festi
   return Math.round((Date.UTC(year, f.month - 1, f.day) - Date.UTC(state.startYear, 0, 1)) / 86400000);
 }
 
-export function festivalHost(world: WorldMap, f: Festival): City {
+export function festivalHost(world: WorldMap, f: Pick<Festival, 'near'>): City {
   for (const name of f.near) {
     const city = world.cities.find(c => c.name === name);
     if (city) return city;

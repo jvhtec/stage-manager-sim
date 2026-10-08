@@ -56,7 +56,8 @@ import { getTech, techBonus, techsActiveIn } from './content/techs';
 import { dailyOffers, pruneGigs, rivalsTakeOffers } from './offers';
 import { dailyTours } from './tours';
 import { dailyFestivals } from './festivals';
-import { awardsNight, recordShow } from './awards';
+import { dailyEvents, eventStakes } from './events';
+import { awardsNight, recordEvent, recordShow } from './awards';
 import { dailyIncidents, monthlyInsurance, rollWeather } from './incidents';
 import { dailyContracts, houseRigAt, monthlyContracts } from './contracts';
 import { dailyMarket, marketNow, monthlyInterest } from './market';
@@ -400,7 +401,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const freelanceNote = freelance.count ? ` ${freelance.count} local freelancer${freelance.count > 1 ? 's' : ''} filled in.` : '';
   const lastArrival = Math.max(...onSite.map(v => v.arrivedHour ?? 0), 0);
   const lateHours = onSite.length ? Math.max(0, lastArrival - loadInHour(gig)) : 0;
-  const quality = Math.max(
+  const rawQuality = Math.max(
     0,
     Math.min(
       1,
@@ -408,6 +409,9 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
         (rng.next() - 0.5) * 0.08,
     ),
   );
+  // Special events: on live TV nothing may be late or break; great nights make careers.
+  const stakes = eventStakes(gig, rawQuality, lateHours > 0 || failures.length > 0 || forgotten.length > 0);
+  const quality = Math.max(0, rawQuality - stakes.qualityPenalty);
   const resultExtras = { gearQuality: gear.quality, riderMet: gear.riderMet, techs: techIds.length ? techIds : undefined };
   const tw = TIER_WEIGHT[gig.tier];
   const rating = s.cityRatings[gig.cityId] ?? 50;
@@ -417,7 +421,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     book(s, 'penalties', -penalty);
     gig.status = 'failed';
     gig.result = { quality, payout: -penalty, lateHours, gearCoverage, crewCoverage, ...resultExtras };
-    s.company.reputation = Math.max(0, s.company.reputation - 4 * tw);
+    s.company.reputation = Math.max(0, s.company.reputation - 4 * tw + Math.min(0, stakes.reputation));
     s.cityRatings[gig.cityId] = Math.max(0, rating - 20);
     s.stats.showsFailed += 1;
     recordShow(s, yearOf(s, s.hour), quality, true, !!gig.festival);
@@ -452,7 +456,8 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   }
   gig.status = 'done';
   gig.result = { quality, payout, lateHours, gearCoverage, crewCoverage, ...resultExtras };
-  s.company.reputation = reputationAfterShow(s.company.reputation, gig.tier, quality);
+  s.company.reputation = Math.max(0, Math.min(100, reputationAfterShow(s.company.reputation, gig.tier, quality) + stakes.reputation));
+  if (gig.event && !gig.event.citywide) recordEvent(s, yearOf(s, s.hour), quality);
   s.cityRatings[gig.cityId] = Math.max(0, Math.min(100, rating + (quality - 0.5) * 30));
   s.stats.showsPlayed += 1;
   recordShow(s, yearOf(s, s.hour), quality, false, !!gig.festival);
@@ -460,7 +465,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const riderNote = gear.riderMet === undefined ? '' : gear.riderMet ? ` Rider (${gig.rider!.brand}) honoured.` : ` They wanted ${gig.rider!.brand} and didn't get it.`;
   const kitNote = gear.quality < 0.8 ? ' Reviewers called the kit dated.' : '';
   const techNote = techIds.length ? ` ${techIds.map(id => getTech(id).name).join(' & ')} on the crew.` : '';
-  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}.${weather?.note ?? ''}${failureNote}${freelanceNote}${riderNote}${kitNote}${techNote}`, quality >= 0.7 ? 'good' : 'info', {
+  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}.${weather?.note ?? ''}${failureNote}${freelanceNote}${stakes.note}${riderNote}${kitNote}${techNote}`, quality >= 0.7 ? 'good' : 'info', {
     cityId: gig.cityId,
     gigId: gig.id,
   });
@@ -516,6 +521,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   rivalsTakeOffers(s, world, rng);
   dailyTours(s, world, rng);
   dailyFestivals(s, world, rng);
+  dailyEvents(s, world, rng);
   dailyContracts(s, world);
   pruneGigs(s);
 

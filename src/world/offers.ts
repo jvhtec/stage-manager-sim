@@ -176,7 +176,7 @@ function rivalVehicleModel(tier: number): string {
 export function rivalsTakeOffers(state: TycoonState, world: WorldMap, rng: Rng) {
   const today = dayOf(state.hour);
   state.gigs.forEach(gig => {
-    if (gig.status !== 'offer' || gig.tourId || gig.festival) return; // tours are bid on as a whole; festivals by tender
+    if (gig.status !== 'offer' || gig.tourId || gig.festival || (gig.event && !gig.event.citywide)) return; // tours are bid on as a whole; festivals and events by tender
     if (gig.acceptByDay < today) {
       gig.status = 'expired';
       return;

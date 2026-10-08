@@ -26,6 +26,12 @@ export function recordShow(s: TycoonState, year: number, quality: number, failed
   }
 }
 
+export function recordEvent(s: TycoonState, year: number, quality: number) {
+  const y = (s.yearStats[year] ??= emptyYear());
+  y.events = (y.events ?? 0) + 1;
+  y.eventQualitySum = (y.eventQualitySum ?? 0) + quality;
+}
+
 export function recordTour(s: TycoonState, year: number, world: boolean) {
   const y = (s.yearStats[year] ??= emptyYear());
   y.tours += 1;
@@ -50,7 +56,7 @@ export function companyRating(state: TycoonState, year: number): RatingBreakdown
     { label: 'Reliability', points: Math.max(0, 100 - y.failed * 20), max: 100 },
     { label: 'Reputation', points: Math.round(state.company.reputation * 2), max: 200 },
     { label: 'Profit', points: Math.round(Math.min(200, Math.max(0, Math.log10(Math.max(1, profit)) - 3) * 66)), max: 200 },
-    { label: 'Festivals & tours', points: Math.min(100, y.festivals * 15 + y.tours * 10 + y.worldTours * 15), max: 100 },
+    { label: 'Festivals, tours & events', points: Math.min(100, y.festivals * 15 + y.tours * 10 + y.worldTours * 15 + (y.events ?? 0) * 25), max: 100 },
   ];
   if (!y.shows && !y.failed) parts[2].points = 0;
   return { total: parts.reduce((s, p) => s + p.points, 0), parts };
@@ -82,6 +88,7 @@ export function awardsNight(s: TycoonState, year: number) {
   if (!best || rating > best.score) wins.push('Production Company of the Year');
   if (y.festivals >= 2 && y.festivalQualitySum / y.festivals >= 0.82) wins.push('Festival Supplier of the Year');
   if (y.tours >= 2) wins.push('Touring Company of the Year');
+  if ((y.events ?? 0) >= 1 && (y.eventQualitySum ?? 0) / (y.events ?? 1) >= 0.85) wins.push('Special Event of the Year');
   const age = year - s.startYear;
   if (age <= 1 && y.shows >= 30 && y.qualitySum / y.shows >= 0.8) wins.push('Best Newcomer');
 

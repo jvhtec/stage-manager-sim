@@ -197,6 +197,8 @@ export interface Vehicle {
   profitLastYear: number;
 }
 
+export type BidLevel = 'sharp' | 'standard' | 'premium';
+
 export type GigStatus = 'offer' | 'booked' | 'done' | 'failed' | 'expired' | 'rival';
 
 export interface GigResult {
@@ -268,6 +270,10 @@ export interface Gig {
   days?: number;
   /** A festival stage contract (content/festivals.ts). `act` is the festival's name. */
   festival?: { id: string; year: number; stage: string; main: boolean };
+  /** A special event's department lot (events.ts), or a show spawned by a citywide event. */
+  event?: { id: string; year: number; name: string; lot: Dept; broadcast: boolean; scale: number; citywide?: boolean };
+  /** Your sealed bid on an event lot. */
+  bid?: BidLevel;
   status: GigStatus;
   rivalId?: string;
   result?: GigResult;
@@ -348,6 +354,8 @@ export interface YearStats {
   festivalQualitySum: number;
   tours: number;
   worldTours: number;
+  events?: number;
+  eventQualitySum?: number;
 }
 
 export interface Company {
@@ -391,6 +399,8 @@ export interface TycoonState {
   contracts: VenueContract[];
   yearStats: Record<number, YearStats>;
   awards: { year: number; title: string }[];
+  /** Special-event tenders already opened, as "eventId-year". */
+  eventsPosted: string[];
   /** Festival tenders already opened, as "festivalId-year". */
   festivalsPosted: string[];
   /** Economy periods (content/economy.ts) already announced. */

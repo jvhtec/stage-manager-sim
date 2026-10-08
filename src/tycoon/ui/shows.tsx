@@ -10,6 +10,7 @@ import { averageCondition, failureChance } from '@/world/wear';
 import { prepFailureFactor } from '@/world/facilities';
 import { ConditionChip } from './gear';
 import { ContractList } from './contracts';
+import { EventBid, EventList } from './events';
 import { getTech } from '@/world/content/techs';
 import { worldOf } from '@/world/mapgen';
 import { roadDistance } from '@/world/pathfinding';
@@ -73,6 +74,15 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
         {gigDates(state, gig)}{' '}
         <span className="tt-dim">({gig.day - today >= 0 ? `in ${gig.day - today}d` : `${today - gig.day}d ago`})</span>
       </Stat>
+      {gig.event && (
+        <div className="tt-item" style={{ margin: '4px 0' }}>
+          <span className="grow" style={{ whiteSpace: 'normal' }}>
+            {gig.event.citywide ? '🎉' : gig.event.broadcast ? '📺' : '★'} {gig.event.citywide ? `Part of ${gig.event.name}` : <>
+              <b>{DEPT_LABELS[gig.event.lot]}</b> contract for <b>{gig.event.name}</b>
+            </>}
+          </span>
+        </div>
+      )}
       {tour && (
         <div className="tt-item clickable" style={{ margin: '4px 0' }} onClick={() => ctx.open('tour', tour.id)}>
           <span className="grow">
@@ -140,7 +150,8 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
         <Row label="Crew" color="#e5e7eb" need={gig.crewNeeded} have={projection?.crew} />
       </div>
 
-      {gig.status === 'offer' && (
+      {gig.status === 'offer' && gig.event && !gig.event.citywide && <EventBid ctx={ctx} gig={gig} />}
+      {gig.status === 'offer' && !(gig.event && !gig.event.citywide) && (
         <div style={{ marginTop: 10 }}>
           {locked ? (
             <div className="tt-warn">
@@ -348,7 +359,7 @@ function Row({ label, color, need, have }: { label: string; color: string; need:
 
 export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
-  const [tab, setTab] = useState<'offers' | 'tours' | 'contracts' | 'booked' | 'history'>('offers');
+  const [tab, setTab] = useState<'offers' | 'tours' | 'events' | 'contracts' | 'booked' | 'history'>('offers');
   const today = dayOf(state.hour);
   const isLocked = (g: Gig) => Number(!!gigBookingBar(state, g).reason);
   const offers = state.gigs
@@ -369,6 +380,9 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
         <button className="tt-btn sm" data-on={tab === 'tours'} onClick={() => setTab('tours')}>
           Tours ({state.tours.filter(t => (t.status === 'offer' && t.acceptByDay >= today) || t.status === 'booked').length})
         </button>
+        <button className="tt-btn sm" data-on={tab === 'events'} onClick={() => setTab('events')}>
+          Events ({state.gigs.filter(g => g.event && !g.event.citywide && g.status === 'offer' && g.acceptByDay >= today).length})
+        </button>
         <button className="tt-btn sm" data-on={tab === 'contracts'} onClick={() => setTab('contracts')}>
           Contracts ({state.contracts.filter(c => c.status === 'active' || (c.status === 'offer' && c.acceptByDay >= today)).length})
         </button>
@@ -381,6 +395,8 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
       </div>
       {tab === 'tours' ? (
         <TourList ctx={ctx} />
+      ) : tab === 'events' ? (
+        <EventList ctx={ctx} />
       ) : tab === 'contracts' ? (
         <ContractList ctx={ctx} />
       ) : (

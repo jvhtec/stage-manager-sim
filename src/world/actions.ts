@@ -16,6 +16,7 @@ import {
   cloneState,
   dayOf,
   depotInCity,
+  formatDay,
   freeLot,
   formatMoney,
   gigById,
@@ -33,7 +34,8 @@ import { makeVehicle } from './state';
 import { tourMaxTier } from './tours';
 import { gigBookingBar, tourBookingBar } from './standing';
 import { getTech, techsActiveIn } from './content/techs';
-import { DEPTS, type ActionOutcome, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
+import { BID_LEVELS } from './events';
+import { DEPTS, type ActionOutcome, type BidLevel, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
 import { STAFF, canBaseVehicle, facilitySpec, nextUpgrade, usedCapacity } from './facilities';
 import { mixFatigue } from './crew';
 import { BREAK_MONTHS, contractShortfall, installKit } from './contracts';
@@ -86,6 +88,7 @@ export function bookGig(state: TycoonState, gigId: string): ActionOutcome {
   if (gig?.tourId) return bookTour(state, gig.tourId);
   if (!gig || gig.status !== 'offer') return fail(state, 'That offer is no longer available.');
   if (gig.acceptByDay < dayOf(state.hour)) return fail(state, 'The booking deadline has passed.');
+  if (gig.event && !gig.event.citywide) return fail(state, 'Special events are won by sealed bid — choose your price.');
   const { reason } = gigBookingBar(state, gig);
   if (reason) return fail(state, reason);
   const s = cloneState(state);
@@ -411,4 +414,18 @@ export function breakContract(state: TycoonState, contractId: string): ActionOut
   book(s, 'penalties', -penalty);
   s.cityRatings[sc.cityId] = Math.max(0, (s.cityRatings[sc.cityId] ?? 50) - 15);
   return ok(s, `Contract ended early — ${formatMoney(s, penalty)} penalty. The kit is back in the warehouse.`);
+}
+
+/** Put in (or change) a sealed bid on a special event's department lot. */
+export function bidEvent(state: TycoonState, gigId: string, level: BidLevel | null): ActionOutcome {
+  const gig = gigById(state, gigId);
+  if (!gig?.event || gig.event.citywide || gig.status !== 'offer') return fail(state, 'That tender is closed.');
+  if (gig.acceptByDay < dayOf(state.hour)) return fail(state, 'Bidding has closed.');
+  const { reason } = gigBookingBar(state, gig);
+  if (level && reason) return fail(state, reason);
+  const s = cloneState(state);
+  const g = gigById(s, gigId)!;
+  if (level) g.bid = level;
+  else delete g.bid;
+  return ok(s, level ? `${BID_LEVELS[level].label} bid in for the ${DEPT_LABELS[gig.event.lot].toLowerCase()} at ${gig.event.name} — decided ${formatDay(s, gig.acceptByDay + 1)}.` : 'Bid withdrawn.');
 }
