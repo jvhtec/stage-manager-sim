@@ -191,7 +191,26 @@ export function HelpWindow() {
           headed for the top) only hire established crews, even for a club date. Start with local bands; do an act proud and
           they'll lower the bar for you next time.
         </li>
-        <li>Buy bigger trucks and more gear, open regional warehouses, and win reputation to unlock arenas and stadiums.</li>
+        <li>
+          <b>The market</b> moves: busy summers, dead Januaries, and real history — recessions, booms, interest rates that swing
+          from 0.5% to 17%, even a pandemic. See <b>Market</b>.
+        </li>
+        <li>
+          <b>Festivals</b> (Glastonbury, FIB, Rock am Ring…) tender their stages two months out — multi-day jobs that pay like a
+          run of arena dates.
+        </li>
+        <li>
+          <b>House contracts</b>: install a rig in a venue for a year for a monthly retainer; its shows run on your rig and rivals
+          can't touch them.
+        </li>
+        <li>
+          <b>Upkeep</b> (Policies): gear wears out and can die mid-set — run a workshop or refurbish. Crews tire on the road and
+          quit if underpaid. Insure against theft, crashes and festival storms.
+        </li>
+        <li>
+          Buy bigger trucks and more gear, open regional warehouses, and win reputation to unlock arenas and stadiums. Every
+          January the industry awards judge your year.
+        </li>
       </ol>
       <p className="tt-dim" style={{ marginBottom: 0 }}>
         Drag to pan, scroll or pinch to zoom. Space pauses; 1–4 set the speed. Install it as an app: on iPhone/iPad use Share →

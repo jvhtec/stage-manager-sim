@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 50 tests):
+(`src/world/__tests__/*.test.ts`, 70 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -95,7 +95,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 - All randomness goes through the seeded `rngState` (same discipline as `src/lib/rng.ts`).
 - Actions (`src/world/actions.ts`) are `(state, …) → { state, result }`, same pattern as
   `src/engine/**`.
-- Save key `stage-manager-sim:tycoon` (v5: star techs, real populations) — separate from the classic save.
+- Save key `stage-manager-sim:tycoon` (v6: market, festivals, wear, crew, contracts, awards; v5 saves are migrated by `migrate()`) — separate from the classic save.
 
 A headless bot played two in-game years on three seeds during tuning: it survives, but stalls at
 Local Circuit unless it buys bigger trucks and more gear. That upgrade pressure is intended.
@@ -200,20 +200,55 @@ note that pushing to `main` publishes the build to GitHub Pages.
 - **Battery**: the canvas redraws every frame only while something moves; when paused it idles
   at ~12 fps for the ambient animation.
 
-## 7. Not ported yet (and where each lands)
+## 7. Strategy depth
+
+The layer that turns logistics into a business. Each system is its own module in `src/world/`
+and reads through `marketNow` / `policies` so the UI shows exactly what the sim uses.
+
+- **Market calendar** (`market.ts`, `content/economy.ts`) — seasonal demand (summer ×1.3,
+  January ×0.6) and period-accurate climate per country moving offer volume and fees: the oil
+  crisis, early-'80s and early-'90s recessions, La Movida, reunification, Barcelona/Expo '92 and
+  the '93 hangover, the live boom, 2008, the euro debt crisis, the festival boom, the 2020-21
+  shutdown (calendar cancelled under force majeure, country wage schemes cover 70% of wages,
+  repayment holiday) and the rebound. Loans charge the era's central-bank rate (BoE, Fed, Banco de
+  España, Bundesbank, Banque de France, Banca d'Italia, then ECB) + 3.5%.
+- **Festivals** (`festivals.ts`, `content/festivals.ts`) — ~50 real festivals with founding and
+  fallow years, growth and stage names. Two months out each tenders its main and second stage as
+  multi-day contracts at the host town (`Gig.days`, `Gig.festival`); book before the close or the
+  best-placed rival wins. Main stages need 1.3× the rig.
+- **Gear wear** (`wear.ts`) — per-product condition; shows wear what they use (per show day,
+  overseas 1.6×); worn kit is derated to 70% quality at zero, sells for less, and fails mid-set
+  (once per show day, removing units). Workshop policy none/basic/full (0.8% / 2.2% of
+  replacement value per month, repairing to 80% / 100%) and per-line refurbishing.
+- **Crew** (`crew.ts`) — fatigue on the road (+4/day on site, +3 travelling, −10/day at home)
+  derating crew to 65% when exhausted; pay policy (×0.8 / ×1 / ×1.25 wages) sets the morale crews
+  drift to monthly, less fatigue; morale nudges every show ±0.06 and below 40 people quit.
+- **House contracts** (`contracts.ts`) — venues tender a year as house PA & lighting supplier for
+  a retainer (40% of a show fee per month). The rig is installed from your warehouse in that
+  town; shows there run on it and rivals can't take them. Breaking costs three months.
+- **Incidents & insurance** (`incidents.ts`) — break-ins, road accidents and festival storms
+  (likeliest in Britain); insurance none / basic (60%) / comprehensive (100% incl. weather) with
+  premiums on the replacement value of gear and fleet.
+- **Rating & awards** (`awards.ts`) — a 0-1000 company rating per year and an awards night every
+  January (Parnelli Awards in the US from 2001, TPi Awards in the UK from 2003, otherwise the Live
+  Production Awards) with reputation and sponsorship prizes.
+
+UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
+(workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the
+show forecast, rating and trophy cabinet in the **League**.
+
+## 8. Not ported yet (and where each lands)
 
 The classic build has systems that don't exist in the map game yet. Each has an obvious home:
 
 | Classic system | Map-game home |
 |---|---|
-| Individual crew (skills, XP, morale, fatigue, avatars, hiring market) | Crew become named people based at warehouses; seats in vehicles carry *specific* techs; skill feeds show quality, long tours drain fatigue (sleeper buses help) |
+| Individual crew (skills, XP, avatars, hiring market) | Fatigue, morale and pay are in (crew.ts); next, crew become named people with skills and XP |
 | Crises (planning / execution prompts) | **Road incidents** (breakdown: wait, tow, or hire a local van), **show incidents** at the venue, both as TT-style pop-ups with choices |
-| Equipment condition & maintenance | Gear wear per tour leg; servicing gear at warehouses alongside vehicles |
 | Show Day scene | Click a venue during a live show → zoom-in performance view (the scene from the game-feel plan, now reachable from the map) |
 | Rentals | Local hire at the venue town when you're short — expensive, but saves a no-show |
-| Festivals | Multi-stage events at the stadium city needing several trucks arriving in a window |
 
-## 8. Next steps (PR-sized)
+## 9. Next steps (PR-sized)
 
 1. **Playtest & balance pass** — fee/wage/running-cost tuning, offer density, rival aggression.
 2. **Named crew at warehouses** — port crew progression and hiring into the map game.
