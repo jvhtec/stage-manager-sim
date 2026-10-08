@@ -104,6 +104,7 @@ export type LedgerCategory =
   | 'support'
   | 'workshop'
   | 'contracts'
+  | 'insurance'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -119,6 +120,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   support: 'Government support',
   workshop: 'Gear maintenance',
   contracts: 'House contracts',
+  insurance: 'Insurance',
   sales: 'Asset sales',
 };
 

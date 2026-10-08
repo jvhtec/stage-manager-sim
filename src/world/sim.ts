@@ -53,6 +53,7 @@ import { getTech, techBonus, techsActiveIn } from './content/techs';
 import { dailyOffers, pruneGigs, rivalsTakeOffers } from './offers';
 import { dailyTours } from './tours';
 import { dailyFestivals } from './festivals';
+import { dailyIncidents, monthlyInsurance, rollWeather } from './incidents';
 import { dailyContracts, houseRigAt, monthlyContracts } from './contracts';
 import { dailyMarket, marketNow, monthlyInterest } from './market';
 import { getRegion } from './content/world';
@@ -357,7 +358,8 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     if (f) failures.push(f);
   }
   const gear = evaluateGear(working, gig, yearOf(s, s.hour), s.gearCondition);
-  wearFromShow(s, delivered, showDays, !!gig.overseas);
+  const weather = onSite.length ? rollWeather(s, gig, rng) : null;
+  wearFromShow(s, delivered, showDays + (weather?.extraWear ?? 0), !!gig.overseas);
   const failureNote = failures.length
     ? ` ${failures.map(f => `${getProduct(f.productId).brand} ${getProduct(f.productId).name}`).join(' and ')} died mid-set.`
     : '';
@@ -373,7 +375,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     0,
     Math.min(
       1,
-      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) }) +
+      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) - (weather?.penalty ?? 0) }) +
         (rng.next() - 0.5) * 0.08,
     ),
   );
@@ -427,7 +429,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const riderNote = gear.riderMet === undefined ? '' : gear.riderMet ? ` Rider (${gig.rider!.brand}) honoured.` : ` They wanted ${gig.rider!.brand} and didn't get it.`;
   const kitNote = gear.quality < 0.8 ? ' Reviewers called the kit dated.' : '';
   const techNote = techIds.length ? ` ${techIds.map(id => getTech(id).name).join(' & ')} on the crew.` : '';
-  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}.${failureNote}${riderNote}${kitNote}${techNote}`, quality >= 0.7 ? 'good' : 'info', {
+  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}.${weather?.note ?? ''}${failureNote}${riderNote}${kitNote}${techNote}`, quality >= 0.7 ? 'good' : 'info', {
     cityId: gig.cityId,
     gigId: gig.id,
   });
@@ -459,6 +461,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   updateTechs(s, date.getUTCFullYear());
   dailyWorkshop(s);
   dailyCrew(s);
+  dailyIncidents(s, rng);
   s.vehicles.forEach(v => {
     if (v.owner !== 'player') return;
     const model = getModel(v.modelId);
@@ -496,6 +499,7 @@ function monthlyTick(s: TycoonState, rng: Rng) {
   book(s, 'property', -s.depots.length * DEPOT_UPKEEP_PER_MONTH);
   monthlyWorkshop(s);
   monthlyCrew(s, rng);
+  monthlyInsurance(s);
   if (s.company.loan > 0) book(s, 'interest', -monthlyInterest(s));
 
   // During a shutdown the banks give everyone a repayment holiday.

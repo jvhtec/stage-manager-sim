@@ -41,10 +41,13 @@ describe('house contracts', () => {
     const installed = stockSize(s.contracts[0].installed);
     expect(installed).toBeGreaterThan(0);
     expect(stockSize(s.depots[0].gear)).toBe(before - installed);
-    s = advanceHours(s, 400 * HOURS_PER_DAY);
+    const endDay = s.contracts[0].endDay;
+    s = advanceHours(s, (endDay - 1) * HOURS_PER_DAY - s.hour);
     expect(Object.values(s.ledger).reduce((sum, y) => sum + (y.contracts ?? 0), 0)).toBeGreaterThanOrEqual(1300 * 10);
+    const beforeEnd = stockSize(s.depots[0].gear);
+    s = advanceHours(s, 2 * HOURS_PER_DAY);
     expect(s.contracts.find(c => c.id === 'c1')?.status ?? 'ended').toBe('ended');
-    expect(stockSize(s.depots[0].gear)).toBe(before);
+    expect(stockSize(s.depots[0].gear)).toBe(beforeEnd + installed);
   });
 
   it("refuses without a warehouse in town; pulling out costs three months", () => {

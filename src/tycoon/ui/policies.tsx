@@ -4,6 +4,7 @@ import { Bar, FatigueChip, Stat } from './bits';
 import { CREW_WAGE_PER_DAY } from '@/world/catalog';
 import { PAY, PAY_LEVELS, averageFatigue, moraleTarget } from '@/world/crew';
 import { ConditionChip } from './gear';
+import { INSURANCE, INSURANCE_LEVELS, insuredValue, monthlyPremium } from '@/world/incidents';
 import { money } from './format';
 import type { WinCtx } from './types';
 
@@ -93,6 +94,22 @@ export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
         Days on the road tire crews out (tours and festivals most) and tired crews build worse shows; they recover at home.
         Morale drifts each month towards what you pay, less how worn out everyone is. Good morale lifts every show; below 40,
         people start quitting.
+      </div>
+
+      <h4>Insurance</h4>
+      <Stat label="Insured value (gear + fleet)">{money(insuredValue(state))}</Stat>
+      <Choice
+        value={state.policies.insurance}
+        options={INSURANCE_LEVELS.map(id => ({
+          id,
+          label: INSURANCE[id].label,
+          detail: INSURANCE[id].blurb,
+          note: `${money(monthlyPremium(state, id))}/mo`,
+        }))}
+        onPick={id => set('insurance', id)}
+      />
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        Warehouses get broken into, trucks crash, and outdoor festivals get rained on — British summers most of all.
       </div>
     </div>
   );
