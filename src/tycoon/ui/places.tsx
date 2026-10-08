@@ -13,6 +13,7 @@ import { vehicleActivity } from '@/world/queries';
 import type { Gig } from '@/world/types';
 import { gigDates } from './gigInfo';
 import { BaseOverview } from './base';
+import { VenueDiorama } from './scenes';
 import { DELEGATION, RENT_FACTOR, WAREHOUSES, canBaseVehicle, facilitySpec } from '@/world/facilities';
 import { ContractCard } from './contracts';
 import { Bar, Stat, TierChip } from './bits';
@@ -197,6 +198,7 @@ export function VenueWindow({ ctx, venueId }: { ctx: WinCtx; venueId: string }) 
         </span>
         <TierChip tier={venue.tier} locked={venue.tier > tier} />
       </div>
+      <VenueDiorama state={state} venue={venue} />
       <Stat label="Capacity">{venue.capacity.toLocaleString()}</Stat>
       {contract && (
         <>

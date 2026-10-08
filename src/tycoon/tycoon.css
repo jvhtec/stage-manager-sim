@@ -461,3 +461,11 @@ body {
 .tt-root.compact:not(.landscape) .tt-countries { grid-template-columns: repeat(2, 1fr); }
 .tt-years { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; }
 .tt-root.compact:not(.landscape) .tt-years { grid-template-columns: repeat(3, 1fr); }
+
+/* Isometric close-ups in base and venue windows. */
+.tt-diorama {
+  background: var(--tt-inset);
+  border: 1px solid rgba(0, 0, 0, 0.5);
+  border-radius: 3px;
+  margin-bottom: 8px;
+}

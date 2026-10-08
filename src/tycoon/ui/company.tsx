@@ -208,8 +208,13 @@ export function HelpWindow() {
           quit if underpaid. Insure against theft, crashes and festival storms.
         </li>
         <li>
-          Buy bigger trucks and more gear, open regional warehouses, and win reputation to unlock arenas and stadiums. Every
-          January the industry awards judge your year.
+          <b>Bases</b>: open a <b>delegation</b> (branch office, vans only) or a <b>warehouse</b> in any town and grow it as
+          your reputation does. Bases near the work cut fuel, hotel nights and freelance rates — and add rent and salaries.
+          Full-time staff (prep, sales) stay at the base; gig technicians go on the road, topped up by local freelancers.
+        </li>
+        <li>
+          Buy bigger trucks and more gear, and win reputation to unlock arenas and stadiums. Every January the industry awards
+          judge your year.
         </li>
       </ol>
       <p className="tt-dim" style={{ marginBottom: 0 }}>

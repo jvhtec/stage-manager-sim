@@ -201,10 +201,10 @@ export default function TycoonGame() {
         return state.vehicles.find(v => v.id === w.refId)?.name ?? 'Vehicle';
       case 'depot': {
         const d = state.depots.find(x => x.id === w.refId);
-        return `Warehouse — ${d ? world.cityById.get(d.cityId)?.name : ''}`;
+        return `${d?.kind === 'delegation' ? 'Delegation' : 'Warehouse'} — ${d ? world.cityById.get(d.cityId)?.name : ''}`;
       }
       case 'depots':
-        return 'Warehouses';
+        return 'Bases';
       case 'vehicles':
         return 'Fleet';
       case 'shows':

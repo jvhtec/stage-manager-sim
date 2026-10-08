@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 70 tests):
+(`src/world/__tests__/*.test.ts`, 75 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -232,6 +232,21 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
 - **Rating & awards** (`awards.ts`) — a 0-1000 company rating per year and an awards night every
   January (Parnelli Awards in the US from 2001, TPi Awards in the UK from 2003, otherwise the Live
   Production Awards) with reputation and sponsorship prizes.
+
+- **Bases & staff** (`facilities.ts`) — delegations (branch office: 25 units, vans and crew
+  buses only, local contacts) and warehouses in three sizes (120 / 320 / 800 units; medium needs
+  Regional reputation, large National), with rent scaled by town size (×0.6-×1.5). Full-time
+  staff per base on salaries: warehouse & prep (45 units each; unprepped kit fails up to 1.6× as
+  often and cases get left behind) and sales & office (+12% offers per head nearby, up to +60%,
+  and local rating). Gig technicians are separate: on the payroll at a base, or local
+  freelancers hired per show day at the venue (pool by town size; 25% cheaper, more of them and
+  better with a base in town).
+- **Road costs** — fuel per tile (by truck size) and per diems + hotel per crew member per night
+  away from base (sleeper buses skip the hotel); the show forecast estimates road costs and margin.
+- **Close-ups** (`render/diorama.ts`) — isometric cutaway scenes in the base and venue windows:
+  racks holding your actual stock, prep crew, office, workshop bench, gig techs, trucks in the
+  bays; venues by kind with the stage, era-correct PA (stacks before 1993, line arrays after),
+  truss, LED screen, FOH and crowd, through load-in, show (beams) and load-out.
 
 UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
 (workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the

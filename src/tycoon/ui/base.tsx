@@ -7,6 +7,7 @@ import type { Depot } from '@/world/types';
 import { Bar, FatigueChip, Stat } from './bits';
 import { kmoney, money } from './format';
 import type { WinCtx } from './types';
+import { BaseDiorama } from './scenes';
 
 /** The base at a glance: what it is, what it costs, who works there. */
 export function BaseOverview({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
@@ -26,6 +27,7 @@ export function BaseOverview({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
   };
   return (
     <div>
+      <BaseDiorama state={state} depot={depot} />
       <div className="tt-row">
         <b>
           {depot.kind === 'delegation' ? '🏢' : '🏭'} {spec.label}
