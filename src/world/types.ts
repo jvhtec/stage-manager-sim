@@ -103,6 +103,7 @@ export type LedgerCategory =
   | 'freight'
   | 'support'
   | 'workshop'
+  | 'contracts'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -117,6 +118,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   freight: 'Air freight & flights',
   support: 'Government support',
   workshop: 'Gear maintenance',
+  contracts: 'House contracts',
   sales: 'Asset sales',
 };
 
@@ -250,6 +252,26 @@ export interface Gig {
   result?: GigResult;
 }
 
+export type ContractStatus = 'offer' | 'active' | 'ended' | 'expired' | 'rival';
+
+/** A venue's year-long house PA & lighting contract (contracts.ts). */
+export interface VenueContract {
+  id: string;
+  venueId: string;
+  cityId: string;
+  tier: number;
+  /** The house rig the venue wants installed. */
+  kit: DeptCounts;
+  /** What you actually installed (locked in the venue until the contract ends). */
+  installed: GearStock;
+  monthly: number;
+  acceptByDay: number;
+  startDay: number;
+  endDay: number;
+  status: ContractStatus;
+  rivalId?: string;
+}
+
 export interface Rival {
   id: string;
   name: string;
@@ -332,6 +354,7 @@ export interface TycoonState {
   crewMorale: number;
   /** Product id → average condition (0-100) of the units you own; missing = 100. */
   gearCondition: Record<string, number>;
+  contracts: VenueContract[];
   /** Festival tenders already opened, as "festivalId-year". */
   festivalsPosted: string[];
   /** Economy periods (content/economy.ts) already announced. */

@@ -11,6 +11,7 @@ import { expectedQuality, productsAvailableIn } from './content/gear';
 import { roadDistance } from './pathfinding';
 import { actReputationBar, reachWeight } from './standing';
 import { marketNow, marketOnDay } from './market';
+import { holdsContractAt } from './contracts';
 import type { City, CitySize, DeptCounts, Gig, Rider, TycoonState, Vehicle, Venue, WorldMap } from './types';
 import { DEPTS } from './types';
 
@@ -94,7 +95,7 @@ export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
   });
   const year = dateOfDay(state, spec.day).getUTCFullYear();
   const rating = state.cityRatings[spec.venue.cityId] ?? 50;
-  const asksForYou = (spec.real || !!spec.festival) && (state.artistRelations[spec.act] ?? 0) > 0;
+  const asksForYou = ((spec.real || !!spec.festival) && (state.artistRelations[spec.act] ?? 0) > 0) || holdsContractAt(state, spec.venue.id);
   const rider = tier >= 2 && rng.chance(spec.real ? 0.55 : 0.25) ? pickRider(needs, tier, year, rng) : undefined;
   const star = spec.real ? 1.15 : 1;
   const loyalty = asksForYou ? 1.1 : 1;
@@ -179,6 +180,7 @@ export function rivalsTakeOffers(state: TycoonState, world: WorldMap, rng: Rng) 
       gig.status = 'expired';
       return;
     }
+    if (holdsContractAt(state, gig.venueId)) return; // the house supplier gets first call
     const rating = state.cityRatings[gig.cityId] ?? 50;
     const actBar = actReputationBar(state, gig.act, false);
     for (const rival of state.rivals) {

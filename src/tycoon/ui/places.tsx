@@ -15,6 +15,7 @@ import { worldOf } from '@/world/mapgen';
 import { vehicleActivity } from '@/world/queries';
 import type { Gig } from '@/world/types';
 import { gigDates } from './gigInfo';
+import { ContractCard } from './contracts';
 import { Bar, FatigueChip, Stat, TierChip } from './bits';
 import { crewWage } from '@/world/crew';
 import { formatPopulation, kmoney, marketLabel, money, ratingLabel } from './format';
@@ -169,6 +170,7 @@ export function VenueWindow({ ctx, venueId }: { ctx: WinCtx; venueId: string }) 
     .sort((a, b) => a.day - b.day);
   const history = state.gigs.filter(g => g.venueId === venueId && (g.status === 'done' || g.status === 'failed' || (g.status === 'rival' && g.result)));
   const tier = companyTier(state.company.reputation);
+  const contract = state.contracts.find(c => c.venueId === venueId && (c.status === 'offer' || c.status === 'active' || c.status === 'rival'));
   return (
     <div>
       <div className="tt-row">
@@ -181,6 +183,12 @@ export function VenueWindow({ ctx, venueId }: { ctx: WinCtx; venueId: string }) 
         <TierChip tier={venue.tier} locked={venue.tier > tier} />
       </div>
       <Stat label="Capacity">{venue.capacity.toLocaleString()}</Stat>
+      {contract && (
+        <>
+          <h4>House contract</h4>
+          <ContractCard ctx={ctx} c={contract} />
+        </>
+      )}
       <h4>Upcoming</h4>
       {gigs.length ? (
         <div className="tt-list">

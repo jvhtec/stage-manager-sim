@@ -8,6 +8,7 @@ import { artistTierIn, findArtist } from '@/world/content/artists';
 import { expectedQuality } from '@/world/content/gear';
 import { averageCondition, failureChance } from '@/world/wear';
 import { ConditionChip } from './gear';
+import { ContractList } from './contracts';
 import { getTech } from '@/world/content/techs';
 import { worldOf } from '@/world/mapgen';
 import { roadDistance } from '@/world/pathfinding';
@@ -313,7 +314,7 @@ function Row({ label, color, need, have }: { label: string; color: string; need:
 
 export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
-  const [tab, setTab] = useState<'offers' | 'tours' | 'booked' | 'history'>('offers');
+  const [tab, setTab] = useState<'offers' | 'tours' | 'contracts' | 'booked' | 'history'>('offers');
   const today = dayOf(state.hour);
   const isLocked = (g: Gig) => Number(!!gigBookingBar(state, g).reason);
   const offers = state.gigs
@@ -334,6 +335,9 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
         <button className="tt-btn sm" data-on={tab === 'tours'} onClick={() => setTab('tours')}>
           Tours ({state.tours.filter(t => (t.status === 'offer' && t.acceptByDay >= today) || t.status === 'booked').length})
         </button>
+        <button className="tt-btn sm" data-on={tab === 'contracts'} onClick={() => setTab('contracts')}>
+          Contracts ({state.contracts.filter(c => c.status === 'active' || (c.status === 'offer' && c.acceptByDay >= today)).length})
+        </button>
         <button className="tt-btn sm" data-on={tab === 'booked'} onClick={() => setTab('booked')}>
           Booked ({booked.length})
         </button>
@@ -343,6 +347,8 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
       </div>
       {tab === 'tours' ? (
         <TourList ctx={ctx} />
+      ) : tab === 'contracts' ? (
+        <ContractList ctx={ctx} />
       ) : (
       <div className="tt-list">
         {list.map(g => {

@@ -6,8 +6,10 @@ import {
   CREW_HIRE_COST,
   DEPOT_BUILD_COST,
   LOAN_STEP,
+  DEPT_LABELS,
   MAX_LOAN,
   getModel,
+  tierInfo,
 } from './catalog';
 import {
   book,
@@ -31,8 +33,10 @@ import { makeVehicle } from './state';
 import { tourMaxTier } from './tours';
 import { gigBookingBar, tourBookingBar } from './standing';
 import { getTech, techsActiveIn } from './content/techs';
-import type { ActionOutcome, Policies, TycoonState } from './types';
+import { DEPTS, type ActionOutcome, type Policies, type TycoonState } from './types';
 import { mixFatigue } from './crew';
+import { BREAK_MONTHS, contractShortfall, installKit } from './contracts';
+import { addStock } from './loading';
 import { onBought, ownedStock, refurbishCost, resaleValue } from './wear';
 import { getProduct } from './content/gear';
 
@@ -317,4 +321,43 @@ export function assignTech(state: TycoonState, techId: string, vehicleId: string
   const s = cloneState(state);
   s.techs = s.techs.map(t => (t.techId === techId ? { ...t, vehicleId: vehicleId ?? undefined } : t));
   return ok(s);
+}
+
+/** Sign a venue's house contract: the rig is installed from your warehouse in that town. */
+export function signContract(state: TycoonState, contractId: string): ActionOutcome {
+  const c = state.contracts.find(x => x.id === contractId);
+  if (!c || c.status !== 'offer') return fail(state, 'That contract is no longer on offer.');
+  if (c.acceptByDay < dayOf(state.hour)) return fail(state, 'Bids have closed.');
+  const needed = tierInfo(c.tier);
+  if (state.company.reputation < needed.minReputation) return fail(state, `The venue wants reputation ${needed.minReputation}+ for its house supplier.`);
+  const world = worldOf(state);
+  const city = world.cityById.get(c.cityId);
+  const short = contractShortfall(state, c);
+  if (!short) return fail(state, `You need a warehouse in ${city?.name} to supply a house rig there.`);
+  const missing = DEPTS.filter(d => short[d] > 0);
+  if (missing.length) return fail(state, `Your ${city?.name} warehouse is short: ${missing.map(d => `${short[d]} ${DEPT_LABELS[d]}`).join(', ')}.`);
+  const s = cloneState(state);
+  const sc = s.contracts.find(x => x.id === contractId)!;
+  installKit(s, sc);
+  sc.status = 'active';
+  const venue = world.venueById.get(c.venueId);
+  pushNews(s, `${s.company.name} is the new house supplier at ${venue?.name} — ${formatMoney(s, c.monthly)}/month for a year.`, 'good', { cityId: c.cityId });
+  return ok(s, `Signed. The house rig is installed at ${venue?.name}.`);
+}
+
+/** Walk away from a house contract early: the kit comes home, the penalty doesn't. */
+export function breakContract(state: TycoonState, contractId: string): ActionOutcome {
+  const c = state.contracts.find(x => x.id === contractId);
+  if (!c || c.status !== 'active') return fail(state, 'No active contract to end.');
+  const penalty = c.monthly * BREAK_MONTHS;
+  const s = cloneState(state);
+  const sc = s.contracts.find(x => x.id === contractId)!;
+  const depot = depotInCity(s, sc.cityId) ?? s.depots[0];
+  if (depot) addStock(depot.gear, sc.installed);
+  sc.installed = {};
+  sc.status = 'ended';
+  sc.endDay = dayOf(s.hour);
+  book(s, 'penalties', -penalty);
+  s.cityRatings[sc.cityId] = Math.max(0, (s.cityRatings[sc.cityId] ?? 50) - 15);
+  return ok(s, `Contract ended early — ${formatMoney(s, penalty)} penalty. The kit is back in the warehouse.`);
 }

@@ -43,6 +43,7 @@ export function ownedStock(state: TycoonState): GearStock {
   const all: GearStock = {};
   state.depots.forEach(d => addStock(all, d.gear));
   state.vehicles.filter(v => v.owner === 'player').forEach(v => addStock(all, v.cargo));
+  state.contracts.forEach(c => c.status === 'active' && addStock(all, c.installed));
   return all;
 }
 

@@ -2,6 +2,7 @@
 import { GEAR_RESALE_RATE, getModel } from './catalog';
 import { getProduct } from './content/gear';
 import { techBonus } from './content/techs';
+import { houseRigAt } from './contracts';
 import { crewEffectiveness, effectiveCrew, moraleBonus } from './crew';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize, type GearEvaluation } from './loading';
 import {
@@ -86,7 +87,7 @@ export interface CoverageProjection {
 export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjection {
   const vehicles = state.vehicles.filter(v => v.owner === 'player' && v.orders.includes(gig.id));
   const stock = new Map(state.depots.map(d => [d.cityId, { gear: { ...d.gear }, crew: d.crew, fatigue: d.fatigue ?? 0 }]));
-  const delivered: GearStock = {};
+  const delivered: GearStock = { ...(vehicles.length ? houseRigAt(state, gig.venueId) : undefined) };
   let crew = 0;
   let effCrew = 0;
   let latestArrival = 0;

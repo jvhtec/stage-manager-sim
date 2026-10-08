@@ -53,6 +53,7 @@ import { getTech, techBonus, techsActiveIn } from './content/techs';
 import { dailyOffers, pruneGigs, rivalsTakeOffers } from './offers';
 import { dailyTours } from './tours';
 import { dailyFestivals } from './festivals';
+import { dailyContracts, houseRigAt, monthlyContracts } from './contracts';
 import { dailyMarket, marketNow, monthlyInterest } from './market';
 import { getRegion } from './content/world';
 import { getCityPath } from './pathfinding';
@@ -138,7 +139,8 @@ function loadVehicle(s: TycoonState, v: Vehicle, gig: Gig) {
     const g = gigById(s, gigId);
     if (!g || g.status !== 'booked') return;
     const others = s.vehicles.filter(o => o !== v && o.owner === 'player' && o.orders.includes(gigId));
-    const brought = emptyCounts();
+    // A venue where you're the house supplier already has your rig in it.
+    const brought = deptTotals(houseRigAt(s, g.venueId) ?? {});
     others.forEach(o => {
       const t = deptTotals(o.cargo);
       DEPTS.forEach(d => (brought[d] += t[d]));
@@ -343,6 +345,9 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     addStock(delivered, v.cargo);
     crew += v.crew;
   });
+  // Your house rig is already in the room (it still needs a crew to run it).
+  const houseRig = onSite.length ? houseRigAt(s, gig.venueId) : undefined;
+  if (houseRig) addStock(delivered, houseRig);
   // Worn kit can pack up on the night (once per show day).
   const working: GearStock = { ...delivered };
   const showDays = gig.overseas ? gig.overseas.stops.length : (gig.days ?? 1);
@@ -468,6 +473,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   rivalsTakeOffers(s, world, rng);
   dailyTours(s, world, rng);
   dailyFestivals(s, world, rng);
+  dailyContracts(s, world);
   pruneGigs(s);
 
   // Nag about booked shows with nothing assigned two days out.
@@ -479,7 +485,10 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     }
   });
 
-  if (date.getUTCDate() === 1 && day > 0) monthlyTick(s, rng);
+  if (date.getUTCDate() === 1 && day > 0) {
+    monthlyTick(s, rng);
+    monthlyContracts(s, world, rng);
+  }
   s.stats.peakCash = Math.max(s.stats.peakCash, s.company.cash);
 }
 
