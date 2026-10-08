@@ -165,7 +165,7 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     if (gig) state.gigs.push(gig);
   }
   // And one small-venue tour, so touring is on the table from day one.
-  for (let i = 0; i < 6 && !state.tours.length; i++) generateNationalTour(state, world, rng, 1);
+  for (let i = 0; i < 6 && !state.tours.length; i++) generateNationalTour(state, world, rng, 1, true);
   state.rngState = rng.getState();
 
   state.news.push({

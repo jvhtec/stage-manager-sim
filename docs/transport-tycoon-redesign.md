@@ -45,6 +45,15 @@ Reputation still gates venue tiers (Local Circuit → Regional → National → 
 **each tier caps the reputation it can earn you** — you can't become world-class playing pubs.
 To climb, you must take on bigger rooms, which need bigger trucks and more gear.
 
+On top of the venue tier, **real acts' management sets its own reputation bar** (`standing.ts`):
+by the biggest tier the act has played so far (10 / 35 / 62 / 85), plus 7 per tier the act
+is still headed up (signed acts on the way up already use established firms), plus 5 for
+international names, minus 4 per point of history with you (max 20). So AC/DC won't hire a
+starter company even for a 1975 club date; local bands only care about the venue. Offers and
+tours from acts beyond your reach come up less often (and show locked), rivals need the same
+standing to win them, and the starter tour is always with an act that will hire you (an
+up-and-coming local band when no real name would).
+
 ## 3. The isometric presentation
 
 Rendered on a 2D canvas the way TT did it — a 2:1 isometric projection, painter's algorithm by
@@ -77,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 47 tests):
+(`src/world/__tests__/*.test.ts`, 50 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game

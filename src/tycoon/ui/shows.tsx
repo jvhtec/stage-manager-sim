@@ -1,3 +1,4 @@
+import { gigBookingBar, tourBookingBar } from '@/world/standing';
 import { useState } from 'react';
 import { assignVehicle, bookGig, unassignVehicle } from '@/world/actions';
 import { DEPT_COLORS, DEPT_LABELS, LOAD_IN_HOUR, SHOW_END_HOUR, SHOW_START_HOUR, companyTier, getModel, tierInfo } from '@/world/catalog';
@@ -30,8 +31,8 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
   const venue = world.venueById.get(gig.venueId)!;
   const city = world.cityById.get(gig.cityId)!;
   const today = dayOf(state.hour);
-  const tier = companyTier(state.company.reputation);
-  const locked = gig.tier > tier;
+  const lock = gigBookingBar(state, gig).reason;
+  const locked = !!lock;
   const act = (fn: Parameters<WinCtx['dispatch']>[0]) => {
     const r = ctx.dispatch(fn);
     if (r.message) ctx.toast(r.message, r.ok);
@@ -138,8 +139,7 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
         <div style={{ marginTop: 10 }}>
           {locked ? (
             <div className="tt-warn">
-              Promoters want reputation {tierInfo(gig.tier).minReputation}+ for {tierInfo(gig.tier).label} venues (you have{' '}
-              {Math.round(state.company.reputation)}).
+              {lock} You have {Math.round(state.company.reputation)}.
             </div>
           ) : (
             <button className="tt-btn primary" onClick={() => act(s => bookGig(s, gig.id))}>
@@ -304,10 +304,10 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
   const [tab, setTab] = useState<'offers' | 'tours' | 'booked' | 'history'>('offers');
   const world = worldOf(state);
   const today = dayOf(state.hour);
-  const tier = companyTier(state.company.reputation);
+  const isLocked = (g: Gig) => Number(!!gigBookingBar(state, g).reason);
   const offers = state.gigs
     .filter(g => g.status === 'offer' && g.acceptByDay >= today && !g.tourId)
-    .sort((a, b) => Number(a.tier > tier) - Number(b.tier > tier) || nearestDepotDistance(state, a) - nearestDepotDistance(state, b));
+    .sort((a, b) => isLocked(a) - isLocked(b) || nearestDepotDistance(state, a) - nearestDepotDistance(state, b));
   const booked = state.gigs.filter(g => g.status === 'booked').sort((a, b) => a.day - b.day);
   const history = state.gigs
     .filter(g => g.status === 'done' || g.status === 'failed')
@@ -366,7 +366,7 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
                   {tab === 'offers' ? ` · ${Math.round(dist)} tiles` : ''}
                 </div>
               </div>
-              {tab === 'offers' && <TierChip tier={g.tier} locked={g.tier > tier} />}
+              {tab === 'offers' && <TierChip tier={g.tier} locked={!!isLocked(g)} />}
               {right}
             </div>
           );

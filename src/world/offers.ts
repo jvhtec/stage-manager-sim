@@ -9,6 +9,7 @@ import { dateOfDay, dayOf, newId, pushNews } from './core';
 import { artistsTouringAt, homeWeight } from './content/artists';
 import { expectedQuality, productsAvailableIn } from './content/gear';
 import { roadDistance } from './pathfinding';
+import { actReputationBar, reachWeight } from './standing';
 import type { City, CitySize, DeptCounts, Gig, Rider, TycoonState, Vehicle, Venue, WorldMap } from './types';
 import { DEPTS } from './types';
 
@@ -16,7 +17,7 @@ const ACT_ADJ = ['Velvet', 'Electric', 'Midnight', 'Neon', 'Broken', 'Golden', '
 const ACT_NOUN = ['Foxes', 'Engines', 'Harbour', 'Satellites', 'Ravens', 'Tides', 'Machines', 'Daughters', 'Avenue', 'Comets', 'Wolves', 'Choir'];
 const SOLO = ['DJ Kestrel', 'Mara Lux', 'Otis Vane', 'Juno Reyes', 'The Okafor Trio', 'Kit Malone', 'Sable', 'Ivo & the Weather'];
 
-function actName(rng: Rng): string {
+export function actName(rng: Rng): string {
   if (rng.chance(0.3)) return rng.pick(SOLO);
   return `${rng.chance(0.6) ? 'The ' : ''}${rng.pick(ACT_ADJ)} ${rng.pick(ACT_NOUN)}`;
 }
@@ -119,7 +120,7 @@ export function pickAct(state: TycoonState, tier: number, year: number, rng: Rng
   const touring = artistsTouringAt(year, tier, state.country);
   if (!touring.length || !rng.chance(REAL_ACT_SHARE[tier])) return { act: actName(rng), real: false };
   // Acts you've done well by are more likely to come back to you.
-  const weights = touring.map(a => (1 + (state.artistRelations[a.name] ?? 0) * 2) * homeWeight(a));
+  const weights = touring.map(a => (1 + (state.artistRelations[a.name] ?? 0) * 2) * homeWeight(a) * reachWeight(state, a.name));
   let roll = rng.next() * weights.reduce((x, y) => x + y, 0);
   for (let i = 0; i < touring.length; i++) {
     roll -= weights[i];
@@ -170,7 +171,9 @@ export function rivalsTakeOffers(state: TycoonState, world: WorldMap, rng: Rng) 
       return;
     }
     const rating = state.cityRatings[gig.cityId] ?? 50;
+    const actBar = actReputationBar(state, gig.act, false);
     for (const rival of state.rivals) {
+      if (rival.reputation < actBar - 5) continue; // the act's management wouldn't call them either
       const dist = roadDistance(world, rival.hqCityId, gig.cityId);
       if (!Number.isFinite(dist)) continue;
       const proximity = dist < 14 ? 1.6 : dist < 32 ? 1 : 0.45;

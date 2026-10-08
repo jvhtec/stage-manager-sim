@@ -86,7 +86,8 @@ function plantTour(state: TycoonState): { state: TycoonState; tour: Tour } {
 
 describe('playing tours', () => {
   it('books the whole tour from any date, and pays the completion bonus', () => {
-    const planted = plantTour(newGame());
+    const fresh = newGame();
+    const planted = plantTour({ ...fresh, company: { ...fresh.company, reputation: 60 } });
     let s = bookGig(planted.state, 'tg-1').state;
     expect(s.tours.find(t => t.id === 'tour-test')!.status).toBe('booked');
     expect(s.gigs.filter(g => g.tourId === 'tour-test').every(g => g.status === 'booked')).toBe(true);

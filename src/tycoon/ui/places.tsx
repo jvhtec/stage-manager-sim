@@ -1,3 +1,4 @@
+import { gigBookingBar, tourBookingBar } from '@/world/standing';
 import { useState } from 'react';
 import { buildDepot, buyVehicle, fireCrew, hireCrew } from '@/world/actions';
 import { stockSize } from '@/world/loading';
@@ -30,7 +31,7 @@ const VENUE_KIND_LABEL: Record<string, string> = {
 
 function GigRow({ ctx, gig }: { ctx: WinCtx; gig: Gig }) {
   const today = dayOf(ctx.state.hour);
-  const locked = gig.tier > companyTier(ctx.state.company.reputation);
+  const locked = !!gigBookingBar(ctx.state, gig).reason;
   const venue = worldOf(ctx.state).venueById.get(gig.venueId);
   return (
     <div className="tt-item clickable" onClick={() => ctx.open('gig', gig.id)}>

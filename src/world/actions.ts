@@ -31,7 +31,8 @@ import { worldOf } from './mapgen';
 import { roadDistance } from './pathfinding';
 import { serviceNow } from './sim';
 import { makeVehicle } from './state';
-import { canBookTour, tourMaxTier } from './tours';
+import { tourMaxTier } from './tours';
+import { gigBookingBar, tourBookingBar } from './standing';
 import { getTech, techsActiveIn } from './content/techs';
 import type { ActionOutcome, TycoonState } from './types';
 import { getProduct } from './content/gear';
@@ -43,10 +44,8 @@ export function bookTour(state: TycoonState, tourId: string): ActionOutcome {
   const tour = state.tours.find(t => t.id === tourId);
   if (!tour || tour.status !== 'offer') return fail(state, 'That tour is no longer on offer.');
   if (tour.acceptByDay < dayOf(state.hour)) return fail(state, 'The booking deadline has passed.');
-  const needed = tierInfo(tourMaxTier(state, tour));
-  if (!canBookTour(state, tour)) {
-    return fail(state, `Promoters want reputation ${needed.minReputation}+ for this tour's ${needed.label} dates.`);
-  }
+  const { reason } = tourBookingBar(state, tour, tourMaxTier(state, tour));
+  if (reason) return fail(state, reason);
   const s = cloneState(state);
   const t = s.tours.find(x => x.id === tourId)!;
   t.status = 'booked';
@@ -83,10 +82,8 @@ export function bookGig(state: TycoonState, gigId: string): ActionOutcome {
   if (gig?.tourId) return bookTour(state, gig.tourId);
   if (!gig || gig.status !== 'offer') return fail(state, 'That offer is no longer available.');
   if (gig.acceptByDay < dayOf(state.hour)) return fail(state, 'The booking deadline has passed.');
-  const needed = tierInfo(gig.tier);
-  if (companyTier(state.company.reputation) < gig.tier) {
-    return fail(state, `Promoters want reputation ${needed.minReputation}+ for ${needed.label} venues.`);
-  }
+  const { reason } = gigBookingBar(state, gig);
+  if (reason) return fail(state, reason);
   const s = cloneState(state);
   gigById(s, gigId)!.status = 'booked';
   return ok(s, `Booked ${gig.act}. Now assign vehicles to get the gear there.`);

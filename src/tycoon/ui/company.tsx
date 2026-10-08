@@ -185,6 +185,11 @@ export function HelpWindow() {
           <b>Star techs</b> — real big names (FOH engineers, lighting and show designers, production managers) join in their era.
           Put one on a truck and the shows it plays get better, especially for the acts they're known for.
         </li>
+        <li>
+          <b>Who'll hire you</b> — venues need a reputation tier, and real acts' management sets its own bar: big names (and acts
+          headed for the top) only hire established crews, even for a club date. Start with local bands; do an act proud and
+          they'll lower the bar for you next time.
+        </li>
         <li>Buy bigger trucks and more gear, open regional warehouses, and win reputation to unlock arenas and stadiums.</li>
       </ol>
       <p className="tt-dim" style={{ marginBottom: 0 }}>

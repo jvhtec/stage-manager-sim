@@ -10,7 +10,7 @@ import type { Gig, TycoonState } from '../types';
 
 const rich = (startYear = 1990): TycoonState => {
   const s = createTycoonGame({ companyName: 'T', color: '#f00', seed: 8, country: 'GB', startYear });
-  return { ...s, company: { ...s.company, cash: 50_000_000 } };
+  return { ...s, company: { ...s.company, cash: 50_000_000, reputation: 95 } };
 };
 
 function plant(s: TycoonState, act: string): { state: TycoonState; gig: Gig } {
