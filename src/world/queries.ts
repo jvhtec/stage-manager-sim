@@ -3,6 +3,7 @@ import { GEAR_RESALE_RATE, HOTEL_NIGHT, HOURS_PER_DAY, PER_DIEM, fuelPerTile, ge
 import { getProduct } from './content/gear';
 import { techBonus } from './content/techs';
 import { houseRigAt } from './contracts';
+import { ownedStock } from './wear';
 import { freelancersFor, type FreelanceHire } from './crew';
 import { prepRatio } from './facilities';
 import { subHireFor, type SubHire } from './hire';
@@ -163,9 +164,9 @@ export function stockValue(stock: GearStock, condition: Record<string, number> =
 
 export function companyValue(state: TycoonState): number {
   const fleet = state.vehicles.filter(v => v.owner === 'player' && !v.lease).reduce((sum, v) => sum + sellValue(v, state.hour), 0);
-  const gear = state.depots.reduce((sum, d) => sum + stockValue(d.gear, state.gearCondition), 0);
-  const inTransit = state.vehicles.filter(v => v.owner === 'player').reduce((sum, v) => sum + stockValue(v.cargo, state.gearCondition), 0);
-  return Math.round(state.company.cash - state.company.loan + fleet + gear + inTransit + state.depots.length * 20000);
+  // Everything you own, wherever it is: racks, trucks, couriers and venues' house rigs.
+  const gear = stockValue(ownedStock(state), state.gearCondition);
+  return Math.round(state.company.cash - state.company.loan + fleet + gear + state.depots.length * 20000);
 }
 
 export function homeDepot(state: TycoonState, v: Vehicle) {

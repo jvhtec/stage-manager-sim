@@ -9,6 +9,7 @@ import { worldOf } from '../mapgen';
 import { stockSize } from '../loading';
 import { monthlyRivals, takeoverPrice } from '../rivals';
 import { condition } from '../wear';
+import { companyValue } from '../queries';
 import type { Gig, TycoonState } from '../types';
 
 const game = (): TycoonState => {
@@ -48,7 +49,10 @@ describe('moving kit and buying rivals', () => {
     const [from, to] = s.depots;
     const id = Object.keys(from.gear)[0];
     const before = from.gear[id];
+    const valueBefore = companyValue(s);
     s = transferGear(s, from.id, to.id, id, 2).state;
+    // Kit on the courier is still yours (less the courier's fee).
+    expect(companyValue(s)).toBeGreaterThan(valueBefore - 2000);
     expect(s.depots[0].gear[id] ?? 0).toBe(before - 2);
     expect(s.transfers.length).toBe(1);
     s = advanceHours(s, 4 * HOURS_PER_DAY);

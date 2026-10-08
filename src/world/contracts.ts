@@ -44,7 +44,9 @@ export function monthlyContracts(s: TycoonState, world: WorldMap, rng: Rng) {
   world.cities.forEach(city =>
     city.venues.forEach(venue => {
       if (venue.kind === 'airport' || venue.kind === 'stadium' || venue.kind === 'pub') return;
-      const taken = s.contracts.some(c => c.venueId === venue.id && (c.status === 'offer' || c.status === 'active' || c.status === 'rival'));
+      const taken = s.contracts.some(
+        c => c.venueId === venue.id && (c.status === 'offer' || c.status === 'active' || (c.status === 'rival' && s.rivals.some(r => r.id === c.rivalId))),
+      );
       if (taken || !rng.chance(TENDER_CHANCE)) return;
       const startDay = today + TENDER_OPEN_DAYS + 7;
       const contract: VenueContract = {
@@ -77,6 +79,12 @@ export function dailyContracts(s: TycoonState, world: WorldMap) {
   const firstOfMonth = dateOfDay(s, today).getUTCDate() === 1;
   s.contracts.forEach(c => {
     const venue = world.venueById.get(c.venueId);
+    // A rival that went under or was bought out can't keep the venue's house rig.
+    if (c.status === 'rival' && !s.rivals.some(r => r.id === c.rivalId)) {
+      c.status = 'ended';
+      c.endDay = today;
+      return;
+    }
     if (c.status === 'offer' && c.acceptByDay < today) {
       const rival = s.rivals
         .filter(r => c.tier >= r.minTier && c.tier <= r.maxTier && r.hqCityId === c.cityId)
@@ -114,10 +122,10 @@ function returnKit(s: TycoonState, c: VenueContract) {
   c.installed = {};
 }
 
-/** Whether your warehouse in that town holds the kit a contract needs. */
+/** Whether your warehouse in that town holds the kit a contract needs (null: no warehouse there — a delegation won't do). */
 export function contractShortfall(state: TycoonState, c: VenueContract): DeptCounts | null {
   const depot = depotInCity(state, c.cityId);
-  if (!depot) return null;
+  if (!depot || depot.kind !== 'warehouse') return null;
   const have = deptTotals(depot.gear);
   const short = emptyCounts();
   let any = false;

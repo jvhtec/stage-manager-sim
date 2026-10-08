@@ -77,3 +77,18 @@ describe('house contracts', () => {
     expect(stockSize(withHouse.delivered)).toBeGreaterThan(0);
   });
 });
+
+describe('house contract edge cases', () => {
+  it('a delegation is not a warehouse', () => {
+    const { s, contract } = setup();
+    const asDelegation = { ...s, depots: s.depots.map(d => (d.cityId === contract.cityId ? { ...d, kind: 'delegation' as const } : d)) };
+    expect(signContract(asDelegation, 'c1').result.ok).toBe(false);
+  });
+
+  it("a departed rival's contract frees the venue", () => {
+    const { s, contract } = setup();
+    const held = { ...s, contracts: [{ ...contract, status: 'rival' as const, rivalId: 'gone-rival', endDay: contract.endDay + 300 }] };
+    const later = advanceHours(held, 2 * HOURS_PER_DAY);
+    expect(later.contracts.find(c => c.id === 'c1')?.status ?? 'ended').toBe('ended');
+  });
+});
