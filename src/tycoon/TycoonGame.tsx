@@ -7,15 +7,19 @@ import {
   Download,
   Ellipsis,
   FastForward,
+  FlaskConical,
   Headphones,
   Home,
   LogOut,
   MapPin,
   Newspaper,
   Pause,
+  SlidersHorizontal,
   Play,
+  TrendingUp,
   Trophy,
   Truck,
+  Users,
   Wallet,
   ZoomIn,
   ZoomOut,
@@ -36,6 +40,10 @@ import { VehicleListWindow, VehicleWindow } from './ui/fleet';
 import { GigWindow, ShowsWindow } from './ui/shows';
 import { TourWindow } from './ui/tours';
 import { TalentWindow } from './ui/talent';
+import { MarketWindow } from './ui/market';
+import { PoliciesWindow } from './ui/policies';
+import { RndWindow } from './ui/rnd';
+import { CrewWindow } from './ui/crewWindow';
 import { FinanceWindow, GameOverPanel, HelpWindow, LeagueWindow, NewGameForm, NewsWindow } from './ui/company';
 import type { WinCtx, WindowKind } from './ui/types';
 import './tycoon.css';
@@ -197,10 +205,10 @@ export default function TycoonGame() {
         return state.vehicles.find(v => v.id === w.refId)?.name ?? 'Vehicle';
       case 'depot': {
         const d = state.depots.find(x => x.id === w.refId);
-        return `Warehouse — ${d ? world.cityById.get(d.cityId)?.name : ''}`;
+        return `${d?.kind === 'delegation' ? 'Delegation' : 'Warehouse'} — ${d ? world.cityById.get(d.cityId)?.name : ''}`;
       }
       case 'depots':
-        return 'Warehouses';
+        return 'Bases';
       case 'vehicles':
         return 'Fleet';
       case 'shows':
@@ -215,6 +223,14 @@ export default function TycoonGame() {
         return 'Company league';
       case 'talent':
         return 'Star techs';
+      case 'market':
+        return 'Market';
+      case 'policies':
+        return 'Company policies';
+      case 'rnd':
+        return 'R&D';
+      case 'crew':
+        return 'Crew';
       case 'help':
         return 'How to play';
       case 'menu':
@@ -252,11 +268,31 @@ export default function TycoonGame() {
         return <LeagueWindow ctx={ctx} />;
       case 'talent':
         return <TalentWindow ctx={ctx} />;
+      case 'market':
+        return <MarketWindow ctx={ctx} />;
+      case 'policies':
+        return <PoliciesWindow ctx={ctx} />;
+      case 'rnd':
+        return <RndWindow ctx={ctx} />;
+      case 'crew':
+        return <CrewWindow ctx={ctx} />;
       case 'help':
         return <HelpWindow />;
       case 'menu':
         return (
           <div className="tt-menu">
+            <button className="tt-btn" onClick={() => open('crew')}>
+              <Users /> Crew
+            </button>
+            <button className="tt-btn" onClick={() => open('market')}>
+              <TrendingUp /> Market
+            </button>
+            <button className="tt-btn" onClick={() => open('policies')}>
+              <SlidersHorizontal /> Policies
+            </button>
+            <button className="tt-btn" onClick={() => open('rnd')}>
+              <FlaskConical /> R&D
+            </button>
             <button className="tt-btn" onClick={() => open('talent')}>
               <Headphones /> Star techs
             </button>
@@ -420,6 +456,18 @@ export default function TycoonGame() {
               <button className="tt-btn" onClick={() => open('finance')} title="Finances">
                 <Wallet /> <span className="tt-label">Finances</span>
               </button>
+              <button className="tt-btn" onClick={() => open('crew')} title="Crew">
+                <Users />
+              </button>
+              <button className="tt-btn" onClick={() => open('market')} title="Market">
+                <TrendingUp />
+              </button>
+              <button className="tt-btn" onClick={() => open('policies')} title="Company policies">
+                <SlidersHorizontal />
+              </button>
+              <button className="tt-btn" onClick={() => open('rnd')} title="R&D">
+                <FlaskConical />
+              </button>
               <button className="tt-btn" onClick={() => open('talent')} title="Star techs">
                 <Headphones />
               </button>
@@ -490,7 +538,7 @@ export default function TycoonGame() {
                 x={w.x}
                 y={w.y}
                 z={w.z}
-                width={w.kind === 'finance' || w.kind === 'league' ? 440 : 340}
+                width={w.kind === 'finance' || w.kind === 'league' || w.kind === 'market' || w.kind === 'crew' ? 440 : 340}
                 onMove={(x, y) => setWindows(prev => prev.map(o => (o.key === w.key ? { ...o, x, y } : o)))}
                 onFocus={() => focusWindow(w.key)}
                 onClose={() => (compact ? setWindows([]) : closeWindow(w.key))}

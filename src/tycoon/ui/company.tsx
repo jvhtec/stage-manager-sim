@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { borrow, repay } from '@/world/actions';
+import { borrow, buyRival, repay } from '@/world/actions';
+import { rivalHealth, takeoverBlocker, takeoverPrice } from '@/world/rivals';
 import {
-  LOAN_INTEREST_PER_YEAR,
-  LOAN_STEP,
-  MAX_LOAN,
   START_YEARS,
   NEGATIVE_MONTHS_GAME_OVER,
   TIERS,
@@ -13,6 +11,9 @@ import {
 import { formatHour, yearOf } from '@/world/core';
 import { worldOf } from '@/world/mapgen';
 import { companyValue } from '@/world/queries';
+import { awardsName, companyRating, rivalRating } from '@/world/awards';
+import { describeLoanRate } from '@/world/market';
+import { borrowStep, creditLimit } from '@/world/finance';
 import { suggestedHqCities } from '@/world/state';
 import { LEDGER_LABELS, type LedgerCategory, type TycoonState } from '@/world/types';
 import { createRandomSeed } from '@/lib/rng';
@@ -27,7 +28,7 @@ function guessCountry(): CountryCode {
 }
 import { Bar, Stat } from './bits';
 import { BrandBadge } from './brands';
-import { formatPopulation, money } from './format';
+import { formatPopulation, kmoney, money } from './format';
 import type { WinCtx } from './types';
 
 export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
@@ -85,16 +86,22 @@ export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
         <b className={state.company.cash < 0 ? 'tt-bad' : ''}>{money(state.company.cash)}</b>
       </Stat>
       <Stat label="Loan">
-        {money(state.company.loan)} <span className="tt-dim">/ {money(MAX_LOAN)} @ {Math.round(LOAN_INTEREST_PER_YEAR * 100)}%</span>
+        {money(state.company.loan)} <span className="tt-dim">/ {money(creditLimit(state))} @ {describeLoanRate(state)}</span>
       </Stat>
       <Stat label="Company value">{money(companyValue(state))}</Stat>
       <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
-        <button className="tt-btn sm" disabled={state.company.loan + LOAN_STEP > MAX_LOAN} onClick={() => act(borrow)}>
-          Borrow {money(LOAN_STEP)}
+        <button className="tt-btn sm" disabled={state.company.loan >= creditLimit(state)} onClick={() => act(borrow)}>
+          Borrow {money(Math.min(borrowStep(state), Math.max(0, creditLimit(state) - state.company.loan)))}
         </button>
         <button className="tt-btn sm" disabled={state.company.loan <= 0} onClick={() => act(repay)}>
-          Repay {money(Math.min(LOAN_STEP, state.company.loan))}
+          Repay {money(Math.min(borrowStep(state), state.company.loan))}
         </button>
+      </div>
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        The bank lends against what you own and how well you're run (your company rating).
+        {state.vehicles.some(v => v.owner === 'player' && v.lease)
+          ? ` Leases: ${money(state.vehicles.reduce((sum, v) => sum + (v.owner === 'player' && v.lease ? v.lease.monthly : 0), 0))}/month.`
+          : ''}
       </div>
       {state.negativeMonths > 0 && (
         <div className="tt-bad" style={{ marginTop: 6 }}>
@@ -185,7 +192,54 @@ export function HelpWindow() {
           <b>Star techs</b> — real big names (FOH engineers, lighting and show designers, production managers) join in their era.
           Put one on a truck and the shows it plays get better, especially for the acts they're known for.
         </li>
-        <li>Buy bigger trucks and more gear, open regional warehouses, and win reputation to unlock arenas and stadiums.</li>
+        <li>
+          <b>Who'll hire you</b> — venues need a reputation tier, and real acts' management sets its own bar: big names (and acts
+          headed for the top) only hire established crews, even for a club date. Start with local bands; do an act proud and
+          they'll lower the bar for you next time.
+        </li>
+        <li>
+          <b>The market</b> moves: busy summers, dead Januaries, and real history — recessions, booms, interest rates that swing
+          from 0.5% to 17%, even a pandemic. See <b>Market</b>.
+        </li>
+        <li>
+          <b>Festivals</b> (Glastonbury, FIB, Rock am Ring…) tender their stages two months out — multi-day jobs that pay like a
+          run of arena dates.
+        </li>
+        <li>
+          <b>House contracts</b>: install a rig in a venue for a year for a monthly retainer; its shows run on your rig and rivals
+          can't touch them.
+        </li>
+        <li>
+          <b>Upkeep</b> (Policies): gear wears out and can die mid-set — run a workshop or refurbish. Crews tire on the road and
+          quit if underpaid. Insure against theft, crashes and festival storms.
+        </li>
+        <li>
+          <b>Bases</b>: open a <b>delegation</b> (branch office, vans only) or a <b>warehouse</b> in any town and grow it as
+          your reputation does. Bases near the work cut fuel, hotel nights and freelance rates — and add rent and salaries.
+          Full-time staff (prep, sales) stay at the base; gig technicians go on the road, topped up by local freelancers.
+        </li>
+        <li>
+          <b>Special events</b> (Shows → Events) — Live Aid, Olympic ceremonies, Eurovision, the BRITs… — are tendered
+          department by department: put in a sealed bid (sharp, standard or premium). On live TV nothing may be late or fail.
+        </li>
+        <li>
+          <b>The trade</b>: short of kit, sub-hire it from a rival nearby (or rent your idle kit out); courier kit between your
+          bases; and when a rival struggles, buy them out from the League.
+        </li>
+        <li>
+          <b>Growing the firm</b>: lease trucks instead of buying them; the bank lends against what you own and your rating. Fund
+          <b> R&D</b> to build your own kit (and earn royalties), sign <b>production deals</b> with acts who love you, and train
+          your crews.
+        </li>
+        <li>
+          <b>Crew</b> are people: sound, lighting, video and staging techs rated 1–5★, with traits (crew chief, perfectionist,
+          road warrior…). Shows want the right specialists — a light-heavy arena needs LX techs — and everyone levels up by
+          working. Hire from the market each month; keep morale up or rivals poach your stars.
+        </li>
+        <li>
+          Buy bigger trucks and more gear, and win reputation to unlock arenas and stadiums. Every January the industry awards
+          judge your year.
+        </li>
       </ol>
       <p className="tt-dim" style={{ marginBottom: 0 }}>
         Drag to pan, scroll or pinch to zoom. Space pauses; 1–4 set the speed. Install it as an app: on iPhone/iPad use Share →
@@ -326,6 +380,8 @@ export function GameOverPanel({ state, onRestart }: { state: TycoonState; onRest
 export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
   const world = worldOf(state);
+  const year = yearOf(state, state.hour);
+  const rating = companyRating(state, year);
   const rows = [
     {
       id: 'player',
@@ -333,6 +389,7 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
       color: state.company.color,
       reputation: state.company.reputation,
       shows: state.stats.showsPlayed,
+      rating: rating.total,
       base: world.cityById.get(state.company.hqCityId)?.name,
       note: 'You',
     },
@@ -342,16 +399,19 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
       color: r.color,
       reputation: r.reputation,
       shows: r.showsPlayed,
+      rating: rivalRating(r.reputation, r.showsPlayed + year),
+      rival: r,
       base: world.cityById.get(r.hqCityId)?.name,
       note: `${r.specialty} · ${tierInfo(r.minTier).label}${r.maxTier !== r.minTier ? `–${tierInfo(r.maxTier).label}` : ''}`,
     })),
-  ].sort((a, b) => b.reputation - a.reputation);
+  ].sort((a, b) => b.rating - a.rating);
   return (
     <div>
       <table className="tt-table">
         <thead>
           <tr>
             <th>Company</th>
+            <th>Rating</th>
             <th>Rep</th>
             <th>Shows</th>
           </tr>
@@ -367,6 +427,29 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
                 <div className="tt-dim" style={{ fontSize: 11, paddingLeft: 30 }}>
                   {r.base} · {r.note}
                 </div>
+                {'rival' in r && r.rival && (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', paddingLeft: 30, marginTop: 2 }}>
+                    <span className="tt-dim" style={{ fontSize: 11 }}>
+                      Finances
+                    </span>
+                    <Bar value={rivalHealth(r.rival)} max={100} color={rivalHealth(r.rival) < 25 ? '#ef4444' : rivalHealth(r.rival) < 50 ? '#f59e0b' : '#22c55e'} />
+                    <button
+                      className="tt-btn sm"
+                      title={takeoverBlocker(state, r.rival) ?? `Buy ${r.name}: their base, kit and crew`}
+                      disabled={!!takeoverBlocker(state, r.rival)}
+                      onClick={() => {
+                        const rv = r.rival!;
+                        const res = ctx.dispatch(s => buyRival(s, rv.id));
+                        if (res.message) ctx.toast(res.message, res.ok);
+                      }}
+                    >
+                      Buy {kmoney(takeoverPrice(r.rival))}
+                    </button>
+                  </div>
+                )}
+              </td>
+              <td>
+                <b>{r.rating}</b>
               </td>
               <td>{Math.round(r.reputation)}</td>
               <td>{r.shows}</td>
@@ -377,6 +460,35 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
       <div className="tt-dim" style={{ marginTop: 6, whiteSpace: 'normal' }}>
         Rivals chase the venue sizes they specialise in, and new firms set up as the years go by.
       </div>
+      <h4>Your rating, {year} so far</h4>
+      {rating.parts.map(p => (
+        <div key={p.label} className="tt-row">
+          <span className="tt-dim" style={{ minWidth: 120 }}>
+            {p.label}
+          </span>
+          <Bar value={p.points} max={p.max} color={state.company.color} />
+          <span style={{ minWidth: 60, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+            {p.points}/{p.max}
+          </span>
+        </div>
+      ))}
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        The {awardsName(state.country, year + 1)} are handed out every January for the year just gone: beat every rival's rating
+        for Production Company of the Year; there are prizes for festivals, touring and newcomers too.
+      </div>
+      <h4>Trophy cabinet</h4>
+      {state.awards.length ? (
+        <div className="tt-list">
+          {[...state.awards].reverse().map((a, i) => (
+            <div key={i} className="tt-row">
+              <span>🏆 {a.title}</span>
+              <span className="tt-dim">{a.year}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="tt-dim">Empty — for now.</div>
+      )}
     </div>
   );
 }

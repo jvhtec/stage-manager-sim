@@ -1,3 +1,4 @@
+import { formatDay } from '@/world/core';
 import { getRegion } from '@/world/content/world';
 import { worldOf } from '@/world/mapgen';
 import { projectCoverage } from '@/world/queries';
@@ -10,7 +11,18 @@ export function gigWhere(state: TycoonState, gig: Gig): string {
     return `✈ ${region.name}: ${gig.overseas.stops.map(s => s.city).join(', ')}`;
   }
   const world = worldOf(state);
+  if (gig.festival) return `🎪 ${gig.festival.stage}, ${world.cityById.get(gig.cityId)?.name}`;
+  if (gig.event && !gig.event.citywide) return `★ ${gig.event.lot} lot, ${world.cityById.get(gig.cityId)?.name}`;
   return `${world.venueById.get(gig.venueId)?.name}, ${world.cityById.get(gig.cityId)?.name}`;
+}
+
+/** "24 Jun 1985", or "24–26 Jun 1985" for multi-day shows. */
+export function gigDates(state: TycoonState, gig: Gig): string {
+  const days = gig.days ?? 1;
+  if (days <= 1) return formatDay(state, gig.day);
+  const first = formatDay(state, gig.day).split(' ');
+  const last = formatDay(state, gig.day + days - 1).split(' ');
+  return first[1] === last[1] ? `${first[0]}–${last.join(' ')}` : `${first[0]} ${first[1]} – ${last.join(' ')}`;
 }
 
 export type Readiness = 'UNASSIGNED' | 'LATE' | 'SHORT' | 'READY';

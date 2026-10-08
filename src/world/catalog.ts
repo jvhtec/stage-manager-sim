@@ -239,11 +239,17 @@ export const STARTING_CASH = 50000;
 export const STARTING_REPUTATION = 18;
 export const CREW_WAGE_PER_DAY = 55;
 export const CREW_HIRE_COST = 400;
-export const DEPOT_BUILD_COST = 35000;
-export const DEPOT_UPKEEP_PER_MONTH = 900;
-export const LOAN_STEP = 10000;
-export const MAX_LOAN = 150000;
-export const LOAN_INTEREST_PER_YEAR = 0.07;
+/** Per crew member per night away from base: meals and a hotel bed (sleeper buses skip the hotel). */
+export const PER_DIEM = 30;
+export const HOTEL_NIGHT = 45;
+
+/** Fuel per tile driven: bigger trucks drink more. */
+export function fuelPerTile(m: Pick<VehicleModel, 'kind' | 'gearCapacity'>): number {
+  return 1 + m.gearCapacity * 0.15 + (m.kind === 'bus' ? 1.5 : 0);
+}
+
+/** Recruitment cost for a full-time staff member (facilities.ts has salaries). */
+export const STAFF_HIRE_COST = 600;
 export const NEGATIVE_MONTHS_GAME_OVER = 3;
 export const SERVICE_INTERVAL_DAYS = 45;
 export const SERVICE_HOURS = 8;

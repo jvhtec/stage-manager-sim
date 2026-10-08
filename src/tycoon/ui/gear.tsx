@@ -1,6 +1,10 @@
-import { buyGear, sellGear } from '@/world/actions';
-import { DEPT_LABELS, GEAR_RESALE_RATE } from '@/world/catalog';
-import { expectedQuality, getProduct } from '@/world/content/gear';
+import { useState } from 'react';
+import { buyGear, refurbishGear, sellGear, transferGear } from '@/world/actions';
+import { describeQuote, transferQuote } from '@/world/transfers';
+import { worldOf } from '@/world/mapgen';
+import { condition, refurbishCost, resaleValue } from '@/world/wear';
+import { DEPT_LABELS } from '@/world/catalog';
+import { expectedQuality, getProduct, isOwnProduct } from '@/world/content/gear';
 import { yearOf } from '@/world/core';
 import { deptTotals } from '@/world/loading';
 import { DEPTS, type Depot, type GearStock, type TycoonState } from '@/world/types';
@@ -25,6 +29,17 @@ export function QualityChip({ quality, state }: { quality: number; state: Tycoon
   return (
     <span className="tt-chip" style={{ background: color }} title="Gear quality (1-10)">
       Q{quality}
+    </span>
+  );
+}
+
+/** Condition of a product line (0-100), green → amber → red. */
+export function ConditionChip({ value }: { value: number }) {
+  const v = Math.round(value);
+  const color = v >= 80 ? '#22c55e' : v >= 55 ? '#f59e0b' : '#ef4444';
+  return (
+    <span className="tt-chip" style={{ background: color, minWidth: 34, textAlign: 'center' }} title="Condition — worn kit sounds worse and fails more">
+      {v}%
     </span>
   );
 }
@@ -63,10 +78,28 @@ export function WarehouseGear({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
   const totals = deptTotals(depot.gear);
   const act = (fn: Parameters<WinCtx['dispatch']>[0]) => {
     const r = ctx.dispatch(fn);
-    if (!r.ok) ctx.toast(r.message ?? 'Not possible', false);
+    if (r.message || !r.ok) ctx.toast(r.message ?? 'Not possible', r.ok);
   };
+  const others = state.depots.filter(d => d.id !== depot.id);
+  const [sendTo, setSendTo] = useState<string>('');
+  const target = others.find(d => d.id === sendTo);
+  const world = worldOf(state);
   return (
     <div className="tt-list">
+      {others.length > 0 && (
+        <div className="tt-item" style={{ gap: 6 }}>
+          <span className="tt-dim">Send kit to</span>
+          <select className="tt-input" style={{ flex: 1 }} value={sendTo} onChange={e => setSendTo(e.target.value)}>
+            <option value="">— choose a base —</option>
+            {others.map(d => (
+              <option key={d.id} value={d.id}>
+                {world.cityById.get(d.cityId)?.name} ({d.kind})
+              </option>
+            ))}
+          </select>
+          {target && <span className="tt-dim">{describeQuote(state, transferQuote(state, depot, target, 1))} per unit</span>}
+        </div>
+      )}
       {DEPTS.map(d => {
         const owned = Object.keys(depot.gear)
           .filter(id => depot.gear[id] > 0 && getProduct(id).dept === d)
@@ -90,8 +123,23 @@ export function WarehouseGear({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
                     {p.brand} <span className="tt-dim">{p.name}</span>
                   </span>
                   <QualityChip quality={p.quality} state={state} />
+                  <ConditionChip value={condition(state, id)} />
                   <b style={{ minWidth: 26, textAlign: 'right' }}>×{depot.gear[id]}</b>
-                  <button className="tt-btn sm" title={`Sell one for ${money(p.price * GEAR_RESALE_RATE)}`} onClick={() => act(s => sellGear(s, depot.id, id))}>
+                  {condition(state, id) < 95 && (
+                    <button
+                      className="tt-btn sm"
+                      title={`Refurbish every ${p.name} you own to as-new: ${money(refurbishCost(state, id))}`}
+                      onClick={() => act(s => refurbishGear(s, id))}
+                    >
+                      🔧
+                    </button>
+                  )}
+                  {target && (
+                    <button className="tt-btn sm" title={`Courier one to ${world.cityById.get(target.cityId)?.name}`} onClick={() => act(s => transferGear(s, depot.id, target.id, id))}>
+                      →
+                    </button>
+                  )}
+                  <button className="tt-btn sm" title={`Sell one for ${money(resaleValue(state, id))}`} onClick={() => act(s => sellGear(s, depot.id, id))}>
                     −
                   </button>
                   <button className="tt-btn sm" title={`Buy one for ${money(p.price)}`} onClick={() => act(s => buyGear(s, depot.id, id))}>
@@ -127,7 +175,7 @@ export function GearShop({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
             <DeptDot dept={d} /> {DEPT_LABELS[d]}
           </h4>
           <div className="tt-list">
-            {state.announcedGear
+            {[...state.ownProducts, ...state.announcedGear]
               .map(getProduct)
               .filter(p => p.dept === d)
               .sort((a, b) => b.quality - a.quality)
@@ -140,7 +188,7 @@ export function GearShop({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
                       <span style={{ fontWeight: 700 }}>{p.name}</span>
                     </div>
                     <div className="tt-dim">
-                      Since {p.introYear}
+                      {isOwnProduct(p.id) ? '★ Your own design · ' : ''}Since {p.introYear}
                       {depot.gear[p.id] ? ` · you have ${depot.gear[p.id]}` : ''}
                     </div>
                   </div>

@@ -101,6 +101,21 @@ export type LedgerCategory =
   | 'purchases'
   | 'interest'
   | 'freight'
+  | 'support'
+  | 'workshop'
+  | 'contracts'
+  | 'insurance'
+  | 'salaries'
+  | 'freelance'
+  | 'travel'
+  | 'fuel'
+  | 'subhire'
+  | 'rental'
+  | 'leasing'
+  | 'rnd'
+  | 'royalties'
+  | 'deals'
+  | 'training'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -113,16 +128,84 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   purchases: 'New vehicles & gear',
   interest: 'Loan interest',
   freight: 'Air freight & flights',
+  support: 'Government support',
+  workshop: 'Gear maintenance',
+  contracts: 'House contracts',
+  insurance: 'Insurance',
+  salaries: 'Full-time staff',
+  freelance: 'Freelance crew',
+  travel: 'Per diems & hotels',
+  fuel: 'Fuel',
+  subhire: 'Sub-hired kit',
+  rental: 'Kit rented out',
+  leasing: 'Vehicle leases',
+  rnd: 'R&D',
+  royalties: 'Design royalties',
+  deals: 'Production deals',
+  training: 'Crew training',
   sales: 'Asset sales',
 };
 
+/** Departments crew specialise in (consoles are sound work). */
+export type CrewDept = 'audio' | 'lighting' | 'video' | 'stage';
+export type CrewTrait = 'chief' | 'roadwarrior' | 'perfectionist' | 'polyglot' | 'party' | 'mentor';
+
+/** A gig technician (people.ts). */
+export interface CrewMember {
+  id: string;
+  name: string;
+  primary: CrewDept;
+  /** 0-5 per department. */
+  skills: Record<CrewDept, number>;
+  /** Shows worked per department towards the next level. */
+  xp: Record<CrewDept, number>;
+  trait?: CrewTrait;
+  fatigue: number;
+  hiredHour: number;
+  /** At a base… */
+  depotId?: string;
+  /** …or aboard a truck. */
+  vehicleId?: string;
+  /** Always rides this truck when it loads at their base. */
+  pinnedVehicleId?: string;
+  /** Pay on top of the going rate for their level (a matched counter-offer). */
+  payBump?: number;
+  /** Won't listen to rivals' offers until this hour. */
+  loyalUntil?: number;
+}
+
+/** A rival trying to hire one of your people away: match it or lose them. */
+export interface PoachBid {
+  id: string;
+  personId: string;
+  rivalName: string;
+  /** Pay rise they're offered, e.g. 0.3 = +30%. */
+  raise: number;
+  expiresDay: number;
+}
+
+export type FacilityKind = 'delegation' | 'warehouse';
+/** Full-time staff roles at a base (gig technicians are `crew`). */
+export type StaffRole = 'warehouse' | 'office';
+
+/** A base: a delegation (branch office) or a warehouse (facilities.ts). */
 export interface Depot {
   id: string;
+  kind: FacilityKind;
+  /** Warehouse size 1-3 (small / medium / large); delegations are 1. */
+  size: number;
+  /** Full-time staff on salary — they never go on the road. */
+  staff: Record<StaffRole, number>;
   cityId: string;
   /** Index into the city's warehouse lots. */
   lot: number;
   gear: GearStock;
+  /** Gig technicians on the payroll, based here between jobs. */
   crew: number;
+  /** Average fatigue (0-100) of the crew resting here. */
+  fatigue?: number;
+  /** Average experience (0-100) of the crew based here. */
+  experience?: number;
   builtHour: number;
 }
 
@@ -161,9 +244,31 @@ export interface Vehicle {
   orders: string[];
   cargo: GearStock;
   crew: number;
+  /** Average fatigue (0-100) of the crew aboard. */
+  crewFatigue?: number;
+  /** Average experience (0-100) of the crew aboard. */
+  crewExperience?: number;
   arrivedHour?: number;
   profitThisYear: number;
   profitLastYear: number;
+  /** Leased rather than owned (finance.ts). */
+  lease?: { monthly: number; sinceHour: number };
+}
+
+export type BidLevel = 'sharp' | 'standard' | 'premium';
+export type RndAmbition = 'refine' | 'flagship' | 'breakthrough';
+
+/** An R&D project (rnd.ts). */
+export interface RndProject {
+  id: string;
+  dept: Dept;
+  ambition: RndAmbition;
+  budget: number;
+  monthsDone: number;
+  startedDay: number;
+  status: 'running' | 'done' | 'failed';
+  series: string;
+  productId?: string;
 }
 
 export type GigStatus = 'offer' | 'booked' | 'done' | 'failed' | 'expired' | 'rival';
@@ -233,9 +338,37 @@ export interface Gig {
   tourId?: string;
   /** Set for world-tour legs abroad; the gig's venue/city is then the airport. */
   overseas?: OverseasLeg;
+  /** Shows that run over several days (festival stages). Default 1. */
+  days?: number;
+  /** A festival stage contract (content/festivals.ts). `act` is the festival's name. */
+  festival?: { id: string; year: number; stage: string; main: boolean };
+  /** A special event's department lot (events.ts), or a show spawned by a citywide event. */
+  event?: { id: string; year: number; name: string; lot: Dept; broadcast: boolean; scale: number; citywide?: boolean };
+  /** Your sealed bid on an event lot. */
+  bid?: BidLevel;
   status: GigStatus;
   rivalId?: string;
   result?: GigResult;
+}
+
+export type ContractStatus = 'offer' | 'active' | 'ended' | 'expired' | 'rival';
+
+/** A venue's year-long house PA & lighting contract (contracts.ts). */
+export interface VenueContract {
+  id: string;
+  venueId: string;
+  cityId: string;
+  tier: number;
+  /** The house rig the venue wants installed. */
+  kit: DeptCounts;
+  /** What you actually installed (locked in the venue until the contract ends). */
+  installed: GearStock;
+  monthly: number;
+  acceptByDay: number;
+  startDay: number;
+  endDay: number;
+  status: ContractStatus;
+  rivalId?: string;
 }
 
 export interface Rival {
@@ -250,6 +383,10 @@ export interface Rival {
   lot: number;
   reputation: number;
   showsPlayed: number;
+  /** Financial health 0-100 (rivals.ts); at 0 they go under. */
+  health?: number;
+  /** showsPlayed at the last monthly check. */
+  lastShows?: number;
 }
 
 export type NewsTone = 'info' | 'good' | 'bad' | 'big';
@@ -269,6 +406,42 @@ export interface HiredTech {
   techId: string;
   /** Truck they ride with — they only help at shows that truck is at. */
   vehicleId?: string;
+}
+
+export type WorkshopLevel = 'none' | 'basic' | 'full';
+export type PayLevel = 'low' | 'standard' | 'high';
+export type InsuranceLevel = 'none' | 'basic' | 'full';
+export type TrainingLevel = 'none' | 'courses' | 'academy';
+
+/** Standing company policies — the levers you set once and live with. */
+export interface Policies {
+  workshop: WorkshopLevel;
+  pay: PayLevel;
+  insurance: InsuranceLevel;
+  /** Fill crew gaps with local freelancers at the venue. */
+  freelance: 'off' | 'fill';
+  /** Fill kit gaps by sub-hiring from rivals nearby. */
+  subhire: 'off' | 'fill';
+  /** Rent idle kit out between jobs. */
+  rentOut: 'off' | 'on';
+  training: TrainingLevel;
+  /** Rest rota: keep tired people at base instead of sending them out. */
+  rest: RestRota;
+}
+
+export type RestRota = 'off' | 'tired' | 'strict';
+
+/** One year's record, for the company rating and the awards (awards.ts). */
+export interface YearStats {
+  shows: number;
+  failed: number;
+  qualitySum: number;
+  festivals: number;
+  festivalQualitySum: number;
+  tours: number;
+  worldTours: number;
+  events?: number;
+  eventQualitySum?: number;
 }
 
 export interface Company {
@@ -304,6 +477,35 @@ export interface TycoonState {
   announcedModels: string[];
   /** Gear product ids already announced as available. */
   announcedGear: string[];
+  policies: Policies;
+  /** Company-wide crew morale, 0-100 (crew.ts). */
+  crewMorale: number;
+  /** Product id → average condition (0-100) of the units you own; missing = 100. */
+  gearCondition: Record<string, number>;
+  contracts: VenueContract[];
+  projects: RndProject[];
+  /** Your gig technicians, by name (people.ts). */
+  people: CrewMember[];
+  /** This month's hiring market: candidates, each tagged with the base they'd join. */
+  candidates: CrewMember[];
+  /** Rivals' open offers to your people (people.ts). */
+  poachBids: PoachBid[];
+  /** Exclusive production deals with acts (deals.ts). */
+  deals: { id: string; act: string; tier: number; monthly: number; startDay: number; endDay: number; strikes: number; status: 'offer' | 'active' | 'ended'; offerExpires: number }[];
+  /** Your own products (encoded ids, see content/gear.ts ownProductId). */
+  ownProducts: string[];
+  /** Rivals that went bust or were bought out — they don't come back. */
+  goneRivals: string[];
+  /** Kit on its way between your bases by courier (transfers.ts). */
+  transfers: { id: string; fromDepotId: string; toDepotId: string; stock: GearStock; arriveHour: number }[];
+  yearStats: Record<number, YearStats>;
+  awards: { year: number; title: string }[];
+  /** Special-event tenders already opened, as "eventId-year". */
+  eventsPosted: string[];
+  /** Festival tenders already opened, as "festivalId-year". */
+  festivalsPosted: string[];
+  /** Economy periods (content/economy.ts) already announced. */
+  announcedClimate: string[];
   /** Artist name → number of good shows you've done for them. */
   artistRelations: Record<string, number>;
   negativeMonths: number;

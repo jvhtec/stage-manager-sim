@@ -64,7 +64,9 @@ describe('artists', () => {
   });
 
   it('remembers acts you did proud', () => {
+    // Nirvana's management wants an established crew, even for club dates.
     let s: TycoonState = newGame();
+    s = { ...s, company: { ...s.company, reputation: 60 } };
     const world = getWorld(s.mapSeed);
     const hq = world.cityById.get(s.company.hqCityId)!;
     const venue = hq.venues.find(v => v.tier === 1)!;

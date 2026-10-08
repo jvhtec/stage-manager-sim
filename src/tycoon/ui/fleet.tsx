@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { rehomeVehicle, sellVehicle, sendHome, serviceVehicle, unassignVehicle } from '@/world/actions';
+import { leaseReturnPenalty } from '@/world/finance';
 import { SERVICE_INTERVAL_DAYS, getModel } from '@/world/catalog';
 import { stockSize } from '@/world/loading';
 import { StockLines } from './gear';
@@ -8,6 +9,7 @@ import { formatDay, gigById, sellValue, vehicleAgeYears } from '@/world/core';
 import { worldOf } from '@/world/mapgen';
 import { vehicleActivity } from '@/world/queries';
 import { Bar, Stat } from './bits';
+import { PersonRow } from './crewWindow';
 import { kmoney, money } from './format';
 import type { WinCtx } from './types';
 
@@ -66,10 +68,30 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
         <span className={v.profitThisYear >= 0 ? 'tt-good' : 'tt-bad'}>{money(v.profitThisYear)}</span>
       </Stat>
       <Stat label="Profit last year">{money(v.profitLastYear)}</Stat>
+      {v.lease && <Stat label="Leased">{money(v.lease.monthly)}/month</Stat>}
 
       <h4>
         Load ({stockSize(v.cargo)}/{model.gearCapacity} gear · {v.crew}/{model.crewSeats} crew)
       </h4>
+      {v.crew > 0 && (
+        <div className="tt-list" style={{ marginBottom: 6 }}>
+          {state.people
+            .filter(m => m.vehicleId === v.id)
+            .map(m => (
+              <PersonRow key={m.id} state={state} m={m} />
+            ))}
+        </div>
+      )}
+      {state.people.some(m => m.pinnedVehicleId === v.id) && (
+        <div className="tt-dim" style={{ whiteSpace: 'normal', marginBottom: 4 }}>
+          📌 Regulars:{' '}
+          {state.people
+            .filter(m => m.pinnedVehicleId === v.id)
+            .map(m => m.name)
+            .join(', ')}{' '}
+          — they always ride this truck (pin people in the crew window).
+        </div>
+      )}
       <StockLines stock={v.cargo} state={state} />
 
       <h4>Orders</h4>
@@ -115,18 +137,34 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
         <button className="tt-btn sm" disabled={!atHome || state.depots.length < 2 || v.orders.length > 0} onClick={() => setRelocating(r => !r)}>
           Relocate…
         </button>
-        <button
-          className="tt-btn sm"
-          disabled={!atHome}
-          onClick={() => {
-            if (window.confirm(`Sell ${v.name} for ${money(sellValue(v, state.hour))}?`)) {
-              act(s => sellVehicle(s, v.id));
-              ctx.close();
-            }
-          }}
-        >
-          Sell {kmoney(sellValue(v, state.hour))}
-        </button>
+        {v.lease ? (
+          <button
+            className="tt-btn sm"
+            disabled={!atHome}
+            onClick={() => {
+              const penalty = leaseReturnPenalty(state, v);
+              if (window.confirm(penalty ? `Hand ${v.name} back early? Penalty ${money(penalty)}.` : `Hand ${v.name} back?`)) {
+                act(s => sellVehicle(s, v.id));
+                ctx.close();
+              }
+            }}
+          >
+            Hand back{leaseReturnPenalty(state, v) ? ` (−${kmoney(leaseReturnPenalty(state, v))})` : ''}
+          </button>
+        ) : (
+          <button
+            className="tt-btn sm"
+            disabled={!atHome}
+            onClick={() => {
+              if (window.confirm(`Sell ${v.name} for ${money(sellValue(v, state.hour))}?`)) {
+                act(s => sellVehicle(s, v.id));
+                ctx.close();
+              }
+            }}
+          >
+            Sell {kmoney(sellValue(v, state.hour))}
+          </button>
+        )}
       </div>
       {relocating && (
         <div className="tt-list" style={{ marginTop: 6 }}>

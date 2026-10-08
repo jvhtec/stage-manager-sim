@@ -13,15 +13,22 @@ import { updateRivals } from './sim';
 import { generateNationalTour } from './tours';
 import { getWorld } from './mapgen';
 import { generateOffer } from './offers';
+import { marketNow } from './market';
+import { refreshCandidates, seedPeople, sideRng, syncCrew } from './people';
 import { roadDistance } from './pathfinding';
-import { DEPTS, type GearStock, type TycoonState, type Vehicle } from './types';
+import { DEPTS, type GearStock, type Policies, type TycoonState, type Vehicle } from './types';
 
 export const TYCOON_SAVE_KEY = 'stage-manager-sim:tycoon';
 // v2: gear became real products (GearStock), plus artist relations, riders
 // and rival specialties — v1 saves are discarded rather than half-migrated.
 // v3: warehouse lots (several per town), airports, tours.
 // v4: home country, audio consoles. v5: star techs, real populations.
-export const TYCOON_SAVE_VERSION = 5;
+// v6: market calendar, festivals, gear wear, crew fatigue, contracts, awards —
+// v5 saves are migrated by filling in the new fields.
+export const TYCOON_SAVE_VERSION = 6;
+const OLDEST_MIGRATABLE = 5;
+
+export const DEFAULT_POLICIES: Policies = { workshop: 'basic', pay: 'standard', insurance: 'none', freelance: 'fill', subhire: 'fill', rentOut: 'off', training: 'none', rest: 'off' };
 
 export interface NewGameOptions {
   companyName: string;
@@ -131,6 +138,23 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     ledger: {},
     announcedModels: VEHICLE_MODELS.filter(m => m.introYear <= startYear).map(m => m.id),
     announcedGear: productsAvailableIn(startYear).map(p => p.id),
+    policies: { ...DEFAULT_POLICIES },
+    crewMorale: 65,
+    gearCondition: {},
+    festivalsPosted: [],
+    eventsPosted: [],
+    contracts: [],
+    goneRivals: [],
+    projects: [],
+    deals: [],
+    people: [],
+    candidates: [],
+    poachBids: [],
+    ownProducts: [],
+    transfers: [],
+    yearStats: {},
+    awards: [],
+    announcedClimate: [],
     artistRelations: {},
     negativeMonths: 0,
     nextId: 0,
@@ -139,13 +163,21 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
 
   state.depots.push({
     id: newId(state, 'depot'),
+    kind: 'warehouse',
+    size: 1,
+    // One prep tech to start; hire sales staff to bring in work.
+    staff: { warehouse: 1, office: 0 },
     cityId: hq.id,
     lot: 0,
     // A small, slightly dated rig for the era you start in.
     gear: starterKit(startYear),
-    crew: 5,
+    crew: 0,
     builtHour: 0,
   });
+  // Five gig techs to start: a couple of sound techs, lighting, a stagehand.
+  seedPeople(state, sideRng(state, 1), state.depots[0].id, 5, 2, ['audio', 'lighting', 'stage', 'audio', 'lighting']);
+  refreshCandidates(state, sideRng(state, 2));
+  syncCrew(state);
   starterFleet(startYear).forEach(modelId => state.vehicles.push(makeVehicle(state, modelId, hq.id)));
 
   // Rivals (real production houses) set up in the biggest places that aren't your home town.
@@ -165,8 +197,14 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     if (gig) state.gigs.push(gig);
   }
   // And one small-venue tour, so touring is on the table from day one.
-  for (let i = 0; i < 6 && !state.tours.length; i++) generateNationalTour(state, world, rng, 1);
+  for (let i = 0; i < 6 && !state.tours.length; i++) generateNationalTour(state, world, rng, 1, true);
   state.rngState = rng.getState();
+
+  // The economy you're starting into.
+  marketNow(state).periods.forEach(p => {
+    state.announcedClimate.push(p.id);
+    state.news.push({ id: newId(state, 'news'), hour: state.hour, text: `${p.label}: ${p.news}`, tone: 'info' });
+  });
 
   state.news.push({
     id: newId(state, 'news'),
@@ -191,11 +229,54 @@ export function loadTycoonGame(): TycoonState | null {
     const raw = localStorage.getItem(TYCOON_SAVE_KEY);
     if (!raw) return null;
     const save = JSON.parse(raw);
-    if (save?.version !== TYCOON_SAVE_VERSION || !save.state?.company) return null;
-    return save.state as TycoonState;
+    if (!save?.state?.company || save.version > TYCOON_SAVE_VERSION || save.version < OLDEST_MIGRATABLE) return null;
+    return migrate(save.state);
   } catch {
     return null;
   }
+}
+
+/** Fills in fields added since the save was made (everything new defaults to "nothing yet"). */
+export function migrate(state: Partial<TycoonState>): TycoonState {
+  const s = state as TycoonState;
+  s.announcedClimate ??= [];
+  s.festivalsPosted ??= [];
+  s.eventsPosted ??= [];
+  s.policies = { ...DEFAULT_POLICIES, ...s.policies };
+  s.gearCondition ??= {};
+  s.crewMorale ??= 65;
+  s.contracts ??= [];
+  s.goneRivals ??= [];
+  s.projects ??= [];
+  s.deals ??= [];
+  s.ownProducts ??= [];
+  s.transfers ??= [];
+  s.depots.forEach(d => {
+    d.kind ??= 'warehouse';
+    d.size ??= 1;
+    d.staff ??= { warehouse: 1, office: 0 };
+  });
+  s.yearStats ??= {};
+  s.awards ??= [];
+  if (!s.people) {
+    // v6 saves counted crew; turn the headcounts into people.
+    s.people = [];
+    const rng = sideRng(s, 3);
+    s.depots.forEach(d => seedPeople(s, rng, d.id, d.crew, Math.max(1, Math.round((d.experience ?? 30) / 25))));
+    s.vehicles.forEach(v => {
+      if (v.owner !== 'player' || !v.crew) return;
+      const before = s.people.length;
+      seedPeople(s, rng, '', v.crew, Math.max(1, Math.round((v.crewExperience ?? 30) / 25)));
+      s.people.slice(before).forEach(m => {
+        m.depotId = undefined;
+        m.vehicleId = v.id;
+      });
+    });
+    syncCrew(s);
+  }
+  s.candidates ??= [];
+  s.poachBids ??= [];
+  return s;
 }
 
 export function clearTycoonGame() {

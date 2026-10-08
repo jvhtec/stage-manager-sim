@@ -9,6 +9,10 @@ import { dateOfDay, dayOf, newId, pushNews } from './core';
 import { artistsTouringAt, homeWeight } from './content/artists';
 import { expectedQuality, productsAvailableIn } from './content/gear';
 import { roadDistance } from './pathfinding';
+import { actReputationBar, reachWeight } from './standing';
+import { marketNow, marketOnDay } from './market';
+import { holdsContractAt } from './contracts';
+import { salesBoost } from './facilities';
 import type { City, CitySize, DeptCounts, Gig, Rider, TycoonState, Vehicle, Venue, WorldMap } from './types';
 import { DEPTS } from './types';
 
@@ -16,7 +20,7 @@ const ACT_ADJ = ['Velvet', 'Electric', 'Midnight', 'Neon', 'Broken', 'Golden', '
 const ACT_NOUN = ['Foxes', 'Engines', 'Harbour', 'Satellites', 'Ravens', 'Tides', 'Machines', 'Daughters', 'Avenue', 'Comets', 'Wolves', 'Choir'];
 const SOLO = ['DJ Kestrel', 'Mara Lux', 'Otis Vane', 'Juno Reyes', 'The Okafor Trio', 'Kit Malone', 'Sable', 'Ivo & the Weather'];
 
-function actName(rng: Rng): string {
+export function actName(rng: Rng): string {
   if (rng.chance(0.3)) return rng.pick(SOLO);
   return `${rng.chance(0.6) ? 'The ' : ''}${rng.pick(ACT_ADJ)} ${rng.pick(ACT_NOUN)}`;
 }
@@ -46,6 +50,7 @@ export function generateOffer(
 
   const today = dayOf(state.hour);
   const day = today + rng.nextRange(minLeadDays, minLeadDays + 14);
+  if (marketOnDay(state, day).shutdown) return null;
   const year = dateOfDay(state, day).getUTCFullYear();
   const { act, real } = pickAct(state, venue.tier, year, rng);
   const gig = buildGig(state, rng, { venue, day, act, real });
@@ -62,6 +67,10 @@ export interface GigSpec {
   tier?: number;
   feeMultiplier?: number;
   tourId?: string;
+  days?: number;
+  /** Scales gear and crew needs (festival main stages are bigger). */
+  needsScale?: number;
+  festival?: Gig['festival'];
 }
 
 /** Rolls the rider, needs and fee for one show. */
@@ -83,16 +92,16 @@ export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
       return;
     }
     const swing = base === 0 ? (rng.chance(0.15) ? 1 : 0) : rng.nextRange(-1, Math.ceil(base * 0.25) + 1);
-    needs[d] = Math.max(0, base + swing);
+    needs[d] = Math.max(0, Math.round((base + swing) * (spec.needsScale ?? 1)));
   });
   const year = dateOfDay(state, spec.day).getUTCFullYear();
   const rating = state.cityRatings[spec.venue.cityId] ?? 50;
-  const asksForYou = spec.real && (state.artistRelations[spec.act] ?? 0) > 0;
+  const asksForYou = ((spec.real || !!spec.festival) && (state.artistRelations[spec.act] ?? 0) > 0) || holdsContractAt(state, spec.venue.id);
   const rider = tier >= 2 && rng.chance(spec.real ? 0.55 : 0.25) ? pickRider(needs, tier, year, rng) : undefined;
   const star = spec.real ? 1.15 : 1;
   const loyalty = asksForYou ? 1.1 : 1;
   const fee =
-    Math.round((info.baseFee * (0.85 + rng.next() * 0.4) * (0.9 + rating / 500) * star * loyalty * (spec.feeMultiplier ?? 1)) / 50) * 50;
+    Math.round((info.baseFee * marketOnDay(state, spec.day).fees * (0.85 + rng.next() * 0.4) * (0.9 + rating / 500) * star * loyalty * (spec.feeMultiplier ?? 1)) / 50) * 50;
 
   return {
     id: newId(state, 'gig'),
@@ -103,11 +112,13 @@ export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
     day: spec.day,
     acceptByDay: spec.day - 3,
     needs,
-    crewNeeded: info.crew + rng.nextInt(tier),
+    crewNeeded: Math.round((info.crew + rng.nextInt(tier)) * (spec.needsScale ?? 1)),
     fee,
     rider,
     asksForYou: asksForYou || undefined,
     tourId: spec.tourId,
+    days: spec.days,
+    festival: spec.festival,
     status: 'offer',
   };
 }
@@ -119,7 +130,7 @@ export function pickAct(state: TycoonState, tier: number, year: number, rng: Rng
   const touring = artistsTouringAt(year, tier, state.country);
   if (!touring.length || !rng.chance(REAL_ACT_SHARE[tier])) return { act: actName(rng), real: false };
   // Acts you've done well by are more likely to come back to you.
-  const weights = touring.map(a => (1 + (state.artistRelations[a.name] ?? 0) * 2) * homeWeight(a));
+  const weights = touring.map(a => (1 + (state.artistRelations[a.name] ?? 0) * 2) * homeWeight(a) * reachWeight(state, a.name));
   let roll = rng.next() * weights.reduce((x, y) => x + y, 0);
   for (let i = 0; i < touring.length; i++) {
     roll -= weights[i];
@@ -145,8 +156,9 @@ function pickRider(needs: DeptCounts, tier: number, year: number, rng: Rng): Rid
 const OFFER_RATE: Record<CitySize, number> = { village: 0.05, town: 0.075, city: 0.15, metropolis: 0.36 };
 
 export function dailyOffers(state: TycoonState, world: WorldMap, rng: Rng) {
+  const { demand } = marketNow(state);
   world.cities.forEach(city => {
-    const chance = OFFER_RATE[city.size];
+    const chance = OFFER_RATE[city.size] * demand * (1 + salesBoost(state, world, city.id));
     if (rng.chance(chance)) {
       const gig = generateOffer(state, world, city, rng);
       if (gig) state.gigs.push(gig);
@@ -164,13 +176,16 @@ function rivalVehicleModel(tier: number): string {
 export function rivalsTakeOffers(state: TycoonState, world: WorldMap, rng: Rng) {
   const today = dayOf(state.hour);
   state.gigs.forEach(gig => {
-    if (gig.status !== 'offer' || gig.tourId) return; // tours are bid on as a whole
+    if (gig.status !== 'offer' || gig.tourId || gig.festival || (gig.event && !gig.event.citywide)) return; // tours are bid on as a whole; festivals and events by tender
     if (gig.acceptByDay < today) {
       gig.status = 'expired';
       return;
     }
+    if (holdsContractAt(state, gig.venueId)) return; // the house supplier gets first call
     const rating = state.cityRatings[gig.cityId] ?? 50;
+    const actBar = actReputationBar(state, gig.act, false);
     for (const rival of state.rivals) {
+      if (rival.reputation < actBar - 5) continue; // the act's management wouldn't call them either
       const dist = roadDistance(world, rival.hqCityId, gig.cityId);
       if (!Number.isFinite(dist)) continue;
       const proximity = dist < 14 ? 1.6 : dist < 32 ? 1 : 0.45;

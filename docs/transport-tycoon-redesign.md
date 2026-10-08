@@ -45,6 +45,15 @@ Reputation still gates venue tiers (Local Circuit → Regional → National → 
 **each tier caps the reputation it can earn you** — you can't become world-class playing pubs.
 To climb, you must take on bigger rooms, which need bigger trucks and more gear.
 
+On top of the venue tier, **real acts' management sets its own reputation bar** (`standing.ts`):
+by the biggest tier the act has played so far (10 / 35 / 62 / 85), plus 7 per tier the act
+is still headed up (signed acts on the way up already use established firms), plus 5 for
+international names, minus 4 per point of history with you (max 20). So AC/DC won't hire a
+starter company even for a 1975 club date; local bands only care about the venue. Offers and
+tours from acts beyond your reach come up less often (and show locked), rivals need the same
+standing to win them, and the starter tour is always with an act that will hire you (an
+up-and-coming local band when no real name would).
+
 ## 3. The isometric presentation
 
 Rendered on a 2D canvas the way TT did it — a 2:1 isometric projection, painter's algorithm by
@@ -77,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 47 tests):
+(`src/world/__tests__/*.test.ts`, 97 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -86,7 +95,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 - All randomness goes through the seeded `rngState` (same discipline as `src/lib/rng.ts`).
 - Actions (`src/world/actions.ts`) are `(state, …) → { state, result }`, same pattern as
   `src/engine/**`.
-- Save key `stage-manager-sim:tycoon` (v5: star techs, real populations) — separate from the classic save.
+- Save key `stage-manager-sim:tycoon` (v6: market, festivals, wear, crew, contracts, awards; v5 saves are migrated by `migrate()`) — separate from the classic save.
 
 A headless bot played two in-game years on three seeds during tuning: it survives, but stalls at
 Local Circuit unless it buys bigger trucks and more gear. That upgrade pressure is intended.
@@ -191,23 +200,122 @@ note that pushing to `main` publishes the build to GitHub Pages.
 - **Battery**: the canvas redraws every frame only while something moves; when paused it idles
   at ~12 fps for the ambient animation.
 
-## 7. Not ported yet (and where each lands)
+## 7. Strategy depth
+
+The layer that turns logistics into a business. Each system is its own module in `src/world/`
+and reads through `marketNow` / `policies` so the UI shows exactly what the sim uses.
+
+- **Market calendar** (`market.ts`, `content/economy.ts`) — seasonal demand (summer ×1.3,
+  January ×0.6) and period-accurate climate per country moving offer volume and fees: the oil
+  crisis, early-'80s and early-'90s recessions, La Movida, reunification, Barcelona/Expo '92 and
+  the '93 hangover, the live boom, 2008, the euro debt crisis, the festival boom, the 2020-21
+  shutdown (calendar cancelled under force majeure, country wage schemes cover 70% of wages,
+  repayment holiday) and the rebound. Loans charge the era's central-bank rate (BoE, Fed, Banco de
+  España, Bundesbank, Banque de France, Banca d'Italia, then ECB) + 3.5%.
+- **Festivals** (`festivals.ts`, `content/festivals.ts`) — ~50 real festivals with founding and
+  fallow years, growth and stage names. Two months out each tenders its main and second stage as
+  multi-day contracts at the host town (`Gig.days`, `Gig.festival`); book before the close or the
+  best-placed rival wins. Main stages need 1.3× the rig.
+- **Gear wear** (`wear.ts`) — per-product condition; shows wear what they use (per show day,
+  overseas 1.6×); worn kit is derated to 70% quality at zero, sells for less, and fails mid-set
+  (once per show day, removing units). Workshop policy none/basic/full (0.8% / 2.2% of
+  replacement value per month, repairing to 80% / 100%) and per-line refurbishing.
+- **Crew** (`crew.ts`) — fatigue on the road (+4/day on site, +3 travelling, −10/day at home)
+  derating crew to 65% when exhausted; pay policy (×0.8 / ×1 / ×1.25 wages) sets the morale crews
+  drift to monthly, less fatigue; morale nudges every show ±0.06 and below 40 people quit.
+- **House contracts** (`contracts.ts`) — venues tender a year as house PA & lighting supplier for
+  a retainer (40% of a show fee per month). The rig is installed from your warehouse in that
+  town; shows there run on it and rivals can't take them. Breaking costs three months.
+- **Incidents & insurance** (`incidents.ts`) — break-ins, road accidents and festival storms
+  (likeliest in Britain); insurance none / basic (60%) / comprehensive (100% incl. weather) with
+  premiums on the replacement value of gear and fleet.
+- **Rating & awards** (`awards.ts`) — a 0-1000 company rating per year and an awards night every
+  January (Parnelli Awards in the US from 2001, TPi Awards in the UK from 2003, otherwise the Live
+  Production Awards) with reputation and sponsorship prizes.
+
+- **Bases & staff** (`facilities.ts`) — delegations (branch office: 25 units, vans and crew
+  buses only, local contacts) and warehouses in three sizes (120 / 320 / 800 units; medium needs
+  Regional reputation, large National), with rent scaled by town size (×0.6-×1.5). Full-time
+  staff per base on salaries: warehouse & prep (45 units each; unprepped kit fails up to 1.6× as
+  often and cases get left behind) and sales & office (+12% offers per head nearby, up to +60%,
+  and local rating). Gig technicians are separate: on the payroll at a base, or local
+  freelancers hired per show day at the venue (pool by town size; 25% cheaper, more of them and
+  better with a base in town).
+- **Road costs** — fuel per tile (by truck size) and per diems + hotel per crew member per night
+  away from base (sleeper buses skip the hotel); the show forecast estimates road costs and margin.
+- **Close-ups** (`render/diorama.ts`) — isometric cutaway scenes in the base and venue windows:
+  racks holding your actual stock, prep crew, office, workshop bench, gig techs, trucks in the
+  bays; venues by kind with the stage, era-correct PA (stacks before 1993, line arrays after),
+  truss, LED screen, FOH and crowd, through load-in, show (beams) and load-out.
+
+- **Special events** (`events.ts`, `content/events.ts`) — ~65 real events per country (Live Aid,
+  the Mandela tribute, Knebworth, Live 8, The Wall in Berlin, Barcelona '92, the Bicentenaire,
+  Jarre at La Défense, Pavarotti & Friends, Olympic/World Cup ceremonies, Eurovision when hosted,
+  MTV EMAs) and recurring dates (BRITs, Super Bowl halftime, Farm Aid, Goyas, Sanremo, Primo
+  Maggio). Tendered 50-110 days ahead by department; sealed bids (sharp ×0.85 / standard /
+  premium ×1.2) scored on reputation^1.3 × specialty ÷ price against the rivals in the league;
+  organisers want reputation 45/62/75 by scale. Broadcasts take −0.15 for anything late, missing
+  or failing; ±2-7 reputation by scale; "Special Event of the Year" award. Citywide events
+  (Fête de la Musique, Love Parade) spawn extra small shows.
+- **Rental market** (`hire.ts`) — sub-hire shortfalls from rivals within 40 tiles (5 units per
+  rival per department, quality a notch below expectations, 10% of replacement value per day);
+  rent idle kit out (0.12%/day income, extra wear).
+- **Transfers** (`transfers.ts`) — courier kit between your bases (by units × distance, arrives
+  after the drive).
+- **Rival finances & takeovers** (`rivals.ts`) — monthly health from the economy, wins and mean
+  reversion (big names floored at 20); at 0 a firm goes under and frees its lot. Buy a rival
+  (price by reputation, size and health; you need reputation within 15 of theirs): their base,
+  used era kit, crew and 6% of their reputation become yours.
+
+- **Finance** (`finance.ts`) — the credit line is 60k + half your assets + up to 150k for your
+  company rating (replacing the fixed cap; borrow in tenths of it). Lease vehicles at 2.5% of the
+  price per month (24-month term; handing back early costs two months).
+- **R&D** (`rnd.ts`) — needs reputation 40+ and a warehouse with 2+ prep staff. Refinement /
+  new flagship / breakthrough: +0.3 / +0.8 / +1.5 quality over the market's best, 9 / 15 / 24
+  months, 5 / 15 / 35% risk, cost from the flagship price. Success puts your own product in the
+  gear shop (encoded in its id, so saves need no registry) at 60% of market price, earns
+  reputation, and pays royalties monthly by your standing, fading over eight years.
+- **Production deals** (`deals.ts`) — acts with 3+ good shows together may offer a two-year
+  exclusive: a retainer (25% of a show fee per month), their tours come straight to you (rivals
+  don't bid) and more often. A lapsed tour or a bad night (<50%) is a strike; two and they walk
+  (relation reset, −3 reputation). One-year cooldown between offers.
+- **Named crew** (`people.ts`, `content/names.ts`) — gig technicians are people with names from
+  your country, a main department (sound, lighting, video, staging) at 1-5★ plus maybe a second
+  string, a trait (crew chief +0.03 show quality, perfectionist ×0.85 failures, road warrior 0.6×
+  fatigue, party animal +morale, polyglot better abroad, mentor 1.5× learning), personal fatigue,
+  and a day rate of 0.85-1.45× the going rate by level. Each show splits `crewNeeded` into slots
+  by its departments' needs (consoles count as sound); the best-matched people fill them, each
+  worth 0.55 (out of their depth) to 1.2 (5★) × fatigue. Trucks board the freshest, best-matched
+  people for the job ahead. People level up in the department they work (10/30/60/110 shows per
+  level) with a raise; training adds monthly progress at base; below 40 morale people quit.
+  **Pins**: pin someone to a truck and they always ride it from its base (and never board another).
+  **Rest rota** policy (everyone works / fatigue 70+ stays home / fatigue 50+ stays home) — fresher
+  crews and morale against more freelancer seats; pins override it. **Counter-offers**: below 50
+  morale rivals make offers to 3★+ people (+15-45%, likelier for higher stars); you have 14 days
+  to match (their day rate rises by the raise and they turn rivals down for a year) or they leave
+  — once back at base, never mid-tour. A hiring market refreshes monthly per base (stars are rare, rarer
+  for small firms); old saves' headcounts become people. Depot/vehicle `crew` and averages are
+  cached by `syncCrew`.
+
+UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
+(workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the
+show forecast, rating and trophy cabinet in the **League**.
+
+## 8. Not ported yet (and where each lands)
 
 The classic build has systems that don't exist in the map game yet. Each has an obvious home:
 
 | Classic system | Map-game home |
 |---|---|
-| Individual crew (skills, XP, morale, fatigue, avatars, hiring market) | Crew become named people based at warehouses; seats in vehicles carry *specific* techs; skill feeds show quality, long tours drain fatigue (sleeper buses help) |
+| Individual crew (skills, XP, avatars, hiring market) | Done: named people with skills, traits, XP, a hiring market (people.ts); avatars still to come |
 | Crises (planning / execution prompts) | **Road incidents** (breakdown: wait, tow, or hire a local van), **show incidents** at the venue, both as TT-style pop-ups with choices |
-| Equipment condition & maintenance | Gear wear per tour leg; servicing gear at warehouses alongside vehicles |
 | Show Day scene | Click a venue during a live show → zoom-in performance view (the scene from the game-feel plan, now reachable from the map) |
 | Rentals | Local hire at the venue town when you're short — expensive, but saves a no-show |
-| Festivals | Multi-stage events at the stadium city needing several trucks arriving in a window |
 
-## 8. Next steps (PR-sized)
+## 9. Next steps (PR-sized)
 
 1. **Playtest & balance pass** — fee/wage/running-cost tuning, offer density, rival aggression.
-2. **Named crew at warehouses** — port crew progression and hiring into the map game.
+2. **Named crew** — done (`people.ts`), with pins, rest rota and counter-offers.
 3. **Road & show incidents** — port the crisis system as pop-up decisions.
 4. **Tour planner** — drag-to-order a vehicle's show list, "add next show in route" suggestions,
    route lines drawn on the map for the selected vehicle.

@@ -1,20 +1,27 @@
+import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
 import { assignVehicle, bookGig, unassignVehicle } from '@/world/actions';
-import { DEPT_COLORS, DEPT_LABELS, LOAD_IN_HOUR, SHOW_END_HOUR, SHOW_START_HOUR, companyTier, getModel, tierInfo } from '@/world/catalog';
+import { DEPT_COLORS, DEPT_LABELS, LOAD_IN_HOUR, SHOW_END_HOUR, SHOW_START_HOUR, getModel } from '@/world/catalog';
 import { dateOfDay, dayOf, formatDay, formatHour, loadInHour, loadOutDoneHour, sumCounts } from '@/world/core';
 import { getRegion } from '@/world/content/world';
 import { artistTierIn, findArtist } from '@/world/content/artists';
 import { expectedQuality } from '@/world/content/gear';
+import { averageCondition, failureChance } from '@/world/wear';
+import { prepFailureFactor } from '@/world/facilities';
+import { levelOf } from '@/world/people';
+import { ConditionChip } from './gear';
+import { ContractList } from './contracts';
+import { EventBid, EventList } from './events';
 import { getTech } from '@/world/content/techs';
 import { worldOf } from '@/world/mapgen';
 import { roadDistance } from '@/world/pathfinding';
-import { estimateArrival, projectCoverage } from '@/world/queries';
+import { estimateArrival, estimateJobCosts, projectCoverage } from '@/world/queries';
 import { DEPTS, type Gig, type TycoonState } from '@/world/types';
 import { Bar, Stat, TierChip } from './bits';
 import { BrandBadge } from './brands';
 import { kmoney, money } from './format';
 import type { WinCtx } from './types';
-import { READINESS_CLASS, gigReadiness, gigWhere } from './gigInfo';
+import { READINESS_CLASS, gigDates, gigReadiness, gigWhere } from './gigInfo';
 import { TourList } from './tours';
 
 function nearestDepotDistance(state: TycoonState, gig: Gig): number {
@@ -30,8 +37,8 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
   const venue = world.venueById.get(gig.venueId)!;
   const city = world.cityById.get(gig.cityId)!;
   const today = dayOf(state.hour);
-  const tier = companyTier(state.company.reputation);
-  const locked = gig.tier > tier;
+  const lock = gigBookingBar(state, gig).reason;
+  const locked = !!lock;
   const act = (fn: Parameters<WinCtx['dispatch']>[0]) => {
     const r = ctx.dispatch(fn);
     if (r.message) ctx.toast(r.message, r.ok);
@@ -53,8 +60,9 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
     <div>
       <div className="tt-row">
         <span>
+          {gig.festival && <b>🎪 {gig.festival.stage} · </b>}
           <a style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => ctx.open('venue', venue.id)}>
-            {venue.name}
+            {gig.festival ? 'festival site' : venue.name}
           </a>
           ,{' '}
           <a style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => ctx.open('city', city.id)}>
@@ -63,10 +71,19 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
         </span>
         <TierChip tier={gig.tier} locked={locked && gig.status === 'offer'} />
       </div>
-      <Stat label="Show day">
-        {formatDay(state, gig.day)}{' '}
+      <Stat label={(gig.days ?? 1) > 1 ? `Show days (${gig.days})` : 'Show day'}>
+        {gigDates(state, gig)}{' '}
         <span className="tt-dim">({gig.day - today >= 0 ? `in ${gig.day - today}d` : `${today - gig.day}d ago`})</span>
       </Stat>
+      {gig.event && (
+        <div className="tt-item" style={{ margin: '4px 0' }}>
+          <span className="grow" style={{ whiteSpace: 'normal' }}>
+            {gig.event.citywide ? '🎉' : gig.event.broadcast ? '📺' : '★'} {gig.event.citywide ? `Part of ${gig.event.name}` : <>
+              <b>{DEPT_LABELS[gig.event.lot]}</b> contract for <b>{gig.event.name}</b>
+            </>}
+          </span>
+        </div>
+      )}
       {tour && (
         <div className="tt-item clickable" style={{ margin: '4px 0' }} onClick={() => ctx.open('tour', tour.id)}>
           <span className="grow">
@@ -134,12 +151,12 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
         <Row label="Crew" color="#e5e7eb" need={gig.crewNeeded} have={projection?.crew} />
       </div>
 
-      {gig.status === 'offer' && (
+      {gig.status === 'offer' && gig.event && !gig.event.citywide && <EventBid ctx={ctx} gig={gig} />}
+      {gig.status === 'offer' && !(gig.event && !gig.event.citywide) && (
         <div style={{ marginTop: 10 }}>
           {locked ? (
             <div className="tt-warn">
-              Promoters want reputation {tierInfo(gig.tier).minReputation}+ for {tierInfo(gig.tier).label} venues (you have{' '}
-              {Math.round(state.company.reputation)}).
+              {lock} You have {Math.round(state.company.reputation)}.
             </div>
           ) : (
             <button className="tt-btn primary" onClick={() => act(s => bookGig(s, gig.id))}>
@@ -173,6 +190,69 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
                   {Math.round(projection.evaluation.quality * 100)}%
                 </span>
               </Stat>
+              <Stat label="Kit condition">
+                <ConditionChip value={averageCondition(state, projection.delivered)} />{' '}
+                <span className="tt-dim">
+                  {Math.round(
+                    (1 -
+                      (1 - Math.min(0.95, failureChance(averageCondition(state, projection.delivered)) * prepFailureFactor(projection.prep) * projection.crewEval.failureFactor)) **
+                        Math.min(4, gig.overseas ? gig.overseas.stops.length : (gig.days ?? 1))) *
+                      100,
+                  )}
+                  % failure risk
+                </span>
+              </Stat>
+              {projection.people.length > 0 && (
+                <Stat label="Crew fit">
+                  <span className={projection.crewEval.match >= 0.75 ? 'tt-good' : projection.crewEval.match >= 0.55 ? 'tt-warn' : 'tt-bad'}>
+                    {Math.round(projection.crewEval.match * 100)}%
+                  </span>{' '}
+                  <span className="tt-dim">
+                    {projection.people
+                      .map(m => `${m.name.split(' ')[0]} ${levelOf(m)}★`)
+                      .slice(0, 6)
+                      .join(', ')}
+                    {projection.people.length > 6 ? '…' : ''}
+                  </span>
+                </Stat>
+              )}
+              <Stat label="Prep">
+                <span className={projection.prep >= 1 ? 'tt-good' : projection.prep >= 0.5 ? 'tt-warn' : 'tt-bad'}>
+                  {Math.round(projection.prep * 100)}%
+                </span>
+              </Stat>
+              {projection.subhire.units > 0 && (
+                <Stat label="Sub-hire">
+                  {projection.subhire.units} unit{projection.subhire.units > 1 ? 's' : ''} · {money(projection.subhire.cost)}{' '}
+                  <span className="tt-dim">from {projection.subhire.from.join(' / ')}</span>
+                </Stat>
+              )}
+              {projection.freelance.count > 0 && (
+                <Stat label="Local freelancers">
+                  +{projection.freelance.count} · {money(projection.freelance.cost)}
+                  {projection.freelance.local ? ' (your contacts)' : ''}
+                </Stat>
+              )}
+              {(() => {
+                const c = estimateJobCosts(state, gig, projection);
+                return (
+                  <>
+                    <Stat label="Road costs (est.)">
+                      {money(c.total)}{' '}
+                      <span className="tt-dim">
+                        fuel {money(c.fuel)} · {c.nights} night{c.nights === 1 ? '' : 's'} away {money(c.travel)}
+                        {c.freelance ? ` · freelancers ${money(c.freelance)}` : ''}
+                        {c.subhire ? ` · sub-hire ${money(c.subhire)}` : ''}
+                      </span>
+                    </Stat>
+                    <Stat label="Margin (est.)">
+                      <b className={gig.fee * (0.35 + 0.65 * projection.expectedQuality) - c.total >= 0 ? 'tt-good' : 'tt-bad'}>
+                        {money(Math.round(gig.fee * (0.35 + 0.65 * projection.expectedQuality) - c.total))}
+                      </b>
+                    </Stat>
+                  </>
+                );
+              })()}
               {gig.rider && (
                 <Stat label="Rider">
                   {projection.evaluation.riderMet ? (
@@ -301,13 +381,12 @@ function Row({ label, color, need, have }: { label: string; color: string; need:
 
 export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
-  const [tab, setTab] = useState<'offers' | 'tours' | 'booked' | 'history'>('offers');
-  const world = worldOf(state);
+  const [tab, setTab] = useState<'offers' | 'tours' | 'events' | 'contracts' | 'booked' | 'history'>('offers');
   const today = dayOf(state.hour);
-  const tier = companyTier(state.company.reputation);
+  const isLocked = (g: Gig) => Number(!!gigBookingBar(state, g).reason);
   const offers = state.gigs
     .filter(g => g.status === 'offer' && g.acceptByDay >= today && !g.tourId)
-    .sort((a, b) => Number(a.tier > tier) - Number(b.tier > tier) || nearestDepotDistance(state, a) - nearestDepotDistance(state, b));
+    .sort((a, b) => isLocked(a) - isLocked(b) || nearestDepotDistance(state, a) - nearestDepotDistance(state, b));
   const booked = state.gigs.filter(g => g.status === 'booked').sort((a, b) => a.day - b.day);
   const history = state.gigs
     .filter(g => g.status === 'done' || g.status === 'failed')
@@ -323,6 +402,12 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
         <button className="tt-btn sm" data-on={tab === 'tours'} onClick={() => setTab('tours')}>
           Tours ({state.tours.filter(t => (t.status === 'offer' && t.acceptByDay >= today) || t.status === 'booked').length})
         </button>
+        <button className="tt-btn sm" data-on={tab === 'events'} onClick={() => setTab('events')}>
+          Events ({state.gigs.filter(g => g.event && !g.event.citywide && g.status === 'offer' && g.acceptByDay >= today).length})
+        </button>
+        <button className="tt-btn sm" data-on={tab === 'contracts'} onClick={() => setTab('contracts')}>
+          Contracts ({state.contracts.filter(c => c.status === 'active' || (c.status === 'offer' && c.acceptByDay >= today)).length + state.deals.filter(d => d.status === 'offer' || d.status === 'active').length})
+        </button>
         <button className="tt-btn sm" data-on={tab === 'booked'} onClick={() => setTab('booked')}>
           Booked ({booked.length})
         </button>
@@ -332,11 +417,13 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
       </div>
       {tab === 'tours' ? (
         <TourList ctx={ctx} />
+      ) : tab === 'events' ? (
+        <EventList ctx={ctx} />
+      ) : tab === 'contracts' ? (
+        <ContractList ctx={ctx} />
       ) : (
       <div className="tt-list">
         {list.map(g => {
-          const venue = world.venueById.get(g.venueId);
-          const city = world.cityById.get(g.cityId);
           const dist = nearestDepotDistance(state, g);
           let right: React.ReactNode = <b>{kmoney(g.fee)}</b>;
           if (tab === 'booked') {
@@ -362,11 +449,11 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
                 </div>
                 <div className="tt-dim">
                   {g.tourId ? '🎫 ' : ''}
-                  {g.overseas ? gigWhere(state, g) : `${venue?.name}, ${city?.name}`} · {formatDay(state, g.day)}
+                  {gigWhere(state, g)} · {gigDates(state, g)}
                   {tab === 'offers' ? ` · ${Math.round(dist)} tiles` : ''}
                 </div>
               </div>
-              {tab === 'offers' && <TierChip tier={g.tier} locked={g.tier > tier} />}
+              {tab === 'offers' && <TierChip tier={g.tier} locked={!!isLocked(g)} />}
               {right}
             </div>
           );

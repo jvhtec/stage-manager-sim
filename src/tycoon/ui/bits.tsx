@@ -21,6 +21,30 @@ export function TierChip({ tier, locked }: { tier: number; locked?: boolean }) {
   );
 }
 
+/** Crew tiredness, 0-100: fresh → weary → exhausted. */
+export function FatigueChip({ value }: { value: number }) {
+  const v = Math.round(value);
+  const label = v < 30 ? 'fresh' : v < 60 ? 'weary' : v < 85 ? 'tired' : 'exhausted';
+  const color = v < 30 ? '#22c55e' : v < 60 ? '#84cc16' : v < 85 ? '#f59e0b' : '#ef4444';
+  return (
+    <span className="tt-chip" style={{ background: color }} title={`Fatigue ${v}/100 — tired crews work worse; they recover at home`}>
+      {label}
+    </span>
+  );
+}
+
+/** Crew experience, 0-100: green → elite. */
+export function ExperienceChip({ value }: { value: number }) {
+  const v = Math.round(value);
+  const label = v < 25 ? 'green' : v < 50 ? 'capable' : v < 75 ? 'seasoned' : 'elite';
+  const color = v < 25 ? '#94a3b8' : v < 50 ? '#38bdf8' : v < 75 ? '#a855f7' : '#facc15';
+  return (
+    <span className="tt-chip" style={{ background: color }} title={`Experience ${v}/100 — seasoned crews build better shows`}>
+      {label}
+    </span>
+  );
+}
+
 export function DeptDot({ dept }: { dept: Dept }) {
   return (
     <span

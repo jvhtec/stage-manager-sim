@@ -7,7 +7,8 @@
  * vehicles at the tile they're on). Labels, show markers and floodlight
  * beams go on top afterwards. Returns screen-space hit targets for picking.
  */
-import { getModel, SHOW_END_HOUR, SHOW_START_HOUR, tierInfo, companyTier } from '@/world/catalog';
+import { gigBookingBar } from '@/world/standing';
+import { getModel, SHOW_END_HOUR, SHOW_START_HOUR, tierInfo } from '@/world/catalog';
 import { dayOf, loadInHour, loadOutDoneHour } from '@/world/core';
 import { getCountry } from '@/world/content/countries';
 import { tileCorners } from '@/world/mapgen';
@@ -15,7 +16,7 @@ import { getCityPath, positionOnPath } from '@/world/pathfinding';
 import { Terrain, type City, type Gig, type TycoonState, type Venue, type Vehicle, type WorldMap } from '@/world/types';
 import { TH, TW, groundZ, project, type Camera, type Pt } from './iso';
 import { C, glow, hexToRgb, paint, setNight, type RGB } from './palette';
-import { hash2, house, poly, tree, venue as drawVenue, vehicle as drawVehicle, warehouse, type RC } from './sprites';
+import { delegation, hash2, house, poly, tree, venue as drawVenue, vehicle as drawVehicle, warehouse, type RC } from './sprites';
 
 export type Selection =
   | { kind: 'vehicle'; id: string }
@@ -363,9 +364,11 @@ export function renderWorld(ctx: CanvasRenderingContext2D, input: RenderInput): 
     if (state.hour >= loadInHour(g) && state.hour < loadOutDoneHour(g)) liveVenues.set(g.venueId, companyRgb);
   });
 
-  const lotOwners = new Map<string, { brand: RGB; hq: boolean; seed: number }>();
-  state.rivals.forEach((r, i) => lotOwners.set(`${r.hqCityId}:${r.lot}`, { brand: hexToRgb(r.color), hq: true, seed: 50 + i }));
-  state.depots.forEach((d, i) => lotOwners.set(`${d.cityId}:${d.lot}`, { brand: companyRgb, hq: d.cityId === state.company.hqCityId, seed: i }));
+  const lotOwners = new Map<string, { brand: RGB; hq: boolean; seed: number; kind: 'warehouse' | 'delegation'; size: number }>();
+  state.rivals.forEach((r, i) => lotOwners.set(`${r.hqCityId}:${r.lot}`, { brand: hexToRgb(r.color), hq: true, seed: 50 + i, kind: 'warehouse', size: r.maxTier >= 4 ? 2 : 1 }));
+  state.depots.forEach((d, i) =>
+    lotOwners.set(`${d.cityId}:${d.lot}`, { brand: companyRgb, hq: d.cityId === state.company.hqCityId, seed: i, kind: d.kind ?? 'warehouse', size: d.size ?? 1 }),
+  );
 
   const placed = placeVehicles(state, map, alpha);
   const selectedVehicle = input.selection?.kind === 'vehicle' ? input.selection.id : null;
@@ -445,7 +448,8 @@ export function renderWorld(ctx: CanvasRenderingContext2D, input: RenderInput): 
             const s = o.city.lots[o.lot];
             if (!owner) break;
             const z = tileCorners(map, s.x, s.y)[0];
-            warehouse(rc, s.x, s.y, z, owner.brand, owner.seed, owner.hq);
+            if (owner.kind === 'delegation') delegation(rc, s.x, s.y, z, owner.brand, owner.seed);
+            else warehouse(rc, s.x, s.y, z, owner.brand, owner.seed, owner.hq, owner.size);
             placed.atSite.get(key)?.forEach((p, k) => {
               const px = s.x + 0.32 + (k % 4) * 0.42;
               const py = s.y + 1.68;
@@ -559,7 +563,6 @@ function drawCityLabels(rc: RC, state: TycoonState, hits: HitTargets) {
 function drawGigMarkers(rc: RC, state: TycoonState, venueTop: Map<string, Pt>, hits: HitTargets, colorFor: (o: string) => RGB) {
   const { ctx, cam, time } = rc;
   const today = dayOf(state.hour);
-  const tier = companyTier(state.company.reputation);
   const byVenue = new Map<string, Gig[]>();
   state.gigs.forEach(g => {
     const relevant =
@@ -592,7 +595,7 @@ function drawGigMarkers(rc: RC, state: TycoonState, venueTop: Map<string, Pt>, h
       label = g.overseas ? `★ ✈ ${Math.max(0, days)}d` : days <= 0 ? '★ TONIGHT' : `★ ${days}d`;
       bg = state.company.color;
     } else if (g.status === 'offer') {
-      const locked = g.tier > tier;
+      const locked = !!gigBookingBar(state, g).reason;
       label = `${g.tourId ? 'TOUR ' : ''}${locked ? '🔒 ' : g.asksForYou ? '♥ ' : ''}${cur}${g.fee >= 10000 ? `${Math.round(g.fee / 1000)}k` : `${(g.fee / 1000).toFixed(1)}k`}`;
       bg = locked ? '#3f3f46' : tierInfo(g.tier).color;
       fg = locked ? '#a1a1aa' : '#0b0d12';

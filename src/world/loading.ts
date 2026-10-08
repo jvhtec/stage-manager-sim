@@ -56,6 +56,9 @@ export function pickGear(stock: GearStock, remaining: DeptCounts, space: number,
   return picked;
 }
 
+/** Worn kit performs worse: 70% of its rated quality at zero condition. */
+export const conditionFactor = (c: number) => 0.7 + 0.3 * (c / 100);
+
 export interface GearEvaluation {
   delivered: DeptCounts;
   /** Share of the rider's gear units that turned up (0-1). */
@@ -67,12 +70,16 @@ export interface GearEvaluation {
   riderMet?: boolean;
 }
 
-export function evaluateGear(delivered: GearStock, gig: Gig, year: number): GearEvaluation {
+/**
+ * `condition` (product id → 0-100) derates worn kit: at zero condition a unit
+ * performs at 70% of its rated quality (see wear.ts).
+ */
+export function evaluateGear(delivered: GearStock, gig: Gig, year: number, condition: Record<string, number> = {}): GearEvaluation {
   const totals = deptTotals(delivered);
   const qualitySum: DeptCounts = { audio: 0, console: 0, lighting: 0, video: 0, stage: 0 };
   for (const id in delivered) {
     const p = getProduct(id);
-    qualitySum[p.dept] += p.quality * delivered[id];
+    qualitySum[p.dept] += p.quality * conditionFactor(condition[id] ?? 100) * delivered[id];
   }
   const avgQuality: DeptCounts = { audio: 0, console: 0, lighting: 0, video: 0, stage: 0 };
   const need = DEPTS.reduce((s, d) => s + gig.needs[d], 0) || 1;
