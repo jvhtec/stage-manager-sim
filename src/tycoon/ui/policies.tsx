@@ -1,4 +1,5 @@
 import { setPolicy } from '@/world/actions';
+import { REST_AT } from '@/world/people';
 import { WORKSHOP, WORKSHOP_LEVELS, averageCondition, monthlyWorkshopCost, ownedStock } from '@/world/wear';
 import { Bar, ExperienceChip, FatigueChip, Stat } from './bits';
 import { CREW_WAGE_PER_DAY } from '@/world/catalog';
@@ -10,6 +11,13 @@ import { money } from './format';
 import type { WinCtx } from './types';
 
 /** A row of mutually exclusive options, TT-style. */
+const REST_ROTAS = ['off', 'tired', 'strict'] as const;
+const REST_LABEL = {
+  off: { label: 'Everyone works', blurb: 'Whoever fits the job best goes, however tired.' },
+  tired: { label: `Rest the exhausted`, blurb: `Fatigue ${REST_AT.tired}+ stays home.` },
+  strict: { label: 'Strict rota', blurb: `Fatigue ${REST_AT.strict}+ stays home.` },
+};
+
 export function Choice<T extends string>({
   value,
   options,
@@ -47,7 +55,7 @@ export function Choice<T extends string>({
 
 export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
-  const set = <K extends 'workshop' | 'pay' | 'insurance' | 'freelance' | 'subhire' | 'rentOut' | 'training'>(key: K, value: (typeof state.policies)[K]) => ctx.dispatch(s => setPolicy(s, key, value));
+  const set = <K extends 'workshop' | 'pay' | 'insurance' | 'freelance' | 'subhire' | 'rentOut' | 'training' | 'rest'>(key: K, value: (typeof state.policies)[K]) => ctx.dispatch(s => setPolicy(s, key, value));
   const owned = ownedStock(state);
   return (
     <div>
@@ -93,8 +101,19 @@ export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
       />
       <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
         Days on the road tire crews out (tours and festivals most) and tired crews build worse shows; they recover at home.
-        Morale drifts each month towards what you pay, less how worn out everyone is. Good morale lifts every show; below 40,
-        people start quitting.
+        Morale drifts each month towards what you pay, less how worn out everyone is. Good morale lifts every show; below 50,
+        rivals make offers to your 3★+ people (match them in the crew window); below 40, people start quitting.
+      </div>
+
+      <h4>Rest rota</h4>
+      <Choice
+        value={state.policies.rest}
+        options={REST_ROTAS.map(id => ({ id, label: REST_LABEL[id].label, detail: REST_LABEL[id].blurb }))}
+        onPick={id => set('rest', id)}
+      />
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        Resting people stay at base when a truck loads — fresher crews and better morale, but more seats filled by freelancers.
+        People pinned to a truck always go.
       </div>
 
       <h4>Crew training</h4>

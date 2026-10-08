@@ -16,7 +16,7 @@ import { createRng, type Rng } from '@/lib/rng';
 import { CREW_HIRE_COST, CREW_WAGE_PER_DAY } from './catalog';
 import { newId, pushNews } from './core';
 import { NAMES } from './content/names';
-import type { CrewDept, CrewMember, CrewTrait, Gig, TycoonState } from './types';
+import type { CrewDept, CrewMember, CrewTrait, Gig, RestRota, TycoonState } from './types';
 
 export const CREW_DEPTS: CrewDept[] = ['audio', 'lighting', 'video', 'stage'];
 export const CREW_DEPT_LABEL: Record<CrewDept, string> = { audio: 'Sound', lighting: 'Lighting', video: 'Video', stage: 'Staging' };
@@ -48,7 +48,7 @@ export const levelOf = (m: CrewMember) => Math.floor(m.skills[m.primary]);
 export const stars = (n: number) => '★'.repeat(Math.max(0, Math.floor(n))) + '☆'.repeat(Math.max(0, 5 - Math.floor(n)));
 
 /** Day rate: a 1★ tech earns less than the going rate, a 5★ much more. */
-export const dayRate = (m: CrewMember) => CREW_WAGE_PER_DAY * (0.7 + 0.15 * Math.max(1, levelOf(m)));
+export const dayRate = (m: CrewMember) => CREW_WAGE_PER_DAY * (0.7 + 0.15 * Math.max(1, levelOf(m))) * (m.payBump ?? 1);
 export const hireFee = (m: CrewMember) => Math.round(CREW_HIRE_COST * (0.5 + 0.5 * levelOf(m)));
 export const roleOf = (m: CrewMember) => CREW_ROLE[m.primary][Math.min(4, Math.max(0, levelOf(m) - 1))];
 
@@ -198,33 +198,63 @@ export function evaluateCrew(people: CrewMember[], gig: Gig): CrewEvaluation {
   };
 }
 
+/** Rest rota: fatigue at which people stay at base instead of going out. */
+export const REST_AT: Record<RestRota, number> = { off: Infinity, tired: 70, strict: 50 };
+
+export interface PickOptions {
+  /** The truck being loaded: people pinned to it board first, people pinned elsewhere don't. */
+  vehicleId?: string;
+  /** Fatigue at which people sit the job out (pinned people still go). */
+  restAt?: number;
+}
+
+/** Whether `m` may board the truck being loaded. */
+export function mayBoard(m: CrewMember, opts: PickOptions = {}): boolean {
+  if (m.pinnedVehicleId && m.pinnedVehicleId !== opts.vehicleId) return false;
+  if (m.pinnedVehicleId === opts.vehicleId && opts.vehicleId) return true;
+  return m.fatigue < (opts.restAt ?? Infinity);
+}
+
 /**
- * Who boards a truck: the fresh, well-matched people for the job ahead.
- * Picks up to `seats` from `pool` (mutating it) and returns them.
+ * Who boards a truck: anyone pinned to it, then the fresh, well-matched
+ * people for the job ahead. Picks up to `seats` from `pool` (mutating it)
+ * and returns them.
  */
-export function pickCrew(pool: CrewMember[], gig: Gig, seats: number, alreadyAboard: CrewMember[] = []): CrewMember[] {
+export function pickCrew(pool: CrewMember[], gig: Gig, seats: number, alreadyAboard: CrewMember[] = [], opts: PickOptions = {}): CrewMember[] {
   const slots = crewSlots(gig);
   alreadyAboard.forEach(m => {
     if (slots[m.primary] > 0) slots[m.primary] -= 1;
   });
   const picked: CrewMember[] = [];
-  while (picked.length < seats && pool.length) {
-    let best = 0;
+  while (picked.length < seats) {
+    let best = -1;
     let bestScore = -Infinity;
     pool.forEach((m, i) => {
+      if (!mayBoard(m, opts)) return;
       const fit = Math.max(...CREW_DEPTS.map(d => (slots[d] > 0 ? m.skills[d] + 1 : m.skills[d] * 0.3)));
-      const score = fit - m.fatigue / 40;
-      if (score > bestScore || (score === bestScore && m.id < pool[best].id)) {
+      const pinned = opts.vehicleId && m.pinnedVehicleId === opts.vehicleId ? 100 : 0;
+      const score = pinned + fit - m.fatigue / 40;
+      if (score > bestScore || (score === bestScore && best >= 0 && m.id < pool[best].id)) {
         best = i;
         bestScore = score;
       }
     });
+    if (best < 0) break;
     const [m] = pool.splice(best, 1);
     const dept = CREW_DEPTS.filter(d => slots[d] > 0).sort((a, b) => m.skills[b] - m.skills[a])[0];
     if (dept) slots[dept] -= 1;
     picked.push(m);
   }
   return picked;
+}
+
+/** People pinned to a truck. */
+export const pinnedTo = (s: TycoonState, vehicleId: string) => s.people.filter(m => m.pinnedVehicleId === vehicleId);
+/** A truck is gone: its regulars go back into the pool. */
+export function unpinFrom(s: TycoonState, vehicleId: string) {
+  s.people.forEach(m => {
+    if (m.pinnedVehicleId === vehicleId) m.pinnedVehicleId = undefined;
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -276,16 +306,26 @@ export function trainPeople(s: TycoonState, showsWorth: number) {
   });
 }
 
-/** Leaving: below 40 morale people quit; below 50 rivals poach the stars. Only people at base leave. */
+/** Days you have to answer a rival's offer to one of your people. */
+export const POACH_ANSWER_DAYS = 14;
+/** Matching an offer keeps them loyal this long. */
+export const LOYALTY_DAYS = 365;
+
+/**
+ * Leaving: below 40 morale people quit; below 50 rivals make offers to your
+ * stars (3★ and up), which you can match. Only people at base leave.
+ */
 export function peopleLeave(s: TycoonState, rng: Rng, morale: number) {
   const gone: string[] = [];
   s.people.forEach(m => {
     if (!m.depotId) return;
     const level = levelOf(m);
-    if (morale < 50 && level >= 4 && s.rivals.length && rng.chance((50 - morale) / 150)) {
+    if (morale < 50 && level >= 3 && s.rivals.length && rng.chance(((50 - morale) / 150) * (level - 2) / 2)) {
+      if ((m.loyalUntil ?? 0) > s.hour || s.poachBids.some(b => b.personId === m.id)) return;
       const rival = rng.pick(s.rivals);
-      gone.push(m.id);
-      pushNews(s, `${rival.name} poach ${m.name}, your ${level}★ ${roleOf(m)}.`, 'bad');
+      const raise = Math.round((0.15 + rng.next() * 0.25 + (level - 3) * 0.05) * 20) / 20;
+      s.poachBids.push({ id: newId(s, 'poach'), personId: m.id, rivalName: rival.name, raise, expiresDay: Math.floor(s.hour / 24) + POACH_ANSWER_DAYS });
+      pushNews(s, `${rival.name} offer ${m.name}, your ${level}★ ${roleOf(m)}, +${Math.round(raise * 100)}% to join them. Match it in the crew window or lose them.`, 'bad');
       return;
     }
     if (morale < 40 && rng.chance((40 - morale) / 100)) gone.push(m.id);
@@ -293,7 +333,42 @@ export function peopleLeave(s: TycoonState, rng: Rng, morale: number) {
   const quit = gone.length;
   if (!quit) return 0;
   s.people = s.people.filter(m => !gone.includes(m.id));
+  s.poachBids = s.poachBids.filter(b => !gone.includes(b.personId));
   return quit;
+}
+
+/** Daily: unanswered offers are taken (once the person is back at base — nobody walks off mid-tour). */
+export function dailyPoachBids(s: TycoonState) {
+  const today = Math.floor(s.hour / 24);
+  s.poachBids = s.poachBids.filter(b => {
+    const m = s.people.find(p => p.id === b.personId);
+    if (!m) return false;
+    if (today < b.expiresDay || !m.depotId) return true;
+    s.people = s.people.filter(p => p.id !== m.id);
+    pushNews(s, `${m.name} has joined ${b.rivalName}.`, 'bad');
+    return false;
+  });
+}
+
+/** Mutating helper: keep them on the rival's money, or let them go. */
+export function settlePoachBid(s: TycoonState, bidId: string, keep: boolean): string | null {
+  const bid = s.poachBids.find(b => b.id === bidId);
+  if (!bid) return null;
+  const m = s.people.find(p => p.id === bid.personId);
+  s.poachBids = s.poachBids.filter(b => b.id !== bidId);
+  if (!m) return null;
+  if (keep) {
+    m.payBump = Math.round((m.payBump ?? 1) * (1 + bid.raise) * 100) / 100;
+    m.loyalUntil = s.hour + LOYALTY_DAYS * 24;
+    return `${m.name} stays — on ${Math.round(bid.raise * 100)}% more.`;
+  }
+  if (!m.depotId) {
+    bid.expiresDay = 0;
+    s.poachBids.push(bid);
+    return `${m.name} will leave for ${bid.rivalName} once they’re back at base.`;
+  }
+  s.people = s.people.filter(p => p.id !== m.id);
+  return `${m.name} has joined ${bid.rivalName}. Good luck to them.`;
 }
 
 /** Party animals lift the mood (a little). */

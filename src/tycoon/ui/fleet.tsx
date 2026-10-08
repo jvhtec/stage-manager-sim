@@ -82,6 +82,16 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
             ))}
         </div>
       )}
+      {state.people.some(m => m.pinnedVehicleId === v.id) && (
+        <div className="tt-dim" style={{ whiteSpace: 'normal', marginBottom: 4 }}>
+          📌 Regulars:{' '}
+          {state.people
+            .filter(m => m.pinnedVehicleId === v.id)
+            .map(m => m.name)
+            .join(', ')}{' '}
+          — they always ride this truck (pin people in the crew window).
+        </div>
+      )}
       <StockLines stock={v.cargo} state={state} />
 
       <h4>Orders</h4>

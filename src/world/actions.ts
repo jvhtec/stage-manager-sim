@@ -41,7 +41,7 @@ import { AMBITIONS, rndBlocker, startProject } from './rnd';
 import { DEAL_YEARS } from './deals';
 import { DEPTS, type ActionOutcome, type BidLevel, type Dept, type RndAmbition, type Vehicle, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
 import { STAFF, canBaseVehicle, facilitySpec, nextUpgrade } from './facilities';
-import { aboard, hireFee, levelOf, makePerson, moveToDepot, roleOf, syncCrew } from './people';
+import { aboard, hireFee, levelOf, makePerson, moveToDepot, roleOf, settlePoachBid, syncCrew, unpinFrom } from './people';
 import { BREAK_MONTHS, contractShortfall, installKit } from './contracts';
 import { addStock } from './loading';
 import { onBought, ownedStock, refurbishCost, resaleValue } from './wear';
@@ -189,6 +189,7 @@ export function sellVehicle(state: TycoonState, vehicleId: string): ActionOutcom
   const value = sellValue(v0, s.hour);
   const depot = depotInCity(s, v0.homeCityId);
   if (depot) aboard(s, v0.id).forEach(m => moveToDepot(m, depot.id));
+  unpinFrom(s, v0.id);
   s.vehicles = s.vehicles.filter(v => v.id !== vehicleId);
   syncCrew(s);
   s.techs = s.techs.map(t => (t.vehicleId === vehicleId ? { techId: t.techId } : t));
@@ -315,8 +316,29 @@ export function fireMember(state: TycoonState, ids: string | string[]): ActionOu
   if (leaving.some(m => !m.depotId)) return fail(state, 'They’re out on a job — let them go when they’re back at base.');
   const s = cloneState(state);
   s.people = s.people.filter(m => !list.includes(m.id));
+  s.poachBids = s.poachBids.filter(b => !list.includes(b.personId));
   syncCrew(s);
   return ok(s, leaving.length === 1 ? `${leaving[0].name} has left the company.` : `${leaving.length} crew let go.`);
+}
+
+/** Pin someone to a truck (they always ride it from its base), or unpin them with `vehicleId` undefined. */
+export function pinCrew(state: TycoonState, personId: string, vehicleId?: string): ActionOutcome {
+  const m0 = state.people.find(m => m.id === personId);
+  if (!m0) return fail(state, 'Unknown crew member.');
+  const v = vehicleId ? state.vehicles.find(x => x.id === vehicleId && x.owner === 'player') : undefined;
+  if (vehicleId && !v) return fail(state, 'Unknown vehicle.');
+  const s = cloneState(state);
+  s.people.find(m => m.id === personId)!.pinnedVehicleId = vehicleId;
+  return ok(s, v ? `${m0.name} now rides ${v.name}.` : `${m0.name} goes wherever they’re needed.`);
+}
+
+/** Answer a rival's offer to one of your people: match it, or let them go. */
+export function answerPoach(state: TycoonState, bidId: string, keep: boolean): ActionOutcome {
+  if (!state.poachBids.some(b => b.id === bidId)) return fail(state, 'That offer is gone.');
+  const s = cloneState(state);
+  const msg = settlePoachBid(s, bidId, keep);
+  syncCrew(s);
+  return ok(s, msg ?? undefined);
 }
 
 /** Open a delegation (branch office) or build a small warehouse in a town. */
@@ -528,6 +550,7 @@ function returnLeased(state: TycoonState, v0: Vehicle): ActionOutcome {
   const s = cloneState(state);
   const depot = depotInCity(s, v0.homeCityId);
   if (depot) aboard(s, v0.id).forEach(m => moveToDepot(m, depot.id));
+  unpinFrom(s, v0.id);
   s.vehicles = s.vehicles.filter(v => v.id !== v0.id);
   syncCrew(s);
   s.techs = s.techs.map(t => (t.vehicleId === v0.id ? { techId: t.techId } : t));

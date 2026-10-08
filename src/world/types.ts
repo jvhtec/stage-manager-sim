@@ -166,6 +166,22 @@ export interface CrewMember {
   depotId?: string;
   /** …or aboard a truck. */
   vehicleId?: string;
+  /** Always rides this truck when it loads at their base. */
+  pinnedVehicleId?: string;
+  /** Pay on top of the going rate for their level (a matched counter-offer). */
+  payBump?: number;
+  /** Won't listen to rivals' offers until this hour. */
+  loyalUntil?: number;
+}
+
+/** A rival trying to hire one of your people away: match it or lose them. */
+export interface PoachBid {
+  id: string;
+  personId: string;
+  rivalName: string;
+  /** Pay rise they're offered, e.g. 0.3 = +30%. */
+  raise: number;
+  expiresDay: number;
 }
 
 export type FacilityKind = 'delegation' | 'warehouse';
@@ -409,7 +425,11 @@ export interface Policies {
   /** Rent idle kit out between jobs. */
   rentOut: 'off' | 'on';
   training: TrainingLevel;
+  /** Rest rota: keep tired people at base instead of sending them out. */
+  rest: RestRota;
 }
+
+export type RestRota = 'off' | 'tired' | 'strict';
 
 /** One year's record, for the company rating and the awards (awards.ts). */
 export interface YearStats {
@@ -468,6 +488,8 @@ export interface TycoonState {
   people: CrewMember[];
   /** This month's hiring market: candidates, each tagged with the base they'd join. */
   candidates: CrewMember[];
+  /** Rivals' open offers to your people (people.ts). */
+  poachBids: PoachBid[];
   /** Exclusive production deals with acts (deals.ts). */
   deals: { id: string; act: string; tier: number; monthly: number; startDay: number; endDay: number; strikes: number; status: 'offer' | 'active' | 'ended'; offerExpires: number }[];
   /** Your own products (encoded ids, see content/gear.ts ownProductId). */

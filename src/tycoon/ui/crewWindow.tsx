@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { fireMember, hireCandidate, hireCrew } from '@/world/actions';
+import { answerPoach, fireMember, hireCandidate, hireCrew, pinCrew } from '@/world/actions';
 import { CREW_HIRE_COST } from '@/world/catalog';
 import { PAY } from '@/world/crew';
-import { CREW_DEPTS, CREW_DEPT_LABEL, TRAITS, dayRate, hireFee, levelOf, roleOf } from '@/world/people';
+import { CREW_DEPTS, CREW_DEPT_LABEL, REST_AT, TRAITS, dayRate, hireFee, levelOf, roleOf } from '@/world/people';
 import { worldOf } from '@/world/mapgen';
 import type { CrewMember, TycoonState } from '@/world/types';
 import { FatigueChip, Stat } from './bits';
@@ -41,6 +41,13 @@ export function PersonRow({ state, m, right }: { state: TycoonState; m: CrewMemb
           {roleOf(m)}
           {second ? ` · also ${CREW_DEPT_LABEL[second].toLowerCase()} ${Math.floor(m.skills[second])}★` : ''} · {money(Math.round(dayRate(m) * pay))}/day{' '}
           {m.fatigue >= 30 && <FatigueChip value={m.fatigue} />}
+          {m.depotId && m.fatigue >= REST_AT[state.policies.rest] && !m.pinnedVehicleId && <span className="tt-chip" style={{ background: '#475569' }}>resting</span>}
+          {m.pinnedVehicleId && !right && (
+            <span className="tt-chip" style={{ background: '#1e3a8a' }} title="Always rides this truck">
+              📌 {state.vehicles.find(v => v.id === m.pinnedVehicleId)?.name ?? '?'}
+            </span>
+          )}
+          {(m.payBump ?? 1) > 1 && <span className="tt-dim"> · +{Math.round(((m.payBump ?? 1) - 1) * 100)}% retention</span>}
         </div>
       </div>
       {right}
@@ -72,6 +79,25 @@ export function CrewWindow({ ctx }: { ctx: WinCtx }) {
           Hiring ({state.candidates.length})
         </button>
       </div>
+      {state.poachBids.map(b => {
+        const m = state.people.find(p => p.id === b.personId);
+        if (!m) return null;
+        const days = Math.max(0, b.expiresDay - Math.floor(state.hour / 24));
+        return (
+          <div key={b.id} className="tt-item" style={{ background: 'rgba(239,68,68,0.15)', gap: 6, flexWrap: 'wrap' }}>
+            <span className="grow" style={{ whiteSpace: 'normal' }}>
+              <b>{b.rivalName}</b> want <b>{m.name}</b> ({levelOf(m)}★ {roleOf(m)}) at +{Math.round(b.raise * 100)}%.{' '}
+              <span className="tt-dim">{days ? `${days} days to answer.` : 'Leaving once back at base.'}</span>
+            </span>
+            <button className="tt-btn sm primary" onClick={() => act(s => answerPoach(s, b.id, true))}>
+              Match ({money(Math.round(dayRate(m) * (1 + b.raise) * pay))}/day)
+            </button>
+            <button className="tt-btn sm" onClick={() => act(s => answerPoach(s, b.id, false))}>
+              Let go
+            </button>
+          </div>
+        );
+      })}
       <Stat label="Payroll">{money(payroll)}/day</Stat>
       <Stat label="By department">
         {CREW_DEPTS.map(d => `${CREW_DEPT_LABEL[d]} ${state.people.filter(m => m.primary === d).length}`).join(' · ')}
@@ -81,6 +107,7 @@ export function CrewWindow({ ctx }: { ctx: WinCtx }) {
         <>
           {state.depots.map(d => {
             const here = state.people.filter(m => m.depotId === d.id).sort(byLevel);
+            const trucks = state.vehicles.filter(v => v.owner === 'player' && v.homeCityId === d.cityId);
             return (
               <div key={d.id}>
                 <h4>
@@ -93,9 +120,27 @@ export function CrewWindow({ ctx }: { ctx: WinCtx }) {
                       state={state}
                       m={m}
                       right={
-                        <button className="tt-btn sm" title="Let go" onClick={() => window.confirm(`Let ${m.name} go?`) && act(s => fireMember(s, m.id))}>
-                          ✕
-                        </button>
+                        <>
+                          {trucks.length > 0 && (
+                            <select
+                              className="tt-input"
+                              aria-label={`Pin ${m.name} to a truck`}
+                              value={m.pinnedVehicleId ?? ''}
+                              onChange={e => act(s => pinCrew(s, m.id, e.target.value || undefined))}
+                              style={{ maxWidth: 110 }}
+                            >
+                              <option value="">Any truck</option>
+                              {trucks.map(v => (
+                                <option key={v.id} value={v.id}>
+                                  📌 {v.name}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                          <button className="tt-btn sm" title="Let go" onClick={() => window.confirm(`Let ${m.name} go?`) && act(s => fireMember(s, m.id))}>
+                            ✕
+                          </button>
+                        </>
                       }
                     />
                   ))}
@@ -121,8 +166,8 @@ export function CrewWindow({ ctx }: { ctx: WinCtx }) {
           ))}
           <div className="tt-dim" style={{ marginTop: 6, whiteSpace: 'normal' }}>
             Shows split their crew slots by what they need — a lighting-heavy show wants LX techs — and the best-matched, freshest
-            people get on the truck. Everyone levels up in the department they work (and wants paying for it). Keep morale up or
-            rivals poach your stars.
+            people get on the truck. Pin someone to a truck to make them its regular: they always ride it. Everyone levels up in the
+            department they work (and wants paying for it). Keep morale up or rivals come knocking for your stars.
           </div>
         </>
       ) : (

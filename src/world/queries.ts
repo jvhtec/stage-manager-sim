@@ -8,7 +8,7 @@ import { freelancersFor, type FreelanceHire } from './crew';
 import { prepRatio } from './facilities';
 import { subHireFor, type SubHire } from './hire';
 import { moraleBonus } from './crew';
-import { aboard, atDepot, evaluateCrew, pickCrew, type CrewEvaluation } from './people';
+import { REST_AT, aboard, atDepot, evaluateCrew, mayBoard, pickCrew, type CrewEvaluation } from './people';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize, type GearEvaluation } from './loading';
 import {
   dateOfDay,
@@ -122,8 +122,10 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
     const remaining = emptyCounts();
     DEPTS.forEach(d => (remaining[d] = Math.max(0, gig.needs[d] - have[d])));
     addStock(delivered, pickGear(depot.gear, remaining, model.gearCapacity, gig.rider));
-    const seats = Math.min(model.crewSeats, Math.max(0, gig.crewNeeded - people.length), depot.people.length);
-    people.push(...pickCrew(depot.people, gig, seats, people));
+    const opts = { vehicleId: v.id, restAt: REST_AT[state.policies.rest] };
+    const pinned = depot.people.filter(m => m.pinnedVehicleId === v.id).length;
+    const seats = Math.min(model.crewSeats, Math.max(pinned, gig.crewNeeded - people.length), depot.people.filter(m => mayBoard(m, opts)).length);
+    people.push(...pickCrew(depot.people, gig, seats, people, opts));
   });
   const crew = people.length;
   const crewEval = evaluateCrew(people, gig);

@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { createRng } from '@/lib/rng';
 import { createTycoonGame, migrate } from '../state';
 import { advanceHours } from '../sim';
-import { fireMember, hireCandidate } from '../actions';
+import { answerPoach, fireMember, hireCandidate } from '../actions';
 import { HOURS_PER_DAY } from '../catalog';
 import { NAMES } from '../content/names';
-import { crewSlots, evaluateCrew, learnFromShow, levelOf, makePerson, peopleLeave, pickCrew, syncCrew } from '../people';
+import { REST_AT, crewSlots, dailyPoachBids, dayRate, evaluateCrew, learnFromShow, levelOf, makePerson, peopleLeave, pickCrew, syncCrew } from '../people';
 import type { CrewMember, Gig, TycoonState } from '../types';
 
 const game = (country: TycoonState['country'] = 'ES'): TycoonState => {
@@ -49,15 +49,51 @@ describe('named crew', () => {
     expect(levelOf(m)).toBeGreaterThanOrEqual(2);
   });
 
-  it('stars get poached when morale is low', () => {
+  it('rivals make offers to stars when morale is low — match them or lose them', () => {
     const s = game();
     const star = person(s, 'audio', 5);
     star.depotId = s.depots[0].id;
     s.people.push(star);
     const rng = { next: () => 0, chance: () => true, pick: <T,>(a: T[]) => a[0] } as never;
     peopleLeave(s, rng, 20);
-    expect(s.people.some(m => m.id === star.id)).toBe(false);
-    expect(s.news[0].text).toMatch(/poach/);
+    expect(s.people.some(m => m.id === star.id)).toBe(true);
+    const bid = s.poachBids.find(b => b.personId === star.id)!;
+    expect(bid).toBeTruthy();
+    expect(s.news[0].text).toMatch(/offer/);
+
+    // Match it: they stay, cost more and turn rivals down for a year.
+    const before = dayRate(star);
+    const kept = answerPoach(s, bid.id, true).state;
+    const m = kept.people.find(p => p.id === star.id)!;
+    expect(dayRate(m)).toBeCloseTo(before * (1 + bid.raise), 5);
+    expect(kept.poachBids.length).toBe(0);
+    peopleLeave(kept, rng, 20);
+    expect(kept.poachBids.some(b => b.personId === star.id)).toBe(false);
+
+    // Ignore it: they leave when it runs out.
+    const ignored = structuredClone(s);
+    ignored.hour += 20 * HOURS_PER_DAY;
+    dailyPoachBids(ignored);
+    expect(ignored.people.some(p => p.id === star.id)).toBe(false);
+  });
+
+  it('pinned people always ride their truck; the rest rota keeps the exhausted home', () => {
+    const s = game();
+    const show = { needs: { audio: 4, lighting: 0, video: 0, stage: 0, console: 0 }, crewNeeded: 2, overseas: false } as unknown as Gig;
+    const ace = person(s, 'audio', 4);
+    const regular = person(s, 'lighting', 1);
+    const tired = person(s, 'audio', 5);
+    tired.fatigue = 80;
+    regular.pinnedVehicleId = 'v1';
+    const other = person(s, 'audio', 5);
+    other.pinnedVehicleId = 'v2';
+
+    const picked = pickCrew([ace, regular, tired, other], show, 2, [], { vehicleId: 'v1', restAt: REST_AT.tired });
+    expect(picked.map(m => m.id).sort()).toEqual([ace.id, regular.id].sort());
+    // Without the rota the tired 5★ beats the ace; pins still hold.
+    const noRota = pickCrew([ace, regular, tired, other], show, 3, [], { vehicleId: 'v1' });
+    expect(noRota.map(m => m.id)).toContain(tired.id);
+    expect(noRota.map(m => m.id)).not.toContain(other.id);
   });
 
   it('hire from the market and let people go', () => {

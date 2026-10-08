@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 96 tests):
+(`src/world/__tests__/*.test.ts`, 97 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -287,8 +287,13 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   by its departments' needs (consoles count as sound); the best-matched people fill them, each
   worth 0.55 (out of their depth) to 1.2 (5★) × fatigue. Trucks board the freshest, best-matched
   people for the job ahead. People level up in the department they work (10/30/60/110 shows per
-  level) with a raise; training adds monthly progress at base; below 50 morale rivals poach 4★+
-  stars, below 40 people quit. A hiring market refreshes monthly per base (stars are rare, rarer
+  level) with a raise; training adds monthly progress at base; below 40 morale people quit.
+  **Pins**: pin someone to a truck and they always ride it from its base (and never board another).
+  **Rest rota** policy (everyone works / fatigue 70+ stays home / fatigue 50+ stays home) — fresher
+  crews and morale against more freelancer seats; pins override it. **Counter-offers**: below 50
+  morale rivals make offers to 3★+ people (+15-45%, likelier for higher stars); you have 14 days
+  to match (their day rate rises by the raise and they turn rivals down for a year) or they leave
+  — once back at base, never mid-tour. A hiring market refreshes monthly per base (stars are rare, rarer
   for small firms); old saves' headcounts become people. Depot/vehicle `crew` and averages are
   cached by `syncCrew`.
 
@@ -302,7 +307,7 @@ The classic build has systems that don't exist in the map game yet. Each has an 
 
 | Classic system | Map-game home |
 |---|---|
-| Individual crew (skills, XP, avatars, hiring market) | Fatigue, morale and pay are in (crew.ts); next, crew become named people with skills and XP |
+| Individual crew (skills, XP, avatars, hiring market) | Done: named people with skills, traits, XP, a hiring market (people.ts); avatars still to come |
 | Crises (planning / execution prompts) | **Road incidents** (breakdown: wait, tow, or hire a local van), **show incidents** at the venue, both as TT-style pop-ups with choices |
 | Show Day scene | Click a venue during a live show → zoom-in performance view (the scene from the game-feel plan, now reachable from the map) |
 | Rentals | Local hire at the venue town when you're short — expensive, but saves a no-show |
@@ -310,7 +315,7 @@ The classic build has systems that don't exist in the map game yet. Each has an 
 ## 9. Next steps (PR-sized)
 
 1. **Playtest & balance pass** — fee/wage/running-cost tuning, offer density, rival aggression.
-2. **Named crew** — done (`people.ts`); next: crew pinned to trucks, crew rest rotas, star poaching counter-offers.
+2. **Named crew** — done (`people.ts`), with pins, rest rota and counter-offers.
 3. **Road & show incidents** — port the crisis system as pop-up decisions.
 4. **Tour planner** — drag-to-order a vehicle's show list, "add next show in route" suggestions,
    route lines drawn on the map for the selected vehicle.
