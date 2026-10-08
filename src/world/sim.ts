@@ -49,7 +49,7 @@ import { worldOf } from './mapgen';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize } from './loading';
 import { GEAR_PRODUCTS, getProduct } from './content/gear';
 import { leftBehindChance, monthlyRent, monthlySalaries, prepFailureFactor, prepOf, prepRatio } from './facilities';
-import { PAY, crewWage, freelancersFor, dailyCrew, effectiveCrew, mixFatigue, monthlyCrew, moraleBonus } from './crew';
+import { STARTING_EXPERIENCE, gainExperience, monthlyTraining, PAY, crewWage, freelancersFor, dailyCrew, effectiveCrew, mixFatigue, monthlyCrew, moraleBonus } from './crew';
 import { dailyWorkshop, monthlyWorkshop, rollFailure, wearFromShow, type Failure } from './wear';
 import { rivalsFor } from './content/companies';
 import { getTech, techBonus, techsActiveIn } from './content/techs';
@@ -59,6 +59,9 @@ import { dailyFestivals } from './festivals';
 import { dailyEvents, eventStakes } from './events';
 import { deliverTransfers } from './transfers';
 import { monthlyRivals } from './rivals';
+import { monthlyLeases } from './finance';
+import { monthlyRnd } from './rnd';
+import { BAD_NIGHT, monthlyDeals, strike } from './deals';
 import { bookSubHire, dailyRentOut, subHireFor } from './hire';
 import { awardsNight, recordEvent, recordShow } from './awards';
 import { dailyIncidents, monthlyInsurance, rollWeather } from './incidents';
@@ -167,6 +170,7 @@ function loadVehicle(s: TycoonState, v: Vehicle, gig: Gig) {
   const seats = Math.min(model.crewSeats - v.crew, crewRemaining, depot.crew);
   if (seats > 0) {
     v.crewFatigue = mixFatigue(v.crew, v.crewFatigue ?? 0, seats, depot.fatigue ?? 0);
+    v.crewExperience = mixFatigue(v.crew, v.crewExperience ?? STARTING_EXPERIENCE, seats, depot.experience ?? STARTING_EXPERIENCE);
     depot.crew -= seats;
     v.crew += seats;
   }
@@ -180,6 +184,7 @@ function unloadVehicle(s: TycoonState, v: Vehicle) {
   if (!depot) return;
   addStock(depot.gear, v.cargo);
   depot.fatigue = mixFatigue(depot.crew, depot.fatigue ?? 0, v.crew, v.crewFatigue ?? 0);
+  if (v.crew) depot.experience = mixFatigue(depot.crew, depot.experience ?? STARTING_EXPERIENCE, v.crew, v.crewExperience ?? STARTING_EXPERIENCE);
   depot.crew += v.crew;
   v.crewFatigue = 0;
   v.cargo = {};
@@ -433,6 +438,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     s.company.reputation = Math.max(0, s.company.reputation - 4 * tw + Math.min(0, stakes.reputation));
     s.cityRatings[gig.cityId] = Math.max(0, rating - 20);
     s.stats.showsFailed += 1;
+    strike(s, gig.act, `the show at ${where} fell apart`);
     recordShow(s, yearOf(s, s.hour), quality, true, !!gig.festival);
     pushNews(
       s,
@@ -467,8 +473,10 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   gig.result = { quality, payout, lateHours, gearCoverage, crewCoverage, ...resultExtras };
   s.company.reputation = Math.max(0, Math.min(100, reputationAfterShow(s.company.reputation, gig.tier, quality) + stakes.reputation));
   if (gig.event && !gig.event.citywide) recordEvent(s, yearOf(s, s.hour), quality);
+  if (quality < BAD_NIGHT) strike(s, gig.act, `a bad night at ${where}`);
   s.cityRatings[gig.cityId] = Math.max(0, Math.min(100, rating + (quality - 0.5) * 30));
   s.stats.showsPlayed += 1;
+  gainExperience(onSite, gig.tier >= 3 || !!gig.festival || !!gig.event);
   recordShow(s, yearOf(s, s.hour), quality, false, !!gig.festival);
   const verdict = quality >= 0.9 ? 'Storming show' : quality >= 0.7 ? 'Solid show' : 'Rough show';
   const riderNote = gear.riderMet === undefined ? '' : gear.riderMet ? ` Rider (${gig.rider!.brand}) honoured.` : ` They wanted ${gig.rider!.brand} and didn't get it.`;
@@ -548,6 +556,8 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     monthlyTick(s, rng);
     monthlyContracts(s, world, rng);
     monthlyRivals(s, rng);
+    monthlyRnd(s, rng);
+    monthlyDeals(s, rng);
   }
   s.stats.peakCash = Math.max(s.stats.peakCash, s.company.cash);
 }
@@ -562,7 +572,9 @@ function monthlyTick(s: TycoonState, rng: Rng) {
   });
   monthlyWorkshop(s);
   monthlyCrew(s, rng);
+  monthlyTraining(s);
   monthlyInsurance(s);
+  monthlyLeases(s);
   if (s.company.loan > 0) book(s, 'interest', -monthlyInterest(s));
 
   // During a shutdown the banks give everyone a repayment holiday.

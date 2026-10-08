@@ -2,8 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { borrow, buyRival, repay } from '@/world/actions';
 import { rivalHealth, takeoverBlocker, takeoverPrice } from '@/world/rivals';
 import {
-  LOAN_STEP,
-  MAX_LOAN,
   START_YEARS,
   NEGATIVE_MONTHS_GAME_OVER,
   TIERS,
@@ -15,6 +13,7 @@ import { worldOf } from '@/world/mapgen';
 import { companyValue } from '@/world/queries';
 import { awardsName, companyRating, rivalRating } from '@/world/awards';
 import { describeLoanRate } from '@/world/market';
+import { borrowStep, creditLimit } from '@/world/finance';
 import { suggestedHqCities } from '@/world/state';
 import { LEDGER_LABELS, type LedgerCategory, type TycoonState } from '@/world/types';
 import { createRandomSeed } from '@/lib/rng';
@@ -87,16 +86,22 @@ export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
         <b className={state.company.cash < 0 ? 'tt-bad' : ''}>{money(state.company.cash)}</b>
       </Stat>
       <Stat label="Loan">
-        {money(state.company.loan)} <span className="tt-dim">/ {money(MAX_LOAN)} @ {describeLoanRate(state)}</span>
+        {money(state.company.loan)} <span className="tt-dim">/ {money(creditLimit(state))} @ {describeLoanRate(state)}</span>
       </Stat>
       <Stat label="Company value">{money(companyValue(state))}</Stat>
       <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
-        <button className="tt-btn sm" disabled={state.company.loan + LOAN_STEP > MAX_LOAN} onClick={() => act(borrow)}>
-          Borrow {money(LOAN_STEP)}
+        <button className="tt-btn sm" disabled={state.company.loan >= creditLimit(state)} onClick={() => act(borrow)}>
+          Borrow {money(Math.min(borrowStep(state), Math.max(0, creditLimit(state) - state.company.loan)))}
         </button>
         <button className="tt-btn sm" disabled={state.company.loan <= 0} onClick={() => act(repay)}>
-          Repay {money(Math.min(LOAN_STEP, state.company.loan))}
+          Repay {money(Math.min(borrowStep(state), state.company.loan))}
         </button>
+      </div>
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        The bank lends against what you own and how well you're run (your company rating).
+        {state.vehicles.some(v => v.owner === 'player' && v.lease)
+          ? ` Leases: ${money(state.vehicles.reduce((sum, v) => sum + (v.owner === 'player' && v.lease ? v.lease.monthly : 0), 0))}/month.`
+          : ''}
       </div>
       {state.negativeMonths > 0 && (
         <div className="tt-bad" style={{ marginTop: 6 }}>
@@ -220,6 +225,11 @@ export function HelpWindow() {
         <li>
           <b>The trade</b>: short of kit, sub-hire it from a rival nearby (or rent your idle kit out); courier kit between your
           bases; and when a rival struggles, buy them out from the League.
+        </li>
+        <li>
+          <b>Growing the firm</b>: lease trucks instead of buying them; the bank lends against what you own and your rating. Fund
+          <b> R&D</b> to build your own kit (and earn royalties), sign <b>production deals</b> with acts who love you, and train
+          your crews — seasoned crews build better shows.
         </li>
         <li>
           Buy bigger trucks and more gear, and win reputation to unlock arenas and stadiums. Every January the industry awards

@@ -6,7 +6,7 @@ import { houseRigAt } from './contracts';
 import { freelancersFor, type FreelanceHire } from './crew';
 import { prepRatio } from './facilities';
 import { subHireFor, type SubHire } from './hire';
-import { crewEffectiveness, effectiveCrew, moraleBonus } from './crew';
+import { crewEffectiveness, effectiveCrew, experienceFactor, moraleBonus } from './crew';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize, type GearEvaluation } from './loading';
 import {
   dateOfDay,
@@ -95,7 +95,7 @@ export interface CoverageProjection {
 /** What would turn up at `gig` if things go to plan — runs the sim's own loading and scoring. */
 export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjection {
   const vehicles = state.vehicles.filter(v => v.owner === 'player' && v.orders.includes(gig.id));
-  const stock = new Map(state.depots.map(d => [d.cityId, { gear: { ...d.gear }, crew: d.crew, fatigue: d.fatigue ?? 0 }]));
+  const stock = new Map(state.depots.map(d => [d.cityId, { gear: { ...d.gear }, crew: d.crew, fatigue: d.fatigue ?? 0, experience: d.experience ?? 30 }]));
   const delivered: GearStock = { ...(vehicles.length ? houseRigAt(state, gig.venueId) : undefined) };
   let crew = 0;
   let effCrew = 0;
@@ -121,7 +121,7 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
     addStock(delivered, pickGear(depot.gear, remaining, model.gearCapacity, gig.rider));
     const seats = Math.min(model.crewSeats, Math.max(0, gig.crewNeeded - crew), depot.crew);
     crew += seats;
-    effCrew += seats * crewEffectiveness(depot.fatigue);
+    effCrew += seats * crewEffectiveness(depot.fatigue) * experienceFactor(depot.experience);
     depot.crew -= seats;
   });
 
@@ -162,7 +162,7 @@ export function stockValue(stock: GearStock, condition: Record<string, number> =
 }
 
 export function companyValue(state: TycoonState): number {
-  const fleet = state.vehicles.filter(v => v.owner === 'player').reduce((sum, v) => sum + sellValue(v, state.hour), 0);
+  const fleet = state.vehicles.filter(v => v.owner === 'player' && !v.lease).reduce((sum, v) => sum + sellValue(v, state.hour), 0);
   const gear = state.depots.reduce((sum, d) => sum + stockValue(d.gear, state.gearCondition), 0);
   const inTransit = state.vehicles.filter(v => v.owner === 'player').reduce((sum, v) => sum + stockValue(v.cargo, state.gearCondition), 0);
   return Math.round(state.company.cash - state.company.loan + fleet + gear + inTransit + state.depots.length * 20000);

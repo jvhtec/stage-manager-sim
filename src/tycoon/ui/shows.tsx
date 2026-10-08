@@ -391,7 +391,7 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
           Events ({state.gigs.filter(g => g.event && !g.event.citywide && g.status === 'offer' && g.acceptByDay >= today).length})
         </button>
         <button className="tt-btn sm" data-on={tab === 'contracts'} onClick={() => setTab('contracts')}>
-          Contracts ({state.contracts.filter(c => c.status === 'active' || (c.status === 'offer' && c.acceptByDay >= today)).length})
+          Contracts ({state.contracts.filter(c => c.status === 'active' || (c.status === 'offer' && c.acceptByDay >= today)).length + state.deals.filter(d => d.status === 'offer' || d.status === 'active').length})
         </button>
         <button className="tt-btn sm" data-on={tab === 'booked'} onClick={() => setTab('booked')}>
           Booked ({booked.length})

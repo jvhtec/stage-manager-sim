@@ -5,9 +5,7 @@
 import {
   CREW_HIRE_COST,
   STAFF_HIRE_COST,
-  LOAN_STEP,
   DEPT_LABELS,
-  MAX_LOAN,
   getModel,
   tierInfo,
 } from './catalog';
@@ -35,11 +33,14 @@ import { tourMaxTier } from './tours';
 import { gigBookingBar, tourBookingBar } from './standing';
 import { getTech, techsActiveIn } from './content/techs';
 import { BID_LEVELS } from './events';
+import { borrowStep, creditLimit, leaseMonthly, leaseReturnPenalty } from './finance';
 import { absorbRival, takeoverBlocker } from './rivals';
 import { bookTransfer, canReceive, describeQuote, transferQuote } from './transfers';
-import { DEPTS, type ActionOutcome, type BidLevel, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
+import { AMBITIONS, rndBlocker, startProject } from './rnd';
+import { DEAL_YEARS } from './deals';
+import { DEPTS, type ActionOutcome, type BidLevel, type Dept, type RndAmbition, type Vehicle, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
 import { STAFF, canBaseVehicle, facilitySpec, nextUpgrade } from './facilities';
-import { mixFatigue } from './crew';
+import { NEW_HIRE_EXPERIENCE, STARTING_EXPERIENCE, mixFatigue } from './crew';
 import { BREAK_MONTHS, contractShortfall, installKit } from './contracts';
 import { addStock } from './loading';
 import { onBought, ownedStock, refurbishCost, resaleValue } from './wear';
@@ -159,9 +160,27 @@ export function buyVehicle(state: TycoonState, depotId: string, modelId: string)
   return ok(s, `Bought ${v.name} (${model.name}).`);
 }
 
+/** Lease a vehicle: no capital up front, a monthly bill instead. */
+export function leaseVehicle(state: TycoonState, depotId: string, modelId: string): ActionOutcome {
+  const depot = state.depots.find(d => d.id === depotId);
+  const model = getModel(modelId);
+  if (!depot) return fail(state, 'Unknown depot.');
+  if (!state.announcedModels.includes(modelId)) return fail(state, `${model.name} isn't available yet.`);
+  if (!canBaseVehicle(depot, model.kind)) return fail(state, 'A delegation can only base vans and crew buses.');
+  const monthly = leaseMonthly(modelId);
+  if (state.company.cash < monthly) return fail(state, `The first month's lease is ${formatMoney(state, monthly)}.`);
+  const s = cloneState(state);
+  const v = makeVehicle(s, modelId, depot.cityId);
+  v.lease = { monthly, sinceHour: s.hour };
+  s.vehicles.push(v);
+  book(s, 'leasing', -monthly);
+  return ok(s, `Leased ${v.name} (${model.name}) at ${formatMoney(s, monthly)}/month.`);
+}
+
 export function sellVehicle(state: TycoonState, vehicleId: string): ActionOutcome {
   const v0 = state.vehicles.find(v => v.id === vehicleId && v.owner === 'player');
   if (!v0) return fail(state, 'Unknown vehicle.');
+  if (v0.lease) return returnLeased(state, v0);
   if (v0.cityId !== v0.homeCityId || !(v0.status === 'parked' || v0.status === 'scheduled')) {
     return fail(state, 'Vehicles can only be sold while parked at their depot.');
   }
@@ -201,7 +220,7 @@ export function rehomeVehicle(state: TycoonState, vehicleId: string, depotId: st
 
 export function buyGear(state: TycoonState, depotId: string, productId: string, qty = 1): ActionOutcome {
   const product = getProduct(productId);
-  if (!state.announcedGear.includes(productId)) return fail(state, `${product.brand} ${product.name} isn't out yet.`);
+  if (!state.announcedGear.includes(productId) && !state.ownProducts.includes(productId)) return fail(state, `${product.brand} ${product.name} isn't out yet.`);
   const cost = product.price * qty;
   if (state.company.cash < cost) return fail(state, `Not enough cash (${formatMoney(state, cost)}).`);
   const d0 = state.depots.find(d => d.id === depotId);
@@ -252,6 +271,7 @@ export function hireCrew(state: TycoonState, depotId: string, qty = 1): ActionOu
   const depot = s.depots.find(d => d.id === depotId);
   if (!depot) return fail(state, 'Unknown depot.');
   depot.fatigue = mixFatigue(depot.crew, depot.fatigue ?? 0, qty, 0);
+  depot.experience = mixFatigue(depot.crew, depot.experience ?? STARTING_EXPERIENCE, qty, NEW_HIRE_EXPERIENCE);
   depot.crew += qty;
   book(s, 'wages', -cost);
   return ok(s);
@@ -333,16 +353,18 @@ export function fireStaff(state: TycoonState, depotId: string, role: StaffRole):
 }
 
 export function borrow(state: TycoonState): ActionOutcome {
-  if (state.company.loan + LOAN_STEP > MAX_LOAN) return fail(state, `The bank won't lend more than ${formatMoney(state, MAX_LOAN)}.`);
+  const limit = creditLimit(state);
+  const step = Math.min(borrowStep(state), limit - state.company.loan);
+  if (step <= 0) return fail(state, `The bank won't lend more than ${formatMoney(state, limit)} against what you own.`);
   const s = cloneState(state);
-  s.company.loan += LOAN_STEP;
-  s.company.cash += LOAN_STEP;
+  s.company.loan += step;
+  s.company.cash += step;
   return ok(s);
 }
 
 export function repay(state: TycoonState): ActionOutcome {
   if (state.company.loan <= 0) return fail(state, 'No loan to repay.');
-  const amount = Math.min(LOAN_STEP, state.company.loan);
+  const amount = Math.min(borrowStep(state), state.company.loan);
   if (state.company.cash < amount) return fail(state, 'Not enough cash.');
   const s = cloneState(state);
   s.company.loan -= amount;
@@ -462,4 +484,53 @@ export function buyRival(state: TycoonState, rivalId: string): ActionOutcome {
   const s = cloneState(state);
   const price = absorbRival(s, s.rivals.find(x => x.id === rivalId)!);
   return ok(s, `${r.name} is yours for ${formatMoney(s, price)}.`);
+}
+
+function returnLeased(state: TycoonState, v0: Vehicle): ActionOutcome {
+  if (v0.cityId !== v0.homeCityId || !(v0.status === 'parked' || v0.status === 'scheduled')) {
+    return fail(state, 'Leased vehicles go back from their depot.');
+  }
+  const penalty = leaseReturnPenalty(state, v0);
+  const s = cloneState(state);
+  const depot = depotInCity(s, v0.homeCityId);
+  if (depot) depot.crew += v0.crew;
+  s.vehicles = s.vehicles.filter(v => v.id !== v0.id);
+  s.techs = s.techs.map(t => (t.vehicleId === v0.id ? { techId: t.techId } : t));
+  if (penalty) book(s, 'leasing', -penalty);
+  return ok(s, penalty ? `${v0.name} handed back early — ${formatMoney(s, penalty)} penalty.` : `${v0.name} handed back at the end of its lease.`);
+}
+
+/** Fund an R&D project in a department. */
+export function startRnd(state: TycoonState, dept: Dept, ambition: RndAmbition): ActionOutcome {
+  const blocker = rndBlocker(state, dept);
+  if (blocker) return fail(state, blocker);
+  const s = cloneState(state);
+  startProject(s, dept, ambition);
+  const p = s.projects[s.projects.length - 1];
+  return ok(s, `${AMBITIONS[ambition].label} project started: ${formatMoney(s, p.budget)} over ${AMBITIONS[ambition].months} months.`);
+}
+
+export function cancelRnd(state: TycoonState, projectId: string): ActionOutcome {
+  const p0 = state.projects.find(p => p.id === projectId && p.status === 'running');
+  if (!p0) return fail(state, 'No such project running.');
+  const s = cloneState(state);
+  s.projects.find(p => p.id === projectId)!.status = 'failed';
+  return ok(s, 'Project shelved. What was spent is spent.');
+}
+
+/** Accept or decline an act's production deal. */
+export function answerDeal(state: TycoonState, dealId: string, accept: boolean): ActionOutcome {
+  const d0 = state.deals.find(d => d.id === dealId && d.status === 'offer');
+  if (!d0) return fail(state, 'That offer has lapsed.');
+  const s = cloneState(state);
+  const d = s.deals.find(x => x.id === dealId)!;
+  if (!accept) {
+    d.status = 'ended';
+    return ok(s, `You turned down ${d.act}.`);
+  }
+  d.status = 'active';
+  d.startDay = dayOf(s.hour);
+  d.endDay = d.startDay + DEAL_YEARS * 365;
+  pushNews(s, `${s.company.name} signs an exclusive production deal with ${d.act}.`, 'good');
+  return ok(s, `Signed with ${d.act}: their tours come to you for ${DEAL_YEARS} years.`);
 }

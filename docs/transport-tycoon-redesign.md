@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 83 tests):
+(`src/world/__tests__/*.test.ts`, 88 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -266,6 +266,22 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   reversion (big names floored at 20); at 0 a firm goes under and frees its lot. Buy a rival
   (price by reputation, size and health; you need reputation within 15 of theirs): their base,
   used era kit, crew and 6% of their reputation become yours.
+
+- **Finance** (`finance.ts`) — the credit line is 60k + half your assets + up to 150k for your
+  company rating (replacing the fixed cap; borrow in tenths of it). Lease vehicles at 2.5% of the
+  price per month (24-month term; handing back early costs two months).
+- **R&D** (`rnd.ts`) — needs reputation 40+ and a warehouse with 2+ prep staff. Refinement /
+  new flagship / breakthrough: +0.3 / +0.8 / +1.5 quality over the market's best, 9 / 15 / 24
+  months, 5 / 15 / 35% risk, cost from the flagship price. Success puts your own product in the
+  gear shop (encoded in its id, so saves need no registry) at 60% of market price, earns
+  reputation, and pays royalties monthly by your standing, fading over eight years.
+- **Production deals** (`deals.ts`) — acts with 3+ good shows together may offer a two-year
+  exclusive: a retainer (25% of a show fee per month), their tours come straight to you (rivals
+  don't bid) and more often. A lapsed tour or a bad night (<50%) is a strike; two and they walk
+  (relation reset, −3 reputation). One-year cooldown between offers.
+- **Crew experience** (`crew.ts`) — crews gain experience per show (more at big jobs), worth
+  0.85×–1.15× effectiveness; new hires start green and dilute it; training policy (courses /
+  academy) improves crew at base for a monthly fee per head.
 
 UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
 (workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the

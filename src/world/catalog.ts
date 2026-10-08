@@ -250,8 +250,6 @@ export function fuelPerTile(m: Pick<VehicleModel, 'kind' | 'gearCapacity'>): num
 
 /** Recruitment cost for a full-time staff member (facilities.ts has salaries). */
 export const STAFF_HIRE_COST = 600;
-export const LOAN_STEP = 10000;
-export const MAX_LOAN = 150000;
 export const NEGATIVE_MONTHS_GAME_OVER = 3;
 export const SERVICE_INTERVAL_DAYS = 45;
 export const SERVICE_HOURS = 8;

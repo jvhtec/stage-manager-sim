@@ -1,8 +1,8 @@
 import { setPolicy } from '@/world/actions';
 import { WORKSHOP, WORKSHOP_LEVELS, averageCondition, monthlyWorkshopCost, ownedStock } from '@/world/wear';
-import { Bar, FatigueChip, Stat } from './bits';
+import { Bar, ExperienceChip, FatigueChip, Stat } from './bits';
 import { CREW_WAGE_PER_DAY } from '@/world/catalog';
-import { FREELANCE_DAY_RATE, PAY, PAY_LEVELS, averageFatigue, moraleTarget } from '@/world/crew';
+import { FREELANCE_DAY_RATE, PAY, PAY_LEVELS, TRAINING, TRAINING_LEVELS, averageExperience, averageFatigue, moraleTarget } from '@/world/crew';
 import { ConditionChip } from './gear';
 import { SUBHIRE_DAY_RATE, rentOutMonthly } from '@/world/hire';
 import { INSURANCE, INSURANCE_LEVELS, insuredValue, monthlyPremium } from '@/world/incidents';
@@ -47,7 +47,7 @@ export function Choice<T extends string>({
 
 export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
-  const set = <K extends 'workshop' | 'pay' | 'insurance' | 'freelance' | 'subhire' | 'rentOut'>(key: K, value: (typeof state.policies)[K]) => ctx.dispatch(s => setPolicy(s, key, value));
+  const set = <K extends 'workshop' | 'pay' | 'insurance' | 'freelance' | 'subhire' | 'rentOut' | 'training'>(key: K, value: (typeof state.policies)[K]) => ctx.dispatch(s => setPolicy(s, key, value));
   const owned = ownedStock(state);
   return (
     <div>
@@ -95,6 +95,25 @@ export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
         Days on the road tire crews out (tours and festivals most) and tired crews build worse shows; they recover at home.
         Morale drifts each month towards what you pay, less how worn out everyone is. Good morale lifts every show; below 40,
         people start quitting.
+      </div>
+
+      <h4>Crew training</h4>
+      <Stat label="Crew experience">
+        <ExperienceChip value={averageExperience(state)} />
+      </Stat>
+      <Choice
+        value={state.policies.training}
+        options={TRAINING_LEVELS.map(id => ({
+          id,
+          label: TRAINING[id].label,
+          detail: TRAINING[id].blurb,
+          note: TRAINING[id].perCrewMonth ? `${money(TRAINING[id].perCrewMonth)}/crew/mo` : undefined,
+        }))}
+        onPick={id => set('training', id)}
+      />
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        Crews get better with every show (big ones teach more) and work up to 15% better when seasoned — new hires start green
+        and dilute it.
       </div>
 
       <h4>Local freelancers</h4>

@@ -1,6 +1,7 @@
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
-import { buildDepot, buyVehicle } from '@/world/actions';
+import { buildDepot, buyVehicle, leaseVehicle } from '@/world/actions';
+import { LEASE_TERM_MONTHS, leaseMonthly } from '@/world/finance';
 import { stockSize } from '@/world/loading';
 import { GearShop, WarehouseGear } from './gear';
 import {
@@ -314,6 +315,14 @@ export function DepotWindow({ ctx, depotId }: { ctx: WinCtx; depotId: string }) 
                     <Bar value={m.reliability} max={100} color="#4ade80" />
                   </div>
                 </div>
+                <button
+                  className="tt-btn sm"
+                  title={`Lease: no capital up front, ${money(leaseMonthly(id))} a month (${LEASE_TERM_MONTHS}-month term)`}
+                  disabled={state.company.cash < leaseMonthly(id) || !canBaseVehicle(depot, m.kind)}
+                  onClick={() => act(s => leaseVehicle(s, depot.id, id))}
+                >
+                  {money(leaseMonthly(id))}/mo
+                </button>
                 <button
                   className="tt-btn sm primary"
                   disabled={state.company.cash < m.price || !canBaseVehicle(depot, m.kind)}

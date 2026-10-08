@@ -7,6 +7,7 @@ import {
   Download,
   Ellipsis,
   FastForward,
+  FlaskConical,
   Headphones,
   Home,
   LogOut,
@@ -40,6 +41,7 @@ import { TourWindow } from './ui/tours';
 import { TalentWindow } from './ui/talent';
 import { MarketWindow } from './ui/market';
 import { PoliciesWindow } from './ui/policies';
+import { RndWindow } from './ui/rnd';
 import { FinanceWindow, GameOverPanel, HelpWindow, LeagueWindow, NewGameForm, NewsWindow } from './ui/company';
 import type { WinCtx, WindowKind } from './ui/types';
 import './tycoon.css';
@@ -223,6 +225,8 @@ export default function TycoonGame() {
         return 'Market';
       case 'policies':
         return 'Company policies';
+      case 'rnd':
+        return 'R&D';
       case 'help':
         return 'How to play';
       case 'menu':
@@ -264,6 +268,8 @@ export default function TycoonGame() {
         return <MarketWindow ctx={ctx} />;
       case 'policies':
         return <PoliciesWindow ctx={ctx} />;
+      case 'rnd':
+        return <RndWindow ctx={ctx} />;
       case 'help':
         return <HelpWindow />;
       case 'menu':
@@ -274,6 +280,9 @@ export default function TycoonGame() {
             </button>
             <button className="tt-btn" onClick={() => open('policies')}>
               <SlidersHorizontal /> Policies
+            </button>
+            <button className="tt-btn" onClick={() => open('rnd')}>
+              <FlaskConical /> R&D
             </button>
             <button className="tt-btn" onClick={() => open('talent')}>
               <Headphones /> Star techs
@@ -443,6 +452,9 @@ export default function TycoonGame() {
               </button>
               <button className="tt-btn" onClick={() => open('policies')} title="Company policies">
                 <SlidersHorizontal />
+              </button>
+              <button className="tt-btn" onClick={() => open('rnd')} title="R&D">
+                <FlaskConical />
               </button>
               <button className="tt-btn" onClick={() => open('talent')} title="Star techs">
                 <Headphones />

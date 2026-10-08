@@ -116,8 +116,38 @@ export const GEAR_PRODUCTS: GearProduct[] = [
 
 const byId = new Map(GEAR_PRODUCTS.map(p => [p.id, p]));
 
+/**
+ * Your own R&D products (rnd.ts) aren't in the catalogue: their specs are
+ * encoded in the id, so any save can describe them without a registry.
+ */
+const OWN = 'own|';
+
+export function ownProductId(p: Omit<GearProduct, 'id'>): string {
+  return [OWN.slice(0, -1), p.dept, p.kind, p.introYear, Math.round(p.quality * 10), p.price, encodeURIComponent(p.brand), encodeURIComponent(p.name)].join('|');
+}
+
+export const isOwnProduct = (id: string) => id.startsWith(OWN);
+
+function parseOwn(id: string): GearProduct {
+  const [, dept, kind, year, q10, price, brand, name] = id.split('|');
+  return {
+    id,
+    dept: dept as Dept,
+    kind: kind as GearKind,
+    introYear: Number(year),
+    quality: Number(q10) / 10,
+    price: Number(price),
+    brand: decodeURIComponent(brand),
+    name: decodeURIComponent(name),
+  };
+}
+
 export function getProduct(id: string): GearProduct {
-  const p = byId.get(id);
+  let p = byId.get(id);
+  if (!p && isOwnProduct(id)) {
+    p = parseOwn(id);
+    byId.set(id, p);
+  }
   if (!p) throw new Error(`Unknown gear product ${id}`);
   return p;
 }

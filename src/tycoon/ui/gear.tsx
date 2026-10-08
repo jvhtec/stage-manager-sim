@@ -4,7 +4,7 @@ import { describeQuote, transferQuote } from '@/world/transfers';
 import { worldOf } from '@/world/mapgen';
 import { condition, refurbishCost, resaleValue } from '@/world/wear';
 import { DEPT_LABELS } from '@/world/catalog';
-import { expectedQuality, getProduct } from '@/world/content/gear';
+import { expectedQuality, getProduct, isOwnProduct } from '@/world/content/gear';
 import { yearOf } from '@/world/core';
 import { deptTotals } from '@/world/loading';
 import { DEPTS, type Depot, type GearStock, type TycoonState } from '@/world/types';
@@ -175,7 +175,7 @@ export function GearShop({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
             <DeptDot dept={d} /> {DEPT_LABELS[d]}
           </h4>
           <div className="tt-list">
-            {state.announcedGear
+            {[...state.ownProducts, ...state.announcedGear]
               .map(getProduct)
               .filter(p => p.dept === d)
               .sort((a, b) => b.quality - a.quality)
@@ -188,7 +188,7 @@ export function GearShop({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
                       <span style={{ fontWeight: 700 }}>{p.name}</span>
                     </div>
                     <div className="tt-dim">
-                      Since {p.introYear}
+                      {isOwnProduct(p.id) ? '★ Your own design · ' : ''}Since {p.introYear}
                       {depot.gear[p.id] ? ` · you have ${depot.gear[p.id]}` : ''}
                     </div>
                   </div>

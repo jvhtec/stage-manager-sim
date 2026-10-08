@@ -33,6 +33,18 @@ export function FatigueChip({ value }: { value: number }) {
   );
 }
 
+/** Crew experience, 0-100: green → elite. */
+export function ExperienceChip({ value }: { value: number }) {
+  const v = Math.round(value);
+  const label = v < 25 ? 'green' : v < 50 ? 'capable' : v < 75 ? 'seasoned' : 'elite';
+  const color = v < 25 ? '#94a3b8' : v < 50 ? '#38bdf8' : v < 75 ? '#a855f7' : '#facc15';
+  return (
+    <span className="tt-chip" style={{ background: color }} title={`Experience ${v}/100 — seasoned crews build better shows`}>
+      {label}
+    </span>
+  );
+}
+
 export function DeptDot({ dept }: { dept: Dept }) {
   return (
     <span

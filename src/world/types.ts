@@ -111,6 +111,11 @@ export type LedgerCategory =
   | 'fuel'
   | 'subhire'
   | 'rental'
+  | 'leasing'
+  | 'rnd'
+  | 'royalties'
+  | 'deals'
+  | 'training'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -133,6 +138,11 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   fuel: 'Fuel',
   subhire: 'Sub-hired kit',
   rental: 'Kit rented out',
+  leasing: 'Vehicle leases',
+  rnd: 'R&D',
+  royalties: 'Design royalties',
+  deals: 'Production deals',
+  training: 'Crew training',
   sales: 'Asset sales',
 };
 
@@ -156,6 +166,8 @@ export interface Depot {
   crew: number;
   /** Average fatigue (0-100) of the crew resting here. */
   fatigue?: number;
+  /** Average experience (0-100) of the crew based here. */
+  experience?: number;
   builtHour: number;
 }
 
@@ -196,12 +208,30 @@ export interface Vehicle {
   crew: number;
   /** Average fatigue (0-100) of the crew aboard. */
   crewFatigue?: number;
+  /** Average experience (0-100) of the crew aboard. */
+  crewExperience?: number;
   arrivedHour?: number;
   profitThisYear: number;
   profitLastYear: number;
+  /** Leased rather than owned (finance.ts). */
+  lease?: { monthly: number; sinceHour: number };
 }
 
 export type BidLevel = 'sharp' | 'standard' | 'premium';
+export type RndAmbition = 'refine' | 'flagship' | 'breakthrough';
+
+/** An R&D project (rnd.ts). */
+export interface RndProject {
+  id: string;
+  dept: Dept;
+  ambition: RndAmbition;
+  budget: number;
+  monthsDone: number;
+  startedDay: number;
+  status: 'running' | 'done' | 'failed';
+  series: string;
+  productId?: string;
+}
 
 export type GigStatus = 'offer' | 'booked' | 'done' | 'failed' | 'expired' | 'rival';
 
@@ -343,6 +373,7 @@ export interface HiredTech {
 export type WorkshopLevel = 'none' | 'basic' | 'full';
 export type PayLevel = 'low' | 'standard' | 'high';
 export type InsuranceLevel = 'none' | 'basic' | 'full';
+export type TrainingLevel = 'none' | 'courses' | 'academy';
 
 /** Standing company policies — the levers you set once and live with. */
 export interface Policies {
@@ -355,6 +386,7 @@ export interface Policies {
   subhire: 'off' | 'fill';
   /** Rent idle kit out between jobs. */
   rentOut: 'off' | 'on';
+  training: TrainingLevel;
 }
 
 /** One year's record, for the company rating and the awards (awards.ts). */
@@ -409,6 +441,11 @@ export interface TycoonState {
   /** Product id → average condition (0-100) of the units you own; missing = 100. */
   gearCondition: Record<string, number>;
   contracts: VenueContract[];
+  projects: RndProject[];
+  /** Exclusive production deals with acts (deals.ts). */
+  deals: { id: string; act: string; tier: number; monthly: number; startDay: number; endDay: number; strikes: number; status: 'offer' | 'active' | 'ended'; offerExpires: number }[];
+  /** Your own products (encoded ids, see content/gear.ts ownProductId). */
+  ownProducts: string[];
   /** Rivals that went bust or were bought out — they don't come back. */
   goneRivals: string[];
   /** Kit on its way between your bases by courier (transfers.ts). */

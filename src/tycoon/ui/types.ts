@@ -17,6 +17,7 @@ export type WindowKind =
   | 'talent'
   | 'market'
   | 'policies'
+  | 'rnd'
   | 'help'
   | 'menu';
 

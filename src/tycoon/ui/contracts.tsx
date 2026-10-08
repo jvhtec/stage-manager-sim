@@ -1,4 +1,5 @@
-import { breakContract, signContract } from '@/world/actions';
+import { answerDeal, breakContract, signContract } from '@/world/actions';
+import { DEAL_RELATION, DEAL_YEARS, STRIKES_TO_WALK } from '@/world/deals';
 import { DEPT_LABELS, tierInfo } from '@/world/catalog';
 import { BREAK_MONTHS, contractShortfall } from '@/world/contracts';
 import { dayOf, formatDay } from '@/world/core';
@@ -81,11 +82,54 @@ export function ContractCard({ ctx, c }: { ctx: WinCtx; c: VenueContract }) {
 
 export function ContractList({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
+  const act = (fn: Parameters<WinCtx['dispatch']>[0]) => {
+    const r = ctx.dispatch(fn);
+    if (r.message) ctx.toast(r.message, r.ok);
+  };
   const today = dayOf(state.hour);
   const mine = state.contracts.filter(c => c.status === 'active');
   const open = state.contracts.filter(c => c.status === 'offer' && c.acceptByDay >= today).sort((a, b) => a.acceptByDay - b.acceptByDay);
+  const deals = state.deals.filter(d => d.status === 'offer' || d.status === 'active');
   return (
     <div>
+      <h4 style={{ marginTop: 0 }}>Artist production deals</h4>
+      <div className="tt-dim" style={{ whiteSpace: 'normal', marginBottom: 6 }}>
+        Do an act proud {DEAL_RELATION}+ times and they may offer you their production for {DEAL_YEARS} years: a retainer, and
+        their tours come straight to you. Let a tour lapse or give them a bad night and that's a strike — {STRIKES_TO_WALK} and they
+        walk.
+      </div>
+      <div className="tt-list">
+        {deals.map(d => (
+          <div key={d.id} className="tt-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 3 }}>
+            <div className="tt-row">
+              <b>♥ {d.act}</b>
+              <span>
+                <b>{money(d.monthly)}</b>/mo
+              </span>
+            </div>
+            {d.status === 'offer' ? (
+              <div className="tt-row">
+                <span className="tt-dim">Offer open {d.offerExpires - today}d</span>
+                <span style={{ display: 'flex', gap: 4 }}>
+                  <button className="tt-btn sm" onClick={() => act(s => answerDeal(s, d.id, false))}>
+                    Decline
+                  </button>
+                  <button className="tt-btn sm primary" onClick={() => act(s => answerDeal(s, d.id, true))}>
+                    Sign
+                  </button>
+                </span>
+              </div>
+            ) : (
+              <div className="tt-dim">
+                Exclusive until {formatDay(state, d.endDay)} · {d.strikes ? <span className="tt-bad">{d.strikes} strike</span> : 'no strikes'}
+              </div>
+            )}
+          </div>
+        ))}
+        {!deals.length && <div className="tt-dim">No acts have offered yet.</div>}
+      </div>
+
+      <h4>House contracts</h4>
       <div className="tt-dim" style={{ whiteSpace: 'normal', marginBottom: 6 }}>
         Venues tender a year as their house PA & lighting supplier. Sign one and the rig is installed from your warehouse in that
         town for the year, earning a monthly retainer. Shows at that venue run on the house rig — your trucks only bring the rest

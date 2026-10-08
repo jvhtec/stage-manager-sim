@@ -18,6 +18,7 @@ import { book, dateOfDay, dayOf, formatMoney, gigById, newId, pushNews, yearOf }
 import { actName, buildGig } from './offers';
 import { marketNow } from './market';
 import { recordTour } from './awards';
+import { activeDealFor, strike } from './deals';
 import { roadDistance } from './pathfinding';
 import type { Gig, OverseasStop, Tour, TycoonState, Venue, Vehicle, WorldMap } from './types';
 
@@ -40,7 +41,7 @@ function shuffled<T>(items: readonly T[], rng: Rng): T[] {
 function pickTourArtist(state: TycoonState, year: number, tier: number, rng: Rng, reachableOnly = false): Artist | null {
   const touring = artistsTouringAt(year, tier, state.country).filter(a => !reachableOnly || reachWeight(state, a.name) === 1);
   if (!touring.length) return null;
-  const weights = touring.map(a => (1 + (state.artistRelations[a.name] ?? 0) * 2) * homeWeight(a) * reachWeight(state, a.name));
+  const weights = touring.map(a => (1 + (state.artistRelations[a.name] ?? 0) * 2) * homeWeight(a) * reachWeight(state, a.name) * (activeDealFor(state, a.name) ? 4 : 1));
   let roll = rng.next() * weights.reduce((x, y) => x + y, 0);
   for (let i = 0; i < touring.length; i++) {
     roll -= weights[i];
@@ -234,8 +235,10 @@ export function dailyTours(state: TycoonState, world: WorldMap, rng: Rng) {
       if (tour.acceptByDay < today) {
         tour.status = 'expired';
         gigs.forEach(g => (g.status = 'expired'));
+        strike(state, tour.act, `you let their ${tour.kind === 'world' ? 'world ' : ''}tour go by`);
         return;
       }
+      if (activeDealFor(state, tour.act)) return; // their production is yours: no rival bids
       const maxTier = Math.max(...gigs.map(g => g.tier));
       const asked = gigs.some(g => g.asksForYou);
       const actBar = actReputationBar(state, tour.act, false);

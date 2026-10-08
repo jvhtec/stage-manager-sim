@@ -4,7 +4,7 @@ import { crewWage, PAY } from '@/world/crew';
 import { STAFF, STAFF_ROLES, facilitySpec, monthlyRent, nextUpgrade, prepRatio, salesBoost, usedCapacity } from '@/world/facilities';
 import { worldOf } from '@/world/mapgen';
 import type { Depot } from '@/world/types';
-import { Bar, FatigueChip, Stat } from './bits';
+import { Bar, ExperienceChip, FatigueChip, Stat } from './bits';
 import { kmoney, money } from './format';
 import type { WinCtx } from './types';
 import { BaseDiorama } from './scenes';
@@ -94,7 +94,11 @@ export function BaseOverview({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
       <div className="tt-item">
         <span className="grow">
           {depot.crew} based here <span className="tt-dim">· {money(crewWage(state))}/day each</span>{' '}
-          {depot.crew > 0 && <FatigueChip value={depot.fatigue ?? 0} />}
+          {depot.crew > 0 && (
+            <>
+              <FatigueChip value={depot.fatigue ?? 0} /> <ExperienceChip value={depot.experience ?? 30} />
+            </>
+          )}
         </span>
         <button className="tt-btn sm" onClick={() => act(s => fireCrew(s, depot.id))}>
           −
