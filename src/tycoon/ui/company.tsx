@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { borrow, repay } from '@/world/actions';
 import {
-  LOAN_INTEREST_PER_YEAR,
   LOAN_STEP,
   MAX_LOAN,
   START_YEARS,
@@ -13,6 +12,7 @@ import {
 import { formatHour, yearOf } from '@/world/core';
 import { worldOf } from '@/world/mapgen';
 import { companyValue } from '@/world/queries';
+import { describeLoanRate } from '@/world/market';
 import { suggestedHqCities } from '@/world/state';
 import { LEDGER_LABELS, type LedgerCategory, type TycoonState } from '@/world/types';
 import { createRandomSeed } from '@/lib/rng';
@@ -85,7 +85,7 @@ export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
         <b className={state.company.cash < 0 ? 'tt-bad' : ''}>{money(state.company.cash)}</b>
       </Stat>
       <Stat label="Loan">
-        {money(state.company.loan)} <span className="tt-dim">/ {money(MAX_LOAN)} @ {Math.round(LOAN_INTEREST_PER_YEAR * 100)}%</span>
+        {money(state.company.loan)} <span className="tt-dim">/ {money(MAX_LOAN)} @ {describeLoanRate(state)}</span>
       </Stat>
       <Stat label="Company value">{money(companyValue(state))}</Stat>
       <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>

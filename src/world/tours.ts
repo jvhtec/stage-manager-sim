@@ -16,6 +16,7 @@ import { artistsTouringAt, homeWeight, type Artist } from './content/artists';
 import { REGIONS } from './content/world';
 import { book, dateOfDay, dayOf, formatMoney, gigById, newId, pushNews } from './core';
 import { actName, buildGig } from './offers';
+import { marketNow } from './market';
 import { roadDistance } from './pathfinding';
 import type { Gig, OverseasStop, Tour, TycoonState, Venue, Vehicle, WorldMap } from './types';
 
@@ -213,12 +214,13 @@ function rivalTruck(state: TycoonState, rivalId: string, homeCityId: string, tie
 export function dailyTours(state: TycoonState, world: WorldMap, rng: Rng) {
   const today = dayOf(state.hour);
 
-  if (rng.chance(NATIONAL_TOUR_CHANCE)) {
+  const { demand, shutdown } = marketNow(state);
+  if (!shutdown && rng.chance(NATIONAL_TOUR_CHANCE * demand)) {
     const t = generateNationalTour(state, world, rng);
     if (t && canBookTour(state, t)) pushNews(state, `Tour offer: ${t.name} — ${t.gigIds.length} dates. Check Shows → Tours.`, 'big');
     else if (t) pushNews(state, `${t.name} announced — promoters want an established crew.`, 'info');
   }
-  if (rng.chance(WORLD_TOUR_CHANCE)) {
+  if (!shutdown && rng.chance(WORLD_TOUR_CHANCE * demand)) {
     const t = generateWorldTour(state, world, rng);
     if (t && canBookTour(state, t)) pushNews(state, `World tour up for grabs: ${t.name}. Check Shows → Tours.`, 'big');
     else if (t) pushNews(state, `${t.name} announced — the big firms are bidding.`, 'info');

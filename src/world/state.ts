@@ -13,6 +13,7 @@ import { updateRivals } from './sim';
 import { generateNationalTour } from './tours';
 import { getWorld } from './mapgen';
 import { generateOffer } from './offers';
+import { marketNow } from './market';
 import { roadDistance } from './pathfinding';
 import { DEPTS, type GearStock, type TycoonState, type Vehicle } from './types';
 
@@ -21,7 +22,10 @@ export const TYCOON_SAVE_KEY = 'stage-manager-sim:tycoon';
 // and rival specialties — v1 saves are discarded rather than half-migrated.
 // v3: warehouse lots (several per town), airports, tours.
 // v4: home country, audio consoles. v5: star techs, real populations.
-export const TYCOON_SAVE_VERSION = 5;
+// v6: market calendar, festivals, gear wear, crew fatigue, contracts, awards —
+// v5 saves are migrated by filling in the new fields.
+export const TYCOON_SAVE_VERSION = 6;
+const OLDEST_MIGRATABLE = 5;
 
 export interface NewGameOptions {
   companyName: string;
@@ -131,6 +135,7 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     ledger: {},
     announcedModels: VEHICLE_MODELS.filter(m => m.introYear <= startYear).map(m => m.id),
     announcedGear: productsAvailableIn(startYear).map(p => p.id),
+    announcedClimate: [],
     artistRelations: {},
     negativeMonths: 0,
     nextId: 0,
@@ -168,6 +173,12 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
   for (let i = 0; i < 6 && !state.tours.length; i++) generateNationalTour(state, world, rng, 1, true);
   state.rngState = rng.getState();
 
+  // The economy you're starting into.
+  marketNow(state).periods.forEach(p => {
+    state.announcedClimate.push(p.id);
+    state.news.push({ id: newId(state, 'news'), hour: state.hour, text: `${p.label}: ${p.news}`, tone: 'info' });
+  });
+
   state.news.push({
     id: newId(state, 'news'),
     hour: state.hour,
@@ -191,11 +202,18 @@ export function loadTycoonGame(): TycoonState | null {
     const raw = localStorage.getItem(TYCOON_SAVE_KEY);
     if (!raw) return null;
     const save = JSON.parse(raw);
-    if (save?.version !== TYCOON_SAVE_VERSION || !save.state?.company) return null;
-    return save.state as TycoonState;
+    if (!save?.state?.company || save.version > TYCOON_SAVE_VERSION || save.version < OLDEST_MIGRATABLE) return null;
+    return migrate(save.state);
   } catch {
     return null;
   }
+}
+
+/** Fills in fields added since the save was made (everything new defaults to "nothing yet"). */
+export function migrate(state: Partial<TycoonState>): TycoonState {
+  const s = state as TycoonState;
+  s.announcedClimate ??= [];
+  return s;
 }
 
 export function clearTycoonGame() {

@@ -15,6 +15,7 @@ export type WindowKind =
   | 'towns'
   | 'league'
   | 'talent'
+  | 'market'
   | 'help'
   | 'menu';
 

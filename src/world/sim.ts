@@ -12,7 +12,6 @@ import {
   CREW_WAGE_PER_DAY,
   DEPOT_UPKEEP_PER_MONTH,
   HOURS_PER_DAY,
-  LOAN_INTEREST_PER_YEAR,
   NEGATIVE_MONTHS_GAME_OVER,
   NO_SHOW_PENALTY_RATE,
   SERVICE_COST,
@@ -52,6 +51,7 @@ import { rivalsFor } from './content/companies';
 import { getTech, techBonus, techsActiveIn } from './content/techs';
 import { dailyOffers, pruneGigs, rivalsTakeOffers } from './offers';
 import { dailyTours } from './tours';
+import { dailyMarket, marketNow, monthlyInterest } from './market';
 import { getRegion } from './content/world';
 import { getCityPath } from './pathfinding';
 import { DEPTS, type GearStock, type Gig, type TycoonState, type Vehicle, type WorldMap } from './types';
@@ -427,7 +427,9 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   updateRivals(s, world, date.getUTCFullYear());
 
   // Running costs and wages land every day — idle trucks and idle crew cost money.
-  book(s, 'wages', -totalCrew(s) * CREW_WAGE_PER_DAY - s.techs.reduce((sum, t) => sum + getTech(t.techId).wagePerDay, 0));
+  const wages = totalCrew(s) * CREW_WAGE_PER_DAY + s.techs.reduce((sum, t) => sum + getTech(t.techId).wagePerDay, 0);
+  book(s, 'wages', -wages);
+  dailyMarket(s, wages);
   updateTechs(s, date.getUTCFullYear());
   s.vehicles.forEach(v => {
     if (v.owner !== 'player') return;
@@ -459,9 +461,12 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
 
 function monthlyTick(s: TycoonState) {
   book(s, 'property', -s.depots.length * DEPOT_UPKEEP_PER_MONTH);
-  if (s.company.loan > 0) book(s, 'interest', -Math.round((s.company.loan * LOAN_INTEREST_PER_YEAR) / 12));
+  if (s.company.loan > 0) book(s, 'interest', -monthlyInterest(s));
 
-  if (s.company.cash < 0) {
+  // During a shutdown the banks give everyone a repayment holiday.
+  if (s.company.cash < 0 && marketNow(s).shutdown) {
+    pushNews(s, 'Month closed in the red — the bank is giving the whole industry breathing room until venues reopen.', 'info');
+  } else if (s.company.cash < 0) {
     s.negativeMonths += 1;
     if (s.negativeMonths >= NEGATIVE_MONTHS_GAME_OVER) {
       s.gameOver = {

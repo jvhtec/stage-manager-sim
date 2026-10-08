@@ -101,6 +101,7 @@ export type LedgerCategory =
   | 'purchases'
   | 'interest'
   | 'freight'
+  | 'support'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -113,6 +114,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   purchases: 'New vehicles & gear',
   interest: 'Loan interest',
   freight: 'Air freight & flights',
+  support: 'Government support',
   sales: 'Asset sales',
 };
 
@@ -304,6 +306,8 @@ export interface TycoonState {
   announcedModels: string[];
   /** Gear product ids already announced as available. */
   announcedGear: string[];
+  /** Economy periods (content/economy.ts) already announced. */
+  announcedClimate: string[];
   /** Artist name → number of good shows you've done for them. */
   artistRelations: Record<string, number>;
   negativeMonths: number;

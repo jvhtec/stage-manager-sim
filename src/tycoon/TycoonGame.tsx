@@ -14,6 +14,7 @@ import {
   Newspaper,
   Pause,
   Play,
+  TrendingUp,
   Trophy,
   Truck,
   Wallet,
@@ -36,6 +37,7 @@ import { VehicleListWindow, VehicleWindow } from './ui/fleet';
 import { GigWindow, ShowsWindow } from './ui/shows';
 import { TourWindow } from './ui/tours';
 import { TalentWindow } from './ui/talent';
+import { MarketWindow } from './ui/market';
 import { FinanceWindow, GameOverPanel, HelpWindow, LeagueWindow, NewGameForm, NewsWindow } from './ui/company';
 import type { WinCtx, WindowKind } from './ui/types';
 import './tycoon.css';
@@ -215,6 +217,8 @@ export default function TycoonGame() {
         return 'Company league';
       case 'talent':
         return 'Star techs';
+      case 'market':
+        return 'Market';
       case 'help':
         return 'How to play';
       case 'menu':
@@ -252,11 +256,16 @@ export default function TycoonGame() {
         return <LeagueWindow ctx={ctx} />;
       case 'talent':
         return <TalentWindow ctx={ctx} />;
+      case 'market':
+        return <MarketWindow ctx={ctx} />;
       case 'help':
         return <HelpWindow />;
       case 'menu':
         return (
           <div className="tt-menu">
+            <button className="tt-btn" onClick={() => open('market')}>
+              <TrendingUp /> Market
+            </button>
             <button className="tt-btn" onClick={() => open('talent')}>
               <Headphones /> Star techs
             </button>
@@ -419,6 +428,9 @@ export default function TycoonGame() {
               </button>
               <button className="tt-btn" onClick={() => open('finance')} title="Finances">
                 <Wallet /> <span className="tt-label">Finances</span>
+              </button>
+              <button className="tt-btn" onClick={() => open('market')} title="Market">
+                <TrendingUp />
               </button>
               <button className="tt-btn" onClick={() => open('talent')} title="Star techs">
                 <Headphones />

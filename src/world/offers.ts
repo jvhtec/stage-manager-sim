@@ -10,6 +10,7 @@ import { artistsTouringAt, homeWeight } from './content/artists';
 import { expectedQuality, productsAvailableIn } from './content/gear';
 import { roadDistance } from './pathfinding';
 import { actReputationBar, reachWeight } from './standing';
+import { marketNow, marketOnDay } from './market';
 import type { City, CitySize, DeptCounts, Gig, Rider, TycoonState, Vehicle, Venue, WorldMap } from './types';
 import { DEPTS } from './types';
 
@@ -47,6 +48,7 @@ export function generateOffer(
 
   const today = dayOf(state.hour);
   const day = today + rng.nextRange(minLeadDays, minLeadDays + 14);
+  if (marketOnDay(state, day).shutdown) return null;
   const year = dateOfDay(state, day).getUTCFullYear();
   const { act, real } = pickAct(state, venue.tier, year, rng);
   const gig = buildGig(state, rng, { venue, day, act, real });
@@ -93,7 +95,7 @@ export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
   const star = spec.real ? 1.15 : 1;
   const loyalty = asksForYou ? 1.1 : 1;
   const fee =
-    Math.round((info.baseFee * (0.85 + rng.next() * 0.4) * (0.9 + rating / 500) * star * loyalty * (spec.feeMultiplier ?? 1)) / 50) * 50;
+    Math.round((info.baseFee * marketOnDay(state, spec.day).fees * (0.85 + rng.next() * 0.4) * (0.9 + rating / 500) * star * loyalty * (spec.feeMultiplier ?? 1)) / 50) * 50;
 
   return {
     id: newId(state, 'gig'),
@@ -146,8 +148,9 @@ function pickRider(needs: DeptCounts, tier: number, year: number, rng: Rng): Rid
 const OFFER_RATE: Record<CitySize, number> = { village: 0.05, town: 0.075, city: 0.15, metropolis: 0.36 };
 
 export function dailyOffers(state: TycoonState, world: WorldMap, rng: Rng) {
+  const { demand } = marketNow(state);
   world.cities.forEach(city => {
-    const chance = OFFER_RATE[city.size];
+    const chance = OFFER_RATE[city.size] * demand;
     if (rng.chance(chance)) {
       const gig = generateOffer(state, world, city, rng);
       if (gig) state.gigs.push(gig);

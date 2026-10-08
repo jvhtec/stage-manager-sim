@@ -243,7 +243,6 @@ export const DEPOT_BUILD_COST = 35000;
 export const DEPOT_UPKEEP_PER_MONTH = 900;
 export const LOAN_STEP = 10000;
 export const MAX_LOAN = 150000;
-export const LOAN_INTEREST_PER_YEAR = 0.07;
 export const NEGATIVE_MONTHS_GAME_OVER = 3;
 export const SERVICE_INTERVAL_DAYS = 45;
 export const SERVICE_HOURS = 8;
