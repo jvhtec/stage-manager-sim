@@ -12,6 +12,7 @@ import {
 import { formatHour, yearOf } from '@/world/core';
 import { worldOf } from '@/world/mapgen';
 import { companyValue } from '@/world/queries';
+import { awardsName, companyRating, rivalRating } from '@/world/awards';
 import { describeLoanRate } from '@/world/market';
 import { suggestedHqCities } from '@/world/state';
 import { LEDGER_LABELS, type LedgerCategory, type TycoonState } from '@/world/types';
@@ -331,6 +332,8 @@ export function GameOverPanel({ state, onRestart }: { state: TycoonState; onRest
 export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
   const world = worldOf(state);
+  const year = yearOf(state, state.hour);
+  const rating = companyRating(state, year);
   const rows = [
     {
       id: 'player',
@@ -338,6 +341,7 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
       color: state.company.color,
       reputation: state.company.reputation,
       shows: state.stats.showsPlayed,
+      rating: rating.total,
       base: world.cityById.get(state.company.hqCityId)?.name,
       note: 'You',
     },
@@ -347,16 +351,18 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
       color: r.color,
       reputation: r.reputation,
       shows: r.showsPlayed,
+      rating: rivalRating(r.reputation, r.showsPlayed + year),
       base: world.cityById.get(r.hqCityId)?.name,
       note: `${r.specialty} · ${tierInfo(r.minTier).label}${r.maxTier !== r.minTier ? `–${tierInfo(r.maxTier).label}` : ''}`,
     })),
-  ].sort((a, b) => b.reputation - a.reputation);
+  ].sort((a, b) => b.rating - a.rating);
   return (
     <div>
       <table className="tt-table">
         <thead>
           <tr>
             <th>Company</th>
+            <th>Rating</th>
             <th>Rep</th>
             <th>Shows</th>
           </tr>
@@ -373,6 +379,9 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
                   {r.base} · {r.note}
                 </div>
               </td>
+              <td>
+                <b>{r.rating}</b>
+              </td>
               <td>{Math.round(r.reputation)}</td>
               <td>{r.shows}</td>
             </tr>
@@ -382,6 +391,35 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
       <div className="tt-dim" style={{ marginTop: 6, whiteSpace: 'normal' }}>
         Rivals chase the venue sizes they specialise in, and new firms set up as the years go by.
       </div>
+      <h4>Your rating, {year} so far</h4>
+      {rating.parts.map(p => (
+        <div key={p.label} className="tt-row">
+          <span className="tt-dim" style={{ minWidth: 120 }}>
+            {p.label}
+          </span>
+          <Bar value={p.points} max={p.max} color={state.company.color} />
+          <span style={{ minWidth: 60, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+            {p.points}/{p.max}
+          </span>
+        </div>
+      ))}
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        The {awardsName(state.country, year + 1)} are handed out every January for the year just gone: beat every rival's rating
+        for Production Company of the Year; there are prizes for festivals, touring and newcomers too.
+      </div>
+      <h4>Trophy cabinet</h4>
+      {state.awards.length ? (
+        <div className="tt-list">
+          {[...state.awards].reverse().map((a, i) => (
+            <div key={i} className="tt-row">
+              <span>🏆 {a.title}</span>
+              <span className="tt-dim">{a.year}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="tt-dim">Empty — for now.</div>
+      )}
     </div>
   );
 }

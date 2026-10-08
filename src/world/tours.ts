@@ -14,9 +14,10 @@ import { getModel } from './catalog';
 import { actReputationBar, reachWeight, tourBookingBar } from './standing';
 import { artistsTouringAt, homeWeight, type Artist } from './content/artists';
 import { REGIONS } from './content/world';
-import { book, dateOfDay, dayOf, formatMoney, gigById, newId, pushNews } from './core';
+import { book, dateOfDay, dayOf, formatMoney, gigById, newId, pushNews, yearOf } from './core';
 import { actName, buildGig } from './offers';
 import { marketNow } from './market';
+import { recordTour } from './awards';
 import { roadDistance } from './pathfinding';
 import type { Gig, OverseasStop, Tour, TycoonState, Venue, Vehicle, WorldMap } from './types';
 
@@ -257,6 +258,7 @@ export function dailyTours(state: TycoonState, world: WorldMap, rng: Rng) {
     if (tour.status !== 'booked' || gigs.some(g => g.status === 'booked')) return;
     if (gigs.every(g => g.status === 'done')) {
       tour.status = 'done';
+      recordTour(state, yearOf(state, state.hour), tour.kind === 'world');
       book(state, 'shows', tour.bonus);
       state.artistRelations[tour.act] = (state.artistRelations[tour.act] ?? 0) + 2;
       state.company.reputation = Math.min(100, state.company.reputation + (tour.kind === 'world' ? 3 : 1.5));

@@ -318,6 +318,17 @@ export interface Policies {
   insurance: InsuranceLevel;
 }
 
+/** One year's record, for the company rating and the awards (awards.ts). */
+export interface YearStats {
+  shows: number;
+  failed: number;
+  qualitySum: number;
+  festivals: number;
+  festivalQualitySum: number;
+  tours: number;
+  worldTours: number;
+}
+
 export interface Company {
   name: string;
   color: string;
@@ -357,6 +368,8 @@ export interface TycoonState {
   /** Product id → average condition (0-100) of the units you own; missing = 100. */
   gearCondition: Record<string, number>;
   contracts: VenueContract[];
+  yearStats: Record<number, YearStats>;
+  awards: { year: number; title: string }[];
   /** Festival tenders already opened, as "festivalId-year". */
   festivalsPosted: string[];
   /** Economy periods (content/economy.ts) already announced. */

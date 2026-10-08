@@ -53,6 +53,7 @@ import { getTech, techBonus, techsActiveIn } from './content/techs';
 import { dailyOffers, pruneGigs, rivalsTakeOffers } from './offers';
 import { dailyTours } from './tours';
 import { dailyFestivals } from './festivals';
+import { awardsNight, recordShow } from './awards';
 import { dailyIncidents, monthlyInsurance, rollWeather } from './incidents';
 import { dailyContracts, houseRigAt, monthlyContracts } from './contracts';
 import { dailyMarket, marketNow, monthlyInterest } from './market';
@@ -391,6 +392,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     s.company.reputation = Math.max(0, s.company.reputation - 4 * tw);
     s.cityRatings[gig.cityId] = Math.max(0, rating - 20);
     s.stats.showsFailed += 1;
+    recordShow(s, yearOf(s, s.hour), quality, true, !!gig.festival);
     pushNews(
       s,
       onSite.length
@@ -425,6 +427,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   s.company.reputation = reputationAfterShow(s.company.reputation, gig.tier, quality);
   s.cityRatings[gig.cityId] = Math.max(0, Math.min(100, rating + (quality - 0.5) * 30));
   s.stats.showsPlayed += 1;
+  recordShow(s, yearOf(s, s.hour), quality, false, !!gig.festival);
   const verdict = quality >= 0.9 ? 'Storming show' : quality >= 0.7 ? 'Solid show' : 'Rough show';
   const riderNote = gear.riderMet === undefined ? '' : gear.riderMet ? ` Rider (${gig.rider!.brand}) honoured.` : ` They wanted ${gig.rider!.brand} and didn't get it.`;
   const kitNote = gear.quality < 0.8 ? ' Reviewers called the kit dated.' : '';
@@ -449,6 +452,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
       v.profitThisYear = 0;
     });
     pushNews(s, `It's ${date.getUTCFullYear()}. Last year's books are closed — check the finances.`, 'info');
+    if (s.hour > HOURS_PER_DAY) awardsNight(s, date.getUTCFullYear() - 1);
   }
   announceModels(s, date.getUTCFullYear());
   announceGear(s, date.getUTCFullYear());

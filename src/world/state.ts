@@ -142,6 +142,8 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     gearCondition: {},
     festivalsPosted: [],
     contracts: [],
+    yearStats: {},
+    awards: [],
     announcedClimate: [],
     artistRelations: {},
     negativeMonths: 0,
@@ -225,6 +227,8 @@ export function migrate(state: Partial<TycoonState>): TycoonState {
   s.gearCondition ??= {};
   s.crewMorale ??= 65;
   s.contracts ??= [];
+  s.yearStats ??= {};
+  s.awards ??= [];
   return s;
 }
 

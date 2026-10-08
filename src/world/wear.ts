@@ -25,8 +25,8 @@ export interface WorkshopInfo {
 
 export const WORKSHOP: Record<WorkshopLevel, WorkshopInfo> = {
   none: { label: 'None', monthlyRate: 0, repairPerDay: 0, cap: 0, blurb: 'No running cost. Gear only gets fixed when you pay to refurbish it.' },
-  basic: { label: 'Basic', monthlyRate: 0.006, repairPerDay: 0.15, cap: 80, blurb: 'A tech and a bench: keeps kit serviceable, never like new.' },
-  full: { label: 'Full workshop', monthlyRate: 0.015, repairPerDay: 0.4, cap: 100, blurb: 'Dedicated techs: kit goes out in as-new condition.' },
+  basic: { label: 'Basic', monthlyRate: 0.008, repairPerDay: 0.15, cap: 80, blurb: 'A tech and a bench: keeps kit serviceable, never like new.' },
+  full: { label: 'Full workshop', monthlyRate: 0.022, repairPerDay: 0.4, cap: 100, blurb: 'Dedicated techs: kit goes out in as-new condition.' },
 };
 export const WORKSHOP_LEVELS: WorkshopLevel[] = ['none', 'basic', 'full'];
 
