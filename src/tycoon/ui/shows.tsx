@@ -206,6 +206,12 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
                   {Math.round(projection.prep * 100)}%
                 </span>
               </Stat>
+              {projection.subhire.units > 0 && (
+                <Stat label="Sub-hire">
+                  {projection.subhire.units} unit{projection.subhire.units > 1 ? 's' : ''} · {money(projection.subhire.cost)}{' '}
+                  <span className="tt-dim">from {projection.subhire.from.join(' / ')}</span>
+                </Stat>
+              )}
               {projection.freelance.count > 0 && (
                 <Stat label="Local freelancers">
                   +{projection.freelance.count} · {money(projection.freelance.cost)}
@@ -221,6 +227,7 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
                       <span className="tt-dim">
                         fuel {money(c.fuel)} · {c.nights} night{c.nights === 1 ? '' : 's'} away {money(c.travel)}
                         {c.freelance ? ` · freelancers ${money(c.freelance)}` : ''}
+                        {c.subhire ? ` · sub-hire ${money(c.subhire)}` : ''}
                       </span>
                     </Stat>
                     <Stat label="Margin (est.)">

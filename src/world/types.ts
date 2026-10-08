@@ -109,6 +109,8 @@ export type LedgerCategory =
   | 'freelance'
   | 'travel'
   | 'fuel'
+  | 'subhire'
+  | 'rental'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -129,6 +131,8 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   freelance: 'Freelance crew',
   travel: 'Per diems & hotels',
   fuel: 'Fuel',
+  subhire: 'Sub-hired kit',
+  rental: 'Kit rented out',
   sales: 'Asset sales',
 };
 
@@ -311,6 +315,10 @@ export interface Rival {
   lot: number;
   reputation: number;
   showsPlayed: number;
+  /** Financial health 0-100 (rivals.ts); at 0 they go under. */
+  health?: number;
+  /** showsPlayed at the last monthly check. */
+  lastShows?: number;
 }
 
 export type NewsTone = 'info' | 'good' | 'bad' | 'big';
@@ -343,6 +351,10 @@ export interface Policies {
   insurance: InsuranceLevel;
   /** Fill crew gaps with local freelancers at the venue. */
   freelance: 'off' | 'fill';
+  /** Fill kit gaps by sub-hiring from rivals nearby. */
+  subhire: 'off' | 'fill';
+  /** Rent idle kit out between jobs. */
+  rentOut: 'off' | 'on';
 }
 
 /** One year's record, for the company rating and the awards (awards.ts). */
@@ -397,6 +409,10 @@ export interface TycoonState {
   /** Product id → average condition (0-100) of the units you own; missing = 100. */
   gearCondition: Record<string, number>;
   contracts: VenueContract[];
+  /** Rivals that went bust or were bought out — they don't come back. */
+  goneRivals: string[];
+  /** Kit on its way between your bases by courier (transfers.ts). */
+  transfers: { id: string; fromDepotId: string; toDepotId: string; stock: GearStock; arriveHour: number }[];
   yearStats: Record<number, YearStats>;
   awards: { year: number; title: string }[];
   /** Special-event tenders already opened, as "eventId-year". */

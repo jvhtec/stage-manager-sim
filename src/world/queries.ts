@@ -5,6 +5,7 @@ import { techBonus } from './content/techs';
 import { houseRigAt } from './contracts';
 import { freelancersFor, type FreelanceHire } from './crew';
 import { prepRatio } from './facilities';
+import { subHireFor, type SubHire } from './hire';
 import { crewEffectiveness, effectiveCrew, moraleBonus } from './crew';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize, type GearEvaluation } from './loading';
 import {
@@ -87,6 +88,8 @@ export interface CoverageProjection {
   freelance: FreelanceHire;
   /** How well-prepped the kit going out is (0-1). */
   prep: number;
+  /** Kit you'd sub-hire from rivals to fill the gaps. */
+  subhire: SubHire;
 }
 
 /** What would turn up at `gig` if things go to plan — runs the sim's own loading and scoring. */
@@ -122,7 +125,10 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
     depot.crew -= seats;
   });
 
-  const evaluation = evaluateGear(delivered, gig, dateOfDay(state, gig.day).getUTCFullYear(), state.gearCondition);
+  const subhire = vehicles.length ? subHireFor(state, worldOf(state), gig, delivered) : { stock: {}, units: 0, cost: 0, from: [] };
+  const withHire: GearStock = { ...delivered };
+  addStock(withHire, subhire.stock);
+  const evaluation = evaluateGear(withHire, gig, dateOfDay(state, gig.day).getUTCFullYear(), state.gearCondition);
   const freelance = vehicles.length ? freelancersFor(state, worldOf(state), gig, crew) : { count: 0, cost: 0, effectiveness: 0, local: false };
   effCrew += freelance.count * freelance.effectiveness;
   // Prep is judged on the bases the trucks come from (loaded or not).
@@ -145,7 +151,7 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
         bonus: techBonus(techIds, gig.act) + moraleBonus(state.crewMorale),
       })
     : 0;
-  return { gear: evaluation.delivered, crew, latestArrival, onTime, vehicles, evaluation, expectedQuality, techIds, delivered, freelance, prep };
+  return { gear: evaluation.delivered, crew, latestArrival, onTime, vehicles, evaluation, expectedQuality, techIds, delivered, freelance, prep, subhire };
 }
 
 /** What a pile of kit would fetch, given its condition. */
@@ -170,6 +176,7 @@ export interface JobCosts {
   fuel: number;
   travel: number;
   freelance: number;
+  subhire: number;
   total: number;
   nights: number;
 }
@@ -197,5 +204,6 @@ export function estimateJobCosts(state: TycoonState, gig: Gig, projection = proj
     travel += away * crew * (PER_DIEM + (model.kind === 'bus' ? 0 : HOTEL_NIGHT));
   });
   const freelance = projection.freelance.cost;
-  return { fuel: Math.round(fuel), travel: Math.round(travel), freelance, total: Math.round(fuel + travel + freelance), nights };
+  const subhire = projection.subhire.cost;
+  return { fuel: Math.round(fuel), travel: Math.round(travel), freelance, subhire, total: Math.round(fuel + travel + freelance + subhire), nights };
 }

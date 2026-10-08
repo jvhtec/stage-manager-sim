@@ -35,8 +35,10 @@ import { tourMaxTier } from './tours';
 import { gigBookingBar, tourBookingBar } from './standing';
 import { getTech, techsActiveIn } from './content/techs';
 import { BID_LEVELS } from './events';
+import { absorbRival, takeoverBlocker } from './rivals';
+import { bookTransfer, canReceive, describeQuote, transferQuote } from './transfers';
 import { DEPTS, type ActionOutcome, type BidLevel, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
-import { STAFF, canBaseVehicle, facilitySpec, nextUpgrade, usedCapacity } from './facilities';
+import { STAFF, canBaseVehicle, facilitySpec, nextUpgrade } from './facilities';
 import { mixFatigue } from './crew';
 import { BREAK_MONTHS, contractShortfall, installKit } from './contracts';
 import { addStock } from './loading';
@@ -205,7 +207,7 @@ export function buyGear(state: TycoonState, depotId: string, productId: string, 
   const d0 = state.depots.find(d => d.id === depotId);
   if (!d0) return fail(state, 'Unknown depot.');
   const spec = facilitySpec(d0);
-  if (usedCapacity(state, d0) + qty > spec.capacity) return fail(state, `The ${spec.label.toLowerCase()} is full (${spec.capacity} units). Sell some kit, or upgrade.`);
+  if (!canReceive(state, d0, qty)) return fail(state, `The ${spec.label.toLowerCase()} is full (${spec.capacity} units). Sell some kit, or upgrade.`);
   const s = cloneState(state);
   const depot = s.depots.find(d => d.id === depotId)!;
   depot.gear[productId] = (depot.gear[productId] ?? 0) + qty;
@@ -428,4 +430,36 @@ export function bidEvent(state: TycoonState, gigId: string, level: BidLevel | nu
   if (level) g.bid = level;
   else delete g.bid;
   return ok(s, level ? `${BID_LEVELS[level].label} bid in for the ${DEPT_LABELS[gig.event.lot].toLowerCase()} at ${gig.event.name} — decided ${formatDay(s, gig.acceptByDay + 1)}.` : 'Bid withdrawn.');
+}
+
+/** Send units of a product line from one base to another by courier. */
+export function transferGear(state: TycoonState, fromDepotId: string, toDepotId: string, productId: string, qty = 1): ActionOutcome {
+  const from = state.depots.find(d => d.id === fromDepotId);
+  const to = state.depots.find(d => d.id === toDepotId);
+  if (!from || !to || from === to) return fail(state, 'Pick two different bases.');
+  const have = from.gear[productId] ?? 0;
+  if (have < 1) return fail(state, 'None of that on the racks here.');
+  const n = Math.min(qty, have);
+  if (!canReceive(state, to, n)) return fail(state, `The ${facilitySpec(to).label.toLowerCase()} there has no room for it.`);
+  const quote = transferQuote(state, from, to, n);
+  if (!Number.isFinite(quote.cost)) return fail(state, 'No road between those bases.');
+  if (state.company.cash < quote.cost) return fail(state, `The courier wants ${formatMoney(state, quote.cost)}.`);
+  const s = cloneState(state);
+  const src = s.depots.find(d => d.id === fromDepotId)!;
+  src.gear[productId] -= n;
+  if (!src.gear[productId]) delete src.gear[productId];
+  s.transfers.push({ id: newId(s, 'tx'), fromDepotId, toDepotId, stock: { [productId]: n }, arriveHour: s.hour + quote.hours });
+  bookTransfer(s, quote.cost);
+  return ok(s, `${n}× ${getProduct(productId).name} on the way (${describeQuote(s, quote)}).`);
+}
+
+/** Buy a rival outright (TT-style): their base, kit and crew become yours. */
+export function buyRival(state: TycoonState, rivalId: string): ActionOutcome {
+  const r = state.rivals.find(x => x.id === rivalId);
+  if (!r) return fail(state, 'That firm is no longer trading.');
+  const blocker = takeoverBlocker(state, r);
+  if (blocker) return fail(state, blocker);
+  const s = cloneState(state);
+  const price = absorbRival(s, s.rivals.find(x => x.id === rivalId)!);
+  return ok(s, `${r.name} is yours for ${formatMoney(s, price)}.`);
 }

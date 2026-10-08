@@ -27,7 +27,7 @@ export const TYCOON_SAVE_KEY = 'stage-manager-sim:tycoon';
 export const TYCOON_SAVE_VERSION = 6;
 const OLDEST_MIGRATABLE = 5;
 
-export const DEFAULT_POLICIES: Policies = { workshop: 'basic', pay: 'standard', insurance: 'none', freelance: 'fill' };
+export const DEFAULT_POLICIES: Policies = { workshop: 'basic', pay: 'standard', insurance: 'none', freelance: 'fill', subhire: 'fill', rentOut: 'off' };
 
 export interface NewGameOptions {
   companyName: string;
@@ -143,6 +143,8 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     festivalsPosted: [],
     eventsPosted: [],
     contracts: [],
+    goneRivals: [],
+    transfers: [],
     yearStats: {},
     awards: [],
     announcedClimate: [],
@@ -233,6 +235,8 @@ export function migrate(state: Partial<TycoonState>): TycoonState {
   s.gearCondition ??= {};
   s.crewMorale ??= 65;
   s.contracts ??= [];
+  s.goneRivals ??= [];
+  s.transfers ??= [];
   s.depots.forEach(d => {
     d.kind ??= 'warehouse';
     d.size ??= 1;

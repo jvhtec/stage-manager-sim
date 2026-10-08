@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { borrow, repay } from '@/world/actions';
+import { borrow, buyRival, repay } from '@/world/actions';
+import { rivalHealth, takeoverBlocker, takeoverPrice } from '@/world/rivals';
 import {
   LOAN_STEP,
   MAX_LOAN,
@@ -28,7 +29,7 @@ function guessCountry(): CountryCode {
 }
 import { Bar, Stat } from './bits';
 import { BrandBadge } from './brands';
-import { formatPopulation, money } from './format';
+import { formatPopulation, kmoney, money } from './format';
 import type { WinCtx } from './types';
 
 export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
@@ -376,6 +377,7 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
       reputation: r.reputation,
       shows: r.showsPlayed,
       rating: rivalRating(r.reputation, r.showsPlayed + year),
+      rival: r,
       base: world.cityById.get(r.hqCityId)?.name,
       note: `${r.specialty} · ${tierInfo(r.minTier).label}${r.maxTier !== r.minTier ? `–${tierInfo(r.maxTier).label}` : ''}`,
     })),
@@ -402,6 +404,26 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
                 <div className="tt-dim" style={{ fontSize: 11, paddingLeft: 30 }}>
                   {r.base} · {r.note}
                 </div>
+                {'rival' in r && r.rival && (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', paddingLeft: 30, marginTop: 2 }}>
+                    <span className="tt-dim" style={{ fontSize: 11 }}>
+                      Finances
+                    </span>
+                    <Bar value={rivalHealth(r.rival)} max={100} color={rivalHealth(r.rival) < 25 ? '#ef4444' : rivalHealth(r.rival) < 50 ? '#f59e0b' : '#22c55e'} />
+                    <button
+                      className="tt-btn sm"
+                      title={takeoverBlocker(state, r.rival) ?? `Buy ${r.name}: their base, kit and crew`}
+                      disabled={!!takeoverBlocker(state, r.rival)}
+                      onClick={() => {
+                        const rv = r.rival!;
+                        const res = ctx.dispatch(s => buyRival(s, rv.id));
+                        if (res.message) ctx.toast(res.message, res.ok);
+                      }}
+                    >
+                      Buy {kmoney(takeoverPrice(r.rival))}
+                    </button>
+                  </div>
+                )}
               </td>
               <td>
                 <b>{r.rating}</b>

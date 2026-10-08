@@ -4,6 +4,7 @@ import { Bar, FatigueChip, Stat } from './bits';
 import { CREW_WAGE_PER_DAY } from '@/world/catalog';
 import { FREELANCE_DAY_RATE, PAY, PAY_LEVELS, averageFatigue, moraleTarget } from '@/world/crew';
 import { ConditionChip } from './gear';
+import { SUBHIRE_DAY_RATE, rentOutMonthly } from '@/world/hire';
 import { INSURANCE, INSURANCE_LEVELS, insuredValue, monthlyPremium } from '@/world/incidents';
 import { money } from './format';
 import type { WinCtx } from './types';
@@ -46,7 +47,7 @@ export function Choice<T extends string>({
 
 export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
-  const set = <K extends 'workshop' | 'pay' | 'insurance' | 'freelance'>(key: K, value: (typeof state.policies)[K]) => ctx.dispatch(s => setPolicy(s, key, value));
+  const set = <K extends 'workshop' | 'pay' | 'insurance' | 'freelance' | 'subhire' | 'rentOut'>(key: K, value: (typeof state.policies)[K]) => ctx.dispatch(s => setPolicy(s, key, value));
   const owned = ownedStock(state);
   return (
     <div>
@@ -109,6 +110,35 @@ export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
           { id: 'off' as const, label: 'Own crew only', detail: 'Never hire in: short-handed shows play short.' },
         ]}
         onPick={id => set('freelance', id)}
+      />
+
+      <h4>Rental market</h4>
+      <Choice
+        value={state.policies.subhire}
+        options={[
+          {
+            id: 'fill' as const,
+            label: 'Sub-hire shortfalls',
+            detail: 'Short of kit for a show? A rival with a base nearby delivers the rest to the venue, at a day rate.',
+            note: `${Math.round(SUBHIRE_DAY_RATE * 100)}%/day`,
+          },
+          { id: 'off' as const, label: 'Own kit only', detail: 'Never rent in: short shows play short.' },
+        ]}
+        onPick={id => set('subhire', id)}
+      />
+      <div style={{ height: 6 }} />
+      <Choice
+        value={state.policies.rentOut}
+        options={[
+          { id: 'off' as const, label: 'Keep idle kit home', detail: 'Nothing rented out; no extra wear.' },
+          {
+            id: 'on' as const,
+            label: 'Rent idle kit out',
+            detail: 'Dry-hire what’s on the racks between your own jobs — income, but extra wear.',
+            note: `≈${money(rentOutMonthly(state))}/mo`,
+          },
+        ]}
+        onPick={id => set('rentOut', id)}
       />
 
       <h4>Insurance</h4>

@@ -1,4 +1,7 @@
-import { buyGear, refurbishGear, sellGear } from '@/world/actions';
+import { useState } from 'react';
+import { buyGear, refurbishGear, sellGear, transferGear } from '@/world/actions';
+import { describeQuote, transferQuote } from '@/world/transfers';
+import { worldOf } from '@/world/mapgen';
 import { condition, refurbishCost, resaleValue } from '@/world/wear';
 import { DEPT_LABELS } from '@/world/catalog';
 import { expectedQuality, getProduct } from '@/world/content/gear';
@@ -77,8 +80,26 @@ export function WarehouseGear({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
     const r = ctx.dispatch(fn);
     if (r.message || !r.ok) ctx.toast(r.message ?? 'Not possible', r.ok);
   };
+  const others = state.depots.filter(d => d.id !== depot.id);
+  const [sendTo, setSendTo] = useState<string>('');
+  const target = others.find(d => d.id === sendTo);
+  const world = worldOf(state);
   return (
     <div className="tt-list">
+      {others.length > 0 && (
+        <div className="tt-item" style={{ gap: 6 }}>
+          <span className="tt-dim">Send kit to</span>
+          <select className="tt-input" style={{ flex: 1 }} value={sendTo} onChange={e => setSendTo(e.target.value)}>
+            <option value="">— choose a base —</option>
+            {others.map(d => (
+              <option key={d.id} value={d.id}>
+                {world.cityById.get(d.cityId)?.name} ({d.kind})
+              </option>
+            ))}
+          </select>
+          {target && <span className="tt-dim">{describeQuote(state, transferQuote(state, depot, target, 1))} per unit</span>}
+        </div>
+      )}
       {DEPTS.map(d => {
         const owned = Object.keys(depot.gear)
           .filter(id => depot.gear[id] > 0 && getProduct(id).dept === d)
@@ -111,6 +132,11 @@ export function WarehouseGear({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
                       onClick={() => act(s => refurbishGear(s, id))}
                     >
                       🔧
+                    </button>
+                  )}
+                  {target && (
+                    <button className="tt-btn sm" title={`Courier one to ${world.cityById.get(target.cityId)?.name}`} onClick={() => act(s => transferGear(s, depot.id, target.id, id))}>
+                      →
                     </button>
                   )}
                   <button className="tt-btn sm" title={`Sell one for ${money(resaleValue(state, id))}`} onClick={() => act(s => sellGear(s, depot.id, id))}>
