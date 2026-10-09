@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { buyGear, refurbishGear, sellGear, transferGear } from '@/world/actions';
 import { describeQuote, transferQuote } from '@/world/transfers';
+import { partnerPrice } from '@/world/partners';
 import { worldOf } from '@/world/mapgen';
 import { condition, refurbishCost, resaleValue } from '@/world/wear';
 import { DEPT_LABELS } from '@/world/catalog';
@@ -193,8 +194,9 @@ export function GearShop({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
                     </div>
                   </div>
                   <QualityChip quality={p.quality} state={state} />
-                  <button className="tt-btn sm primary" disabled={state.company.cash < p.price} onClick={() => act(s => buyGear(s, depot.id, p.id))}>
-                    {kmoney(p.price)}
+                  <button className="tt-btn sm primary" disabled={state.company.cash < partnerPrice(state, p.id)} onClick={() => act(s => buyGear(s, depot.id, p.id))}>
+                    {kmoney(partnerPrice(state, p.id))}
+                    {partnerPrice(state, p.id) < p.price && <span title={`${p.brand} partner discount`}> ★</span>}
                   </button>
                 </div>
               ))}

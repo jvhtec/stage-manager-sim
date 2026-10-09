@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Building2,
   CalendarDays,
@@ -20,6 +20,10 @@ import {
   Trophy,
   Truck,
   Users,
+  AlertTriangle,
+  Gavel,
+  Globe,
+  Route,
   Wallet,
   ZoomIn,
   ZoomOut,
@@ -39,11 +43,20 @@ import { CityWindow, DepotListWindow, DepotWindow, TownsWindow, VenueWindow } fr
 import { VehicleListWindow, VehicleWindow } from './ui/fleet';
 import { GigWindow, ShowsWindow } from './ui/shows';
 import { TourWindow } from './ui/tours';
-import { TalentWindow } from './ui/talent';
-import { MarketWindow } from './ui/market';
 import { PoliciesWindow } from './ui/policies';
-import { RndWindow } from './ui/rnd';
+import { DecisionsWindow } from './ui/decisions';
+// Windows you open now and then load on demand, keeping the main game chunk lean.
+const TalentWindow = lazy(() => import('./ui/talent').then(m => ({ default: m.TalentWindow })));
+const MarketWindow = lazy(() => import('./ui/market').then(m => ({ default: m.MarketWindow })));
+const AuctionsWindow = lazy(() => import('./ui/auctions').then(m => ({ default: m.AuctionsWindow })));
+const WorldMapWindow = lazy(() => import('./ui/worldMap').then(m => ({ default: m.WorldMapWindow })));
+const PlannerWindow = lazy(() => import('./ui/planner').then(m => ({ default: m.PlannerWindow })));
+const RndWindow = lazy(() => import('./ui/rnd').then(m => ({ default: m.RndWindow })));
 import { CrewWindow } from './ui/crewWindow';
+import { Splash } from './ui/Splash';
+import { Intro, introSkipped } from './ui/Intro';
+import { DEFAULT_COUNTRY } from '@/world/content/countries';
+import { createRandomSeed } from '@/lib/rng';
 import { FinanceWindow, GameOverPanel, HelpWindow, LeagueWindow, NewGameForm, NewsWindow } from './ui/company';
 import type { WinCtx, WindowKind } from './ui/types';
 import './tycoon.css';
@@ -70,7 +83,12 @@ export default function TycoonGame() {
   const [toasts, setToasts] = useState<{ id: number; text: string; ok: boolean }[]>([]);
   const [confirmQuit, setConfirmQuit] = useState(false);
 
-  const showNewGame = !state || game.isPreview;
+  // Front door → (new-company form → intro) → the game.
+  const [stage, setStage] = useState<'splash' | 'newgame' | 'intro' | 'play'>('splash');
+  const [splashHelp, setSplashHelp] = useState(false);
+  const showSplash = stage === 'splash';
+  const showNewGame = stage === 'newgame';
+  const inGame = stage === 'play';
   const { compact, landscape } = useLayout();
   const installer = useInstallPrompt();
 
@@ -144,6 +162,17 @@ export default function TycoonGame() {
     [open],
   );
 
+  // A new problem needs your call: open it (the clock stops by itself).
+  const seenDilemmas = useRef<Set<string>>(new Set());
+  const dilemmaIds = state?.dilemmas.map(d => d.id).join(',') ?? '';
+  useEffect(() => {
+    if (!state || game.isPreview || !inGame) return;
+    const fresh = state.dilemmas.filter(d => !seenDilemmas.current.has(d.id));
+    fresh.forEach(d => seenDilemmas.current.add(d.id));
+    if (fresh.length) open('decisions');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dilemmaIds, inGame]);
+
   // News popups fade after a while.
   const { popups, dismissPopup } = game;
   useEffect(() => {
@@ -187,6 +216,18 @@ export default function TycoonGame() {
         : null;
 
   const brand = state && !game.isPreview ? state.company.color : '#64748b';
+  const saved = state && !game.isPreview ? state : null;
+
+  // The clock only runs in the game itself; the front door and the intro are quiet.
+  useEffect(() => {
+    if (stage !== 'play') game.setSpeed(0);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage]);
+  // No save yet: show a map behind the title card.
+  useEffect(() => {
+    if (stage === 'splash' && !game.state) game.preview(createRandomSeed(), undefined, DEFAULT_COUNTRY);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage, game.state]);
   setCurrency(getCountry(state?.country).currency);
   const world = state ? worldOf(state) : null;
 
@@ -231,6 +272,14 @@ export default function TycoonGame() {
         return 'R&D';
       case 'crew':
         return 'Crew';
+      case 'decisions':
+        return 'Needs your call';
+      case 'auctions':
+        return 'Auctions';
+      case 'worldmap':
+        return 'World tour map';
+      case 'planner':
+        return 'Plan a run';
       case 'help':
         return 'How to play';
       case 'menu':
@@ -276,16 +325,38 @@ export default function TycoonGame() {
         return <RndWindow ctx={ctx} />;
       case 'crew':
         return <CrewWindow ctx={ctx} />;
+      case 'decisions':
+        return <DecisionsWindow ctx={ctx} />;
+      case 'auctions':
+        return <AuctionsWindow ctx={ctx} />;
+      case 'worldmap':
+        return <WorldMapWindow ctx={ctx} tourId={w.refId} />;
+      case 'planner':
+        return <PlannerWindow ctx={ctx} vehicleId={w.refId} />;
       case 'help':
         return <HelpWindow />;
       case 'menu':
         return (
           <div className="tt-menu">
+            {state.dilemmas.length > 0 && (
+              <button className="tt-btn" onClick={() => open('decisions')} style={{ color: '#fbbf24' }}>
+                <AlertTriangle /> Needs your call ({state.dilemmas.length})
+              </button>
+            )}
             <button className="tt-btn" onClick={() => open('crew')}>
               <Users /> Crew
             </button>
             <button className="tt-btn" onClick={() => open('market')}>
               <TrendingUp /> Market
+            </button>
+            <button className="tt-btn" onClick={() => open('planner')}>
+              <Route /> Plan a run
+            </button>
+            <button className="tt-btn" onClick={() => open('worldmap')}>
+              <Globe /> World tour map
+            </button>
+            <button className="tt-btn" onClick={() => open('auctions')}>
+              <Gavel /> Auctions{state.auctions.length > 0 ? ` (${state.auctions.length})` : ''}
             </button>
             <button className="tt-btn" onClick={() => open('policies')}>
               <SlidersHorizontal /> Policies
@@ -341,11 +412,11 @@ export default function TycoonGame() {
         alphaRef={game.alphaRef}
         selection={selection}
         followVehicleId={follow}
-        onPick={showNewGame ? () => undefined : onPick}
+        onPick={inGame ? onPick : () => undefined}
         onUserPan={() => setFollow(null)}
       />
 
-      {state && !showNewGame && (
+      {state && inGame && (
         <>
           {compact ? (
             <>
@@ -456,11 +527,26 @@ export default function TycoonGame() {
               <button className="tt-btn" onClick={() => open('finance')} title="Finances">
                 <Wallet /> <span className="tt-label">Finances</span>
               </button>
+              {state.dilemmas.length > 0 && (
+                <button className="tt-btn" data-on onClick={() => open('decisions')} title="Needs your call" style={{ color: '#fbbf24' }}>
+                  <AlertTriangle /> {state.dilemmas.length}
+                </button>
+              )}
               <button className="tt-btn" onClick={() => open('crew')} title="Crew">
                 <Users />
               </button>
               <button className="tt-btn" onClick={() => open('market')} title="Market">
                 <TrendingUp />
+              </button>
+              <button className="tt-btn" onClick={() => open('planner')} title="Plan a run">
+                <Route />
+              </button>
+              <button className="tt-btn" onClick={() => open('worldmap')} title="World tour map">
+                <Globe />
+              </button>
+              <button className="tt-btn" onClick={() => open('auctions')} title="Auctions" data-on={state.auctions.length > 0 ? true : undefined}>
+                <Gavel />
+                {state.auctions.length > 0 && ` ${state.auctions.length}`}
               </button>
               <button className="tt-btn" onClick={() => open('policies')} title="Company policies">
                 <SlidersHorizontal />
@@ -538,14 +624,14 @@ export default function TycoonGame() {
                 x={w.x}
                 y={w.y}
                 z={w.z}
-                width={w.kind === 'finance' || w.kind === 'league' || w.kind === 'market' || w.kind === 'crew' ? 440 : 340}
+                width={w.kind === 'finance' || w.kind === 'league' || w.kind === 'market' || w.kind === 'crew' || w.kind === 'decisions' || w.kind === 'vehicles' ? 440 : w.kind === 'worldmap' ? 560 : w.kind === 'planner' ? 440 : 340}
                 onMove={(x, y) => setWindows(prev => prev.map(o => (o.key === w.key ? { ...o, x, y } : o)))}
                 onFocus={() => focusWindow(w.key)}
                 onClose={() => (compact ? setWindows([]) : closeWindow(w.key))}
                 onBack={compact && windows.length > 1 ? () => closeWindow(w.key) : undefined}
                 sheet={compact}
               >
-                {renderWindow(w, ctx)}
+                <Suspense fallback={<div className="tt-dim">Loading…</div>}>{renderWindow(w, ctx)}</Suspense>
               </Window>
             );
           })}
@@ -600,18 +686,59 @@ export default function TycoonGame() {
           <Window title="New company" x={0} y={0} z={100} onMove={() => undefined} onFocus={() => undefined}>
             <NewGameForm
               onPreview={game.preview}
+              onCancel={() => {
+                game.reload();
+                setStage('splash');
+              }}
               onStart={opts => {
                 setWindows([]);
                 setFollow(null);
                 game.newGame(opts);
-                open('help');
+                game.setSpeed(0);
+                if (introSkipped()) {
+                  setStage('play');
+                  game.setSpeed(1);
+                  open('help');
+                } else setStage('intro');
               }}
             />
           </Window>
         </div>
       )}
 
-      {state?.gameOver && !game.isPreview && (
+      {showSplash && (
+        <Splash
+          saved={saved}
+          color={saved?.company.color ?? '#e11d48'}
+          onContinue={() => {
+            setStage('play');
+            game.setSpeed(1);
+          }}
+          onNew={() => setStage('newgame')}
+          onHelp={() => setSplashHelp(true)}
+        />
+      )}
+
+      {showSplash && splashHelp && (
+        <div className="tt-overlay" style={{ zIndex: 320 }}>
+          <Window title="How to play" x={0} y={0} z={100} onMove={() => undefined} onFocus={() => undefined} onClose={() => setSplashHelp(false)}>
+            <HelpWindow />
+          </Window>
+        </div>
+      )}
+
+      {stage === 'intro' && state && !game.isPreview && (
+        <Intro
+          state={state}
+          onDone={() => {
+            setStage('play');
+            game.setSpeed(1);
+            open('help');
+          }}
+        />
+      )}
+
+      {state?.gameOver && inGame && (
         <div className="tt-overlay">
           <Window title="The receivers have arrived" x={0} y={0} z={100} onMove={() => undefined} onFocus={() => undefined}>
             <GameOverPanel
@@ -619,6 +746,7 @@ export default function TycoonGame() {
               onRestart={() => {
                 setWindows([]);
                 game.abandon();
+                setStage('newgame');
               }}
             />
           </Window>
@@ -643,6 +771,7 @@ export default function TycoonGame() {
                     setConfirmQuit(false);
                     setWindows([]);
                     game.abandon();
+                    setStage('newgame');
                   }}
                 >
                   New company

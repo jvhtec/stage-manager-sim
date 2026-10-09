@@ -19,6 +19,10 @@ export type WindowKind =
   | 'policies'
   | 'rnd'
   | 'crew'
+  | 'decisions'
+  | 'auctions'
+  | 'worldmap'
+  | 'planner'
   | 'help'
   | 'menu';
 

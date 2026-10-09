@@ -15,6 +15,7 @@ import { actReputationBar, reachWeight, tourBookingBar } from './standing';
 import { artistsTouringAt, homeWeight, type Artist } from './content/artists';
 import { REGIONS } from './content/world';
 import { book, dateOfDay, dayOf, formatMoney, gigById, newId, pushNews, yearOf } from './core';
+import { venueOpenIn } from './content/venueYears';
 import { actName, buildGig } from './offers';
 import { marketNow } from './market';
 import { recordTour } from './awards';
@@ -94,7 +95,7 @@ export function generateNationalTour(state: TycoonState, world: WorldMap, rng: R
   const artist = upAndComing ? null : pickTourArtist(state, year, tier, rng, reachableOnly);
   if (!artist && !upAndComing) return null;
   const act = artist?.name ?? actName(rng);
-  const venues = world.cities.flatMap(c => c.venues).filter(v => v.tier === tier && v.kind !== 'airport');
+  const venues = world.cities.flatMap(c => c.venues).filter(v => v.tier === tier && v.kind !== 'airport' && venueOpenIn(v.name, year));
   const route = routeVenues(world, venues, 3 + rng.nextInt(4), rng);
   if (route.length < 3) return null;
 
@@ -123,9 +124,11 @@ export function generateWorldTour(state: TycoonState, world: WorldMap, rng: Rng)
   if (!airport) return null;
 
   // Home dates: the stadium (for stadium acts) plus a couple of arenas.
-  const stadiums = tier === 4 ? world.cities.flatMap(c => c.venues).filter(v => v.kind === 'stadium') : [];
-  const arenas = world.cities.flatMap(c => c.venues).filter(v => v.kind === 'arena');
+  const stadiums = tier === 4 ? world.cities.flatMap(c => c.venues).filter(v => v.kind === 'stadium' && venueOpenIn(v.name, year)) : [];
+  const arenas = world.cities.flatMap(c => c.venues).filter(v => v.kind === 'arena' && venueOpenIn(v.name, year));
   const route = [...stadiums.slice(0, 1), ...routeVenues(world, arenas, 1 + rng.nextInt(2), rng)];
+  // No big room open this year (rebuilding, or not built yet): no home dates, no world tour.
+  if (!route.length) return null;
   const tourId = newId(state, 'tour');
   const gigs = domesticRun(state, world, rng, artist.name, tourId, route, today + 16 + rng.nextInt(8));
 

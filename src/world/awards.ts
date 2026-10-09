@@ -38,7 +38,8 @@ export function recordTour(s: TycoonState, year: number, world: boolean) {
   if (world) y.worldTours += 1;
 }
 
-const yearProfit = (state: TycoonState, year: number) => Object.values(state.ledger[year] ?? {}).reduce((a, b) => a + (b ?? 0), 0);
+const yearProfit = (state: TycoonState, year: number) =>
+  Object.entries(state.ledger[year] ?? {}).reduce((a, [c, v]) => (c === 'equity' ? a : a + (v ?? 0)), 0);
 
 export interface RatingBreakdown {
   total: number;

@@ -1,13 +1,16 @@
 import { useState } from 'react';
-import { rehomeVehicle, sellVehicle, sendHome, serviceVehicle, unassignVehicle } from '@/world/actions';
+import { bookAndAssign, retrofitVehicle, rehomeVehicle, sellVehicle, sendHome, serviceVehicle, unassignVehicle } from '@/world/actions';
 import { leaseReturnPenalty } from '@/world/finance';
 import { SERVICE_INTERVAL_DAYS, getModel } from '@/world/catalog';
 import { stockSize } from '@/world/loading';
 import { StockLines } from './gear';
 import { getTech } from '@/world/content/techs';
-import { formatDay, gigById, sellValue, vehicleAgeYears } from '@/world/core';
+import { formatDay, gigById, loadInHour, sellValue, vehicleAgeYears } from '@/world/core';
 import { worldOf } from '@/world/mapgen';
-import { vehicleActivity } from '@/world/queries';
+import { estimateArrival, suggestJobs, vehicleActivity } from '@/world/queries';
+import { roadDistance } from '@/world/pathfinding';
+import { fleetSummary } from '@/world/fleetReport';
+import { retrofitBlocker, retrofitCost, vehicleClass } from '@/world/regulation';
 import { Bar, Stat } from './bits';
 import { PersonRow } from './crewWindow';
 import { kmoney, money } from './format';
@@ -19,6 +22,7 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
   const v = state.vehicles.find(x => x.id === vehicleId);
   if (!v) return <div className="tt-dim">This vehicle has been sold.</div>;
   const world = worldOf(state);
+  const suggestions = suggestJobs(state, v);
   const model = getModel(v.modelId);
   const age = vehicleAgeYears(v, state.hour);
   const atHome = v.cityId === v.homeCityId && (v.status === 'parked' || v.status === 'scheduled');
@@ -64,6 +68,17 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
       <Stat label="Last service">
         {daysSinceService}d ago <span className="tt-dim">(every {SERVICE_INTERVAL_DAYS}d)</span>
       </Stat>
+      {v.owner === 'player' && (
+        <Stat label="Emission class">
+          <b>{vehicleClass(v, state)}</b>
+          {(v.retrofit ?? 0) > 0 && <span className="tt-dim"> (filter ×{v.retrofit})</span>}
+          {atHome && !retrofitBlocker(state, v) && (
+            <button className="tt-btn sm" style={{ marginLeft: 6 }} onClick={() => act(s => retrofitVehicle(s, v.id))} title="Fit a particulate filter: one class cleaner">
+              Retrofit {money(retrofitCost(v))}
+            </button>
+          )}
+        </Stat>
+      )}
       <Stat label="Profit this year">
         <span className={v.profitThisYear >= 0 ? 'tt-good' : 'tt-bad'}>{money(v.profitThisYear)}</span>
       </Stat>
@@ -100,6 +115,10 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
           {v.orders.map((id, i) => {
             const g = gigById(state, id);
             if (!g) return null;
+            // Can the truck make it? Arrival after the shows before this one, against this one's load-in.
+            const spare = loadInHour(g) - estimateArrival(state, v, g);
+            const prevCity = i === 0 ? (v.status === 'driving' || v.status === 'broken' ? v.route!.to : v.cityId ?? v.homeCityId) : gigById(state, v.orders[i - 1])?.cityId;
+            const leg = prevCity ? roadDistance(world, prevCity, g.cityId) : NaN;
             return (
               <div key={id} className="tt-item clickable" onClick={() => ctx.open('gig', id)}>
                 <span className="tt-dim">{i + 1}.</span>
@@ -107,6 +126,12 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
                   <div style={{ fontWeight: 700 }}>{g.act}</div>
                   <div className="tt-dim">
                     {world.venueById.get(g.venueId)?.name}, {world.cityById.get(g.cityId)?.name} · {formatDay(state, g.day)}
+                  </div>
+                  <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+                    {Number.isFinite(leg) && leg > 0 ? `${Math.round(leg)} tiles on · ` : ''}
+                    <span className={spare < 0 ? 'tt-bad' : spare < 6 ? 'tt-warn' : 'tt-good'}>
+                      {spare < 0 ? `late by ${Math.ceil(-spare)}h` : spare < 6 ? `tight: ${Math.floor(spare)}h spare` : `${Math.floor(spare)}h spare at load-in`}
+                    </span>
                   </div>
                 </div>
                 <button
@@ -121,10 +146,44 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
               </div>
             );
           })}
-          <div className="tt-dim">Then: return to depot.</div>
+          <div className="tt-dim">
+            Then: return to depot
+            {(() => {
+              const last = gigById(state, v.orders[v.orders.length - 1]);
+              const back = last ? roadDistance(world, last.cityId, v.homeCityId) : NaN;
+              return Number.isFinite(back) && back > 0 ? ` — ${Math.round(back)} tiles, about ${Math.ceil(back / model.speed)}h.` : '.';
+            })()}
+          </div>
         </div>
       ) : (
         <div className="tt-dim">No orders. Open a booked show and assign this vehicle to it.</div>
+      )}
+
+      {v.owner === 'player' && suggestions.length > 0 && (
+        <>
+          <h4>Suggested next jobs</h4>
+          <div className="tt-list">
+            {suggestions.map(s => (
+              <div key={s.gig.id} className="tt-item" style={{ gap: 6 }}>
+                <div className="grow clickable" style={{ minWidth: 0, cursor: 'pointer' }} onClick={() => ctx.open('gig', s.gig.id)}>
+                  <b>{s.gig.act}</b>
+                  <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+                    {world.venueById.get(s.gig.venueId)?.name}, {world.cityById.get(s.gig.cityId)?.name} · {formatDay(state, s.gig.day)} · {Math.round(s.distance)} tiles on
+                  </div>
+                </div>
+                <button className="tt-btn sm primary" onClick={() => act(st => bookAndAssign(st, v.id, s.gig.id))}>
+                  Book {kmoney(s.gig.fee)}
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+
+      {v.owner === 'player' && (
+        <button className="tt-btn sm" onClick={() => ctx.open('planner', v.id)} style={{ marginTop: 6 }}>
+          Plan a run with this truck…
+        </button>
       )}
 
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 10 }}>
@@ -188,32 +247,105 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
   );
 }
 
+type FleetSort = 'profit' | 'busy' | 'age' | 'name';
+
+/** Company-wide fleet dashboard: KPIs, what needs attention, and every vehicle ranked. */
 export function VehicleListWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
-  const fleet = state.vehicles.filter(v => v.owner === 'player');
-  const total = fleet.reduce((s, v) => s + v.profitThisYear, 0);
+  const [sort, setSort] = useState<FleetSort>('profit');
+  const summary = fleetSummary(state);
+  const rows = [...summary.rows].sort((a, b) =>
+    sort === 'profit' ? b.profit - a.profit : sort === 'busy' ? b.utilisation - a.utilisation : sort === 'age' ? b.ageYears - a.ageYears : a.vehicle.name.localeCompare(b.vehicle.name),
+  );
+  const tile = (label: string, value: React.ReactNode, hint?: string, tone?: 'good' | 'warn' | 'bad') => (
+    <div key={label} className="tt-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 0, flex: '1 1 30%', minWidth: 96 }} title={hint}>
+      <span className="tt-dim" style={{ fontSize: 11 }}>
+        {label}
+      </span>
+      <b className={tone ? `tt-${tone}` : ''} style={{ fontSize: 15 }}>
+        {value}
+      </b>
+    </div>
+  );
+  const busyPct = Math.round(summary.avgUtilisation * 100);
+
   return (
     <div>
-      <div className="tt-list">
-        {fleet.map(v => (
-          <div key={v.id} className="tt-item clickable" onClick={() => ctx.open('vehicle', v.id)}>
-            <div className="grow">
-              <div style={{ fontWeight: 700 }}>
-                {v.status === 'broken' ? '⚠ ' : ''}
-                {v.name} <span className="tt-dim">{getModel(v.modelId).name}</span>
-              </div>
-              <div className="tt-dim">{vehicleActivity(state, v)}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
+        {tile('Vehicles', summary.count, `${summary.onTheRoad} on the road, ${summary.idle} idle, ${summary.inWorkshop} in the workshop`)}
+        {tile('Busy', `${busyPct}%`, 'Average share of days working or booked, over the last ~50 days', busyPct >= 60 ? 'good' : busyPct >= 35 ? 'warn' : 'bad')}
+        {tile('On the road', summary.onTheRoad)}
+        {tile('Idle now', summary.idle, undefined, summary.idle > 0 && summary.idle === summary.count ? 'warn' : undefined)}
+        {tile('Reliability', `${Math.round(summary.avgReliability)}%`, 'Average across the fleet', summary.avgReliability >= 70 ? 'good' : summary.avgReliability >= 45 ? 'warn' : 'bad')}
+        {tile('Avg age', `${summary.avgAge.toFixed(1)} yrs`)}
+        {tile('Next 14 days', `${summary.upcoming.covered}/${summary.upcoming.total}`, 'Booked shows fully covered, of those coming up', summary.upcoming.total && summary.upcoming.covered < summary.upcoming.total ? 'warn' : 'good')}
+        {tile('Profit YTD', money(summary.profit), undefined, summary.profit >= 0 ? 'good' : 'bad')}
+      </div>
+
+      <h4>Needs attention{summary.alerts.length ? ` (${summary.alerts.length})` : ''}</h4>
+      {summary.alerts.length ? (
+        <div className="tt-list">
+          {summary.alerts.slice(0, 8).map(a => (
+            <div
+              key={a.id}
+              className="tt-item clickable"
+              style={{ gap: 6 }}
+              onClick={() => (a.gigId ? ctx.open('gig', a.gigId) : a.vehicleId && ctx.open('vehicle', a.vehicleId))}
+            >
+              <span style={{ width: 8, height: 22, borderRadius: 2, flexShrink: 0, background: a.severity === 'bad' ? '#ef4444' : a.severity === 'warn' ? '#f59e0b' : '#64748b' }} />
+              <span className="grow" style={{ whiteSpace: 'normal' }}>
+                {a.text}
+              </span>
+              <span className="tt-dim">›</span>
             </div>
-            <span className={v.profitThisYear >= 0 ? 'tt-good' : 'tt-bad'} style={{ fontWeight: 700 }}>
-              {kmoney(v.profitThisYear)}
-            </span>
-          </div>
+          ))}
+          {summary.alerts.length > 8 && <div className="tt-dim">…and {summary.alerts.length - 8} more.</div>}
+        </div>
+      ) : (
+        <div className="tt-good">All clear — everything booked is covered and the fleet is in shape.</div>
+      )}
+
+      <h4>The fleet</h4>
+      <div className="tt-tabs" style={{ marginBottom: 4 }}>
+        {(['profit', 'busy', 'age', 'name'] as FleetSort[]).map(k => (
+          <button key={k} className="tt-btn sm" data-on={sort === k} onClick={() => setSort(k)}>
+            {k === 'busy' ? 'Busiest' : k === 'age' ? 'Oldest' : k === 'profit' ? 'Profit' : 'Name'}
+          </button>
         ))}
       </div>
-      <div className="tt-row" style={{ marginTop: 6 }}>
-        <span className="tt-dim">{fleet.length} vehicles · profit this year</span>
-        <b className={total >= 0 ? 'tt-good' : 'tt-bad'}>{money(total)}</b>
+      <div className="tt-list">
+        {rows.map(r => {
+          const v = r.vehicle;
+          return (
+            <div key={v.id} className="tt-item clickable" onClick={() => ctx.open('vehicle', v.id)}>
+              <div className="grow" style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700 }}>
+                  {v.status === 'broken' ? '⚠ ' : ''}
+                  {v.name} <span className="tt-dim">{getModel(v.modelId).name}</span>
+                  {v.lease ? <span className="tt-dim"> · leased</span> : null}
+                </div>
+                <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+                  {vehicleActivity(state, v)}
+                </div>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}>
+                  <Bar value={Math.round(r.utilisation * 100)} max={100} color={r.utilisation >= 0.6 ? '#22c55e' : r.utilisation >= 0.3 ? '#f59e0b' : '#ef4444'} />
+                  <span className="tt-dim" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
+                    {Math.round(r.utilisation * 100)}% busy · {Math.round(v.reliability)}% rel · {r.ageYears.toFixed(1)}y
+                  </span>
+                </div>
+              </div>
+              <span className={r.profit >= 0 ? 'tt-good' : 'tt-bad'} style={{ fontWeight: 700 }}>
+                {kmoney(r.profit)}
+              </span>
+            </div>
+          );
+        })}
       </div>
+      {summary.best && summary.worst && summary.count > 1 && (
+        <div className="tt-dim" style={{ marginTop: 6, whiteSpace: 'normal' }}>
+          Best earner: {summary.best.vehicle.name} ({kmoney(summary.best.profit)}) · weakest: {summary.worst.vehicle.name} ({kmoney(summary.worst.profit)}).
+        </div>
+      )}
     </div>
   );
 }

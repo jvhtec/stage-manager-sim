@@ -8,6 +8,7 @@
 import type { Rng } from '@/lib/rng';
 import { tierInfo } from './catalog';
 import { dateOfDay, dayOf, formatDay, newId, pushNews } from './core';
+import { venueOpenIn } from './content/venueYears';
 import { festivalSize, festivalsFor, type Festival } from './content/festivals';
 import { marketOnDay } from './market';
 import { buildGig } from './offers';
@@ -65,7 +66,7 @@ export function festivalCalendar(state: TycoonState, world: WorldMap): FestivalD
 
 function postTender(s: TycoonState, world: WorldMap, rng: Rng, f: Festival, year: number, size: number, startDay: number) {
   const host = festivalHost(world, f);
-  const venues = host.venues.filter(v => v.kind !== 'airport').sort((a, b) => b.tier - a.tier);
+  const venues = host.venues.filter(v => v.kind !== 'airport' && venueOpenIn(v.name, year)).sort((a, b) => b.tier - a.tier);
   const site = venues[0];
   if (!site) return;
   const acceptByDay = startDay - TENDER_CLOSES_DAYS;

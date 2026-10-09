@@ -1,5 +1,10 @@
-import { setPolicy } from '@/world/actions';
+import { setPartner, setPolicy } from '@/world/actions';
+import { PARTNER_DISCOUNT, PARTNER_REPUTATION, PARTNER_SHARE, brandShare, brandsFor, sponsorship } from '@/world/partners';
+import { DEPT_LABELS } from '@/world/catalog';
+import { DEPTS } from '@/world/types';
 import { REST_AT } from '@/world/people';
+import { MARKETING, MARKETING_LEVELS, marketingMonthly } from '@/world/marketing';
+import { dayOf, formatDay } from '@/world/core';
 import { WORKSHOP, WORKSHOP_LEVELS, averageCondition, monthlyWorkshopCost, ownedStock } from '@/world/wear';
 import { Bar, ExperienceChip, FatigueChip, Stat } from './bits';
 import { CREW_WAGE_PER_DAY } from '@/world/catalog';
@@ -55,7 +60,7 @@ export function Choice<T extends string>({
 
 export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
-  const set = <K extends 'workshop' | 'pay' | 'insurance' | 'freelance' | 'subhire' | 'rentOut' | 'training' | 'rest'>(key: K, value: (typeof state.policies)[K]) => ctx.dispatch(s => setPolicy(s, key, value));
+  const set = <K extends 'workshop' | 'pay' | 'insurance' | 'freelance' | 'subhire' | 'rentOut' | 'training' | 'rest' | 'marketing'>(key: K, value: (typeof state.policies)[K]) => ctx.dispatch(s => setPolicy(s, key, value));
   const owned = ownedStock(state);
   return (
     <div>
@@ -133,6 +138,67 @@ export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
       <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
         Crews get better with every show (big ones teach more) and work up to 15% better when seasoned — new hires start green
         and dilute it.
+      </div>
+
+      <h4>Marketing</h4>
+      <Choice
+        value={state.policies.marketing}
+        options={MARKETING_LEVELS.map(id => ({
+          id,
+          label: MARKETING[id].label,
+          detail: MARKETING[id].blurb,
+          note: MARKETING[id].rate ? `${money(marketingMonthly(state, id))}/mo` : undefined,
+        }))}
+        onPick={id => set('marketing', id)}
+      />
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        More offers ({Math.round((MARKETING[state.policies.marketing].offers - 1) * 100)}% now) and a slow climb in reputation. The cost
+        scales with your standing, and the trade-show season (PLASA, Prolight + Sound, LDI) asks you each year whether to exhibit.
+        {state.promo && state.promo.offerUntil >= dayOf(state.hour) && (
+          <>
+            {' '}
+            <b>Show buzz:</b> +{Math.round((state.promo.offerMult - 1) * 100)}% offers until {formatDay(state, state.promo.offerUntil)}
+            {state.promo.gearUntil >= dayOf(state.hour) ? `, ${Math.round(state.promo.gearDiscount * 100)}% off kit until ${formatDay(state, state.promo.gearUntil)}` : ''}.
+          </>
+        )}
+      </div>
+
+      <h4>Maker partnerships</h4>
+      {DEPTS.map(d => {
+        const partner = state.partners[d];
+        const brands = brandsFor(state, d);
+        return (
+          <div key={d} className="tt-item" style={{ gap: 6, flexWrap: 'wrap' }}>
+            <span style={{ width: 70 }}>{DEPT_LABELS[d]}</span>
+            <select
+              className="tt-input"
+              aria-label={`${DEPT_LABELS[d]} partner`}
+              value={partner?.brand ?? ''}
+              onChange={e => {
+                const r = ctx.dispatch(s => setPartner(s, d, e.target.value || undefined));
+                if (r.message) ctx.toast(r.message, r.ok);
+              }}
+              style={{ flex: 1, minWidth: 120 }}
+            >
+              <option value="">No partner</option>
+              {brands.map(b => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+            {partner && (
+              <span className="tt-dim" style={{ width: '100%', whiteSpace: 'normal' }}>
+                Your racks: {Math.round(brandShare(state, d, partner.brand) * 100)}% {partner.brand}
+                {brandShare(state, d, partner.brand) >= PARTNER_SHARE ? ` · sponsorship ${money(sponsorship(state, d))}/month` : ` · below ${Math.round(PARTNER_SHARE * 100)}% — no sponsorship${partner.lapse ? `, ${partner.lapse} month${partner.lapse > 1 ? 's' : ''} of warnings` : ''}`}
+              </span>
+            )}
+          </div>
+        );
+      })}
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        Commit a department to one maker (reputation {PARTNER_REPUTATION}+): {Math.round(PARTNER_DISCOUNT * 100)}% off their kit, and a monthly sponsorship while
+        {' '}{Math.round(PARTNER_SHARE * 100)}%+ of that department's racks wear their name. Let the share slip and they walk; a partner can't be swapped for a year.
       </div>
 
       <h4>Local freelancers</h4>

@@ -7,6 +7,21 @@
  * Pure and deterministic: same state in → same state out (the only
  * randomness is the seeded rng carried in `state.rngState`).
  */
+import { hypeLabel, showPayout } from './gate';
+import { paperworkFor } from './paperwork';
+import { chargeZones, yearlyZones } from './regulation';
+import { settleRuns } from './runs';
+import { dailyTradeShows, monthlyMarketing } from './marketing';
+import { difficultyOf, monthlyGoal } from './scenario';
+import { monthlyPriceWars } from './pricewars';
+import { monthlyShares } from './shares';
+import { dailyUtilisation } from './fleetReport';
+import { recordVenueNight } from './promoters';
+import { dailyAuctions, monthlyAuctions } from './auctions';
+import { annualReport, monthlyMilestones } from './milestones';
+import { monthlyPartners } from './partners';
+import { monthlyTowns } from './towns';
+import { breakdownDilemma, dailyCrewDilemmas, hourlyCrises } from './dilemmas';
 import type { Rng } from '@/lib/rng';
 import {
   HOTEL_NIGHT,
@@ -49,11 +64,11 @@ import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSiz
 import { GEAR_PRODUCTS, getProduct } from './content/gear';
 import { leftBehindChance, monthlyRent, monthlySalaries, prepFailureFactor, prepOf, prepRatio } from './facilities';
 import { monthlyTraining, PAY, freelancersFor, monthlyCrew, moraleBonus } from './crew';
-import { REST_AT, aboard, atDepot, dailyPeopleFatigue, dailyPoachBids, dayRate, evaluateCrew, learnFromShow, moveToDepot, moveToVehicle, pickCrew, refreshCandidates, syncCrew } from './people';
+import { REST_AT, crewDirectives, aboard, atDepot, dailyPeopleFatigue, dailyPoachBids, dayRate, evaluateCrew, learnFromShow, moveToDepot, moveToVehicle, pickCrew, refreshCandidates, syncCrew } from './people';
 import { dailyWorkshop, monthlyWorkshop, rollFailure, wearFromShow, type Failure } from './wear';
 import { rivalsFor } from './content/companies';
 import { getTech, techBonus, techsActiveIn } from './content/techs';
-import { dailyOffers, pruneGigs, rivalsTakeOffers } from './offers';
+import { dailyOffers, pruneGigs, rivalsTakeOffers, yearlyVenues } from './offers';
 import { dailyTours } from './tours';
 import { dailyFestivals } from './festivals';
 import { dailyEvents, eventStakes } from './events';
@@ -85,12 +100,20 @@ export function reputationAfterShow(rep: number, tier: number, quality: number):
   return Math.min(ceiling, rep + delta * Math.max(0.25, 1 - rep / 110));
 }
 
-export function advanceHours(state: TycoonState, hours: number): TycoonState {
+/**
+ * Runs the world on by `hours`. With `stopForDecisions`, stops early in the
+ * hour a new problem needs your call (so the game can pause on it).
+ */
+export function advanceHours(state: TycoonState, hours: number, stopForDecisions = false): TycoonState {
   if (state.gameOver || hours <= 0) return state;
   const s = cloneState(state);
   const world = worldOf(s);
+  const waiting = new Set(s.dilemmas.map(d => d.id));
   withRng(s, rng => {
-    for (let i = 0; i < hours && !s.gameOver; i++) stepHour(s, world, rng);
+    for (let i = 0; i < hours && !s.gameOver; i++) {
+      stepHour(s, world, rng);
+      if (stopForDecisions && s.dilemmas.some(d => !waiting.has(d.id))) break;
+    }
   });
   return s;
 }
@@ -99,6 +122,7 @@ function stepHour(s: TycoonState, world: WorldMap, rng: Rng) {
   s.hour += 1;
   if (s.hour % HOURS_PER_DAY === 0) dailyTick(s, world, rng);
   deliverTransfers(s);
+  hourlyCrises(s, rng);
   resolveShows(s, world, rng);
   // Snapshot the list: rival trucks can be removed mid-loop.
   [...s.vehicles].forEach(v => stepVehicle(s, world, v, rng));
@@ -167,11 +191,13 @@ function loadVehicle(s: TycoonState, v: Vehicle, gig: Gig) {
 
   const picked = pickGear(depot.gear, remaining, model.gearCapacity - stockSize(v.cargo), gig.rider);
   addStock(v.cargo, picked);
-  const pinned = atDepot(s, depot.id).filter(m => m.pinnedVehicleId === v.id).length;
+  const directives = crewDirectives(s, gig);
+  const here = atDepot(s, depot.id);
+  const pinned = here.filter(m => m.pinnedVehicleId === v.id || directives.prefer.has(m.id)).length;
   const seats = Math.min(model.crewSeats - v.crew, Math.max(crewRemaining, pinned), depot.crew);
   if (seats > 0) {
-    // Pinned people first, then the freshest, best-matched people for the job ahead get on board.
-    const opts = { vehicleId: v.id, restAt: REST_AT[s.policies.rest] };
+    // Pinned and named people first, then the freshest, best-matched people for the job ahead get on board.
+    const opts = { vehicleId: v.id, restAt: REST_AT[s.policies.rest], ...directives };
     pickCrew(atDepot(s, depot.id), gig, seats, aboard(s, v.id), opts).forEach(m => moveToVehicle(m, v.id));
     syncCrew(s);
   }
@@ -301,7 +327,10 @@ function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
       if (rng.chance((1 - v.reliability / 100) * 0.035)) {
         v.status = 'broken';
         v.brokenUntil = s.hour + 3 + rng.nextInt(6);
-        if (v.owner === 'player') pushNews(s, `${v.name} has broken down!`, 'bad', { vehicleId: v.id });
+        if (v.owner === 'player') {
+          pushNews(s, `${v.name} has broken down!`, 'bad', { vehicleId: v.id });
+          breakdownDilemma(s, v);
+        }
         return;
       }
       break;
@@ -392,7 +421,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const showDays = gig.overseas ? gig.overseas.stops.length : (gig.days ?? 1);
   const failures: Failure[] = [];
   for (let d = 0; d < Math.min(4, showDays); d++) {
-    const f = rollFailure(s, working, rng, prepFailureFactor(prep) * crewEval.failureFactor);
+    const f = rollFailure(s, working, rng, prepFailureFactor(prep) * crewEval.failureFactor * (gig.mods?.failureFactor ?? 1));
     if (f) failures.push(f);
   }
   const gear = evaluateGear(working, gig, yearOf(s, s.hour), s.gearCondition);
@@ -420,7 +449,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     0,
     Math.min(
       1,
-      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) + crewEval.bonus - (weather?.penalty ?? 0) }) +
+      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) + crewEval.bonus - (weather?.penalty ?? 0) + (gig.mods?.quality ?? 0) }) +
         (rng.next() - 0.5) * 0.08,
     ),
   );
@@ -431,6 +460,16 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const tw = TIER_WEIGHT[gig.tier];
   const rating = s.cityRatings[gig.cityId] ?? 50;
 
+  // Working a low-emission zone costs the old trucks a daily charge, show or no show.
+  if (onSite.length) chargeZones(s, gig, onSite);
+  // A rig that crossed a border paid its visas and carnet whether or not the night went well.
+  if (gig.overseas && onSite.length) {
+    const papers = paperworkFor(s, gig, working, crew, yearOf(s, s.hour));
+    if (papers.total) {
+      book(s, 'paperwork', -papers.total);
+      onSite.forEach(v => (v.profitThisYear -= Math.round(papers.total / onSite.length)));
+    }
+  }
   if (!onSite.length || quality < 0.3) {
     const penalty = Math.round(gig.fee * NO_SHOW_PENALTY_RATE);
     book(s, 'penalties', -penalty);
@@ -440,6 +479,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     s.cityRatings[gig.cityId] = Math.max(0, rating - 20);
     s.stats.showsFailed += 1;
     strike(s, gig.act, `the show at ${where} fell apart`);
+    recordVenueNight(s, gig.venueId, quality, true);
     recordShow(s, yearOf(s, s.hour), quality, true, !!gig.festival);
     pushNews(
       s,
@@ -452,7 +492,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     return;
   }
 
-  const payout = Math.round(gig.fee * (0.35 + 0.65 * quality));
+  const payout = showPayout(gig, quality);
   book(s, 'shows', payout);
   if (gig.overseas) {
     // Air freight for the rig and flights for the crew, there and back.
@@ -475,6 +515,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   s.company.reputation = Math.max(0, Math.min(100, reputationAfterShow(s.company.reputation, gig.tier, quality) + stakes.reputation));
   if (gig.event && !gig.event.citywide) recordEvent(s, yearOf(s, s.hour), quality);
   if (quality < BAD_NIGHT) strike(s, gig.act, `a bad night at ${where}`);
+  recordVenueNight(s, gig.venueId, quality, false);
   s.cityRatings[gig.cityId] = Math.max(0, Math.min(100, rating + (quality - 0.5) * 30));
   s.stats.showsPlayed += 1;
   learnFromShow(s, people, crewEval.assigned, gig.tier >= 3 || !!gig.festival || !!gig.event);
@@ -483,7 +524,8 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const riderNote = gear.riderMet === undefined ? '' : gear.riderMet ? ` Rider (${gig.rider!.brand}) honoured.` : ` They wanted ${gig.rider!.brand} and didn't get it.`;
   const kitNote = gear.quality < 0.8 ? ' Reviewers called the kit dated.' : '';
   const techNote = techIds.length ? ` ${techIds.map(id => getTech(id).name).join(' & ')} on the crew.` : '';
-  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}.${weather?.note ?? ''}${failureNote}${freelanceNote}${hire.units ? ` Sub-hired ${hire.units} unit${hire.units > 1 ? 's' : ''} from ${hire.from.join(' & ')}.` : ''}${stakes.note}${riderNote}${kitNote}${techNote}`, quality >= 0.7 ? 'good' : 'info', {
+  const gateNote = gig.gate ? ` Tickets: ${hypeLabel(gig.gate.hype)} (gate deal).` : '';
+  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}.${gateNote}${weather?.note ?? ''}${failureNote}${freelanceNote}${hire.units ? ` Sub-hired ${hire.units} unit${hire.units > 1 ? 's' : ''} from ${hire.from.join(' & ')}.` : ''}${stakes.note}${riderNote}${kitNote}${techNote}`, quality >= 0.7 ? 'good' : 'info', {
     cityId: gig.cityId,
     gigId: gig.id,
   });
@@ -504,6 +546,9 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     });
     pushNews(s, `It's ${date.getUTCFullYear()}. Last year's books are closed — check the finances.`, 'info');
     if (s.hour > HOURS_PER_DAY) awardsNight(s, date.getUTCFullYear() - 1);
+    yearlyVenues(s, world, date.getUTCFullYear());
+    annualReport(s, date.getUTCFullYear() - 1);
+    yearlyZones(s, date.getUTCFullYear());
   }
   announceModels(s, date.getUTCFullYear());
   announceGear(s, date.getUTCFullYear());
@@ -518,6 +563,11 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   dailyRentOut(s);
   dailyPeopleFatigue(s);
   dailyPoachBids(s);
+  dailyAuctions(s, rng);
+  settleRuns(s);
+  dailyTradeShows(s);
+  dailyUtilisation(s);
+  dailyCrewDilemmas(s, rng, s.crewMorale);
   syncCrew(s);
   dailyIncidents(s, rng);
   s.vehicles.forEach(v => {
@@ -559,6 +609,14 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     monthlyTick(s, rng);
     monthlyContracts(s, world, rng);
     monthlyRivals(s, rng);
+    monthlyAuctions(s, rng);
+    monthlyMilestones(s);
+    monthlyPartners(s);
+    monthlyTowns(s, world);
+    monthlyMarketing(s);
+    monthlyGoal(s);
+    monthlyPriceWars(s, rng);
+    monthlyShares(s, p => rng.chance(p));
     monthlyRnd(s, rng);
     monthlyDeals(s, rng);
   }
@@ -587,7 +645,8 @@ function monthlyTick(s: TycoonState, rng: Rng) {
     pushNews(s, 'Month closed in the red — the bank is giving the whole industry breathing room until venues reopen.', 'info');
   } else if (s.company.cash < 0) {
     s.negativeMonths += 1;
-    if (s.negativeMonths >= NEGATIVE_MONTHS_GAME_OVER) {
+    const grace = difficultyOf(s).graceMonths;
+    if (s.negativeMonths >= grace) {
       s.gameOver = {
         hour: s.hour,
         reason: `${s.company.name} spent ${s.negativeMonths} months in the red and the bank has called in the receivers.`,
@@ -596,7 +655,7 @@ function monthlyTick(s: TycoonState, rng: Rng) {
     } else {
       pushNews(
         s,
-        `Month closed in the red. ${NEGATIVE_MONTHS_GAME_OVER - s.negativeMonths} more and the bank shuts you down.`,
+        `Month closed in the red. ${grace - s.negativeMonths} more and the bank shuts you down.`,
         'big',
       );
     }

@@ -503,9 +503,73 @@ export function renderWorld(ctx: CanvasRenderingContext2D, input: RenderInput): 
   });
   ctx.restore();
 
+  const planned = selectedVehicle ? state.vehicles.find(v => v.id === selectedVehicle) : undefined;
+  if (planned && planned.owner === 'player') drawRoutePlan(rc, state, planned);
   drawCityLabels(rc, state, hits);
   drawGigMarkers(rc, state, venueTop, hits, colorFor);
   return hits;
+}
+
+/** The selected truck's plan: where it is, each show it's heading to in order, and the way home. */
+function drawRoutePlan(rc: RC, state: TycoonState, v: Vehicle) {
+  const { ctx, cam, map } = rc;
+  const stops: { cityId: string; label: string }[] = [];
+  const here = v.status === 'driving' || v.status === 'broken' ? v.route?.to : v.cityId;
+  if (here) stops.push({ cityId: here, label: '' });
+  v.orders.forEach(id => {
+    const g = state.gigs.find(x => x.id === id);
+    if (!g || g.status !== 'booked') return;
+    if (stops[stops.length - 1]?.cityId !== g.cityId) stops.push({ cityId: g.cityId, label: String(stops.length) });
+  });
+  if (stops.length < 1 || (stops.length === 1 && stops[0].cityId === v.homeCityId)) return;
+  const last = stops[stops.length - 1];
+  const homeLeg = last.cityId !== v.homeCityId;
+  const trace = (a: string, b: string, style: { color: string; width: number; dash: number[] }) => {
+    const path = getCityPath(map, a, b);
+    if (path.length < 2) return;
+    ctx.strokeStyle = style.color;
+    ctx.lineWidth = style.width * cam.zoom;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.setLineDash(style.dash.map(d => d * cam.zoom));
+    ctx.beginPath();
+    path.forEach((idx, i) => {
+      const tx = idx % map.width;
+      const ty = Math.floor(idx / map.width);
+      const [sx, sy] = project(cam, tx + 0.5, ty + 0.5, groundZ(map, tx, ty));
+      if (i === 0) ctx.moveTo(sx, sy);
+      else ctx.lineTo(sx, sy);
+    });
+    ctx.stroke();
+  };
+  ctx.save();
+  // A dark casing under each line so it reads over any terrain.
+  const legs: [string, string, boolean][] = stops.slice(1).map((s, i) => [stops[i].cityId, s.cityId, false]);
+  if (homeLeg) legs.push([last.cityId, v.homeCityId, true]);
+  legs.forEach(([a, b, home]) => trace(a, b, { color: 'rgba(0,0,0,0.45)', width: home ? 4 : 5.5, dash: [] }));
+  legs.forEach(([a, b, home]) => trace(a, b, home ? { color: 'rgba(255,255,255,0.55)', width: 2, dash: [3, 4] } : { color: state.company.color, width: 3.2, dash: [8, 5] }));
+  ctx.setLineDash([]);
+  // Numbered stops.
+  stops.forEach(s => {
+    if (!s.label) return;
+    const city = map.cityById.get(s.cityId);
+    if (!city) return;
+    const [sx, sy] = project(cam, city.x + 0.5, city.y + 0.5, groundZ(map, city.x, city.y));
+    const r = 9 * Math.max(0.9, Math.min(1.3, cam.zoom * 0.7));
+    ctx.beginPath();
+    ctx.arc(sx, sy - r * 1.4, r, 0, Math.PI * 2);
+    ctx.fillStyle = state.company.color;
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#fff';
+    ctx.stroke();
+    ctx.fillStyle = '#fff';
+    ctx.font = `800 ${Math.round(r * 1.2)}px ui-rounded, system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(s.label, sx, sy - r * 1.4 + 0.5);
+  });
+  ctx.restore();
 }
 
 function outlineFootprint(rc: RC, x: number, y: number, w: number, h: number) {

@@ -2,6 +2,13 @@
  * Player commands. Each takes the current state and returns
  * `{ state, result }` — a new state on success, the untouched one on failure.
  */
+import { gateBlocker, hypeLabel, rollGate } from './gate';
+import { retrofitBlocker, retrofitCost, vehicleClass } from './regulation';
+import { openRun, planRun } from './runs';
+import { haggle, haggleBlocker } from './negotiate';
+import { PARTNER_DISCOUNT, PARTNER_SHARE, endPartner, partnerBlocker, partnerPrice, signPartner } from './partners';
+import { lotBlocker, lotName, takeLot } from './auctions';
+import { resolveDilemma } from './dilemmas';
 import {
   CREW_HIRE_COST,
   STAFF_HIRE_COST,
@@ -39,7 +46,9 @@ import { absorbRival, takeoverBlocker } from './rivals';
 import { bookTransfer, canReceive, describeQuote, transferQuote } from './transfers';
 import { AMBITIONS, rndBlocker, startProject } from './rnd';
 import { DEAL_YEARS } from './deals';
-import { DEPTS, type ActionOutcome, type BidLevel, type Dept, type RndAmbition, type Vehicle, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
+import { headhuntBlocker, headhuntFee, headhuntRivalHealthAfter, headhuntTarget, HEADHUNT_REP_COST } from './headhunt';
+import { IPO_FLOAT, buybackCost, ipoProceeds, listingBlocker, tradingTotal } from './shares';
+import { DEPTS, type ActionOutcome, type DividendLevel, type BidLevel, type Dept, type RndAmbition, type Vehicle, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
 import { STAFF, canBaseVehicle, facilitySpec, nextUpgrade } from './facilities';
 import { aboard, hireFee, levelOf, makePerson, moveToDepot, roleOf, settlePoachBid, syncCrew, unpinFrom } from './people';
 import { BREAK_MONTHS, contractShortfall, installKit } from './contracts';
@@ -98,6 +107,82 @@ export function bookGig(state: TycoonState, gigId: string): ActionOutcome {
   const s = cloneState(state);
   gigById(s, gigId)!.status = 'booked';
   return ok(s, `Booked ${gig.act}. Now assign vehicles to get the gear there.`);
+}
+
+/** Name exactly who works a booked show (at most as many as it needs). */
+export function setCrewPicks(state: TycoonState, gigId: string, personIds: string[]): ActionOutcome {
+  const gig0 = gigById(state, gigId);
+  if (!gig0 || gig0.status !== 'booked') return fail(state, 'Book the show first.');
+  const unique = [...new Set(personIds)];
+  if (unique.some(id => !state.people.some(m => m.id === id))) return fail(state, 'Unknown crew member.');
+  if (unique.length > gig0.crewNeeded) return fail(state, `This show only needs ${gig0.crewNeeded} crew.`);
+  const s = cloneState(state);
+  const gig = gigById(s, gigId)!;
+  gig.crewPicks = unique.length ? unique : undefined;
+  return ok(s, unique.length ? `${unique.length} named for ${gig.act}.` : `Crew for ${gig.act} back to automatic.`);
+}
+
+/** Book a whole planned run onto one truck: all of it, or none. */
+export function bookRun(state: TycoonState, vehicleId: string, gigIds: string[]): ActionOutcome {
+  const v = state.vehicles.find(x => x.id === vehicleId && x.owner === 'player');
+  if (!v) return fail(state, 'Unknown vehicle.');
+  if (!gigIds.length) return fail(state, 'Pick some shows first.');
+  const plan = planRun(state, v, gigIds);
+  const bad = plan.stops.find(s => s.blocker || s.spare < 0);
+  if (bad) return fail(state, bad.blocker ?? `${v.name} can't make ${bad.gig.act} in time.`);
+  let s = state;
+  for (const g of plan.stops) {
+    const booked = bookGig(s, g.gig.id);
+    if (!booked.result.ok) return fail(state, booked.result.message ?? 'A booking failed.');
+    const assigned = assignVehicle(booked.state, vehicleId, g.gig.id);
+    if (!assigned.result.ok) return fail(state, assigned.result.message ?? 'The truck can’t take it.');
+    s = assigned.state;
+  }
+  s = cloneState(s);
+  openRun(s, vehicleId, plan.stops.map(x => x.gig.id));
+  const bonus = plan.bonusRate ? ` Deliver all of it well for a ${Math.round(plan.bonusRate * 100)}% run bonus.` : '';
+  return ok(s, `${v.name} booked on ${plan.stops.length} date${plan.stops.length > 1 ? 's' : ''}.${bonus}`);
+}
+
+/** Fit a filter to an older truck: one emission class up, at its depot. */
+export function retrofitVehicle(state: TycoonState, vehicleId: string): ActionOutcome {
+  const v0 = state.vehicles.find(v => v.id === vehicleId && v.owner === 'player');
+  if (!v0) return fail(state, 'Unknown vehicle.');
+  const blocker = retrofitBlocker(state, v0);
+  if (blocker) return fail(state, blocker);
+  const s = cloneState(state);
+  const v = s.vehicles.find(x => x.id === vehicleId)!;
+  const cost = retrofitCost(v);
+  v.retrofit = (v.retrofit ?? 0) + 1;
+  book(s, 'servicing', -cost);
+  v.profitThisYear -= cost;
+  serviceNow(s, v);
+  return ok(s, `${v.name} fitted with a filter: emission class ${vehicleClass(v, s)}.`);
+}
+
+/** Book a single show on a share of the gate rather than a flat fee. */
+export function bookGate(state: TycoonState, gigId: string): ActionOutcome {
+  const gig0 = gigById(state, gigId);
+  if (!gig0) return fail(state, 'That offer is no longer available.');
+  const blocker = gateBlocker(gig0);
+  if (blocker) return fail(state, blocker);
+  const booked = bookGig(state, gigId);
+  if (!booked.result.ok) return booked;
+  const s = cloneState(booked.state);
+  const gig = gigById(s, gigId)!;
+  const { hype, forecast } = withRng(s, rng => rollGate(s, gig, rng));
+  gig.gate = { hype, forecast };
+  return ok(s, `Booked ${gig.act} on a share of the gate. Ticket sales are forecast as ${hypeLabel(forecast)}.`);
+}
+
+/** One tap: book the offer and put this truck on it. */
+export function bookAndAssign(state: TycoonState, vehicleId: string, gigId: string): ActionOutcome {
+  const booked = bookGig(state, gigId);
+  if (!booked.result.ok) return booked;
+  const assigned = assignVehicle(booked.state, vehicleId, gigId);
+  // If the truck can't take it after all, leave everything as it was.
+  if (!assigned.result.ok) return fail(state, assigned.result.message ?? 'That truck can’t take the job.');
+  return ok(assigned.state, `Booked and assigned: ${gigById(state, gigId)?.act}.`);
 }
 
 export function assignVehicle(state: TycoonState, vehicleId: string, gigId: string): ActionOutcome {
@@ -224,7 +309,7 @@ export function rehomeVehicle(state: TycoonState, vehicleId: string, depotId: st
 export function buyGear(state: TycoonState, depotId: string, productId: string, qty = 1): ActionOutcome {
   const product = getProduct(productId);
   if (!state.announcedGear.includes(productId) && !state.ownProducts.includes(productId)) return fail(state, `${product.brand} ${product.name} isn't out yet.`);
-  const cost = product.price * qty;
+  const cost = partnerPrice(state, productId) * qty;
   if (state.company.cash < cost) return fail(state, `Not enough cash (${formatMoney(state, cost)}).`);
   const d0 = state.depots.find(d => d.id === depotId);
   if (!d0) return fail(state, 'Unknown depot.');
@@ -332,6 +417,62 @@ export function pinCrew(state: TycoonState, personId: string, vehicleId?: string
   return ok(s, v ? `${m0.name} now rides ${v.name}.` : `${m0.name} goes wherever they’re needed.`);
 }
 
+/** Push an offer for a better fee — once. The promoter may fold, dig in, or walk. */
+export function haggleGig(state: TycoonState, gigId: string): ActionOutcome {
+  const gig0 = gigById(state, gigId);
+  if (!gig0) return fail(state, 'That offer is no longer available.');
+  const blocker = haggleBlocker(state, gig0);
+  if (blocker) return fail(state, blocker);
+  const s = cloneState(state);
+  const gig = gigById(s, gigId)!;
+  const fee0 = gig.fee;
+  const result = withRng(s, rng => haggle(s, gig, rng));
+  if (result === 'won') return ok(s, `${gig.act}'s promoter gives way: ${formatMoney(state, fee0)} → ${formatMoney(state, gig.fee)}.`);
+  if (result === 'walked') return { state: s, result: { ok: false, message: `${gig.act}'s promoter walks away and books someone else.` } };
+  return { state: s, result: { ok: false, message: `${gig.act}'s promoter won't budge — the fee stands at ${formatMoney(state, gig.fee)}.` } };
+}
+
+/** Sign, switch or (with no brand) end a manufacturer partnership for a department. */
+export function setPartner(state: TycoonState, dept: Dept, brand?: string): ActionOutcome {
+  if (!brand) {
+    const current = state.partners[dept];
+    if (!current) return fail(state, 'No partnership to end.');
+    const s = cloneState(state);
+    endPartner(s, dept);
+    return ok(s, `Ended the ${current.brand} partnership.`);
+  }
+  const blocker = partnerBlocker(state, dept, brand);
+  if (blocker) return fail(state, blocker);
+  const s = cloneState(state);
+  signPartner(s, dept, brand);
+  return ok(s, `${brand} are now your ${dept} partner: ${Math.round(PARTNER_DISCOUNT * 100)}% off their kit, sponsorship while ${Math.round(PARTNER_SHARE * 100)}%+ of your racks wear their name.`);
+}
+
+/** Buy a lot at today's asking price, sent to one of your bases. */
+export function bidAuction(state: TycoonState, auctionId: string, lotId: string, depotId: string): ActionOutcome {
+  const a0 = state.auctions.find(a => a.id === auctionId);
+  const lot0 = a0?.lots.find(l => l.id === lotId);
+  if (!a0 || !lot0) return fail(state, 'Someone else got there first.');
+  const blocker = lotBlocker(state, a0, lot0, depotId);
+  if (blocker) return fail(state, blocker);
+  const s = cloneState(state);
+  const a = s.auctions.find(x => x.id === auctionId)!;
+  const price = takeLot(s, a, a.lots.find(l => l.id === lotId)!, depotId);
+  book(s, 'purchases', -price);
+  return ok(s, `Bought ${lotName(lot0)} for ${formatMoney(state, price)}.`);
+}
+
+/** Make the call on a problem (dilemmas.ts). */
+export function makeDecision(state: TycoonState, dilemmaId: string, optionId: string): ActionOutcome {
+  const d = state.dilemmas.find(x => x.id === dilemmaId);
+  if (!d) return fail(state, 'That’s already been dealt with.');
+  const option = d.options.find(o => o.id === optionId);
+  if (!option) return fail(state, 'Unknown choice.');
+  if (option.cost && state.company.cash < option.cost) return fail(state, 'Not enough cash.');
+  const s = cloneState(state);
+  return ok(s, resolveDilemma(s, dilemmaId, optionId) ?? undefined);
+}
+
 /** Answer a rival's offer to one of your people: match it, or let them go. */
 export function answerPoach(state: TycoonState, bidId: string, keep: boolean): ActionOutcome {
   if (!state.poachBids.some(b => b.id === bidId)) return fail(state, 'That offer is gone.');
@@ -406,6 +547,61 @@ export function fireStaff(state: TycoonState, depotId: string, role: StaffRole):
   s.depots.find(d => d.id === depotId)!.staff[role] -= 1;
   book(s, 'salaries', -STAFF[role].salary);
   return ok(s, `Let go with a month's pay (${formatMoney(s, STAFF[role].salary)}).`);
+}
+
+/** Float a slice of the company on the stock market. */
+export function goPublic(state: TycoonState): ActionOutcome {
+  const why = listingBlocker(state);
+  if (why) return fail(state, why);
+  const s = cloneState(state);
+  const raised = ipoProceeds(s);
+  book(s, 'equity', raised);
+  s.listing = { day: dayOf(s.hour), float: IPO_FLOAT, confidence: 60, dividend: 'modest', mark: tradingTotal(s), weakMonths: 0, raised, paid: 0 };
+  pushNews(s, `${s.company.name} floats on the stock exchange, raising ${formatMoney(s, raised)}. Shareholders will expect results.`, 'big');
+  return ok(s, `Listed — ${formatMoney(s, raised)} raised.`);
+}
+
+export function setDividend(state: TycoonState, level: DividendLevel): ActionOutcome {
+  if (!state.listing) return fail(state, 'You are not listed.');
+  const s = cloneState(state);
+  s.listing!.dividend = level;
+  return ok(s);
+}
+
+/** Buy the public out and go private again — at a premium. */
+export function takePrivate(state: TycoonState): ActionOutcome {
+  if (!state.listing) return fail(state, 'You are not listed.');
+  const cost = buybackCost(state);
+  if (state.company.cash < cost) return fail(state, `Buying the public out costs ${formatMoney(state, cost)}.`);
+  const s = cloneState(state);
+  book(s, 'equity', -cost);
+  s.listing = undefined;
+  pushNews(s, `${s.company.name} buys out its shareholders and delists for ${formatMoney(s, cost)}.`, 'big');
+  return ok(s, 'Taken private.');
+}
+
+
+/** Lure a rival's standout tech away — at a premium, and it costs you both. */
+export function headhunt(state: TycoonState, rivalId: string, depotId?: string): ActionOutcome {
+  const rival = state.rivals.find(r => r.id === rivalId);
+  if (!rival) return fail(state, 'Unknown rival.');
+  const why = headhuntBlocker(state, rival);
+  if (why) return fail(state, why);
+  const s = cloneState(state);
+  const r = s.rivals.find(x => x.id === rivalId)!;
+  const m = headhuntTarget(s, r);
+  const fee = headhuntFee(m);
+  m.id = newId(s, 'crew');
+  m.hiredHour = s.hour;
+  m.depotId = (s.depots.find(d => d.id === depotId) ?? s.depots[0]).id;
+  s.people.push(m);
+  syncCrew(s);
+  book(s, 'wages', -fee);
+  r.health = headhuntRivalHealthAfter(r);
+  s.company.reputation = Math.max(0, s.company.reputation - HEADHUNT_REP_COST);
+  (s.headhunted ??= {})[r.id] = dayOf(s.hour);
+  pushNews(s, `${s.company.name} lures ${m.name} away from ${r.name}.`, 'big');
+  return ok(s, `${m.name} (${levelOf(m)}★ ${roleOf(m)}) leaves ${r.name} to join you.`);
 }
 
 export function borrow(state: TycoonState): ActionOutcome {

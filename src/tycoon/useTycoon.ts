@@ -33,6 +33,8 @@ export interface Tycoon {
   preview: (seed: number, hqCityId?: string, country?: CountryCode) => void;
   isPreview: boolean;
   abandon: () => void;
+  /** Put the saved game back (after peeking at the new-company screen). */
+  reload: () => void;
   popups: NewsItem[];
   dismissPopup: (id: string) => void;
 }
@@ -85,10 +87,15 @@ export function useTycoon(): Tycoon {
         const steps = Math.min(MAX_STEPS_PER_FRAME, Math.floor(acc));
         if (steps > 0) {
           acc -= steps;
-          const next = advanceHours(s, steps);
+          const next = advanceHours(s, steps, true);
           stateRef.current = next;
           collectNews(next);
           if (next.gameOver) setSpeed(0);
+          // Something needs your call: stop the clock (the window opens itself).
+          if (next.dilemmas.some(d => !s.dilemmas.some(x => x.id === d.id))) {
+            acc = 0;
+            setSpeed(0);
+          }
         }
         alphaRef.current = SPEEDS[speedRef.current] ? acc : 0;
       }
@@ -146,6 +153,13 @@ export function useTycoon(): Tycoon {
     refresh();
   }, []);
 
+  const reload = useCallback(() => {
+    previewRef.current = false;
+    stateRef.current = loadTycoonGame();
+    lastNewsId.current = stateRef.current?.news[0]?.id ?? null;
+    refresh();
+  }, []);
+
   const abandon = useCallback(() => {
     clearTycoonGame();
     stateRef.current = null;
@@ -166,6 +180,7 @@ export function useTycoon(): Tycoon {
     preview,
     isPreview: previewRef.current,
     abandon,
+    reload,
     popups,
     dismissPopup,
   };

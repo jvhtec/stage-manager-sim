@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 97 tests):
+(`src/world/__tests__/*.test.ts`, 231 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -297,6 +297,186 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   for small firms); old saves' headcounts become people. Depot/vehicle `crew` and averages are
   cached by `syncCrew`.
 
+- **Decisions** (`dilemmas.ts`) — problems that need your call, popping up as a "Needs your call"
+  window and stopping the clock. A player truck breaking down with a show waiting offers wait /
+  call recovery (£, moving within the hour) / bodge it (free, reliability −8). At load-in a booked
+  show you're delivering has a 6-12% chance (more for big tiers) of a venue problem: undersized
+  power (generator vs house power: dimmers trip, ×1.6 failures), union call (extra hands vs a
+  sulky load-in and town rating), the manager's extras (better show + relation vs a cooler act),
+  curfew (fine vs cut-short set), an injured tech (send home vs play on exhausted), or a storm
+  warning at festivals (ballast ×0.35 storm odds). Choices become `gig.mods` folded into the
+  night's quality/failure/weather; unanswered, the cheap default happens at the deadline.
+
+- **Auctions** (`auctions.ts`) — a bankrupt rival's racks and trucks (and, ~10% of months, an
+  estate sale or hire-shop closure) go to a 21-day Dutch auction: gear lots (era-standard kit at
+  45-80% condition) and used trucks (2+ years old, shakier). Asking price starts at 95% of market
+  value (1.5× resale) and slides 3 points a day to a 70% floor — never below what the kit would
+  resell for, so no arbitrage — but each day another buyer may snap each lot up (2% rising to ~7%).
+  Used kit blends its condition into what you own; used trucks keep their age and reliability.
+
+- **Price wars** (`pricewars.ts`) — monthly (~5%, ≤2 at once) a healthy rival based within ~35 road
+  tiles of a town you have a depot in starts undercutting it by 8-20% for 2-4 months. Fees there
+  fall by that much and the rival wins 30% more of the work; a decision offers ride it out (free; the
+  war costs the rival 2 health a month), fight back (marketing-scaled spend: you only lose half the
+  undercut, the rival loses 5 a month and gets no bonus) or buy a truce (twice the price, ends it
+  at once). A rival below 35 health backs down. The Market window lists live wars.
+
+- **Going public** (`shares.ts`) — from year 4 with reputation 55+, company value 1.5M and no red
+  months, Finance offers a float of 30% of the company (7% underwriting fee) — cash lands under the
+  new "Shares & dividends" ledger line, which is excluded from profit, awards and the annual report.
+  Shareholder *confidence* (0-100, starts 60) moves monthly: +1.5 for a profitable month, −3 for a
+  loss, plus the dividend policy (none −1 / modest 20% of profit +0.5 / generous 40% +1.5). The share
+  price is company value × (0.7 + 0.6 × confidence). Below 30 an activist decision appears
+  (special dividend +25 confidence, or stand firm −10 and reputation −2); under 8 for four months
+  the board ousts you (game over). Going private again costs 120% of the stake's market value.
+
+- **Headhunting** (`headhunt.ts`) — every rival carries a standout tech (3★, 4★ at reputation 55+,
+  5★ at 80+; the department is the rival's specialty), stable within a month and drawn from a side
+  rng so the sim's sequence isn't disturbed. Luring them away costs triple the normal signing fee,
+  knocks 6 off the rival's finances and 1 off your reputation, and the star arrives expecting a
+  15% pay rise. Each rival can be raided once per 180 days. Buttons sit under each rival in the League.
+
+- **The world moves** — landmark rooms keep their real years (`content/venueYears.ts`): The O2
+  opens in 2007, Wembley is shut 2001-2006, Palau Sant Jordi opens in 1990, the Stade de France in
+  1998, Roig Arena in 2025… A closed room gets no offers, tour dates, festival sites, event lots or
+  house tenders, and the New Year news announces openings, rebuilds and reopenings (world tours
+  need an open home room). **Local fame**: towns you've done proud (rating above 50) post up to
+  +20% more offers, towns you've let down −20%.
+
+- **Living rivals** (`rivals.ts`) — monthly: well-run firms (health 60+) build their name slowly and
+  move up a tier when their standing allows (news: "now chasing arena-size work"), struggling ones
+  (<35) lose it; a healthy firm (65+) may swallow a struggling one (<25) — the buyer inherits its
+  reach, the target's base closes and its lot frees up; and in a decent era market (trend ≥ 1,
+  never in a shutdown) a new start-up opens in a town with a free lot — small (tiers 1-2, rep
+  12-24) with a made-up name. Capped at 14 firms.
+
+- **The long game** (`milestones.ts`) — every New Year the **annual report** closes the books (revenue,
+  costs, net, company value, shows and average quality, league rank among all firms, fleet and
+  crew), compares with last year in the news and sits in the Finances window (last three years
+  side by side). 25 career **milestones** (first show, 100 shows, first tour, festival, special
+  event, house contract, own product, takeover, 5★ tech, first profitable year, seven then eight
+  figures, a decade in business…) tick off monthly and show in the League; pure recognition, no
+  economic effect.
+
+- **Maker partnerships** (`partners.ts`) — from reputation 25, commit a department to one maker
+  (Meyer for sound, Martin for lights…): 10% off their kit, and a monthly sponsorship of
+  `share × (150 + reputation × 6)` while ≥50% of that department's racks wear their name. Below
+  that they warn you for two months, then walk. A partner can't be swapped inside a year.
+
+- **Haggling** (`negotiate.ts`) — any single-show offer (not tours, festival or event tenders) can be pushed
+  once for +12% fee. Odds are 15-85%: your standing beyond what the act demands, the town's opinion,
+  your history with the act, and whether they asked for you by name. If they refuse, half the time the
+  promoter also walks and books someone else — so it only pays when you hold the stronger hand.
+
+- **Growing towns** (`towns.ts`) — every month each town grows by 0.15% plus the era's boom or
+  bust, extra where you run a base (+0.15%) and have a name (up to +0.2%); nothing during a
+  shutdown, capped at 2.5×. Population shows in the Towns window ("+x% since you started"), and the
+  town's offer rate scales with it.
+
+- **World tour map** (`ui/worldMap.tsx`, `content/worldmap.ts`) — a stylised world (hand-simplified
+  continents, real coordinates for every overseas city, a home airport per country). Flight arcs run
+  from your home airport to each overseas leg, stops are numbered along the leg and turn green as
+  they're played, the next date pulses, and the way home is dashed. "Whole tour" frames the lot; each
+  leg button zooms to its region with city names. Reached from the tour window, the globe in the
+  toolbar, or the menu on phones.
+
+- **Customs** (`dilemmas.ts`) — an overseas leg has a 25% chance of trouble at load-in, most often a rig
+  held at customs: hire a broker (3% of the fee), release it minus the flagged cases (thinner show),
+  or sit it out in the shed (rushed, tired show, morale dips).
+- **Promoter relationships** (`promoters.ts`) — each venue's promoter remembers your nights: great shows
+  (+1), solid ones (+½), bad ones (−1), disasters (−3), 0-8. Friendly promoters get picked for offers
+  more often (+25% weight per point) and pay up to +10%; shown as "Strangers → Family" in the venue window.
+- **Suggested next jobs** — the vehicle window lists up to three open offers that fit on the end of a
+  truck's orders (bookable, reachable before load-in, within 36 tiles), best fee for the driving first,
+  with a one-tap Book & assign.
+
+- **Choosing the crew** — on a booked show, name exactly who goes (up to the crew it needs): named
+  people board first, even over better-matched techs, and are held back from other booked shows;
+  the gig window shows the crew fit.
+- **Truck itinerary** — each order in a vehicle's list shows the tiles from the previous stop and
+  the hours spare at load-in (green 6h+, amber under 6h, red if late), plus the way back to depot.
+  (Orders stay sorted by show date, so there's nothing to drag into order.)
+- **Visas & carnets** (`paperwork.ts`) — a rig that crosses a border pays an ATA carnet (£400 +
+  0.3% of the kit's value + £120 per extra country) unless it stays inside the EU (the UK needs
+  carnets for Europe from 2021), and a work visa per head for the US, Canada, Japan, Korea,
+  Australia, Singapore, Brazil (rising over the decades). Estimated on the world map and in the road
+  costs, charged when the rig turns up, whatever the show's result.
+
+- **Run planner** (`runs.ts`, `ui/planner.tsx`) — pick a truck, tick open offers in its reach (up to 2.5× the
+  suggestion range) and see the whole run before committing: tiles on and hours spare at every load-in
+  (the plan is checked as if the truck already had those orders), fees, driving and fuel, nights away
+  and a net. Booking is all-or-nothing (book + assign each date, or none). A run of 2+ dates earns a
+  **run bonus** of 3% per extra date (cap 12%) of the fees, paid when every date is played with
+  quality ≥ 60%; one failure or rough night and it's forfeited ("Run bonuses" in the ledger).
+- **Crew on the road** (`dilemmas.ts`) — each day a 3★+ person aboard a truck with a show ahead may ask for
+  a raise (1.2% × a morale factor; not while "loyal"): accept (+15% pay for good, loyal six months), a one-off
+  bonus (twelve days' pay, loyal two months — the default if ignored) or call their bluff (they walk,
+  leaving the crew a person short). Someone at 75+ fatigue may burn out (4%/day): send them home or push
+  through (a rougher show, morale dips). One open question per person.
+
+- **Fleet dashboard** (`fleetReport.ts`) — the Fleet window opens on KPIs (vehicles, busy %, on the road, idle,
+  reliability, average age, the next 14 days covered, profit YTD), a "Needs attention" list (booked shows with
+  no truck, that won't make load-in, or short on gear/crew; broken or overdue-for-service or low-reliability
+  trucks; vehicles past their life; trucks that have barely worked) and every vehicle with a usage bar
+  (an exponential average over ~50 days of working-or-booked days), sortable by profit, busiest, oldest, name.
+- **Rivals at auctions** — lots are now bought by named rivals (healthy ones only, weighted by health, a match
+  with their department, and how near their base is); news says who picked up what, and a buyer's books get a
+  small lift. Nobody buys when every rival is struggling.
+- **Rivals plan runs too** — a rival already holding a date within 24 tiles and 4 days of an offer is 1.45×
+  likelier to land it (1.15× more again with two or more dates nearby), and puts it on the same truck when
+  there's time to drive between (a day apart at most 8 tiles, otherwise 2+ days); news: "X strings Y onto its run".
+
+- **Low-emission zones** (`content/regulations.ts`, `regulation.ts`) — from their start year cities charge vehicles
+  below an emission class a daily fee (London LEZ 2008 and ULEZ 2019, Germany's Umweltzonen 2008, Paris 2015+,
+  Milan 2008, Madrid Central 2018, LA 2010, …). A vehicle's class is what it met when it was built (a 1992→1…
+  2014→6 ladder) plus up to two retrofits (12% of the model's price each, done at the depot). Charged per show
+  day when the truck is on site, shown in the job estimate, as fleet-dashboard alerts and in the Market window's
+  zone list, and announced when a new scheme starts.
+
+- **Marketing & trade shows** (`marketing.ts`, `content/tradeShows.ts`) — a standing marketing policy (none /
+  local ads / trade press / national campaign: 0 → 0.25 → 0.6 → 1.4 × (400 + 20 × reputation) a month) buys
+  +4% / +9% / +16% offers and a slow reputation climb that fades toward 100. Each year PLASA (London, Sept),
+  Musikmesse then Prolight + Sound (Frankfurt, spring) and LDI (Las Vegas, Nov) ask a question on opening
+  day (not during a shutdown): take a stand (+25% offers for 30 days, 12% off kit for 14, a little
+  reputation), walk the floor (+8% / 14 days, 5% / 7 days) or stay home (the default). Costs scale with your
+  size and the distance (×1 at home, ×1.8 across Europe, ×3 overseas); kit discounts stack with partnerships.
+
+- **Goals, difficulty & legacy score** (`scenario.ts`) — pick a goal and a difficulty when you start. Goals:
+  sandbox, top of the industry (reputation 90 in 25 years), an empire (worth £5M in 20), around the world (three
+  world tours in 25), silverware (Production Company of the Year ×3), the consolidator (buy out three rivals in
+  25) and built to last (30 years). Progress shows in the League; reaching it is a big news moment and the
+  game carries on; missing the deadline is noted. Difficulty: Gentle (1.6× starting cash, rivals ×0.8, crises
+  ×0.7, five months in the red), Standard, Cutthroat (0.7× cash, rivals ×1.25, crises ×1.3, two months). The
+  **legacy score** sums the career (company value, reputation, shows, awards, milestones, years, a won goal ×1000),
+  scaled by difficulty, and shows in the League and on the game-over panel.
+
+- **Front door** (`ui/Splash.tsx`, `ui/Intro.tsx`) — the game opens on a title screen (stage-light beams, the
+  title truck in your livery) over the map: Continue (with company, date, cash and goal of the saved game),
+  New company, How to play. Starting a new company runs a four-card **intro** — the year and what the era was
+  like (with the current market headline), your company and its kit, the competition, your goal and the first
+  three steps — skippable, with a "skip next time" tick. The clock stays paused through both.
+
+- **Fee or gate** (`gate.ts`) — on single shows of tier 2+ you can take a share of the gate instead of a flat fee:
+  flat pays fee × (0.35 + 0.65·quality); the gate pays fee × (0.12 + 1.2·quality²·hype). `hype` (0.5-1.6) is how
+  ticket sales go — the economy and season, the town's opinion of you, a real act — plus luck; you get a forecast
+  (the truth ± 0.15) when you book, and the real number on the night. Over a year a decent crew comes out a few
+  percent ahead on the gate, but it swings with the season (summer well ahead, mid-winter behind) and a rough
+  night or slow sales leaves you well short.
+
+**Balance check** (scripted bot: one local truck per idle van, GB 1979 / 1995, ES 2010, US 1985, 4-24 seeds
+each, vs the merged #19 baseline). Cash and survival are level or better (GB 1979, 12 seeds: mean £1.02M
+baseline vs £0.93M, 11/12 vs 12/12 alive; fresh seeds £924k vs £934k); reputation runs a few points lower
+for a bot that never answers a decision — unanswered decisions take the free default, which costs a little
+show quality. A smarter bot that plans 3-date runs, haggles at ≥60% odds, takes partnerships and answers
+decisions earns about 2× the plain bot, almost all from keeping each truck booked (run bonuses paid on only
+3-6 runs in 7 years; sponsorship is ~£500/month per department), so there's no runaway from the new tools.
+A second pass after the rival changes: GB 1979 cash £863k mean (vs £926k before, £1.02M baseline), the other
+three scenarios flat, no extra bankruptcies, show counts steady.
+A third pass after emission zones, marketing, trade shows and goals: standard-difficulty results are identical to
+the second pass in every scenario (the bot never uses those systems, and an unanswered trade show means
+staying home). Difficulty tiers on GB 1979 over 8 seeds: Gentle £897k, Standard £846k, Cutthroat £732k mean cash
+(7 of 8 Cutthroat companies survive, all of the others do).
+
 UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
 (workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the
 show forecast, rating and trophy cabinet in the **League**.
@@ -316,11 +496,11 @@ The classic build has systems that don't exist in the map game yet. Each has an 
 
 1. **Playtest & balance pass** — fee/wage/running-cost tuning, offer density, rival aggression.
 2. **Named crew** — done (`people.ts`), with pins, rest rota and counter-offers.
-3. **Road & show incidents** — port the crisis system as pop-up decisions.
-4. **Tour planner** — drag-to-order a vehicle's show list, "add next show in route" suggestions,
+3. **Road & show incidents** — done (`dilemmas.ts`): breakdown and venue decisions.
+4. **Tour planner** — route lines for the selected vehicle are drawn on the map (numbered stops) and the vehicle window suggests the next job; still to come: drag-to-order a show list,
    route lines drawn on the map for the selected vehicle.
 5. **Gear transfers & local hire** — move stock between warehouses; hire locally when short.
 6. **Sound** — WebAudio engine hum, crowd swell at live venues, cash-register on payouts.
-7. **Town growth & more eras** — towns grow with successful shows; new gear tech (LED walls,
-   line arrays) unlocks by year like vehicle models.
+7. **Town growth** — landmark venues now open and close in their real years and local fame
+   steers offers; towns also grow over the decades (`towns.ts`).
 8. **Retire `/classic`** once its systems are ported.

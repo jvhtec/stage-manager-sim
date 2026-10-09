@@ -1,6 +1,8 @@
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
-import { assignVehicle, bookGig, unassignVehicle } from '@/world/actions';
+import { assignVehicle, bookGate, bookGig, haggleGig, unassignVehicle } from '@/world/actions';
+import { expectedPayout, gateBlocker, gatePayout, hypeLabel } from '@/world/gate';
+import { HAGGLE_RAISE, haggleBlocker, haggleChance } from '@/world/negotiate';
 import { DEPT_COLORS, DEPT_LABELS, LOAD_IN_HOUR, SHOW_END_HOUR, SHOW_START_HOUR, getModel } from '@/world/catalog';
 import { dateOfDay, dayOf, formatDay, formatHour, loadInHour, loadOutDoneHour, sumCounts } from '@/world/core';
 import { getRegion } from '@/world/content/world';
@@ -9,6 +11,7 @@ import { expectedQuality } from '@/world/content/gear';
 import { averageCondition, failureChance } from '@/world/wear';
 import { prepFailureFactor } from '@/world/facilities';
 import { levelOf } from '@/world/people';
+import { CrewPicker } from './crewWindow';
 import { ConditionChip } from './gear';
 import { ContractList } from './contracts';
 import { EventBid, EventList } from './events';
@@ -31,6 +34,7 @@ function nearestDepotDistance(state: TycoonState, gig: Gig): number {
 
 export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
   const { state } = ctx;
+  const [pickingCrew, setPickingCrew] = useState(false);
   const gig = state.gigs.find(g => g.id === gigId);
   if (!gig) return <div className="tt-dim">This show has dropped off the books.</div>;
   const world = worldOf(state);
@@ -159,13 +163,38 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
               {lock} You have {Math.round(state.company.reputation)}.
             </div>
           ) : (
-            <button className="tt-btn primary" onClick={() => act(s => bookGig(s, gig.id))}>
-              {tour ? 'Book the whole tour' : 'Book this show'}
-            </button>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <button className="tt-btn primary" onClick={() => act(s => bookGig(s, gig.id))}>
+                {tour ? 'Book the whole tour' : 'Book this show'}
+              </button>
+              {!tour && !gateBlocker(gig) && (
+                <button
+                  className="tt-btn"
+                  title={`Instead of ${money(gig.fee)} flat: ${money(Math.round(gatePayout(gig.fee, 0.9, 1)))} for a great show on a normal night, ${money(Math.round(gatePayout(gig.fee, 0.9, 1.4)))} if it sells out, ${money(Math.round(gatePayout(gig.fee, 0.6, 0.7)))} for an average show and slow tickets`}
+                  onClick={() => act(s => bookGate(s, gig.id))}
+                >
+                  Share of the gate
+                </button>
+              )}
+              {!tour && !haggleBlocker(state, gig) && (
+                <button
+                  className="tt-btn"
+                  title={`Push for +${Math.round(HAGGLE_RAISE * 100)}% — ${Math.round(haggleChance(state, gig) * 100)}% they agree; if not, they may walk away`}
+                  onClick={() => act(s => haggleGig(s, gig.id))}
+                >
+                  Haggle +{Math.round(HAGGLE_RAISE * 100)}% ({Math.round(haggleChance(state, gig) * 100)}%)
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}
 
+      {gig.gate && (
+        <Stat label="Deal">
+          Share of the gate <span className="tt-dim">· tickets forecast {hypeLabel(gig.gate.forecast)}{gig.status === 'booked' ? ' — the real number comes on the night' : ''}</span>
+        </Stat>
+      )}
       {gig.status === 'booked' && projection && (
         <>
           <div className="tt-item" style={{ marginTop: 8 }}>
@@ -185,6 +214,10 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
           </div>
           {projection.vehicles.length > 0 && (
             <div style={{ marginTop: 6 }}>
+              <button className="tt-btn sm" onClick={() => setPickingCrew(p => !p)} style={{ marginBottom: 6 }}>
+                {pickingCrew ? 'Hide crew' : `Choose the crew${gig.crewPicks?.length ? ` (${gig.crewPicks.length} named)` : ''}`}
+              </button>
+              {pickingCrew && <CrewPicker ctx={ctx} gig={gig} />}
               <Stat label="Kit vs expectations">
                 <span className={projection.evaluation.quality >= 0.95 ? 'tt-good' : projection.evaluation.quality >= 0.8 ? 'tt-warn' : 'tt-bad'}>
                   {Math.round(projection.evaluation.quality * 100)}%
@@ -243,11 +276,13 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
                         fuel {money(c.fuel)} · {c.nights} night{c.nights === 1 ? '' : 's'} away {money(c.travel)}
                         {c.freelance ? ` · freelancers ${money(c.freelance)}` : ''}
                         {c.subhire ? ` · sub-hire ${money(c.subhire)}` : ''}
+                        {c.paperwork ? ` · visas & carnet ${money(c.paperwork)}` : ''}
+                        {c.zones ? ` · low-emission zone ${money(c.zones)}` : ''}
                       </span>
                     </Stat>
                     <Stat label="Margin (est.)">
-                      <b className={gig.fee * (0.35 + 0.65 * projection.expectedQuality) - c.total >= 0 ? 'tt-good' : 'tt-bad'}>
-                        {money(Math.round(gig.fee * (0.35 + 0.65 * projection.expectedQuality) - c.total))}
+                      <b className={expectedPayout(gig, projection.expectedQuality) - c.total >= 0 ? 'tt-good' : 'tt-bad'}>
+                        {money(Math.round(expectedPayout(gig, projection.expectedQuality) - c.total))}
                       </b>
                     </Stat>
                   </>

@@ -14,6 +14,7 @@
 import type { Rng } from '@/lib/rng';
 import { DEPT_LABELS, tierInfo } from './catalog';
 import { dateOfDay, dayOf, formatDay, formatMoney, newId, pushNews } from './core';
+import { venueOpenIn } from './content/venueYears';
 import { EVENT_NOTICE_DAYS, eventRunsIn, eventTitle, eventsFor, type SpecialEvent } from './content/events';
 import { festivalHost } from './festivals';
 import { marketOnDay } from './market';
@@ -82,7 +83,7 @@ export function eventCalendar(state: TycoonState, world: WorldMap): EventDate[] 
 
 function postEvent(s: TycoonState, world: WorldMap, rng: Rng, e: SpecialEvent, year: number, start: number) {
   const host = festivalHost(world, e);
-  const venues = host.venues.filter(v => v.kind !== 'airport').sort((a, b) => b.tier - a.tier);
+  const venues = host.venues.filter(v => v.kind !== 'airport' && venueOpenIn(v.name, year)).sort((a, b) => b.tier - a.tier);
   if (!venues.length) return;
 
   if (e.kind === 'citywide') {
@@ -90,7 +91,7 @@ function postEvent(s: TycoonState, world: WorldMap, rng: Rng, e: SpecialEvent, y
     const towns = e.id === 'fete' ? world.cities : [host];
     for (let i = 0; i < (e.shows ?? 6); i++) {
       const town = towns[i % towns.length];
-      const room = town.venues.filter(v => v.kind !== 'airport' && v.tier <= 2);
+      const room = town.venues.filter(v => v.kind !== 'airport' && v.tier <= 2 && venueOpenIn(v.name, year));
       if (!room.length) continue;
       const venue = rng.pick(room);
       const gig = buildGig(s, rng, { venue, day: start, act: actName(rng), real: false, feeMultiplier: 1.25 });

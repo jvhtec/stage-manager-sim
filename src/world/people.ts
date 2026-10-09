@@ -202,6 +202,10 @@ export function evaluateCrew(people: CrewMember[], gig: Gig): CrewEvaluation {
 export const REST_AT: Record<RestRota, number> = { off: Infinity, tired: 70, strict: 50 };
 
 export interface PickOptions {
+  /** People named for this show: they board first. */
+  prefer?: Set<string>;
+  /** People named for some other booked show: they stay put. */
+  reserved?: Set<string>;
   /** The truck being loaded: people pinned to it board first, people pinned elsewhere don't. */
   vehicleId?: string;
   /** Fatigue at which people sit the job out (pinned people still go). */
@@ -210,6 +214,8 @@ export interface PickOptions {
 
 /** Whether `m` may board the truck being loaded. */
 export function mayBoard(m: CrewMember, opts: PickOptions = {}): boolean {
+  if (opts.reserved?.has(m.id) && !opts.prefer?.has(m.id)) return false;
+  if (opts.prefer?.has(m.id)) return true;
   if (m.pinnedVehicleId && m.pinnedVehicleId !== opts.vehicleId) return false;
   if (m.pinnedVehicleId === opts.vehicleId && opts.vehicleId) return true;
   return m.fatigue < (opts.restAt ?? Infinity);
@@ -233,7 +239,8 @@ export function pickCrew(pool: CrewMember[], gig: Gig, seats: number, alreadyAbo
       if (!mayBoard(m, opts)) return;
       const fit = Math.max(...CREW_DEPTS.map(d => (slots[d] > 0 ? m.skills[d] + 1 : m.skills[d] * 0.3)));
       const pinned = opts.vehicleId && m.pinnedVehicleId === opts.vehicleId ? 100 : 0;
-      const score = pinned + fit - m.fatigue / 40;
+      const named = opts.prefer?.has(m.id) ? 150 : 0;
+      const score = pinned + named + fit - m.fatigue / 40;
       if (score > bestScore || (score === bestScore && best >= 0 && m.id < pool[best].id)) {
         best = i;
         bestScore = score;
@@ -246,6 +253,20 @@ export function pickCrew(pool: CrewMember[], gig: Gig, seats: number, alreadyAbo
     picked.push(m);
   }
   return picked;
+}
+
+/**
+ * What your crew nominations mean for loading `gig`: the people named for it
+ * go first, and people named for any other still-booked show are held back.
+ */
+export function crewDirectives(s: TycoonState, gig: Gig): { prefer: Set<string>; reserved: Set<string> } {
+  const prefer = new Set(gig.crewPicks ?? []);
+  const reserved = new Set<string>();
+  s.gigs.forEach(g => {
+    if (g.id === gig.id || g.status !== 'booked') return;
+    (g.crewPicks ?? []).forEach(id => reserved.add(id));
+  });
+  return { prefer, reserved };
 }
 
 /** People pinned to a truck. */

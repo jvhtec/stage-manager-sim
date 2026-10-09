@@ -107,7 +107,8 @@ export function rollWeather(s: TycoonState, gig: Gig, rng: Rng): Weather | null 
   if (!gig.festival) return null;
   const days = gig.days ?? 1;
   let storms = 0;
-  for (let d = 0; d < days; d++) if (rng.chance(STORM_CHANCE[s.country])) storms++;
+  const odds = STORM_CHANCE[s.country] * (gig.mods?.stormFactor ?? 1);
+  for (let d = 0; d < days; d++) if (rng.chance(odds)) storms++;
   if (!storms) return null;
   const penalty = Math.min(0.2, 0.07 * storms);
   const loss = Math.round(gig.fee * 0.12 * storms);

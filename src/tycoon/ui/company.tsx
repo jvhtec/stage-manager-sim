@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { borrow, buyRival, repay } from '@/world/actions';
+import { borrow, buyRival, goPublic, headhunt, repay, setDividend, takePrivate } from '@/world/actions';
+import { headhuntBlocker, headhuntFee, headhuntTarget } from '@/world/headhunt';
+import { levelOf, roleOf } from '@/world/people';
+import { DIVIDENDS, IPO_FLOAT, buybackCost, ipoProceeds, listingBlocker, marketCap, sharePrice } from '@/world/shares';
+import type { DividendLevel } from '@/world/types';
 import { rivalHealth, takeoverBlocker, takeoverPrice } from '@/world/rivals';
 import {
   START_YEARS,
@@ -8,14 +12,16 @@ import {
   companyTier,
   tierInfo,
 } from '@/world/catalog';
-import { formatHour, yearOf } from '@/world/core';
+import { formatDay, formatHour, yearOf } from '@/world/core';
+import { MILESTONES } from '@/world/milestones';
+import { DIFFICULTIES, DIFFICULTY_IDS, GOALS, GOAL_IDS, goalDeadlineYear, legacyScore } from '@/world/scenario';
 import { worldOf } from '@/world/mapgen';
 import { companyValue } from '@/world/queries';
 import { awardsName, companyRating, rivalRating } from '@/world/awards';
 import { describeLoanRate } from '@/world/market';
 import { borrowStep, creditLimit } from '@/world/finance';
 import { suggestedHqCities } from '@/world/state';
-import { LEDGER_LABELS, type LedgerCategory, type TycoonState } from '@/world/types';
+import { LEDGER_LABELS, type AnnualReport, type Difficulty, type GoalId, type LedgerCategory, type TycoonState } from '@/world/types';
 import { createRandomSeed } from '@/lib/rng';
 import { COUNTRIES, type CountryCode } from '@/world/content/countries';
 
@@ -109,6 +115,45 @@ export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
           {NEGATIVE_MONTHS_GAME_OVER - state.negativeMonths} more and the bank shuts you down.
         </div>
       )}
+      <h4>Shareholders</h4>
+      {state.listing ? (
+        <>
+          <Stat label="Share price">
+            <b>{money(Math.round(sharePrice(state)))}</b> <span className="tt-dim">· market cap {money(marketCap(state))}</span>
+          </Stat>
+          <Stat label="Confidence">
+            <span className={state.listing.confidence < 30 ? 'tt-bad' : state.listing.confidence > 65 ? 'tt-good' : ''}>{Math.round(state.listing.confidence)}</span>
+            <span className="tt-dim"> · paid out {money(state.listing.paid)} so far</span>
+          </Stat>
+          <Bar value={state.listing.confidence} max={100} color={state.listing.confidence < 30 ? '#ef4444' : '#22c55e'} />
+          <div className="tt-dim" style={{ margin: '6px 0 2px' }}>Dividend policy</div>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {(Object.keys(DIVIDENDS) as DividendLevel[]).map(id => (
+              <button key={id} className="tt-btn sm" data-on={state.listing!.dividend === id} onClick={() => act(s => setDividend(s, id))}>
+                {state.listing!.dividend === id ? '● ' : '○ '}
+                {DIVIDENDS[id].label}
+              </button>
+            ))}
+          </div>
+          <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+            {DIVIDENDS[state.listing.dividend].blurb} A losing month costs you the market's trust; at zero for long enough, the board
+            ousts you.
+          </div>
+          <button className="tt-btn sm" style={{ marginTop: 6 }} disabled={state.company.cash < buybackCost(state)} onClick={() => act(takePrivate)}>
+            Go private again · {money(buybackCost(state))}
+          </button>
+        </>
+      ) : (
+        <>
+          <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+            Float {Math.round(IPO_FLOAT * 100)}% of the company for about {money(ipoProceeds(state))} — then answer to shareholders.
+          </div>
+          {listingBlocker(state) && <div className="tt-warn" style={{ marginTop: 4 }}>{listingBlocker(state)}</div>}
+          <button className="tt-btn sm" style={{ marginTop: 6 }} disabled={!!listingBlocker(state)} onClick={() => act(goPublic)}>
+            Go public
+          </button>
+        </>
+      )}
       <h4>Reputation</h4>
       <div className="tt-row">
         <span>
@@ -124,6 +169,46 @@ export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
       <Stat label="Shows played / failed">
         {state.stats.showsPlayed} / <span className={state.stats.showsFailed ? 'tt-bad' : ''}>{state.stats.showsFailed}</span>
       </Stat>
+      <h4>Annual reports</h4>
+      {state.reports.length ? (
+        <table className="tt-table">
+          <thead>
+            <tr>
+              <th />
+              {[...state.reports].slice(-3).map(r => (
+                <th key={r.year}>{r.year}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {(
+              [
+                ['Revenue', (r: AnnualReport) => money(r.revenue), null],
+                ['Costs', (r: AnnualReport) => money(r.costs), null],
+                ['Net', (r: AnnualReport) => money(r.net), (r: AnnualReport) => (r.net >= 0 ? 'tt-good' : 'tt-bad')],
+                ['Company value', (r: AnnualReport) => money(r.value), null],
+                ['Shows (failed)', (r: AnnualReport) => `${r.shows} (${r.failed})`, null],
+                ['Average show', (r: AnnualReport) => `${Math.round(r.avgQuality * 100)}%`, null],
+                ['League rank', (r: AnnualReport) => `${r.rank} of ${r.firms}`, null],
+                ['Fleet / crew', (r: AnnualReport) => `${r.fleet} / ${r.crew}`, null],
+              ] as [string, (r: AnnualReport) => string, ((r: AnnualReport) => string) | null][]
+            ).map(([label, fmt, cls]) => (
+              <tr key={label}>
+                <td className="tt-dim">{label}</td>
+                {[...state.reports].slice(-3).map(r => (
+                  <td key={r.year} className={cls ? cls(r) : ''}>
+                    {fmt(r)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+          The first annual report lands on New Year's Day: income, costs, company value and where you rank.
+        </div>
+      )}
     </div>
   );
 }
@@ -234,7 +319,55 @@ export function HelpWindow() {
         <li>
           <b>Crew</b> are people: sound, lighting, video and staging techs rated 1–5★, with traits (crew chief, perfectionist,
           road warrior…). Shows want the right specialists — a light-heavy arena needs LX techs — and everyone levels up by
-          working. Hire from the market each month; keep morale up or rivals poach your stars.
+          working. Hire from the market each month. <b>Pin</b> someone to a truck to make them its regular, or open a booked
+          show and <b>Choose the crew</b> to name exactly who goes. Set a rest rota in Policies so tired people sit jobs out.
+          If morale slips, rivals make offers to your stars — match them within two weeks or lose them.
+        </li>
+        <li>
+          <b>Needs your call</b>: a breakdown with a show waiting, a rig held at customs, undersized power, a union call, an
+          injured tech, a star demanding a raise mid-tour… The game pauses and asks. Ignore it and the cheap default happens at the deadline.
+        </li>
+        <li>
+          <b>Planning a truck</b>: select it and its route is drawn on the map; its window lists each stop with the hours spare
+          at load-in, and suggests the next jobs that fit, bookable in one tap. <b>Plan a run</b> (route icon) strings
+          several offers onto one truck — check every load-in, then book them all; deliver every date well for a run bonus. Single-show offers can be <b>haggled</b> once
+          for +12% — a refusal may make the promoter walk, so push when you hold the stronger hand.
+        </li>
+        <li>
+          <b>Abroad</b>: the world map (globe button) shows each world tour's flights. Crossing a border costs <b>visas and
+          carnets</b> (EU firms move freely inside the EU; the UK needs carnets for Europe from 2021), and rigs get held at
+          customs now and then.
+        </li>
+        <li>
+          <b>Getting your name about</b>: set a marketing budget in Policies for more offers and a slow climb in reputation, and
+          decide each year whether to exhibit at the trade shows (PLASA, Prolight + Sound, LDI) — a stand brings a month of
+          enquiries and cheaper kit. <b>Low-emission zones</b> (Market) start charging older trucks in big cities from the
+          2000s on: check a vehicle's emission class, and retrofit a filter or replace it. A rival may start a{' '}
+          <b>price war</b> in a town you work in (see Market) — ride it out, fight back or buy a truce.
+        </li>
+        <li>
+          <b>Going public</b>: a big, reputable company can float 30% of itself for cash (Finance). Then shareholders
+          want profits and dividends: losses drain their confidence, activists demand action, and a board with no confidence
+          at all will throw you out. <b>Headhunting</b>: in the League table you can lure a rival's star tech away at triple
+          the usual signing fee — it dents their finances and your reputation, and the star expects a rise.
+        </li>
+        <li>
+          <b>Fleet</b>: the Fleet window is a dashboard — how busy each truck is, what needs attention in the next two
+          weeks, and who's earning. Rivals plan runs too: a firm already working an area is likelier to take the next date
+          there.
+        </li>
+        <li>
+          <b>Second-hand</b>: when a rival goes under, its kit and trucks go to auction — the price slides daily, but others may
+          snap lots up first. <b>Maker partnerships</b> (Policies) give a discount and sponsorship for committing a department
+          to one brand. Venue <b>promoters</b> remember your nights: do them proud and they call more and pay more.
+        </li>
+        <li>
+          The world moves: landmark rooms open and close in their real years (the O2 in 2007), towns grow, rivals expand,
+          merge and start up. Your <b>annual report</b> lands every New Year, and the League tracks your career milestones.
+        </li>
+        <li>
+          <b>Your goal</b>: you choose one (and a difficulty) when you start a company — see how you're doing in the League,
+          along with your legacy score. Reach it and the game keeps going; the score is what you leave behind.
         </li>
         <li>
           Buy bigger trucks and more gear, and win reputation to unlock arenas and stadiums. Every January the industry awards
@@ -258,7 +391,7 @@ export function NewGameForm({
   onCancel,
 }: {
   onPreview: (seed: number, hqCityId?: string, country?: CountryCode) => void;
-  onStart: (opts: { companyName: string; color: string; seed: number; hqCityId: string; country: CountryCode; startYear: number }) => void;
+  onStart: (opts: { companyName: string; color: string; seed: number; hqCityId: string; country: CountryCode; startYear: number; difficulty: Difficulty; goal: GoalId }) => void;
   onCancel?: () => void;
 }) {
   const [name, setName] = useState('Roadcase & Rigging');
@@ -266,6 +399,8 @@ export function NewGameForm({
   const [seed, setSeed] = useState(() => createRandomSeed());
   const [country, setCountry] = useState<CountryCode>(() => guessCountry());
   const [startYear, setStartYear] = useState(1990);
+  const [difficulty, setDifficulty] = useState<Difficulty>('normal');
+  const [goal, setGoal] = useState<GoalId>('sandbox');
   const cities = useMemo(() => suggestedHqCities(seed, country), [seed, country]);
   const [hq, setHq] = useState<string>('');
   const hqId = cities.find(c => c.id === hq)?.id ?? cities.find(c => c.size === 'town')?.id ?? cities[0]?.id;
@@ -326,6 +461,36 @@ export function NewGameForm({
           ))}
         </div>
       </div>
+      <div>
+        <div className="tt-dim" style={{ marginBottom: 3 }}>
+          Difficulty
+        </div>
+        <div className="tt-years">
+          {DIFFICULTY_IDS.map(d => (
+            <button key={d} className="tt-btn sm" data-on={d === difficulty} onClick={() => setDifficulty(d)} title={DIFFICULTIES[d].blurb}>
+              {DIFFICULTIES[d].label}
+            </button>
+          ))}
+        </div>
+        <div className="tt-dim" style={{ marginTop: 3, fontSize: 11, whiteSpace: 'normal' }}>
+          {DIFFICULTIES[difficulty].blurb}
+        </div>
+      </div>
+      <div>
+        <div className="tt-dim" style={{ marginBottom: 3 }}>
+          Goal
+        </div>
+        <select className="tt-input" value={goal} onChange={e => setGoal(e.target.value as GoalId)} aria-label="Goal">
+          {GOAL_IDS.map(g => (
+            <option key={g} value={g}>
+              {GOALS[g].label}
+            </option>
+          ))}
+        </select>
+        <div className="tt-dim" style={{ marginTop: 3, fontSize: 11, whiteSpace: 'normal' }}>
+          {GOALS[goal].blurb}
+        </div>
+      </div>
       <label>
         <div className="tt-dim" style={{ marginBottom: 3 }}>
           Home town
@@ -351,7 +516,7 @@ export function NewGameForm({
           <button
             className="tt-btn primary"
             disabled={!name.trim() || !hqId}
-            onClick={() => onStart({ companyName: name.trim(), color, seed, hqCityId: hqId!, country, startYear })}
+            onClick={() => onStart({ companyName: name.trim(), color, seed, hqCityId: hqId!, country, startYear, difficulty, goal })}
           >
             Start company
           </button>
@@ -370,9 +535,60 @@ export function GameOverPanel({ state, onRestart }: { state: TycoonState; onRest
       <Stat label="Shows failed">{state.stats.showsFailed}</Stat>
       <Stat label="Peak cash">{money(state.stats.peakCash)}</Stat>
       <Stat label="Peak tier">{tierInfo(companyTier(state.company.reputation)).label}</Stat>
+      <Stat label="Legacy score">
+        <b>{legacyScore(state).total.toLocaleString('en-US')}</b>
+      </Stat>
+      {state.goalResult && (
+        <Stat label="Goal">
+          <span className={state.goalResult.status === 'won' ? 'tt-good' : 'tt-dim'}>
+            {GOALS[state.goal ?? 'sandbox'].label} — {state.goalResult.status === 'won' ? 'reached' : 'missed'}
+          </span>
+        </Stat>
+      )}
       <button className="tt-btn primary" style={{ marginTop: 10 }} onClick={onRestart}>
         Start a new company
       </button>
+    </div>
+  );
+}
+
+/** Your goal, its progress and the legacy score so far. */
+function CareerPanel({ state }: { state: TycoonState }) {
+  const goal = GOALS[state.goal ?? 'sandbox'];
+  const progress = goal.progress(state);
+  const score = legacyScore(state);
+  const deadline = goalDeadlineYear(state);
+  return (
+    <div style={{ marginBottom: 6 }}>
+      <h4 style={{ marginTop: 0 }}>
+        Your goal — {goal.label}
+        {state.difficulty && state.difficulty !== 'normal' ? <span className="tt-dim"> · {DIFFICULTIES[state.difficulty].label}</span> : null}
+      </h4>
+      {state.goal && state.goal !== 'sandbox' ? (
+        <>
+          <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+            {goal.blurb}
+            {deadline ? ` (by ${deadline})` : ''}
+          </div>
+          <div className="tt-row">
+            <span style={{ minWidth: 140 }}>{progress.text}</span>
+            <Bar value={Math.round(progress.fraction * 100)} max={100} color={state.goalResult?.status === 'won' ? '#22c55e' : state.company.color} />
+          </div>
+          {state.goalResult && (
+            <div className={state.goalResult.status === 'won' ? 'tt-good' : 'tt-dim'} style={{ marginTop: 2 }}>
+              {state.goalResult.status === 'won' ? '🏆 Reached — everything from here is a bonus.' : 'The deadline passed. The company carries on.'}
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="tt-dim">No goal — a sandbox. Pick one when you start a new company.</div>
+      )}
+      <div className="tt-row" style={{ marginTop: 4 }}>
+        <span className="tt-dim" title={score.parts.map(p => `${p.label}: ${p.points}`).join(' · ')}>
+          Legacy score
+        </span>
+        <b>{score.total.toLocaleString('en-US')}</b>
+      </div>
     </div>
   );
 }
@@ -407,6 +623,7 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
   ].sort((a, b) => b.rating - a.rating);
   return (
     <div>
+      <CareerPanel state={state} />
       <table className="tt-table">
         <thead>
           <tr>
@@ -445,6 +662,33 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
                     >
                       Buy {kmoney(takeoverPrice(r.rival))}
                     </button>
+                  </div>
+                )}
+                {'rival' in r && r.rival && (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', paddingLeft: 30, marginTop: 2 }}>
+                    {(() => {
+                      const rv = r.rival!;
+                      const star = headhuntTarget(state, rv);
+                      const why = headhuntBlocker(state, rv);
+                      return (
+                        <>
+                          <span className="tt-dim" style={{ fontSize: 11, whiteSpace: 'normal' }}>
+                            Star: {star.name}, {levelOf(star)}★ {roleOf(star)}
+                          </span>
+                          <button
+                            className="tt-btn sm"
+                            title={why ?? `Lure ${star.name} away: costs ${rv.name} 6 finances and you 1 reputation`}
+                            disabled={!!why}
+                            onClick={() => {
+                              const res = ctx.dispatch(s => headhunt(s, rv.id));
+                              if (res.message) ctx.toast(res.message, res.ok);
+                            }}
+                          >
+                            Headhunt {kmoney(headhuntFee(star))}
+                          </button>
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
               </td>
@@ -489,6 +733,22 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
       ) : (
         <div className="tt-dim">Empty — for now.</div>
       )}
+      <h4>
+        Milestones ({state.milestones.length}/{MILESTONES.length})
+      </h4>
+      <div className="tt-list">
+        {MILESTONES.map(m => {
+          const got = state.milestones.find(x => x.id === m.id);
+          return (
+            <div key={m.id} className="tt-row" style={{ opacity: got ? 1 : 0.45 }}>
+              <span>
+                {got ? '🏁' : '▫️'} <b>{m.label}</b> <span className="tt-dim">{m.blurb}</span>
+              </span>
+              {got && <span className="tt-dim">{formatDay(state, got.day)}</span>}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

@@ -116,6 +116,13 @@ export type LedgerCategory =
   | 'royalties'
   | 'deals'
   | 'training'
+  | 'onsite'
+  | 'sponsorship'
+  | 'paperwork'
+  | 'bonuses'
+  | 'zones'
+  | 'marketing'
+  | 'equity'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -143,6 +150,13 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   royalties: 'Design royalties',
   deals: 'Production deals',
   training: 'Crew training',
+  onsite: 'On-the-day extras',
+  sponsorship: 'Maker sponsorship',
+  paperwork: 'Visas & carnets',
+  bonuses: 'Run bonuses',
+  zones: 'Low-emission zones',
+  marketing: 'Marketing & trade shows',
+  equity: 'Shares & dividends',
   sales: 'Asset sales',
 };
 
@@ -251,6 +265,10 @@ export interface Vehicle {
   arrivedHour?: number;
   profitThisYear: number;
   profitLastYear: number;
+  /** How busy it's been lately, 0-1 (fleetReport.ts). */
+  util?: number;
+  /** Filters fitted to an older engine, each adding an emission class (regulation.ts). */
+  retrofit?: number;
   /** Leased rather than owned (finance.ts). */
   lease?: { monthly: number; sinceHour: number };
 }
@@ -346,9 +364,110 @@ export interface Gig {
   event?: { id: string; year: number; name: string; lot: Dept; broadcast: boolean; scale: number; citywide?: boolean };
   /** Your sealed bid on an event lot. */
   bid?: BidLevel;
+  /** You've already haggled over the fee (negotiate.ts). */
+  negotiated?: boolean;
+  /** On a share of the gate instead of a flat fee (gate.ts): the true ticket-sales hype and your forecast of it. */
+  gate?: { hype: number; forecast: number };
+  /** People you've named for this show (people.ts); they board first and are held back from other jobs. */
+  crewPicks?: string[];
   status: GigStatus;
   rivalId?: string;
   result?: GigResult;
+  /** What your on-the-day decisions did to the show (dilemmas.ts). */
+  mods?: ShowMods;
+}
+
+export interface ShowMods {
+  quality?: number;
+  failureFactor?: number;
+  /** Multiplier on the chance of storms at an outdoor show. */
+  stormFactor?: number;
+}
+
+/** One lot at an auction (auctions.ts): used kit or a used truck. */
+export interface AuctionLot {
+  id: string;
+  kind: 'gear' | 'vehicle';
+  productId?: string;
+  qty?: number;
+  /** Gear condition 0-100. */
+  condition?: number;
+  modelId?: string;
+  ageYears?: number;
+  reliability?: number;
+  /** Market value; the asking price is a sliding share of it. */
+  value: number;
+}
+
+export interface Auction {
+  id: string;
+  seller: string;
+  cityId: string;
+  startDay: number;
+  endDay: number;
+  lots: AuctionLot[];
+}
+
+export type DividendLevel = 'none' | 'modest' | 'generous';
+
+/** The company's stock-market listing (shares.ts). */
+export interface Listing {
+  day: number;
+  /** Share of the company in public hands. */
+  float: number;
+  /** 0-100: how the market feels about you. */
+  confidence: number;
+  dividend: DividendLevel;
+  /** Trading-ledger total at the last month end (to work out each month's profit). */
+  mark: number;
+  /** Months with confidence near zero. */
+  weakMonths: number;
+  /** Cash raised at the float, and paid out in dividends since. */
+  raised: number;
+  paid: number;
+}
+
+/** A rival undercutting a town's fees (pricewars.ts). */
+export interface PriceWar {
+  id: string;
+  cityId: string;
+  rivalId: string;
+  startDay: number;
+  endDay: number;
+  /** Share fees fall by. */
+  undercut: number;
+  /** You've stood up to them. */
+  fight: boolean;
+}
+
+/** A string of shows booked together on one truck (runs.ts). */
+export interface Run {
+  id: string;
+  vehicleId: string;
+  gigIds: string[];
+  bonusRate: number;
+  status: 'active' | 'paid' | 'broken';
+  bonus?: number;
+}
+
+export type DilemmaKind = 'shareholders' | 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
+
+/** A problem that needs your call (dilemmas.ts). */
+export interface Dilemma {
+  id: string;
+  kind: DilemmaKind;
+  title: string;
+  text: string;
+  options: { id: string; label: string; detail: string; cost?: number }[];
+  /** What happens if you don't answer by `expiresHour`. */
+  defaultOption: string;
+  gigId?: string;
+  vehicleId?: string;
+  personId?: string;
+  /** Extra reference for the kind (a trade show's id). */
+  payload?: string;
+  createdHour: number;
+  expiresHour: number;
 }
 
 export type ContractStatus = 'offer' | 'active' | 'ended' | 'expired' | 'rival';
@@ -427,6 +546,20 @@ export interface Policies {
   training: TrainingLevel;
   /** Rest rota: keep tired people at base instead of sending them out. */
   rest: RestRota;
+  marketing: MarketingLevel;
+}
+
+export type Difficulty = 'easy' | 'normal' | 'hard';
+export type GoalId = 'sandbox' | 'top' | 'empire' | 'worlds' | 'awards' | 'consolidator' | 'survivor';
+
+export type MarketingLevel = 'none' | 'local' | 'trade' | 'national';
+
+/** Show-driven buzz and deals still running (marketing.ts). */
+export interface Promo {
+  offerMult: number;
+  offerUntil: number;
+  gearDiscount: number;
+  gearUntil: number;
 }
 
 export type RestRota = 'off' | 'tired' | 'strict';
@@ -442,6 +575,26 @@ export interface YearStats {
   worldTours: number;
   events?: number;
   eventQualitySum?: number;
+}
+
+/** The year's books and standing (milestones.ts). */
+export interface AnnualReport {
+  year: number;
+  revenue: number;
+  costs: number;
+  net: number;
+  cash: number;
+  value: number;
+  shows: number;
+  failed: number;
+  avgQuality: number;
+  rating: number;
+  rank: number;
+  firms: number;
+  reputation: number;
+  fleet: number;
+  crew: number;
+  best?: { act: string; quality: number };
 }
 
 export interface Company {
@@ -490,6 +643,29 @@ export interface TycoonState {
   candidates: CrewMember[];
   /** Rivals' open offers to your people (people.ts). */
   poachBids: PoachBid[];
+  /** Problems waiting on your decision (dilemmas.ts). */
+  dilemmas: Dilemma[];
+  /** Used kit and trucks under the hammer (auctions.ts). */
+  auctions: Auction[];
+  /** Career milestones reached (milestones.ts) and the yearly reports. */
+  milestones: { id: string; day: number }[];
+  /** Manufacturer partnership per department (partners.ts). */
+  /** Town size multipliers over the game (towns.ts). */
+  townGrowth: Record<string, number>;
+  /** Buzz and deals from trade shows (marketing.ts). */
+  promo?: Promo;
+  /** Day each rival was last raided for crew (headhunt.ts). */
+  headhunted?: Record<string, number>;
+  /** Stock-market listing, once you go public (shares.ts). */
+  listing?: Listing;
+  /** Rivals undercutting your towns (pricewars.ts). */
+  priceWars: PriceWar[];
+  /** Planned road runs (runs.ts). */
+  runs: Run[];
+  /** Promoter relationship per venue, 0-8 (venues.ts). */
+  venueRelations: Record<string, number>;
+  partners: Partial<Record<Dept, { brand: string; sinceDay: number; lapse: number }>>;
+  reports: AnnualReport[];
   /** Exclusive production deals with acts (deals.ts). */
   deals: { id: string; act: string; tier: number; monthly: number; startDay: number; endDay: number; strikes: number; status: 'offer' | 'active' | 'ended'; offerExpires: number }[];
   /** Your own products (encoded ids, see content/gear.ts ownProductId). */
@@ -510,7 +686,11 @@ export interface TycoonState {
   artistRelations: Record<string, number>;
   negativeMonths: number;
   nextId: number;
-  stats: { showsPlayed: number; showsFailed: number; peakCash: number };
+  stats: { showsPlayed: number; showsFailed: number; peakCash: number; rivalsBought?: number };
+  /** Chosen at the start (scenario.ts). */
+  difficulty?: Difficulty;
+  goal?: GoalId;
+  goalResult?: { status: 'won' | 'missed'; day: number };
   gameOver?: { hour: number; reason: string };
 }
 

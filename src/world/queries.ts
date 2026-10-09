@@ -1,4 +1,6 @@
 /** Read-only projections for the UI — nothing here mutates state. */
+import { zoneBill } from './regulation';
+import { paperworkFor } from './paperwork';
 import { GEAR_RESALE_RATE, HOTEL_NIGHT, HOURS_PER_DAY, PER_DIEM, fuelPerTile, getModel } from './catalog';
 import { getProduct } from './content/gear';
 import { techBonus } from './content/techs';
@@ -8,10 +10,11 @@ import { freelancersFor, type FreelanceHire } from './crew';
 import { prepRatio } from './facilities';
 import { subHireFor, type SubHire } from './hire';
 import { moraleBonus } from './crew';
-import { REST_AT, aboard, atDepot, evaluateCrew, mayBoard, pickCrew, type CrewEvaluation } from './people';
+import { REST_AT, crewDirectives, aboard, atDepot, evaluateCrew, mayBoard, pickCrew, type CrewEvaluation } from './people';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize, type GearEvaluation } from './loading';
 import {
   dateOfDay,
+  dayOf,
   depotInCity,
   emptyCounts,
   formatHour,
@@ -22,6 +25,7 @@ import {
   sellValue,
   travelHours,
 } from './core';
+import { gigBookingBar } from './standing';
 import { worldOf } from './mapgen';
 import { roadDistance } from './pathfinding';
 import { DEPTS, type CrewMember, type DeptCounts, type GearStock, type Gig, type TycoonState, type Vehicle } from './types';
@@ -70,6 +74,41 @@ export function estimateArrival(state: TycoonState, v: Vehicle, gig: Gig): numbe
   if (from === gig.cityId && (loaded || from !== v.homeCityId)) return state.hour;
   const depart = Math.max(state.hour, plannedDepartureHour(world, v, from, gig));
   return depart + travelHours(world, v.modelId, from, gig.cityId);
+}
+
+export interface JobSuggestion {
+  gig: Gig;
+  /** Tiles from where the truck will be after its current orders. */
+  distance: number;
+  /** Fee per tile of the extra driving — the ranking score. */
+  score: number;
+}
+
+/** How far a suggestion may be from where the truck will be. */
+export const SUGGEST_RANGE = 36;
+
+/**
+ * Open single-show offers that would fit on the end of this truck's orders:
+ * bookable by you, reachable in time for load-in, close to where it'll be.
+ * Best fee for the driving first.
+ */
+export function suggestJobs(state: TycoonState, v: Vehicle, limit = 3): JobSuggestion[] {
+  if (v.owner !== 'player') return [];
+  const world = worldOf(state);
+  const today = dayOf(state.hour);
+  const booked = v.orders.map(id => gigById(state, id)).filter((g): g is Gig => !!g && g.status === 'booked');
+  const anchor = booked.length ? booked[booked.length - 1].cityId : v.status === 'driving' || v.status === 'broken' ? v.route!.to : v.cityId ?? v.homeCityId;
+  const out: JobSuggestion[] = [];
+  state.gigs.forEach(g => {
+    if (g.status !== 'offer' || g.tourId || g.festival || g.event || g.overseas) return;
+    if (g.acceptByDay < today || g.day <= today) return;
+    if (v.orders.includes(g.id) || gigBookingBar(state, g).reason) return;
+    const distance = roadDistance(world, anchor, g.cityId);
+    if (!Number.isFinite(distance) || distance > SUGGEST_RANGE) return;
+    if (estimateArrival(state, v, g) > loadInHour(g)) return;
+    out.push({ gig: g, distance, score: g.fee / (distance + 6) });
+  });
+  return out.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 
 export interface CoverageProjection {
@@ -122,8 +161,8 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
     const remaining = emptyCounts();
     DEPTS.forEach(d => (remaining[d] = Math.max(0, gig.needs[d] - have[d])));
     addStock(delivered, pickGear(depot.gear, remaining, model.gearCapacity, gig.rider));
-    const opts = { vehicleId: v.id, restAt: REST_AT[state.policies.rest] };
-    const pinned = depot.people.filter(m => m.pinnedVehicleId === v.id).length;
+    const opts = { vehicleId: v.id, restAt: REST_AT[state.policies.rest], ...crewDirectives(state, gig) };
+    const pinned = depot.people.filter(m => m.pinnedVehicleId === v.id || opts.prefer.has(m.id)).length;
     const seats = Math.min(model.crewSeats, Math.max(pinned, gig.crewNeeded - people.length), depot.people.filter(m => mayBoard(m, opts)).length);
     people.push(...pickCrew(depot.people, gig, seats, people, opts));
   });
@@ -183,6 +222,10 @@ export interface JobCosts {
   travel: number;
   freelance: number;
   subhire: number;
+  /** Visas and carnets on a leg abroad. */
+  paperwork: number;
+  /** Low-emission zone charges for the trucks assigned. */
+  zones: number;
   total: number;
   nights: number;
 }
@@ -211,5 +254,7 @@ export function estimateJobCosts(state: TycoonState, gig: Gig, projection = proj
   });
   const freelance = projection.freelance.cost;
   const subhire = projection.subhire.cost;
-  return { fuel: Math.round(fuel), travel: Math.round(travel), freelance, subhire, total: Math.round(fuel + travel + freelance + subhire), nights };
+  const paperwork = gig.overseas ? paperworkFor(state, gig, projection.delivered, projection.crew || gig.crewNeeded, dateOfDay(state, gig.day).getUTCFullYear()).total : 0;
+  const zones = projection.vehicles.reduce((sum, v) => sum + (zoneBill(state, v, gig)?.total ?? 0), 0);
+  return { fuel: Math.round(fuel), travel: Math.round(travel), freelance, subhire, paperwork, zones, total: Math.round(fuel + travel + freelance + subhire + paperwork + zones), nights };
 }
