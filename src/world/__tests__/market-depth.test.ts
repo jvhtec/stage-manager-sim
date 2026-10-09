@@ -80,7 +80,8 @@ describe('moving kit and buying rivals', () => {
     const victim = weak.rivals.find(x => x.reputation < 60)!;
     victim.health = 1;
     victim.reputation = 10;
-    for (let i = 0; i < 6 && weak.rivals.includes(victim); i++) monthlyRivals(weak, { next: () => 0, chance: () => false } as never);
+    for (let i = 0; i < 6 && weak.rivals.includes(victim); i++) monthlyRivals(weak, { next: () => 0, chance: () => false, nextInt: () => 0, pick: <T,>(a: T[]) => a[0] } as never);
     expect(weak.goneRivals).toContain(victim.id);
+    expect(weak.auctions.some(a => a.seller === victim.name)).toBe(true);
   });
 });
