@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 120 tests):
+(`src/world/__tests__/*.test.ts`, 126 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -327,6 +327,14 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   reach, the target's base closes and its lot frees up; and in a decent era market (trend ≥ 1,
   never in a shutdown) a new start-up opens in a town with a free lot — small (tiers 1-2, rep
   12-24) with a made-up name. Capped at 14 firms.
+
+- **The long game** (`milestones.ts`) — every New Year the **annual report** closes the books (revenue,
+  costs, net, company value, shows and average quality, league rank among all firms, fleet and
+  crew), compares with last year in the news and sits in the Finances window (last three years
+  side by side). 25 career **milestones** (first show, 100 shows, first tour, festival, special
+  event, house contract, own product, takeover, 5★ tech, first profitable year, seven then eight
+  figures, a decade in business…) tick off monthly and show in the League; pure recognition, no
+  economic effect.
 
 UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
 (workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the

@@ -497,6 +497,26 @@ export interface YearStats {
   eventQualitySum?: number;
 }
 
+/** The year's books and standing (milestones.ts). */
+export interface AnnualReport {
+  year: number;
+  revenue: number;
+  costs: number;
+  net: number;
+  cash: number;
+  value: number;
+  shows: number;
+  failed: number;
+  avgQuality: number;
+  rating: number;
+  rank: number;
+  firms: number;
+  reputation: number;
+  fleet: number;
+  crew: number;
+  best?: { act: string; quality: number };
+}
+
 export interface Company {
   name: string;
   color: string;
@@ -547,6 +567,9 @@ export interface TycoonState {
   dilemmas: Dilemma[];
   /** Used kit and trucks under the hammer (auctions.ts). */
   auctions: Auction[];
+  /** Career milestones reached (milestones.ts) and the yearly reports. */
+  milestones: { id: string; day: number }[];
+  reports: AnnualReport[];
   /** Exclusive production deals with acts (deals.ts). */
   deals: { id: string; act: string; tier: number; monthly: number; startDay: number; endDay: number; strikes: number; status: 'offer' | 'active' | 'ended'; offerExpires: number }[];
   /** Your own products (encoded ids, see content/gear.ts ownProductId). */

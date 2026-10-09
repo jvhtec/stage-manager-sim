@@ -9,7 +9,6 @@ import type { Rng } from '@/lib/rng';
 import { tierInfo } from './catalog';
 import { book, dateOfDay, dayOf, depotInCity, emptyCounts, formatDay, formatMoney, newId, pushNews, yearOf } from './core';
 import { venueOpenIn } from './content/venueYears';
-import { venueOpenIn } from './content/venueYears';
 import { addStock, deptTotals, pickGear } from './loading';
 import { marketNow } from './market';
 import { wearFromShow } from './wear';

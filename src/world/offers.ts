@@ -7,7 +7,6 @@ import type { Rng } from '@/lib/rng';
 import { tierInfo } from './catalog';
 import { dateOfDay, dayOf, newId, pushNews, yearOf } from './core';
 import { VENUE_YEARS, closuresIn, openingsIn, reopeningsIn, venueOpenIn } from './content/venueYears';
-import { venueOpenIn } from './content/venueYears';
 import { artistsTouringAt, homeWeight } from './content/artists';
 import { expectedQuality, productsAvailableIn } from './content/gear';
 import { roadDistance } from './pathfinding';

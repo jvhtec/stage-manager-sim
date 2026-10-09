@@ -8,14 +8,15 @@ import {
   companyTier,
   tierInfo,
 } from '@/world/catalog';
-import { formatHour, yearOf } from '@/world/core';
+import { formatDay, formatHour, yearOf } from '@/world/core';
+import { MILESTONES } from '@/world/milestones';
 import { worldOf } from '@/world/mapgen';
 import { companyValue } from '@/world/queries';
 import { awardsName, companyRating, rivalRating } from '@/world/awards';
 import { describeLoanRate } from '@/world/market';
 import { borrowStep, creditLimit } from '@/world/finance';
 import { suggestedHqCities } from '@/world/state';
-import { LEDGER_LABELS, type LedgerCategory, type TycoonState } from '@/world/types';
+import { LEDGER_LABELS, type AnnualReport, type LedgerCategory, type TycoonState } from '@/world/types';
 import { createRandomSeed } from '@/lib/rng';
 import { COUNTRIES, type CountryCode } from '@/world/content/countries';
 
@@ -124,6 +125,46 @@ export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
       <Stat label="Shows played / failed">
         {state.stats.showsPlayed} / <span className={state.stats.showsFailed ? 'tt-bad' : ''}>{state.stats.showsFailed}</span>
       </Stat>
+      <h4>Annual reports</h4>
+      {state.reports.length ? (
+        <table className="tt-table">
+          <thead>
+            <tr>
+              <th />
+              {[...state.reports].slice(-3).map(r => (
+                <th key={r.year}>{r.year}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {(
+              [
+                ['Revenue', (r: AnnualReport) => money(r.revenue), null],
+                ['Costs', (r: AnnualReport) => money(r.costs), null],
+                ['Net', (r: AnnualReport) => money(r.net), (r: AnnualReport) => (r.net >= 0 ? 'tt-good' : 'tt-bad')],
+                ['Company value', (r: AnnualReport) => money(r.value), null],
+                ['Shows (failed)', (r: AnnualReport) => `${r.shows} (${r.failed})`, null],
+                ['Average show', (r: AnnualReport) => `${Math.round(r.avgQuality * 100)}%`, null],
+                ['League rank', (r: AnnualReport) => `${r.rank} of ${r.firms}`, null],
+                ['Fleet / crew', (r: AnnualReport) => `${r.fleet} / ${r.crew}`, null],
+              ] as [string, (r: AnnualReport) => string, ((r: AnnualReport) => string) | null][]
+            ).map(([label, fmt, cls]) => (
+              <tr key={label}>
+                <td className="tt-dim">{label}</td>
+                {[...state.reports].slice(-3).map(r => (
+                  <td key={r.year} className={cls ? cls(r) : ''}>
+                    {fmt(r)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ) : (
+        <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+          The first annual report lands on New Year's Day: income, costs, company value and where you rank.
+        </div>
+      )}
     </div>
   );
 }
@@ -489,6 +530,22 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
       ) : (
         <div className="tt-dim">Empty — for now.</div>
       )}
+      <h4>
+        Milestones ({state.milestones.length}/{MILESTONES.length})
+      </h4>
+      <div className="tt-list">
+        {MILESTONES.map(m => {
+          const got = state.milestones.find(x => x.id === m.id);
+          return (
+            <div key={m.id} className="tt-row" style={{ opacity: got ? 1 : 0.45 }}>
+              <span>
+                {got ? '🏁' : '▫️'} <b>{m.label}</b> <span className="tt-dim">{m.blurb}</span>
+              </span>
+              {got && <span className="tt-dim">{formatDay(state, got.day)}</span>}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

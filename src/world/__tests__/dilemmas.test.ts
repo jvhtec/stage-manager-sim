@@ -52,7 +52,7 @@ describe('on-the-day decisions', () => {
     expect(s.dilemmas.length).toBe(1);
     const d = s.dilemmas[0];
     s.hour = d.expiresHour;
-    hourlyCrises(s, { ...yes, chance: () => false } as never);
+    hourlyCrises(s, { ...(yes as object), chance: () => false } as never);
     expect(s.dilemmas).toHaveLength(0);
     expect(s.news[0].text).toMatch(/No answer/);
   });

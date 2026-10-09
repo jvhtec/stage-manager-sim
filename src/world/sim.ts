@@ -8,6 +8,7 @@
  * randomness is the seeded rng carried in `state.rngState`).
  */
 import { dailyAuctions, monthlyAuctions } from './auctions';
+import { annualReport, monthlyMilestones } from './milestones';
 import { breakdownDilemma, hourlyCrises } from './dilemmas';
 import type { Rng } from '@/lib/rng';
 import {
@@ -519,6 +520,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     pushNews(s, `It's ${date.getUTCFullYear()}. Last year's books are closed — check the finances.`, 'info');
     if (s.hour > HOURS_PER_DAY) awardsNight(s, date.getUTCFullYear() - 1);
     yearlyVenues(s, world, date.getUTCFullYear());
+    annualReport(s, date.getUTCFullYear() - 1);
   }
   announceModels(s, date.getUTCFullYear());
   announceGear(s, date.getUTCFullYear());
@@ -576,6 +578,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     monthlyContracts(s, world, rng);
     monthlyRivals(s, rng);
     monthlyAuctions(s, rng);
+    monthlyMilestones(s);
     monthlyRnd(s, rng);
     monthlyDeals(s, rng);
   }

@@ -8,6 +8,7 @@ import type { Rng } from '@/lib/rng';
 import { tierInfo } from './catalog';
 import { book, depotInCity, formatMoney, freeLot, newId, pushNews, yearOf } from './core';
 import { openAuction } from './auctions';
+import { unlock } from './milestones';
 import { rentalProduct } from './hire';
 import { marketNow } from './market';
 import { worldOf } from './mapgen';
@@ -147,6 +148,7 @@ export function absorbRival(s: TycoonState, r: Rival) {
   s.rivals = s.rivals.filter(x => x.id !== r.id);
   s.vehicles = s.vehicles.filter(v => v.owner !== r.id);
   s.goneRivals.push(r.id);
+  unlock(s, 'takeover');
 
   let base = depotInCity(s, r.hqCityId);
   if (!base) {
