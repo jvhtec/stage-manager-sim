@@ -437,6 +437,10 @@ decisions earns about 2× the plain bot, almost all from keeping each truck book
 3-6 runs in 7 years; sponsorship is ~£500/month per department), so there's no runaway from the new tools.
 A second pass after the rival changes: GB 1979 cash £863k mean (vs £926k before, £1.02M baseline), the other
 three scenarios flat, no extra bankruptcies, show counts steady.
+A third pass after emission zones, marketing, trade shows and goals: standard-difficulty results are identical to
+the second pass in every scenario (the bot never uses those systems, and an unanswered trade show means
+staying home). Difficulty tiers on GB 1979 over 8 seeds: Gentle £897k, Standard £846k, Cutthroat £732k mean cash
+(7 of 8 Cutthroat companies survive, all of the others do).
 
 UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
 (workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the
