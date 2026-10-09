@@ -116,6 +116,7 @@ export type LedgerCategory =
   | 'royalties'
   | 'deals'
   | 'training'
+  | 'onsite'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -143,6 +144,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   royalties: 'Design royalties',
   deals: 'Production deals',
   training: 'Crew training',
+  onsite: 'On-the-day extras',
   sales: 'Asset sales',
 };
 
@@ -349,6 +351,33 @@ export interface Gig {
   status: GigStatus;
   rivalId?: string;
   result?: GigResult;
+  /** What your on-the-day decisions did to the show (dilemmas.ts). */
+  mods?: ShowMods;
+}
+
+export interface ShowMods {
+  quality?: number;
+  failureFactor?: number;
+  /** Multiplier on the chance of storms at an outdoor show. */
+  stormFactor?: number;
+}
+
+export type DilemmaKind = 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
+
+/** A problem that needs your call (dilemmas.ts). */
+export interface Dilemma {
+  id: string;
+  kind: DilemmaKind;
+  title: string;
+  text: string;
+  options: { id: string; label: string; detail: string; cost?: number }[];
+  /** What happens if you don't answer by `expiresHour`. */
+  defaultOption: string;
+  gigId?: string;
+  vehicleId?: string;
+  personId?: string;
+  createdHour: number;
+  expiresHour: number;
 }
 
 export type ContractStatus = 'offer' | 'active' | 'ended' | 'expired' | 'rival';
@@ -490,6 +519,8 @@ export interface TycoonState {
   candidates: CrewMember[];
   /** Rivals' open offers to your people (people.ts). */
   poachBids: PoachBid[];
+  /** Problems waiting on your decision (dilemmas.ts). */
+  dilemmas: Dilemma[];
   /** Exclusive production deals with acts (deals.ts). */
   deals: { id: string; act: string; tier: number; monthly: number; startDay: number; endDay: number; strikes: number; status: 'offer' | 'active' | 'ended'; offerExpires: number }[];
   /** Your own products (encoded ids, see content/gear.ts ownProductId). */

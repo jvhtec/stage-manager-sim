@@ -7,6 +7,7 @@
  * Pure and deterministic: same state in → same state out (the only
  * randomness is the seeded rng carried in `state.rngState`).
  */
+import { breakdownDilemma, hourlyCrises } from './dilemmas';
 import type { Rng } from '@/lib/rng';
 import {
   HOTEL_NIGHT,
@@ -85,12 +86,20 @@ export function reputationAfterShow(rep: number, tier: number, quality: number):
   return Math.min(ceiling, rep + delta * Math.max(0.25, 1 - rep / 110));
 }
 
-export function advanceHours(state: TycoonState, hours: number): TycoonState {
+/**
+ * Runs the world on by `hours`. With `stopForDecisions`, stops early in the
+ * hour a new problem needs your call (so the game can pause on it).
+ */
+export function advanceHours(state: TycoonState, hours: number, stopForDecisions = false): TycoonState {
   if (state.gameOver || hours <= 0) return state;
   const s = cloneState(state);
   const world = worldOf(s);
+  const waiting = new Set(s.dilemmas.map(d => d.id));
   withRng(s, rng => {
-    for (let i = 0; i < hours && !s.gameOver; i++) stepHour(s, world, rng);
+    for (let i = 0; i < hours && !s.gameOver; i++) {
+      stepHour(s, world, rng);
+      if (stopForDecisions && s.dilemmas.some(d => !waiting.has(d.id))) break;
+    }
   });
   return s;
 }
@@ -99,6 +108,7 @@ function stepHour(s: TycoonState, world: WorldMap, rng: Rng) {
   s.hour += 1;
   if (s.hour % HOURS_PER_DAY === 0) dailyTick(s, world, rng);
   deliverTransfers(s);
+  hourlyCrises(s, rng);
   resolveShows(s, world, rng);
   // Snapshot the list: rival trucks can be removed mid-loop.
   [...s.vehicles].forEach(v => stepVehicle(s, world, v, rng));
@@ -301,7 +311,10 @@ function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
       if (rng.chance((1 - v.reliability / 100) * 0.035)) {
         v.status = 'broken';
         v.brokenUntil = s.hour + 3 + rng.nextInt(6);
-        if (v.owner === 'player') pushNews(s, `${v.name} has broken down!`, 'bad', { vehicleId: v.id });
+        if (v.owner === 'player') {
+          pushNews(s, `${v.name} has broken down!`, 'bad', { vehicleId: v.id });
+          breakdownDilemma(s, v);
+        }
         return;
       }
       break;
@@ -392,7 +405,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const showDays = gig.overseas ? gig.overseas.stops.length : (gig.days ?? 1);
   const failures: Failure[] = [];
   for (let d = 0; d < Math.min(4, showDays); d++) {
-    const f = rollFailure(s, working, rng, prepFailureFactor(prep) * crewEval.failureFactor);
+    const f = rollFailure(s, working, rng, prepFailureFactor(prep) * crewEval.failureFactor * (gig.mods?.failureFactor ?? 1));
     if (f) failures.push(f);
   }
   const gear = evaluateGear(working, gig, yearOf(s, s.hour), s.gearCondition);
@@ -420,7 +433,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     0,
     Math.min(
       1,
-      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) + crewEval.bonus - (weather?.penalty ?? 0) }) +
+      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) + crewEval.bonus - (weather?.penalty ?? 0) + (gig.mods?.quality ?? 0) }) +
         (rng.next() - 0.5) * 0.08,
     ),
   );

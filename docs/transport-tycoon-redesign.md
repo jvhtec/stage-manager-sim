@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 97 tests):
+(`src/world/__tests__/*.test.ts`, 103 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -297,6 +297,16 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   for small firms); old saves' headcounts become people. Depot/vehicle `crew` and averages are
   cached by `syncCrew`.
 
+- **Decisions** (`dilemmas.ts`) — problems that need your call, popping up as a "Needs your call"
+  window and stopping the clock. A player truck breaking down with a show waiting offers wait /
+  call recovery (£, moving within the hour) / bodge it (free, reliability −8). At load-in a booked
+  show you're delivering has a 6-12% chance (more for big tiers) of a venue problem: undersized
+  power (generator vs house power: dimmers trip, ×1.6 failures), union call (extra hands vs a
+  sulky load-in and town rating), the manager's extras (better show + relation vs a cooler act),
+  curfew (fine vs cut-short set), an injured tech (send home vs play on exhausted), or a storm
+  warning at festivals (ballast ×0.35 storm odds). Choices become `gig.mods` folded into the
+  night's quality/failure/weather; unanswered, the cheap default happens at the deadline.
+
 UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
 (workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the
 show forecast, rating and trophy cabinet in the **League**.
@@ -316,7 +326,7 @@ The classic build has systems that don't exist in the map game yet. Each has an 
 
 1. **Playtest & balance pass** — fee/wage/running-cost tuning, offer density, rival aggression.
 2. **Named crew** — done (`people.ts`), with pins, rest rota and counter-offers.
-3. **Road & show incidents** — port the crisis system as pop-up decisions.
+3. **Road & show incidents** — done (`dilemmas.ts`): breakdown and venue decisions.
 4. **Tour planner** — drag-to-order a vehicle's show list, "add next show in route" suggestions,
    route lines drawn on the map for the selected vehicle.
 5. **Gear transfers & local hire** — move stock between warehouses; hire locally when short.

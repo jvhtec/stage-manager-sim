@@ -85,10 +85,15 @@ export function useTycoon(): Tycoon {
         const steps = Math.min(MAX_STEPS_PER_FRAME, Math.floor(acc));
         if (steps > 0) {
           acc -= steps;
-          const next = advanceHours(s, steps);
+          const next = advanceHours(s, steps, true);
           stateRef.current = next;
           collectNews(next);
           if (next.gameOver) setSpeed(0);
+          // Something needs your call: stop the clock (the window opens itself).
+          if (next.dilemmas.some(d => !s.dilemmas.some(x => x.id === d.id))) {
+            acc = 0;
+            setSpeed(0);
+          }
         }
         alphaRef.current = SPEEDS[speedRef.current] ? acc : 0;
       }

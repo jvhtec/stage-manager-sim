@@ -469,3 +469,12 @@ body {
   border-radius: 3px;
   margin-bottom: 8px;
 }
+
+.tt-decision {
+  border: 1px solid rgba(251, 191, 36, 0.5);
+  background: rgba(251, 191, 36, 0.07);
+  padding: 8px;
+  margin-bottom: 8px;
+  border-radius: 3px;
+}
+.tt-decision .tt-choice { height: auto; min-height: 0; padding: 8px 10px; margin-bottom: 4px; line-height: 1.3; }

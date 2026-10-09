@@ -20,6 +20,7 @@ import {
   Trophy,
   Truck,
   Users,
+  AlertTriangle,
   Wallet,
   ZoomIn,
   ZoomOut,
@@ -42,6 +43,7 @@ import { TourWindow } from './ui/tours';
 import { TalentWindow } from './ui/talent';
 import { MarketWindow } from './ui/market';
 import { PoliciesWindow } from './ui/policies';
+import { DecisionsWindow } from './ui/decisions';
 import { RndWindow } from './ui/rnd';
 import { CrewWindow } from './ui/crewWindow';
 import { FinanceWindow, GameOverPanel, HelpWindow, LeagueWindow, NewGameForm, NewsWindow } from './ui/company';
@@ -144,6 +146,17 @@ export default function TycoonGame() {
     [open],
   );
 
+  // A new problem needs your call: open it (the clock stops by itself).
+  const seenDilemmas = useRef<Set<string>>(new Set());
+  const dilemmaIds = state?.dilemmas.map(d => d.id).join(',') ?? '';
+  useEffect(() => {
+    if (!state || game.isPreview) return;
+    const fresh = state.dilemmas.filter(d => !seenDilemmas.current.has(d.id));
+    fresh.forEach(d => seenDilemmas.current.add(d.id));
+    if (fresh.length) open('decisions');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dilemmaIds]);
+
   // News popups fade after a while.
   const { popups, dismissPopup } = game;
   useEffect(() => {
@@ -231,6 +244,8 @@ export default function TycoonGame() {
         return 'R&D';
       case 'crew':
         return 'Crew';
+      case 'decisions':
+        return 'Needs your call';
       case 'help':
         return 'How to play';
       case 'menu':
@@ -276,11 +291,18 @@ export default function TycoonGame() {
         return <RndWindow ctx={ctx} />;
       case 'crew':
         return <CrewWindow ctx={ctx} />;
+      case 'decisions':
+        return <DecisionsWindow ctx={ctx} />;
       case 'help':
         return <HelpWindow />;
       case 'menu':
         return (
           <div className="tt-menu">
+            {state.dilemmas.length > 0 && (
+              <button className="tt-btn" onClick={() => open('decisions')} style={{ color: '#fbbf24' }}>
+                <AlertTriangle /> Needs your call ({state.dilemmas.length})
+              </button>
+            )}
             <button className="tt-btn" onClick={() => open('crew')}>
               <Users /> Crew
             </button>
@@ -456,6 +478,11 @@ export default function TycoonGame() {
               <button className="tt-btn" onClick={() => open('finance')} title="Finances">
                 <Wallet /> <span className="tt-label">Finances</span>
               </button>
+              {state.dilemmas.length > 0 && (
+                <button className="tt-btn" data-on onClick={() => open('decisions')} title="Needs your call" style={{ color: '#fbbf24' }}>
+                  <AlertTriangle /> {state.dilemmas.length}
+                </button>
+              )}
               <button className="tt-btn" onClick={() => open('crew')} title="Crew">
                 <Users />
               </button>
@@ -538,7 +565,7 @@ export default function TycoonGame() {
                 x={w.x}
                 y={w.y}
                 z={w.z}
-                width={w.kind === 'finance' || w.kind === 'league' || w.kind === 'market' || w.kind === 'crew' ? 440 : 340}
+                width={w.kind === 'finance' || w.kind === 'league' || w.kind === 'market' || w.kind === 'crew' || w.kind === 'decisions' ? 440 : 340}
                 onMove={(x, y) => setWindows(prev => prev.map(o => (o.key === w.key ? { ...o, x, y } : o)))}
                 onFocus={() => focusWindow(w.key)}
                 onClose={() => (compact ? setWindows([]) : closeWindow(w.key))}

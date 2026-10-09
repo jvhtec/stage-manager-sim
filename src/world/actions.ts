@@ -2,6 +2,7 @@
  * Player commands. Each takes the current state and returns
  * `{ state, result }` — a new state on success, the untouched one on failure.
  */
+import { resolveDilemma } from './dilemmas';
 import {
   CREW_HIRE_COST,
   STAFF_HIRE_COST,
@@ -330,6 +331,17 @@ export function pinCrew(state: TycoonState, personId: string, vehicleId?: string
   const s = cloneState(state);
   s.people.find(m => m.id === personId)!.pinnedVehicleId = vehicleId;
   return ok(s, v ? `${m0.name} now rides ${v.name}.` : `${m0.name} goes wherever they’re needed.`);
+}
+
+/** Make the call on a problem (dilemmas.ts). */
+export function makeDecision(state: TycoonState, dilemmaId: string, optionId: string): ActionOutcome {
+  const d = state.dilemmas.find(x => x.id === dilemmaId);
+  if (!d) return fail(state, 'That’s already been dealt with.');
+  const option = d.options.find(o => o.id === optionId);
+  if (!option) return fail(state, 'Unknown choice.');
+  if (option.cost && state.company.cash < option.cost) return fail(state, 'Not enough cash.');
+  const s = cloneState(state);
+  return ok(s, resolveDilemma(s, dilemmaId, optionId) ?? undefined);
 }
 
 /** Answer a rival's offer to one of your people: match it, or let them go. */
