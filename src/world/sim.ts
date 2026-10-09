@@ -14,6 +14,7 @@ import { settleRuns } from './runs';
 import { dailyTradeShows, monthlyMarketing } from './marketing';
 import { difficultyOf, monthlyGoal } from './scenario';
 import { monthlyPriceWars } from './pricewars';
+import { monthlyShares } from './shares';
 import { dailyUtilisation } from './fleetReport';
 import { recordVenueNight } from './promoters';
 import { dailyAuctions, monthlyAuctions } from './auctions';
@@ -615,6 +616,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     monthlyMarketing(s);
     monthlyGoal(s);
     monthlyPriceWars(s, rng);
+    monthlyShares(s, p => rng.chance(p));
     monthlyRnd(s, rng);
     monthlyDeals(s, rng);
   }

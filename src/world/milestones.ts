@@ -71,7 +71,7 @@ export function buildReport(s: TycoonState, year: number): AnnualReport {
   let costs = 0;
   (Object.keys(ledger) as (keyof typeof ledger)[]).forEach(c => {
     const v = ledger[c] ?? 0;
-    if (c === 'sales') return; // selling assets isn't trading
+    if (c === 'sales' || c === 'equity') return; // selling assets or shares isn't trading
     if (v > 0) revenue += v;
     else costs -= v;
   });

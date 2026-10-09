@@ -46,7 +46,8 @@ import { absorbRival, takeoverBlocker } from './rivals';
 import { bookTransfer, canReceive, describeQuote, transferQuote } from './transfers';
 import { AMBITIONS, rndBlocker, startProject } from './rnd';
 import { DEAL_YEARS } from './deals';
-import { DEPTS, type ActionOutcome, type BidLevel, type Dept, type RndAmbition, type Vehicle, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
+import { IPO_FLOAT, buybackCost, ipoProceeds, listingBlocker, tradingTotal } from './shares';
+import { DEPTS, type ActionOutcome, type DividendLevel, type BidLevel, type Dept, type RndAmbition, type Vehicle, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
 import { STAFF, canBaseVehicle, facilitySpec, nextUpgrade } from './facilities';
 import { aboard, hireFee, levelOf, makePerson, moveToDepot, roleOf, settlePoachBid, syncCrew, unpinFrom } from './people';
 import { BREAK_MONTHS, contractShortfall, installKit } from './contracts';
@@ -546,6 +547,38 @@ export function fireStaff(state: TycoonState, depotId: string, role: StaffRole):
   book(s, 'salaries', -STAFF[role].salary);
   return ok(s, `Let go with a month's pay (${formatMoney(s, STAFF[role].salary)}).`);
 }
+
+/** Float a slice of the company on the stock market. */
+export function goPublic(state: TycoonState): ActionOutcome {
+  const why = listingBlocker(state);
+  if (why) return fail(state, why);
+  const s = cloneState(state);
+  const raised = ipoProceeds(s);
+  book(s, 'equity', raised);
+  s.listing = { day: dayOf(s.hour), float: IPO_FLOAT, confidence: 60, dividend: 'modest', mark: tradingTotal(s), weakMonths: 0, raised, paid: 0 };
+  pushNews(s, `${s.company.name} floats on the stock exchange, raising ${formatMoney(s, raised)}. Shareholders will expect results.`, 'big');
+  return ok(s, `Listed — ${formatMoney(s, raised)} raised.`);
+}
+
+export function setDividend(state: TycoonState, level: DividendLevel): ActionOutcome {
+  if (!state.listing) return fail(state, 'You are not listed.');
+  const s = cloneState(state);
+  s.listing!.dividend = level;
+  return ok(s);
+}
+
+/** Buy the public out and go private again — at a premium. */
+export function takePrivate(state: TycoonState): ActionOutcome {
+  if (!state.listing) return fail(state, 'You are not listed.');
+  const cost = buybackCost(state);
+  if (state.company.cash < cost) return fail(state, `Buying the public out costs ${formatMoney(state, cost)}.`);
+  const s = cloneState(state);
+  book(s, 'equity', -cost);
+  s.listing = undefined;
+  pushNews(s, `${s.company.name} buys out its shareholders and delists for ${formatMoney(s, cost)}.`, 'big');
+  return ok(s, 'Taken private.');
+}
+
 
 export function borrow(state: TycoonState): ActionOutcome {
   const limit = creditLimit(state);

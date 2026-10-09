@@ -122,6 +122,7 @@ export type LedgerCategory =
   | 'bonuses'
   | 'zones'
   | 'marketing'
+  | 'equity'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -155,6 +156,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   bonuses: 'Run bonuses',
   zones: 'Low-emission zones',
   marketing: 'Marketing & trade shows',
+  equity: 'Shares & dividends',
   sales: 'Asset sales',
 };
 
@@ -406,6 +408,25 @@ export interface Auction {
   lots: AuctionLot[];
 }
 
+export type DividendLevel = 'none' | 'modest' | 'generous';
+
+/** The company's stock-market listing (shares.ts). */
+export interface Listing {
+  day: number;
+  /** Share of the company in public hands. */
+  float: number;
+  /** 0-100: how the market feels about you. */
+  confidence: number;
+  dividend: DividendLevel;
+  /** Trading-ledger total at the last month end (to work out each month's profit). */
+  mark: number;
+  /** Months with confidence near zero. */
+  weakMonths: number;
+  /** Cash raised at the float, and paid out in dividends since. */
+  raised: number;
+  paid: number;
+}
+
 /** A rival undercutting a town's fees (pricewars.ts). */
 export interface PriceWar {
   id: string;
@@ -429,7 +450,7 @@ export interface Run {
   bonus?: number;
 }
 
-export type DilemmaKind = 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
+export type DilemmaKind = 'shareholders' | 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
 
 /** A problem that needs your call (dilemmas.ts). */
 export interface Dilemma {
@@ -633,6 +654,8 @@ export interface TycoonState {
   townGrowth: Record<string, number>;
   /** Buzz and deals from trade shows (marketing.ts). */
   promo?: Promo;
+  /** Stock-market listing, once you go public (shares.ts). */
+  listing?: Listing;
   /** Rivals undercutting your towns (pricewars.ts). */
   priceWars: PriceWar[];
   /** Planned road runs (runs.ts). */

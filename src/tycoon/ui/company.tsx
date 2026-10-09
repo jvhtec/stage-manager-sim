@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { borrow, buyRival, repay } from '@/world/actions';
+import { borrow, buyRival, goPublic, repay, setDividend, takePrivate } from '@/world/actions';
+import { DIVIDENDS, IPO_FLOAT, buybackCost, ipoProceeds, listingBlocker, marketCap, sharePrice } from '@/world/shares';
+import type { DividendLevel } from '@/world/types';
 import { rivalHealth, takeoverBlocker, takeoverPrice } from '@/world/rivals';
 import {
   START_YEARS,
@@ -110,6 +112,45 @@ export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
           {state.negativeMonths} month{state.negativeMonths > 1 ? 's' : ''} closed in the red —{' '}
           {NEGATIVE_MONTHS_GAME_OVER - state.negativeMonths} more and the bank shuts you down.
         </div>
+      )}
+      <h4>Shareholders</h4>
+      {state.listing ? (
+        <>
+          <Stat label="Share price">
+            <b>{money(Math.round(sharePrice(state)))}</b> <span className="tt-dim">· market cap {money(marketCap(state))}</span>
+          </Stat>
+          <Stat label="Confidence">
+            <span className={state.listing.confidence < 30 ? 'tt-bad' : state.listing.confidence > 65 ? 'tt-good' : ''}>{Math.round(state.listing.confidence)}</span>
+            <span className="tt-dim"> · paid out {money(state.listing.paid)} so far</span>
+          </Stat>
+          <Bar value={state.listing.confidence} max={100} color={state.listing.confidence < 30 ? '#ef4444' : '#22c55e'} />
+          <div className="tt-dim" style={{ margin: '6px 0 2px' }}>Dividend policy</div>
+          <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+            {(Object.keys(DIVIDENDS) as DividendLevel[]).map(id => (
+              <button key={id} className="tt-btn sm" data-on={state.listing!.dividend === id} onClick={() => act(s => setDividend(s, id))}>
+                {state.listing!.dividend === id ? '● ' : '○ '}
+                {DIVIDENDS[id].label}
+              </button>
+            ))}
+          </div>
+          <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+            {DIVIDENDS[state.listing.dividend].blurb} A losing month costs you the market's trust; at zero for long enough, the board
+            ousts you.
+          </div>
+          <button className="tt-btn sm" style={{ marginTop: 6 }} disabled={state.company.cash < buybackCost(state)} onClick={() => act(takePrivate)}>
+            Go private again · {money(buybackCost(state))}
+          </button>
+        </>
+      ) : (
+        <>
+          <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+            Float {Math.round(IPO_FLOAT * 100)}% of the company for about {money(ipoProceeds(state))} — then answer to shareholders.
+          </div>
+          {listingBlocker(state) && <div className="tt-warn" style={{ marginTop: 4 }}>{listingBlocker(state)}</div>}
+          <button className="tt-btn sm" style={{ marginTop: 6 }} disabled={!!listingBlocker(state)} onClick={() => act(goPublic)}>
+            Go public
+          </button>
+        </>
       )}
       <h4>Reputation</h4>
       <div className="tt-row">
@@ -299,7 +340,13 @@ export function HelpWindow() {
           <b>Getting your name about</b>: set a marketing budget in Policies for more offers and a slow climb in reputation, and
           decide each year whether to exhibit at the trade shows (PLASA, Prolight + Sound, LDI) — a stand brings a month of
           enquiries and cheaper kit. <b>Low-emission zones</b> (Market) start charging older trucks in big cities from the
-          2000s on: check a vehicle's emission class, and retrofit a filter or replace it.
+          2000s on: check a vehicle's emission class, and retrofit a filter or replace it. A rival may start a{' '}
+          <b>price war</b> in a town you work in (see Market) — ride it out, fight back or buy a truce.
+        </li>
+        <li>
+          <b>Going public</b>: a big, reputable company can float 30% of itself for cash (Finance). Then shareholders
+          want profits and dividends: losses drain their confidence, activists demand action, and a board with no confidence
+          at all will throw you out.
         </li>
         <li>
           <b>Fleet</b>: the Fleet window is a dashboard — how busy each truck is, what needs attention in the next two

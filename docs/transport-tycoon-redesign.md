@@ -321,6 +321,15 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   undercut, the rival loses 5 a month and gets no bonus) or buy a truce (twice the price, ends it
   at once). A rival below 35 health backs down. The Market window lists live wars.
 
+- **Going public** (`shares.ts`) — from year 4 with reputation 55+, company value 1.5M and no red
+  months, Finance offers a float of 30% of the company (7% underwriting fee) — cash lands under the
+  new "Shares & dividends" ledger line, which is excluded from profit, awards and the annual report.
+  Shareholder *confidence* (0-100, starts 60) moves monthly: +1.5 for a profitable month, −3 for a
+  loss, plus the dividend policy (none −1 / modest 20% of profit +0.5 / generous 40% +1.5). The share
+  price is company value × (0.7 + 0.6 × confidence). Below 30 an activist decision appears
+  (special dividend +25 confidence, or stand firm −10 and reputation −2); under 8 for four months
+  the board ousts you (game over). Going private again costs 120% of the stake's market value.
+
 - **The world moves** — landmark rooms keep their real years (`content/venueYears.ts`): The O2
   opens in 2007, Wembley is shut 2001-2006, Palau Sant Jordi opens in 1990, the Stade de France in
   1998, Roig Arena in 2025… A closed room gets no offers, tour dates, festival sites, event lots or
