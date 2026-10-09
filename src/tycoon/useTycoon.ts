@@ -33,6 +33,8 @@ export interface Tycoon {
   preview: (seed: number, hqCityId?: string, country?: CountryCode) => void;
   isPreview: boolean;
   abandon: () => void;
+  /** Put the saved game back (after peeking at the new-company screen). */
+  reload: () => void;
   popups: NewsItem[];
   dismissPopup: (id: string) => void;
 }
@@ -151,6 +153,13 @@ export function useTycoon(): Tycoon {
     refresh();
   }, []);
 
+  const reload = useCallback(() => {
+    previewRef.current = false;
+    stateRef.current = loadTycoonGame();
+    lastNewsId.current = stateRef.current?.news[0]?.id ?? null;
+    refresh();
+  }, []);
+
   const abandon = useCallback(() => {
     clearTycoonGame();
     stateRef.current = null;
@@ -171,6 +180,7 @@ export function useTycoon(): Tycoon {
     preview,
     isPreview: previewRef.current,
     abandon,
+    reload,
     popups,
     dismissPopup,
   };

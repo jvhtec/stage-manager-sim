@@ -428,6 +428,12 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   **legacy score** sums the career (company value, reputation, shows, awards, milestones, years, a won goal ×1000),
   scaled by difficulty, and shows in the League and on the game-over panel.
 
+- **Front door** (`ui/Splash.tsx`, `ui/Intro.tsx`) — the game opens on a title screen (stage-light beams, the
+  title truck in your livery) over the map: Continue (with company, date, cash and goal of the saved game),
+  New company, How to play. Starting a new company runs a four-card **intro** — the year and what the era was
+  like (with the current market headline), your company and its kit, the competition, your goal and the first
+  three steps — skippable, with a "skip next time" tick. The clock stays paused through both.
+
 **Balance check** (scripted bot: one local truck per idle van, GB 1979 / 1995, ES 2010, US 1985, 4-24 seeds
 each, vs the merged #19 baseline). Cash and survival are level or better (GB 1979, 12 seeds: mean £1.02M
 baseline vs £0.93M, 11/12 vs 12/12 alive; fresh seeds £924k vs £934k); reputation runs a few points lower
