@@ -1,80 +1,29 @@
-# Welcome to your Lovable project
+# Stage Tycoon
 
-## Project info
+A Transport-Tycoon-style management game about running a touring production
+company: book sound, lights and video for shows, send trucks and crews across an
+isometric map, grow your bases, and take acts on world tours — from 1975 to today.
 
-**URL**: https://lovable.dev/projects/67b3781e-e54f-49d8-891a-f7a9716d14d4
+Play it in the browser (it installs as a PWA); there is no backend.
 
-## How can I edit this code?
-
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/67b3781e-e54f-49d8-891a-f7a9716d14d4) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
+## Develop
 
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
 npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+npm run dev          # http://localhost:8080
+npm run test:run     # simulation tests
+npm run lint
+npm run build:pages  # GitHub Pages build (base path /stage-manager-sim/)
+npm run budget:bundle
 ```
 
-**Edit a file directly in GitHub**
+Built with Vite, TypeScript and React. The simulation lives in `src/world`
+(a deterministic, seeded engine with no UI imports) and the map game in
+`src/tycoon`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Design documents
 
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/67b3781e-e54f-49d8-891a-f7a9716d14d4) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
-
-## Sector Pro Simulator Documentation
-
-The following design documents outline the core vision for the Sector Pro Simulator experience:
+The current design is in the Transport Tycoon redesign document; the others are earlier plans from the original dashboard-style build, which has since been retired:
 
 - [Transport Tycoon Redesign — current direction](docs/transport-tycoon-redesign.md)
 - [Tycoon Game Plan — earlier roadmap (dashboard era)](docs/tycoon-game-plan.md)

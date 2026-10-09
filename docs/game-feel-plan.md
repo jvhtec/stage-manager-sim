@@ -1,6 +1,6 @@
 > **Superseded:** the game has pivoted to a Transport-Tycoon-style isometric map game — see
-> `docs/transport-tycoon-redesign.md`. This plan is kept for history; its dashboard build lives
-> on at `/classic`.
+> `docs/transport-tycoon-redesign.md`. This plan is kept for history; the dashboard build it
+> describes has been retired and removed.
 
 # Stage Manager Sim — Game Feel Plan (Graphics & Mechanics Overhaul)
 

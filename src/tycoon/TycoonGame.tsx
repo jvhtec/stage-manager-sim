@@ -757,10 +757,7 @@ export default function TycoonGame() {
         <div className="tt-overlay">
           <Window title="Start a new company?" x={0} y={0} z={100} onMove={() => undefined} onFocus={() => undefined} onClose={() => setConfirmQuit(false)}>
             <p style={{ marginTop: 0 }}>Your current company will be lost.</p>
-            <div style={{ display: 'flex', gap: 6, justifyContent: 'space-between', flexWrap: 'wrap' }}>
-              <a className="tt-btn sm" href={`${import.meta.env.BASE_URL}classic`}>
-                Open the classic version
-              </a>
+            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button className="tt-btn" onClick={() => setConfirmQuit(false)}>
                   Keep playing

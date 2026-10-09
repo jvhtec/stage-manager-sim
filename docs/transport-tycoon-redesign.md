@@ -1,8 +1,7 @@
 # Stage Manager Sim — The Transport Tycoon Redesign
 
-> **Status:** first playable slice shipped on `claude/transport-tycoon-redesign-2qfm5y`. The
-> map game is now the default experience at `/`; the previous dashboard build is kept intact at
-> `/classic` while its systems are ported across. This document supersedes the sequencing in
+> **Status:** shipped. The map game is the whole app; the previous dashboard build (`/classic`)
+> has been retired and removed. This document supersedes the sequencing in
 > `docs/game-feel-plan.md` and `docs/tycoon-game-plan.md` — those plans polished a management
 > dashboard; this one changes what kind of game it is.
 
@@ -95,7 +94,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 - All randomness goes through the seeded `rngState` (same discipline as `src/lib/rng.ts`).
 - Actions (`src/world/actions.ts`) are `(state, …) → { state, result }`, same pattern as
   `src/engine/**`.
-- Save key `stage-manager-sim:tycoon` (v6: market, festivals, wear, crew, contracts, awards; v5 saves are migrated by `migrate()`) — separate from the classic save.
+- Save key `stage-manager-sim:tycoon` (v6: market, festivals, wear, crew, contracts, awards; v5 saves are migrated by `migrate()`) — the dashboard build's old save key is no longer read.
 
 A headless bot played two in-game years on three seeds during tuning: it survives, but stalls at
 Local Circuit unless it buys bigger trucks and more gear. That upgrade pressure is intended.
@@ -548,9 +547,9 @@ show forecast, rating and trophy cabinet in the **League**.
 
 ## 8. Not ported yet (and where each lands)
 
-The classic build has systems that don't exist in the map game yet. Each has an obvious home:
+The retired dashboard build had systems that were ported to the map game like so:
 
-| Classic system | Map-game home |
+| Dashboard system | Map-game home |
 |---|---|
 | Individual crew (skills, XP, avatars, hiring market) | Done: named people with skills, traits, XP, a hiring market (people.ts); avatars still to come |
 | Crises (planning / execution prompts) | **Road incidents** (breakdown: wait, tow, or hire a local van), **show incidents** at the venue, both as TT-style pop-ups with choices |
@@ -568,4 +567,4 @@ The classic build has systems that don't exist in the map game yet. Each has an 
 6. **Sound** — WebAudio engine hum, crowd swell at live venues, cash-register on payouts.
 7. **Town growth** — landmark venues now open and close in their real years and local fame
    steers offers; towns also grow over the decades (`towns.ts`).
-8. **Retire `/classic`** once its systems are ported.
+8. ~~Retire `/classic`~~ — done: the dashboard build and its code have been removed.

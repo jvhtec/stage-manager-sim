@@ -8,10 +8,10 @@
  * - The *state* (everything that changes as the clock runs) is plain JSON
  *   and is what gets persisted.
  */
-import type { Department } from '@/types/game';
 import type { CountryCode } from './content/countries';
 
 /** Gear slots: the classic departments plus mixing consoles (FOH / monitors). */
+export type Department = 'audio' | 'lighting' | 'video' | 'stage';
 export type Dept = Department | 'console';
 export const DEPTS: Dept[] = ['audio', 'console', 'lighting', 'video', 'stage'];
 export type DeptCounts = Record<Dept, number>;

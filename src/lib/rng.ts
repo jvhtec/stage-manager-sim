@@ -1,13 +1,11 @@
 /**
  * Seeded PRNG (mulberry32) for the deterministic parts of the simulation:
- * contract generation, crew generation, competitor bidding, and daily
- * morale/schedule rolls. Given the same seed and the same sequence of
+ * offers, crew, rival bidding and the daily rolls. Given the same seed and the same sequence of
  * calls, these always produce the same outputs — that's what makes a
  * fixed-seed playthrough reproducible for balance tuning and tests.
  *
- * Deliberately NOT used for: entity id suffixes (uniqueness only, not a
- * gameplay outcome) or the manual "roll a hire candidate" action in
- * Crew.tsx (a one-off UI action, not part of the automatic sim loop).
+ * Deliberately NOT used for entity id suffixes (uniqueness only, not a
+ * gameplay outcome).
  */
 export interface Rng {
   /** Next float in [0, 1). */
