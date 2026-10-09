@@ -21,6 +21,7 @@ import {
   Truck,
   Users,
   AlertTriangle,
+  Gavel,
   Wallet,
   ZoomIn,
   ZoomOut,
@@ -44,6 +45,7 @@ import { TalentWindow } from './ui/talent';
 import { MarketWindow } from './ui/market';
 import { PoliciesWindow } from './ui/policies';
 import { DecisionsWindow } from './ui/decisions';
+import { AuctionsWindow } from './ui/auctions';
 import { RndWindow } from './ui/rnd';
 import { CrewWindow } from './ui/crewWindow';
 import { FinanceWindow, GameOverPanel, HelpWindow, LeagueWindow, NewGameForm, NewsWindow } from './ui/company';
@@ -246,6 +248,8 @@ export default function TycoonGame() {
         return 'Crew';
       case 'decisions':
         return 'Needs your call';
+      case 'auctions':
+        return 'Auctions';
       case 'help':
         return 'How to play';
       case 'menu':
@@ -293,6 +297,8 @@ export default function TycoonGame() {
         return <CrewWindow ctx={ctx} />;
       case 'decisions':
         return <DecisionsWindow ctx={ctx} />;
+      case 'auctions':
+        return <AuctionsWindow ctx={ctx} />;
       case 'help':
         return <HelpWindow />;
       case 'menu':
@@ -308,6 +314,9 @@ export default function TycoonGame() {
             </button>
             <button className="tt-btn" onClick={() => open('market')}>
               <TrendingUp /> Market
+            </button>
+            <button className="tt-btn" onClick={() => open('auctions')}>
+              <Gavel /> Auctions{state.auctions.length > 0 ? ` (${state.auctions.length})` : ''}
             </button>
             <button className="tt-btn" onClick={() => open('policies')}>
               <SlidersHorizontal /> Policies
@@ -488,6 +497,10 @@ export default function TycoonGame() {
               </button>
               <button className="tt-btn" onClick={() => open('market')} title="Market">
                 <TrendingUp />
+              </button>
+              <button className="tt-btn" onClick={() => open('auctions')} title="Auctions" data-on={state.auctions.length > 0 ? true : undefined}>
+                <Gavel />
+                {state.auctions.length > 0 && ` ${state.auctions.length}`}
               </button>
               <button className="tt-btn" onClick={() => open('policies')} title="Company policies">
                 <SlidersHorizontal />

@@ -2,6 +2,7 @@
  * Player commands. Each takes the current state and returns
  * `{ state, result }` — a new state on success, the untouched one on failure.
  */
+import { lotBlocker, lotName, takeLot } from './auctions';
 import { resolveDilemma } from './dilemmas';
 import {
   CREW_HIRE_COST,
@@ -331,6 +332,20 @@ export function pinCrew(state: TycoonState, personId: string, vehicleId?: string
   const s = cloneState(state);
   s.people.find(m => m.id === personId)!.pinnedVehicleId = vehicleId;
   return ok(s, v ? `${m0.name} now rides ${v.name}.` : `${m0.name} goes wherever they’re needed.`);
+}
+
+/** Buy a lot at today's asking price, sent to one of your bases. */
+export function bidAuction(state: TycoonState, auctionId: string, lotId: string, depotId: string): ActionOutcome {
+  const a0 = state.auctions.find(a => a.id === auctionId);
+  const lot0 = a0?.lots.find(l => l.id === lotId);
+  if (!a0 || !lot0) return fail(state, 'Someone else got there first.');
+  const blocker = lotBlocker(state, a0, lot0, depotId);
+  if (blocker) return fail(state, blocker);
+  const s = cloneState(state);
+  const a = s.auctions.find(x => x.id === auctionId)!;
+  const price = takeLot(s, a, a.lots.find(l => l.id === lotId)!, depotId);
+  book(s, 'purchases', -price);
+  return ok(s, `Bought ${lotName(lot0)} for ${formatMoney(state, price)}.`);
 }
 
 /** Make the call on a problem (dilemmas.ts). */

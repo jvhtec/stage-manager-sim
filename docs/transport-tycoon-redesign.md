@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 103 tests):
+(`src/world/__tests__/*.test.ts`, 109 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -306,6 +306,13 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   curfew (fine vs cut-short set), an injured tech (send home vs play on exhausted), or a storm
   warning at festivals (ballast ×0.35 storm odds). Choices become `gig.mods` folded into the
   night's quality/failure/weather; unanswered, the cheap default happens at the deadline.
+
+- **Auctions** (`auctions.ts`) — a bankrupt rival's racks and trucks (and, ~10% of months, an
+  estate sale or hire-shop closure) go to a 21-day Dutch auction: gear lots (era-standard kit at
+  45-80% condition) and used trucks (2+ years old, shakier). Asking price starts at 95% of market
+  value (1.5× resale) and slides 3 points a day to a 70% floor — never below what the kit would
+  resell for, so no arbitrage — but each day another buyer may snap each lot up (2% rising to ~7%).
+  Used kit blends its condition into what you own; used trucks keep their age and reliability.
 
 UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
 (workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the

@@ -20,6 +20,7 @@ export type WindowKind =
   | 'rnd'
   | 'crew'
   | 'decisions'
+  | 'auctions'
   | 'help'
   | 'menu';
 

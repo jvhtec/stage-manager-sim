@@ -362,6 +362,30 @@ export interface ShowMods {
   stormFactor?: number;
 }
 
+/** One lot at an auction (auctions.ts): used kit or a used truck. */
+export interface AuctionLot {
+  id: string;
+  kind: 'gear' | 'vehicle';
+  productId?: string;
+  qty?: number;
+  /** Gear condition 0-100. */
+  condition?: number;
+  modelId?: string;
+  ageYears?: number;
+  reliability?: number;
+  /** Market value; the asking price is a sliding share of it. */
+  value: number;
+}
+
+export interface Auction {
+  id: string;
+  seller: string;
+  cityId: string;
+  startDay: number;
+  endDay: number;
+  lots: AuctionLot[];
+}
+
 export type DilemmaKind = 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
 
 /** A problem that needs your call (dilemmas.ts). */
@@ -521,6 +545,8 @@ export interface TycoonState {
   poachBids: PoachBid[];
   /** Problems waiting on your decision (dilemmas.ts). */
   dilemmas: Dilemma[];
+  /** Used kit and trucks under the hammer (auctions.ts). */
+  auctions: Auction[];
   /** Exclusive production deals with acts (deals.ts). */
   deals: { id: string; act: string; tier: number; monthly: number; startDay: number; endDay: number; strikes: number; status: 'offer' | 'active' | 'ended'; offerExpires: number }[];
   /** Your own products (encoded ids, see content/gear.ts ownProductId). */

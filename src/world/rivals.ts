@@ -7,6 +7,7 @@
 import type { Rng } from '@/lib/rng';
 import { tierInfo } from './catalog';
 import { book, depotInCity, formatMoney, newId, pushNews, yearOf } from './core';
+import { openAuction } from './auctions';
 import { rentalProduct } from './hire';
 import { marketNow } from './market';
 import { worldOf } from './mapgen';
@@ -41,6 +42,7 @@ export function monthlyRivals(s: TycoonState, rng: Rng) {
       s.vehicles = s.vehicles.filter(v => v.owner !== r.id);
       s.goneRivals.push(r.id);
       pushNews(s, `${r.name} goes into administration — their ${city} lot is up for grabs.`, 'big', { cityId: r.hqCityId });
+      openAuction(s, rng, r.name, r.hqCityId, r.maxTier, 'bust');
     } else if (r.health < STRUGGLING && before >= STRUGGLING) {
       pushNews(s, `Word is ${r.name} is struggling. A buyer could pick them up cheap (see the League).`, 'info', { cityId: r.hqCityId });
     }

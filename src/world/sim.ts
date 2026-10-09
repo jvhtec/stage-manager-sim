@@ -7,6 +7,7 @@
  * Pure and deterministic: same state in → same state out (the only
  * randomness is the seeded rng carried in `state.rngState`).
  */
+import { dailyAuctions, monthlyAuctions } from './auctions';
 import { breakdownDilemma, hourlyCrises } from './dilemmas';
 import type { Rng } from '@/lib/rng';
 import {
@@ -531,6 +532,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   dailyRentOut(s);
   dailyPeopleFatigue(s);
   dailyPoachBids(s);
+  dailyAuctions(s, rng);
   syncCrew(s);
   dailyIncidents(s, rng);
   s.vehicles.forEach(v => {
@@ -572,6 +574,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     monthlyTick(s, rng);
     monthlyContracts(s, world, rng);
     monthlyRivals(s, rng);
+    monthlyAuctions(s, rng);
     monthlyRnd(s, rng);
     monthlyDeals(s, rng);
   }

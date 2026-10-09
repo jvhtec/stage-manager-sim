@@ -151,6 +151,7 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     candidates: [],
     poachBids: [],
     dilemmas: [],
+    auctions: [],
     ownProducts: [],
     transfers: [],
     yearStats: {},
@@ -278,6 +279,7 @@ export function migrate(state: Partial<TycoonState>): TycoonState {
   s.candidates ??= [];
   s.poachBids ??= [];
   s.dilemmas ??= [];
+  s.auctions ??= [];
   return s;
 }
 
