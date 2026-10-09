@@ -12,6 +12,7 @@
  * as cached summaries by `syncCrew`, so code that only needs headcounts keeps
  * reading them.
  */
+import { loungeRest } from './annexes';
 import { createRng, type Rng } from '@/lib/rng';
 import { CREW_HIRE_COST, CREW_WAGE_PER_DAY } from './catalog';
 import { newId, pushNews } from './core';
@@ -302,13 +303,14 @@ export function learnFromShow(s: TycoonState, people: CrewMember[], assigned: Ma
 
 export function dailyPeopleFatigue(s: TycoonState) {
   const status = new Map(s.vehicles.map(v => [v.id, v.status]));
+  const depotById = new Map(s.depots.map(d => [d.id, d]));
   s.people.forEach(m => {
     if (m.vehicleId) {
       const base = status.get(m.vehicleId) === 'on-site' ? 4 : 3;
       const mult = m.trait === 'roadwarrior' ? 0.6 : m.trait === 'party' ? 1.2 : 1;
       m.fatigue = Math.min(100, m.fatigue + base * mult);
     } else {
-      m.fatigue = Math.max(0, m.fatigue - 10);
+      m.fatigue = Math.max(0, m.fatigue - 10 - (m.depotId ? loungeRest(depotById.get(m.depotId) ?? {}) : 0));
     }
   });
 }

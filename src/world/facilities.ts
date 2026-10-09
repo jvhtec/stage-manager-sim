@@ -4,7 +4,7 @@
  * - **Delegations** — a branch office: cheap, a sales desk and a lock-up for
  *   a few cases. Local contacts make freelance crew there cheaper and better,
  *   and sales staff bring in work from the region. Vans and crew buses only.
- * - **Warehouses** — the real thing, in three sizes: racks for the rig, a
+ * - **Warehouses** — the real thing, in four sizes: racks for the rig, a
  *   loading dock for trucks of any size, and a prep crew who check every
  *   case before it goes out.
  *
@@ -76,6 +76,16 @@ export const WAREHOUSES: FacilitySpec[] = [
     minReputation: tierInfo(3).minReputation,
     blurb: 'A stadium-tour shed: a fleet of artics backs onto the dock.',
   },
+  {
+    label: 'Production campus',
+    build: 260000,
+    rent: 5200,
+    capacity: 2000,
+    maxStaff: { warehouse: 28, office: 10 },
+    vehicles: 'all',
+    minReputation: tierInfo(4).minReputation,
+    blurb: 'A full production campus: acres of racks, a fleet yard and room for annexes of every kind.',
+  },
 ];
 
 export const STAFF: Record<StaffRole, { label: string; salary: number; blurb: string }> = {
@@ -95,7 +105,7 @@ const MAX_SALES_BOOST = 0.6;
 const SALES_RADIUS = 30;
 
 export function facilitySpec(d: Pick<Depot, 'kind' | 'size'>): FacilitySpec {
-  return d.kind === 'delegation' ? DELEGATION : WAREHOUSES[Math.max(1, Math.min(3, d.size)) - 1];
+  return d.kind === 'delegation' ? DELEGATION : WAREHOUSES[Math.max(1, Math.min(WAREHOUSES.length, d.size)) - 1];
 }
 
 /** What a base can become next, if anything. */

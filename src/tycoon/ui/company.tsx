@@ -384,6 +384,10 @@ export function HelpWindow() {
           money.
         </li>
         <li>
+          <b>Upgrading a base</b>: a warehouse grows up to a production campus, and the Base tab adds annexes — a rehearsal
+          stage (rehearse a show or tour for better quality, rent it to bands in between), a workshop bench and a crew lounge.
+        </li>
+        <li>
           <b>Rivalry</b>: provoke a rival (headhunting, price-war fights) or sit in an aggressive neighbour's patch and the heat
           rises — then come rumours, tampered kit and tip-offs. Pay for security, hit back, or hire an investigator in the League
           to watch them for a quarter.

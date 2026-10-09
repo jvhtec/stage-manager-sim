@@ -1,4 +1,21 @@
-import { fireStaff, hireCrew, hireStaff, upgradeDepot } from '@/world/actions';
+import { buildAnnex, fireStaff, hireCrew, hireStaff, rehearseShow, upgradeDepot } from '@/world/actions';
+import {
+  MODULES,
+  MODULE_IDS,
+  REHEARSAL_FAILURE,
+  REHEARSAL_QUALITY,
+  annexUpkeep,
+  gigRehearsalCost,
+  moduleBlocker,
+  moduleLevel,
+  modLevel,
+  rehearsable,
+  rehearsalBlocker,
+  stageRental,
+  tourLegs,
+  tourRehearsalCost,
+} from '@/world/annexes';
+import { dayOf, formatDay } from '@/world/core';
 import { dayRate, levelOf } from '@/world/people';
 import { PersonRow } from './crewWindow';
 import { CREW_HIRE_COST, STAFF_HIRE_COST } from '@/world/catalog';
@@ -63,6 +80,50 @@ export function BaseOverview({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
         </div>
       )}
 
+      <h4>Annexes</h4>
+      {depot.kind === 'delegation' ? (
+        <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+          Rehearsal stages, workshop benches and crew lounges need a warehouse — upgrade this delegation first.
+        </div>
+      ) : (
+        <>
+          {MODULE_IDS.map(id => {
+            const level = modLevel(depot, id);
+            const info = MODULES[id];
+            const cur = moduleLevel(id, level);
+            const next = moduleLevel(id, level + 1);
+            const why = moduleBlocker(state, depot, id);
+            return (
+              <div key={id} className="tt-item">
+                <div className="grow">
+                  <div style={{ fontWeight: 700 }}>
+                    {info.icon} {cur ? cur.label : info.label}{' '}
+                    <span className="tt-dim">{cur ? `· ${money(cur.upkeep)}/mo` : '· not built'}</span>
+                  </div>
+                  <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+                    {(cur ?? next)?.blurb}
+                    {id === 'rehearsal' && level > 0 && (
+                      <>
+                        {' '}
+                        Shows rehearsed here: quality +{Math.round(REHEARSAL_QUALITY[level] * 100)}%, failures −{Math.round((1 - REHEARSAL_FAILURE[level]) * 100)}%. Rented to bands for about{' '}
+                        {money(stageRental(state, depot))}/mo.
+                      </>
+                    )}
+                  </div>
+                  {next && why && <div className="tt-dim" style={{ fontSize: 11 }}>{why}</div>}
+                </div>
+                {next && (
+                  <button className="tt-btn sm primary" disabled={!!why} title={`${next.label}: ${money(next.upkeep)}/mo upkeep`} onClick={() => act(s => buildAnnex(s, depot.id, id))}>
+                    {level ? 'Upgrade' : 'Build'} {kmoney(next.build)}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+          {modLevel(depot, 'rehearsal') > 0 && <RehearsalBooking ctx={ctx} />}
+        </>
+      )}
+
       <h4>Full-time staff</h4>
       {STAFF_ROLES.map(role => (
         <div key={role} className="tt-item">
@@ -116,10 +177,62 @@ export function BaseOverview({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
       <h4>Monthly costs</h4>
       <Stat label="Rent, rates & utilities">{money(rent)}</Stat>
       <Stat label="Full-time salaries">{money(salaries)}</Stat>
+      {annexUpkeep(depot) > 0 && <Stat label="Annex upkeep">{money(annexUpkeep(depot))}</Stat>}
       <Stat label="Gig techs (≈30 days)">{money(techs)}</Stat>
       <Stat label="Total">
-        <b>{money(rent + salaries + techs)}</b>
+        <b>{money(rent + salaries + techs + annexUpkeep(depot))}</b>
       </Stat>
     </div>
+  );
+}
+
+/** Upcoming shows and tours that can still go through the stage. */
+function RehearsalBooking({ ctx }: { ctx: WinCtx }) {
+  const { state } = ctx;
+  const today = dayOf(state.hour);
+  const act = (fn: Parameters<WinCtx['dispatch']>[0]) => {
+    const r = ctx.dispatch(fn);
+    if (r.message) ctx.toast(r.message, r.ok);
+  };
+  const tourIds = new Set(state.tours.filter(t => t.status === 'booked' && tourLegs(state, t).length).map(t => t.id));
+  const singles = state.gigs.filter(g => !g.tourId && rehearsable(state, g) && g.day - today <= 45).sort((a, b) => a.day - b.day);
+  const tours = state.tours.filter(t => tourIds.has(t.id));
+  if (!singles.length && !tours.length) {
+    return <div className="tt-dim" style={{ marginTop: 4 }}>Nothing booked to rehearse. Book a show and come back.</div>;
+  }
+  return (
+    <>
+      <div className="tt-dim" style={{ marginTop: 6 }}>Book a rehearsal</div>
+      <div className="tt-list">
+        {tours.map(t => {
+          const why = rehearsalBlocker(state, t.id);
+          return (
+            <div key={t.id} className="tt-item">
+              <div className="grow">
+                <div style={{ fontWeight: 700 }}>🎪 {t.name}</div>
+                <div className="tt-dim">{tourLegs(state, t).length} dates still to play</div>
+              </div>
+              <button className="tt-btn sm" disabled={!!why} title={why ?? undefined} onClick={() => act(s => rehearseShow(s, t.id))}>
+                Rehearse {money(tourRehearsalCost(state, t))}
+              </button>
+            </div>
+          );
+        })}
+        {singles.slice(0, 6).map(g => {
+          const why = rehearsalBlocker(state, g.id);
+          return (
+            <div key={g.id} className="tt-item">
+              <div className="grow">
+                <div style={{ fontWeight: 700 }}>{g.act}</div>
+                <div className="tt-dim">{formatDay(state, g.day)}</div>
+              </div>
+              <button className="tt-btn sm" disabled={!!why} title={why ?? undefined} onClick={() => act(s => rehearseShow(s, g.id))}>
+                Rehearse {money(gigRehearsalCost(g))}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </>
   );
 }

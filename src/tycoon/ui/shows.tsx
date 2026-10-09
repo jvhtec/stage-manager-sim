@@ -1,6 +1,7 @@
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
-import { assignVehicle, bookGate, bookGig, haggleGig, unassignVehicle } from '@/world/actions';
+import { assignVehicle, bookGate, bookGig, haggleGig, rehearseShow, unassignVehicle } from '@/world/actions';
+import { MODULES, REHEARSAL_QUALITY, bestStageLevel, gigRehearsalCost, rehearsalBlocker, tourRehearsalCost } from '@/world/annexes';
 import { expectedPayout, gateBlocker, gatePayout, hypeLabel } from '@/world/gate';
 import { HAGGLE_RAISE, haggleBlocker, haggleChance } from '@/world/negotiate';
 import { DEPT_COLORS, DEPT_LABELS, LOAD_IN_HOUR, SHOW_END_HOUR, SHOW_START_HOUR, getModel } from '@/world/catalog';
@@ -194,6 +195,31 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
         <Stat label="Deal">
           Share of the gate <span className="tt-dim">· tickets forecast {hypeLabel(gig.gate.forecast)}{gig.status === 'booked' ? ' — the real number comes on the night' : ''}</span>
         </Stat>
+      )}
+      {gig.status === 'booked' && gig.rehearsed && (
+        <Stat label="Rehearsed">
+          <span className="tt-good">in your {MODULES.rehearsal.levels[gig.rehearsed - 1].label.toLowerCase()}</span>
+        </Stat>
+      )}
+      {gig.status === 'booked' && !gig.rehearsed && bestStageLevel(state) > 0 && (
+        <div style={{ marginTop: 6 }}>
+          {(() => {
+            const id = tour ? tour.id : gig.id;
+            const why = rehearsalBlocker(state, id);
+            const cost = tour ? tourRehearsalCost(state, tour) : gigRehearsalCost(gig);
+            return (
+              <button
+                className="tt-btn sm"
+                disabled={!!why}
+                title={why ?? `Run it through your stage: quality +${Math.round(REHEARSAL_QUALITY[bestStageLevel(state)] * 100)}%, fewer failures`}
+                onClick={() => act(s => rehearseShow(s, id))}
+              >
+                {tour ? 'Rehearse the tour' : 'Rehearse'} · {money(cost)}
+              </button>
+            );
+          })()}
+          {rehearsalBlocker(state, tour ? tour.id : gig.id) && <span className="tt-dim"> {rehearsalBlocker(state, tour ? tour.id : gig.id)}</span>}
+        </div>
       )}
       {gig.status === 'booked' && projection && (
         <>

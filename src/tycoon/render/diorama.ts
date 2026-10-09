@@ -217,6 +217,10 @@ export interface BaseSceneInput {
   officeStaff: number;
   gigTechs: number;
   workshop: 'none' | 'basic' | 'full';
+  /** Annex levels (annexes.ts): rehearsal stage, workshop bench, crew lounge. */
+  rehearsal?: number;
+  bench?: number;
+  lounge?: number;
   /** Vehicles parked at the base. */
   vehicles: { kind: 'van' | 'truck' | 'semi' | 'bus' }[];
   /** Vehicles out on jobs (empty bays). */
@@ -245,15 +249,18 @@ function stockColors(input: BaseSceneInput, slots: number): (RGB | null)[] {
 }
 
 function drawWarehouse(ctx: CanvasRenderingContext2D, w: number, h: number, input: BaseSceneInput, brand: RGB, time: number) {
-  const W = [0, 10, 12, 14][input.size] ?? 10;
-  const D = [0, 7, 8, 9][input.size] ?? 7;
+  const W0 = [0, 10, 12, 14, 16][input.size] ?? 10;
+  const D = [0, 7, 8, 9, 10][input.size] ?? 7;
+  const stage = input.rehearsal ?? 0;
+  // A soundstage annex runs along the right-hand side.
+  const W = W0 + (stage ? 4.2 : 0);
   const sc = makeScene(ctx, w, h, W, D, 6, time);
   floor(sc, [176, 176, 170], [120, 120, 116]);
   // Safety walkway and the brand painted on the floor.
   groundQuad(sc.rc, 0.2, D - 2.6, W - 0.2, D - 2.45, 0, paint([240, 200, 40]));
   backWalls(sc, [206, 208, 212], brand);
   // Roller doors on the back-right wall.
-  const doorWall: Box = { x0: 0, y0: -0.25, x1: W, y1: 0, z0: 0, z1: sc.H };
+  const doorWall: Box = { x0: 0, y0: -0.25, x1: W0, y1: 0, z0: 0, z1: sc.H };
   for (let i = 0; i < input.size + 1; i++) {
     const u0 = 0.55 + i * 0.13;
     poly(sc.rc, faceQuad(leftFace(sc.rc, doorWall), u0, u0 + 0.1, 0, 0.55), paint([120, 126, 134]));
@@ -262,7 +269,7 @@ function drawWarehouse(ctx: CanvasRenderingContext2D, w: number, h: number, inpu
   // Racks: along the back-left wall and down the middle.
   const levels = 2 + input.size;
   const lenY = D - 3;
-  const lenX = W * 0.45;
+  const lenX = W0 * 0.45;
   const slotsY = Math.floor(lenY / 0.5) * levels;
   const slotsX = Math.floor(lenX / 0.5) * levels;
   const colors = stockColors(input, slotsY + slotsX);
@@ -282,12 +289,12 @@ function drawWarehouse(ctx: CanvasRenderingContext2D, w: number, h: number, inpu
     const py = D - 3.2 + ((i * 0.7) % 1.2) + Math.cos(t * 0.7) * 0.3;
     add(sc, px, py, () => person(sc, px, py, 0, [240, 140, 30], Math.abs(Math.sin(t * 6)) * 0.05));
   }
-  if (input.prepStaff >= 2 || input.size >= 2) add(sc, W * 0.55 + 0.8, D - 3.6, () => forklift(sc, W * 0.55, D - 4, time));
+  if (input.prepStaff >= 2 || input.size >= 2) add(sc, W0 * 0.55 + 0.8, D - 3.6, () => forklift(sc, W0 * 0.55, D - 4, time));
 
   // Office in the back corner, glass-fronted.
-  const ox = W - 3.6;
-  add(sc, W - 0.2, 2.4, () => {
-    const office: Box = { x0: ox, y0: 0, x1: W, y1: 2.2, z0: 0, z1: 2.6 };
+  const ox = W0 - 3.6;
+  add(sc, W0 - 0.2, 2.4, () => {
+    const office: Box = { x0: ox, y0: 0, x1: W0, y1: 2.2, z0: 0, z1: 2.6 };
     poly(sc.rc, faceQuad(leftFace(sc.rc, office), 0, 1, 0, 1), glow([160, 200, 230], 0.25), paint([90, 100, 110]));
     poly(sc.rc, faceQuad(rightFace(sc.rc, office), 0, 1, 0, 1), glow([160, 200, 230], 0.18), paint([90, 100, 110]));
   });
@@ -297,8 +304,12 @@ function drawWarehouse(ctx: CanvasRenderingContext2D, w: number, h: number, inpu
     add(sc, dx + 0.9, dy + 0.6, () => desk(sc, dx, dy, input.year, i < input.officeStaff, [70, 90, 140]));
   }
 
+  if (stage) drawStage(sc, W0, W, D, stage, time);
+  // Extra annex furniture: a second bench and bunks.
+  if ((input.bench ?? 0) >= 2) add(sc, 3.2, D - 1.2, () => prism(sc.rc, { x0: 1.8, y0: D - 1.3, x1: 3.2, y1: D - 0.9, z0: 0, z1: 0.85 }, [110, 110, 120], [140, 140, 150]));
+  if ((input.lounge ?? 0) >= 2) add(sc, 5.4, D - 0.3, () => prism(sc.rc, { x0: 4.8, y0: D - 1.0, x1: 5.4, y1: D - 0.4, z0: 0, z1: 1.2 }, [90, 70, 120], [110, 90, 150]));
   // Workshop bench.
-  if (input.workshop !== 'none') {
+  if (input.workshop !== 'none' || (input.bench ?? 0) > 0) {
     add(sc, 1.6, D - 0.6, () => {
       prism(sc.rc, { x0: 0.3, y0: D - 1.3, x1: 1.6, y1: D - 0.7, z0: 0, z1: 0.85 }, [120, 90, 60], [150, 116, 80]);
       if (Math.floor(time / 300) % 3 === 0) {
@@ -307,7 +318,7 @@ function drawWarehouse(ctx: CanvasRenderingContext2D, w: number, h: number, inpu
         sc.rc.ctx.fillRect(sx - 1.5, sy - 1.5, 3, 3);
       }
     });
-    if (input.workshop === 'full') add(sc, 1.0, D - 0.4, () => person(sc, 1.0, D - 0.35, 0, [90, 90, 96]));
+    if (input.workshop === 'full' || (input.bench ?? 0) >= 2) add(sc, 1.0, D - 0.4, () => person(sc, 1.0, D - 0.35, 0, [90, 90, 96]));
   }
 
   // Gig techs on the break-room sofa.
@@ -322,7 +333,7 @@ function drawWarehouse(ctx: CanvasRenderingContext2D, w: number, h: number, inpu
   // Loading bays along the front: parked vehicles, empty bays for the ones out on jobs.
   const bays = Math.max(input.vehicles.length + input.away, 2);
   for (let i = 0; i < bays; i++) {
-    const bx = W - 0.7 - i * 1.15;
+    const bx = W0 - 0.7 - i * 1.15;
     const by = D - 0.15;
     const v = input.vehicles[i];
     if (bx < 5.4) break;
@@ -330,6 +341,58 @@ function drawWarehouse(ctx: CanvasRenderingContext2D, w: number, h: number, inpu
     if (v) add(sc, bx + 0.4, by, () => bayVehicle(sc, bx, by, v.kind, brand));
   }
   flush(sc);
+}
+
+/** A rehearsal stage in the annex: a platform, back line, a lighting bar and a band at work. */
+function drawStage(sc: Scene, x0: number, x1: number, D: number, level: number, time: number) {
+  const px0 = x0 + 0.35;
+  const px1 = x1 - 0.3;
+  const py1 = Math.min(D - 3.6, 2.2 + level * 0.45);
+  // Platform.
+  add(sc, px0, 0.1, () => prism(sc.rc, { x0: px0, y0: 0.5, x1: px1, y1: py1, z0: 0, z1: 0.4 }, [58, 58, 66], [78, 78, 88]));
+  // Back screen / wall at the larger sizes.
+  if (level >= 3) {
+    const wall: Box = { x0: px0, y0: 0.08, x1: px1, y1: 0.28, z0: 0.4, z1: 3.2 };
+    add(sc, px0, 0.3, () => {
+      prism(sc.rc, wall, [20, 20, 26], [20, 20, 26], false);
+      const hue = (time / 40) % 360;
+      poly(sc.rc, faceQuad(leftFace(sc.rc, wall), 0.05, 0.95, 0.1, 0.9), glow(hueRgb(hue), 0.55));
+    });
+  }
+  // Lighting bar on two uprights, with coloured lamps.
+  const barZ = 2.9 + (level >= 3 ? 0.4 : 0);
+  add(sc, px1, 0.9, () => {
+    prism(sc.rc, { x0: px0, y0: py1 - 0.1, x1: px0 + 0.1, y1: py1, z0: 0.4, z1: barZ }, [30, 30, 36], [30, 30, 36], false);
+    prism(sc.rc, { x0: px1 - 0.1, y0: py1 - 0.1, x1: px1, y1: py1, z0: 0.4, z1: barZ }, [30, 30, 36], [30, 30, 36], false);
+    prism(sc.rc, { x0: px0, y0: py1 - 0.1, x1: px1, y1: py1, z0: barZ, z1: barZ + 0.1 }, [30, 30, 36], [30, 30, 36], false);
+    const lamps = 3 + level;
+    for (let i = 0; i < lamps; i++) {
+      const lx = px0 + 0.3 + ((px1 - px0 - 0.6) * i) / Math.max(1, lamps - 1);
+      const [sx, sy] = P(sc, lx, py1 - 0.05, barZ);
+      sc.rc.ctx.fillStyle = glow(hueRgb(((time / 12 + i * 70) % 360 + 360) % 360), 0.9);
+      sc.rc.ctx.beginPath();
+      sc.rc.ctx.arc(sx, sy, Math.max(1.2, 1.6 * sc.rc.cam.zoom), 0, Math.PI * 2);
+      sc.rc.ctx.fill();
+    }
+  });
+  // Back line: amps and a drum riser; the band.
+  const mid = (px0 + px1) / 2;
+  add(sc, px0 + 0.9, 1.0, () => prism(sc.rc, { x0: px0 + 0.3, y0: 0.6, x1: px0 + 0.9, y1: 1.0, z0: 0.4, z1: 1.3 }, [40, 40, 46], [60, 60, 68]));
+  add(sc, px1 - 0.4, 1.0, () => prism(sc.rc, { x0: px1 - 1.0, y0: 0.6, x1: px1 - 0.4, y1: 1.0, z0: 0.4, z1: 1.3 }, [40, 40, 46], [60, 60, 68]));
+  add(sc, mid + 0.4, 1.3, () => prism(sc.rc, { x0: mid - 0.4, y0: 0.7, x1: mid + 0.4, y1: 1.3, z0: 0.4, z1: 1.0 }, [150, 40, 50], [180, 60, 70]));
+  const members = Math.min(4, 1 + level);
+  for (let i = 0; i < members; i++) {
+    const t = time / 500 + i * 1.3;
+    const bx = px0 + 0.9 + ((px1 - px0 - 1.8) * (i + 0.5)) / members;
+    const by = py1 - 0.7 - (i % 2) * 0.35;
+    add(sc, bx, by, () => person(sc, bx, by, 0.4, SHIRTS[(i + 3) % SHIRTS.length], Math.abs(Math.sin(t * 3)) * 0.07));
+  }
+}
+
+function hueRgb(h: number): RGB {
+  const k = (n: number) => (n + h / 60) % 6;
+  const f = (n: number) => 1 - Math.max(0, Math.min(k(n), 4 - k(n), 1));
+  return [Math.round(80 + 175 * f(5)), Math.round(80 + 175 * f(3)), Math.round(80 + 175 * f(1))];
 }
 
 function drawDelegation(ctx: CanvasRenderingContext2D, w: number, h: number, input: BaseSceneInput, brand: RGB, time: number) {

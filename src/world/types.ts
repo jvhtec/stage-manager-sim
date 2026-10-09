@@ -125,6 +125,7 @@ export type LedgerCategory =
   | 'equity'
   | 'festival'
   | 'venues'
+  | 'facilities'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -161,6 +162,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   equity: 'Shares & dividends',
   festival: 'Own festival',
   venues: 'Owned venues',
+  facilities: 'Annexes & stages',
   sales: 'Asset sales',
 };
 
@@ -225,6 +227,10 @@ export interface Depot {
   /** Average experience (0-100) of the crew based here. */
   experience?: number;
   builtHour: number;
+  /** Annexes and their level (annexes.ts). */
+  modules?: Partial<Record<ModuleId, number>>;
+  /** Day the rehearsal stage is free again. */
+  stageBusyUntil?: number;
 }
 
 export type VehicleStatus =
@@ -379,6 +385,8 @@ export interface Gig {
   result?: GigResult;
   /** What your on-the-day decisions did to the show (dilemmas.ts). */
   mods?: ShowMods;
+  /** Level of the stage it rehearsed on (annexes.ts). */
+  rehearsed?: number;
 }
 
 export interface ShowMods {
@@ -425,6 +433,8 @@ export interface SponsorDeal {
   shortfalls: number;
   paid: number;
 }
+
+export type ModuleId = 'rehearsal' | 'workshop' | 'lounge';
 
 export type VenueProgramme = 'lease' | 'promote';
 

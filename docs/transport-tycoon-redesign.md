@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 268 tests):
+(`src/world/__tests__/*.test.ts`, 277 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -329,6 +329,19 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   price is company value × (0.7 + 0.6 × confidence). Below 30 an activist decision appears
   (special dividend +25 confidence, or stand firm −10 and reputation −2); under 8 for four months
   the board ousts you (game over). Going private again costs 120% of the stake's market value.
+
+- **Facility upgrades** (`annexes.ts`) — warehouses now grow through four sizes (a fourth
+  "production campus": 2,000 units, 28 prep / 10 office staff, £5,200 rent, reputation tier 4) and
+  take annexes, each needing a minimum warehouse size and charging monthly upkeep:
+  *rehearsal stage* (room 25k / soundstage 70k / production hall 160k / arena hall 320k, upkeep
+  £400-5,000): rehearse a booked show (5% of its fee) or a whole tour (60% of its legs' combined
+  cost) for +2/4/6/8% quality and −6/12/18/24% failure chance (×0.8 share across a tour), taking the
+  stage for a day or more; free time is rented to bands (£350-6,500 a month × the economy × the
+  town), and a busy stage keeps the town warm. *Workshop bench* (18k / 55k): +0.08 / +0.18
+  condition a day to all kit (caps 85/95; more benches add 30%), on top of the workshop policy.
+  *Crew lounge* (12k / 35k): techs resting at the base shed 3 / 6 extra fatigue a day (the second
+  level adds a little morale). The base diorama grows a soundstage annex with a band, lighting bar
+  and (from the production hall up) a video wall. A shutdown zeroes the rent but leaves the upkeep.
 
 - **Rivalry** (`rivalry.ts`) — each rival carries heat (0-100) toward you. It rises 12 when you
   headhunt them, 8 when you fight their price war (−5 for a truce), and each month by 4 × their

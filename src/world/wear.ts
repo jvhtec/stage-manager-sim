@@ -5,6 +5,7 @@
  * mid-set. Keep a workshop running (a monthly cost) to repair it as you go,
  * or pay to refurbish a line all at once.
  */
+import { benchRepair } from './annexes';
 import { techResaleFactor } from './content/techWaves';
 import type { Rng } from '@/lib/rng';
 import { GEAR_RESALE_RATE } from './catalog';
@@ -67,10 +68,13 @@ export function wearFromShow(s: TycoonState, delivered: GearStock, days: number,
 
 export function dailyWorkshop(s: TycoonState) {
   const w = WORKSHOP[s.policies.workshop];
-  if (!w.repairPerDay) return;
+  const [bench, benchCap] = benchRepair(s);
+  const repair = w.repairPerDay + bench;
+  const cap = Math.max(w.cap, benchCap);
+  if (!repair) return;
   for (const id in s.gearCondition) {
     const c = s.gearCondition[id];
-    if (c < w.cap) s.gearCondition[id] = Math.min(w.cap, c + w.repairPerDay);
+    if (c < cap) s.gearCondition[id] = Math.min(cap, c + repair);
   }
 }
 

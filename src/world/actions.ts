@@ -48,10 +48,11 @@ import { AMBITIONS, rndBlocker, startProject } from './rnd';
 import { DEAL_YEARS } from './deals';
 import { headhuntBlocker, headhuntFee, headhuntRivalHealthAfter, headhuntTarget, HEADHUNT_REP_COST } from './headhunt';
 import { festBlocker, planFestival } from './ownfest';
+import { MODULES, buildModule, moduleBlocker, rehearsalBlocker, rehearse } from './annexes';
 import { HEAT_HEADHUNT, addHeat, hireInvestigator, investigatorBlocker } from './rivalry';
 import { buyBlocker, buyVenue, ownedOf, sellVenue } from './owned';
 import { IPO_FLOAT, buybackCost, ipoProceeds, listingBlocker, tradingTotal } from './shares';
-import { DEPTS, type ActionOutcome, type VenueProgramme, type DividendLevel, type FestHeadliner, type FestTicket, type FestTier, type BidLevel, type Dept, type RndAmbition, type Vehicle, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
+import { DEPTS, type ActionOutcome, type ModuleId, type VenueProgramme, type DividendLevel, type FestHeadliner, type FestTicket, type FestTier, type BidLevel, type Dept, type RndAmbition, type Vehicle, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
 import { STAFF, canBaseVehicle, facilitySpec, nextUpgrade } from './facilities';
 import { aboard, hireFee, levelOf, makePerson, moveToDepot, roleOf, settlePoachBid, syncCrew, unpinFrom } from './people';
 import { BREAK_MONTHS, contractShortfall, installKit } from './contracts';
@@ -651,6 +652,25 @@ export function investigate(state: TycoonState, rivalId: string): ActionOutcome 
   const s = cloneState(state);
   const target = s.rivals.find(r => r.id === rivalId)!;
   return ok(s, withRng(s, rng => hireInvestigator(s, target, rng)));
+}
+
+/** Add or upgrade an annex at a warehouse. */
+export function buildAnnex(state: TycoonState, depotId: string, module: ModuleId): ActionOutcome {
+  const d0 = state.depots.find(d => d.id === depotId);
+  if (!d0) return fail(state, 'Unknown base.');
+  const why = moduleBlocker(state, d0, module);
+  if (why) return fail(state, why);
+  const s = cloneState(state);
+  buildModule(s, s.depots.find(d => d.id === depotId)!, module);
+  return ok(s, `${MODULES[module].label} built.`);
+}
+
+/** Run a booked show, or a whole tour, through your rehearsal stage. */
+export function rehearseShow(state: TycoonState, targetId: string): ActionOutcome {
+  const why = rehearsalBlocker(state, targetId);
+  if (why) return fail(state, why);
+  const s = cloneState(state);
+  return ok(s, rehearse(s, targetId));
 }
 
 export function borrow(state: TycoonState): ActionOutcome {
