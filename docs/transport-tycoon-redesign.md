@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 169 tests):
+(`src/world/__tests__/*.test.ts`, 182 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -392,6 +392,18 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   leaving the crew a person short). Someone at 75+ fatigue may burn out (4%/day): send them home or push
   through (a rougher show, morale dips). One open question per person.
 
+- **Fleet dashboard** (`fleetReport.ts`) — the Fleet window opens on KPIs (vehicles, busy %, on the road, idle,
+  reliability, average age, the next 14 days covered, profit YTD), a "Needs attention" list (booked shows with
+  no truck, that won't make load-in, or short on gear/crew; broken or overdue-for-service or low-reliability
+  trucks; vehicles past their life; trucks that have barely worked) and every vehicle with a usage bar
+  (an exponential average over ~50 days of working-or-booked days), sortable by profit, busiest, oldest, name.
+- **Rivals at auctions** — lots are now bought by named rivals (healthy ones only, weighted by health, a match
+  with their department, and how near their base is); news says who picked up what, and a buyer's books get a
+  small lift. Nobody buys when every rival is struggling.
+- **Rivals plan runs too** — a rival already holding a date within 24 tiles and 4 days of an offer is 1.45×
+  likelier to land it (1.15× more again with two or more dates nearby), and puts it on the same truck when
+  there's time to drive between (a day apart at most 8 tiles, otherwise 2+ days); news: "X strings Y onto its run".
+
 **Balance check** (scripted bot: one local truck per idle van, GB 1979 / 1995, ES 2010, US 1985, 4-24 seeds
 each, vs the merged #19 baseline). Cash and survival are level or better (GB 1979, 12 seeds: mean £1.02M
 baseline vs £0.93M, 11/12 vs 12/12 alive; fresh seeds £924k vs £934k); reputation runs a few points lower
@@ -399,6 +411,8 @@ for a bot that never answers a decision — unanswered decisions take the free d
 show quality. A smarter bot that plans 3-date runs, haggles at ≥60% odds, takes partnerships and answers
 decisions earns about 2× the plain bot, almost all from keeping each truck booked (run bonuses paid on only
 3-6 runs in 7 years; sponsorship is ~£500/month per department), so there's no runaway from the new tools.
+A second pass after the rival changes: GB 1979 cash £863k mean (vs £926k before, £1.02M baseline), the other
+three scenarios flat, no extra bankruptcies, show counts steady.
 
 UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
 (workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the

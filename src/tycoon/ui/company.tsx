@@ -295,6 +295,11 @@ export function HelpWindow() {
           customs now and then.
         </li>
         <li>
+          <b>Fleet</b>: the Fleet window is a dashboard — how busy each truck is, what needs attention in the next two
+          weeks, and who's earning. Rivals plan runs too: a firm already working an area is likelier to take the next date
+          there.
+        </li>
+        <li>
           <b>Second-hand</b>: when a rival goes under, its kit and trucks go to auction — the price slides daily, but others may
           snap lots up first. <b>Maker partnerships</b> (Policies) give a discount and sponsorship for committing a department
           to one brand. Venue <b>promoters</b> remember your nights: do them proud and they call more and pay more.

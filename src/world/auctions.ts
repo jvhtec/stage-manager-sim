@@ -14,6 +14,8 @@ import { worldOf } from './mapgen';
 import { ownedStock, condition } from './wear';
 import { facilitySpec, canBaseVehicle } from './facilities';
 import { canReceive } from './transfers';
+import { roadDistance } from './pathfinding';
+import { rivalHealth } from './rivals';
 import { DEPTS, type Auction, type AuctionLot, type TycoonState } from './types';
 
 /** Days an auction runs before the leftovers are carted off. */
@@ -94,12 +96,48 @@ export function monthlyAuctions(s: TycoonState, rng: Rng) {
   openAuction(s, rng, rng.pick(SELLERS), rng.pick(cities).id, 2 + rng.nextInt(2), 'estate');
 }
 
-/** Daily: other buyers snap lots up (likelier as they get cheaper); auctions close. */
+/** Rivals below this health are in no state to buy. */
+const RIVAL_BUYER_HEALTH = 40;
+/** A buying rival gets a small lift from the cheap stock. */
+const RIVAL_BUY_HEALTH = 1.5;
+
+/** Who takes a lot: a rival, weighted by health, by whether it's their line of work, and by how near they are. */
+function rivalBuyer(s: TycoonState, rng: Rng, a: Auction, lot: AuctionLot) {
+  const world = worldOf(s);
+  const dept = lot.kind === 'gear' ? getProduct(lot.productId!).dept : undefined;
+  const weights = s.rivals
+    .filter(r => rivalHealth(r) >= RIVAL_BUYER_HEALTH)
+    .map(r => {
+      const dist = roadDistance(world, r.hqCityId, a.cityId);
+      const near = Number.isFinite(dist) ? (dist < 20 ? 2 : dist < 45 ? 1.2 : 0.7) : 0.4;
+      const line = dept ? (r.specialty === dept ? 2.2 : 1) : 1.2;
+      return { r, w: (rivalHealth(r) / 100) * near * line };
+    });
+  const total = weights.reduce((sum, x) => sum + x.w, 0);
+  if (!total) return undefined;
+  let roll = rng.next() * total;
+  for (const x of weights) {
+    roll -= x.w;
+    if (roll <= 0) return x.r;
+  }
+  return weights[weights.length - 1].r;
+}
+
+/** Daily: rivals snap lots up (likelier as they get cheaper); auctions close. */
 export function dailyAuctions(s: TycoonState, rng: Rng) {
   if (!s.auctions.length) return;
   const day = dayOf(s.hour);
+  const city = (id: string) => worldOf(s).cityById.get(id)?.name;
   s.auctions.forEach(a => {
-    a.lots = a.lots.filter(lot => !rng.chance(0.02 + (START_FACTOR - priceFactor(a, day)) * 0.2));
+    a.lots = a.lots.filter(lot => {
+      if (!rng.chance(0.02 + (START_FACTOR - priceFactor(a, day)) * 0.2)) return true;
+      const buyer = rivalBuyer(s, rng, a, lot);
+      if (buyer) {
+        buyer.health = Math.min(100, rivalHealth(buyer) + RIVAL_BUY_HEALTH);
+        pushNews(s, `${buyer.name} picks up ${lotName(lot)} at ${a.seller}'s auction in ${city(a.cityId)}.`, 'info', { cityId: a.cityId });
+      }
+      return false;
+    });
   });
   s.auctions = s.auctions.filter(a => day < a.endDay && a.lots.length);
 }

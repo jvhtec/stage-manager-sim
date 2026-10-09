@@ -9,6 +9,7 @@ import { formatDay, gigById, loadInHour, sellValue, vehicleAgeYears } from '@/wo
 import { worldOf } from '@/world/mapgen';
 import { estimateArrival, suggestJobs, vehicleActivity } from '@/world/queries';
 import { roadDistance } from '@/world/pathfinding';
+import { fleetSummary } from '@/world/fleetReport';
 import { Bar, Stat } from './bits';
 import { PersonRow } from './crewWindow';
 import { kmoney, money } from './format';
@@ -234,32 +235,105 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
   );
 }
 
+type FleetSort = 'profit' | 'busy' | 'age' | 'name';
+
+/** Company-wide fleet dashboard: KPIs, what needs attention, and every vehicle ranked. */
 export function VehicleListWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
-  const fleet = state.vehicles.filter(v => v.owner === 'player');
-  const total = fleet.reduce((s, v) => s + v.profitThisYear, 0);
+  const [sort, setSort] = useState<FleetSort>('profit');
+  const summary = fleetSummary(state);
+  const rows = [...summary.rows].sort((a, b) =>
+    sort === 'profit' ? b.profit - a.profit : sort === 'busy' ? b.utilisation - a.utilisation : sort === 'age' ? b.ageYears - a.ageYears : a.vehicle.name.localeCompare(b.vehicle.name),
+  );
+  const tile = (label: string, value: React.ReactNode, hint?: string, tone?: 'good' | 'warn' | 'bad') => (
+    <div key={label} className="tt-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 0, flex: '1 1 30%', minWidth: 96 }} title={hint}>
+      <span className="tt-dim" style={{ fontSize: 11 }}>
+        {label}
+      </span>
+      <b className={tone ? `tt-${tone}` : ''} style={{ fontSize: 15 }}>
+        {value}
+      </b>
+    </div>
+  );
+  const busyPct = Math.round(summary.avgUtilisation * 100);
+
   return (
     <div>
-      <div className="tt-list">
-        {fleet.map(v => (
-          <div key={v.id} className="tt-item clickable" onClick={() => ctx.open('vehicle', v.id)}>
-            <div className="grow">
-              <div style={{ fontWeight: 700 }}>
-                {v.status === 'broken' ? '⚠ ' : ''}
-                {v.name} <span className="tt-dim">{getModel(v.modelId).name}</span>
-              </div>
-              <div className="tt-dim">{vehicleActivity(state, v)}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginBottom: 6 }}>
+        {tile('Vehicles', summary.count, `${summary.onTheRoad} on the road, ${summary.idle} idle, ${summary.inWorkshop} in the workshop`)}
+        {tile('Busy', `${busyPct}%`, 'Average share of days working or booked, over the last ~50 days', busyPct >= 60 ? 'good' : busyPct >= 35 ? 'warn' : 'bad')}
+        {tile('On the road', summary.onTheRoad)}
+        {tile('Idle now', summary.idle, undefined, summary.idle > 0 && summary.idle === summary.count ? 'warn' : undefined)}
+        {tile('Reliability', `${Math.round(summary.avgReliability)}%`, 'Average across the fleet', summary.avgReliability >= 70 ? 'good' : summary.avgReliability >= 45 ? 'warn' : 'bad')}
+        {tile('Avg age', `${summary.avgAge.toFixed(1)} yrs`)}
+        {tile('Next 14 days', `${summary.upcoming.covered}/${summary.upcoming.total}`, 'Booked shows fully covered, of those coming up', summary.upcoming.total && summary.upcoming.covered < summary.upcoming.total ? 'warn' : 'good')}
+        {tile('Profit YTD', money(summary.profit), undefined, summary.profit >= 0 ? 'good' : 'bad')}
+      </div>
+
+      <h4>Needs attention{summary.alerts.length ? ` (${summary.alerts.length})` : ''}</h4>
+      {summary.alerts.length ? (
+        <div className="tt-list">
+          {summary.alerts.slice(0, 8).map(a => (
+            <div
+              key={a.id}
+              className="tt-item clickable"
+              style={{ gap: 6 }}
+              onClick={() => (a.gigId ? ctx.open('gig', a.gigId) : a.vehicleId && ctx.open('vehicle', a.vehicleId))}
+            >
+              <span style={{ width: 8, height: 22, borderRadius: 2, flexShrink: 0, background: a.severity === 'bad' ? '#ef4444' : a.severity === 'warn' ? '#f59e0b' : '#64748b' }} />
+              <span className="grow" style={{ whiteSpace: 'normal' }}>
+                {a.text}
+              </span>
+              <span className="tt-dim">›</span>
             </div>
-            <span className={v.profitThisYear >= 0 ? 'tt-good' : 'tt-bad'} style={{ fontWeight: 700 }}>
-              {kmoney(v.profitThisYear)}
-            </span>
-          </div>
+          ))}
+          {summary.alerts.length > 8 && <div className="tt-dim">…and {summary.alerts.length - 8} more.</div>}
+        </div>
+      ) : (
+        <div className="tt-good">All clear — everything booked is covered and the fleet is in shape.</div>
+      )}
+
+      <h4>The fleet</h4>
+      <div className="tt-tabs" style={{ marginBottom: 4 }}>
+        {(['profit', 'busy', 'age', 'name'] as FleetSort[]).map(k => (
+          <button key={k} className="tt-btn sm" data-on={sort === k} onClick={() => setSort(k)}>
+            {k === 'busy' ? 'Busiest' : k === 'age' ? 'Oldest' : k === 'profit' ? 'Profit' : 'Name'}
+          </button>
         ))}
       </div>
-      <div className="tt-row" style={{ marginTop: 6 }}>
-        <span className="tt-dim">{fleet.length} vehicles · profit this year</span>
-        <b className={total >= 0 ? 'tt-good' : 'tt-bad'}>{money(total)}</b>
+      <div className="tt-list">
+        {rows.map(r => {
+          const v = r.vehicle;
+          return (
+            <div key={v.id} className="tt-item clickable" onClick={() => ctx.open('vehicle', v.id)}>
+              <div className="grow" style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700 }}>
+                  {v.status === 'broken' ? '⚠ ' : ''}
+                  {v.name} <span className="tt-dim">{getModel(v.modelId).name}</span>
+                  {v.lease ? <span className="tt-dim"> · leased</span> : null}
+                </div>
+                <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+                  {vehicleActivity(state, v)}
+                </div>
+                <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}>
+                  <Bar value={Math.round(r.utilisation * 100)} max={100} color={r.utilisation >= 0.6 ? '#22c55e' : r.utilisation >= 0.3 ? '#f59e0b' : '#ef4444'} />
+                  <span className="tt-dim" style={{ fontSize: 11, whiteSpace: 'nowrap' }}>
+                    {Math.round(r.utilisation * 100)}% busy · {Math.round(v.reliability)}% rel · {r.ageYears.toFixed(1)}y
+                  </span>
+                </div>
+              </div>
+              <span className={r.profit >= 0 ? 'tt-good' : 'tt-bad'} style={{ fontWeight: 700 }}>
+                {kmoney(r.profit)}
+              </span>
+            </div>
+          );
+        })}
       </div>
+      {summary.best && summary.worst && summary.count > 1 && (
+        <div className="tt-dim" style={{ marginTop: 6, whiteSpace: 'normal' }}>
+          Best earner: {summary.best.vehicle.name} ({kmoney(summary.best.profit)}) · weakest: {summary.worst.vehicle.name} ({kmoney(summary.worst.profit)}).
+        </div>
+      )}
     </div>
   );
 }

@@ -85,17 +85,39 @@ describe('auctions', () => {
     expect(bidAuction(s, a.id, lot.id, s.depots[0].id).result.ok).toBe(false);
   });
 
-  it('lots get snapped up over time and auctions close', () => {
+  it('lots get snapped up by named rivals over time and auctions close', () => {
     const s = withAuction();
     const lots = s.auctions[0].lots.length;
     const hungry = { ...(never as object), chance: () => true } as never;
+    const before = s.rivals.map(r => r.health ?? 60);
     dailyAuctions(s, hungry);
     expect(s.auctions.length).toBe(0);
+    const buys = s.news.filter(n => /picks up/.test(n.text));
+    expect(buys.length).toBe(lots);
+    // Somebody's books got a little healthier.
+    expect(s.rivals.some((r, i) => (r.health ?? 60) > before[i])).toBe(true);
     const t = withAuction();
     t.auctions[0].endDay = dayOf(t.hour) + 1;
     const later = advanceHours(t, 2 * HOURS_PER_DAY);
     expect(later.auctions.length).toBe(0);
-    expect(lots).toBeGreaterThan(0);
     expect(AUCTION_DAYS).toBe(21);
+  });
+
+  it('prefers healthy rivals in their own line of work, and nobody buys when all are struggling', () => {
+    const s = withAuction();
+    s.rivals.forEach(r => (r.health = 10));
+    const hungry = { ...(never as object), chance: () => true } as never;
+    dailyAuctions(s, hungry);
+    expect(s.news.some(n => /picks up/.test(n.text))).toBe(false);
+    // One healthy audio house next door buys all the audio lots.
+    const t = withAuction();
+    t.rivals.forEach(r => (r.health = 10));
+    const buyer = t.rivals[0];
+    buyer.health = 90;
+    buyer.specialty = 'audio';
+    dailyAuctions(t, hungry);
+    const picks = t.news.filter(n => /picks up/.test(n.text));
+    expect(picks.length).toBeGreaterThan(0);
+    picks.forEach(n => expect(n.text.startsWith(buyer.name)).toBe(true));
   });
 });

@@ -602,7 +602,7 @@ export default function TycoonGame() {
                 x={w.x}
                 y={w.y}
                 z={w.z}
-                width={w.kind === 'finance' || w.kind === 'league' || w.kind === 'market' || w.kind === 'crew' || w.kind === 'decisions' ? 440 : w.kind === 'worldmap' ? 560 : w.kind === 'planner' ? 440 : 340}
+                width={w.kind === 'finance' || w.kind === 'league' || w.kind === 'market' || w.kind === 'crew' || w.kind === 'decisions' || w.kind === 'vehicles' ? 440 : w.kind === 'worldmap' ? 560 : w.kind === 'planner' ? 440 : 340}
                 onMove={(x, y) => setWindows(prev => prev.map(o => (o.key === w.key ? { ...o, x, y } : o)))}
                 onFocus={() => focusWindow(w.key)}
                 onClose={() => (compact ? setWindows([]) : closeWindow(w.key))}

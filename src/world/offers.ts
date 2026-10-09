@@ -197,6 +197,37 @@ function rivalVehicleModel(tier: number): string {
   return 'luton-box';
 }
 
+/** A rival already working an area finds the next date there easier: cluster of dates within these limits. */
+export const RIVAL_RUN_TILES = 24;
+export const RIVAL_RUN_DAYS = 4;
+const RIVAL_RUN_BONUS = 1.45;
+
+/** The dates a rival already holds near `gig` (same area, a few days either side). */
+export function rivalNearbyDates(state: TycoonState, world: WorldMap, rivalId: string, gig: Gig): Gig[] {
+  const today = dayOf(state.hour);
+  return state.gigs.filter(g => {
+    if (g.rivalId !== rivalId || g.status !== 'rival' || g.id === gig.id || g.day < today - 1) return false;
+    if (Math.abs(g.day - gig.day) > RIVAL_RUN_DAYS) return false;
+    const d = roadDistance(world, g.cityId, gig.cityId);
+    return Number.isFinite(d) && d <= RIVAL_RUN_TILES;
+  });
+}
+
+/** Can that rival's existing truck add this date to its run (enough time to get there)? */
+function runnableTruck(state: TycoonState, world: WorldMap, rivalId: string, gig: Gig): Vehicle | undefined {
+  const dates = rivalNearbyDates(state, world, rivalId, gig);
+  return state.vehicles.find(v => {
+    if (v.owner !== rivalId || !v.orders.length) return false;
+    return v.orders.every(id => {
+      const g = state.gigs.find(x => x.id === id);
+      if (!g) return false;
+      const gap = Math.abs(gig.day - g.day);
+      const d = roadDistance(world, g.cityId, gig.cityId);
+      return gap >= 1 && Number.isFinite(d) && (gap >= 2 || d <= 8) && dates.some(n => n.id === g.id);
+    });
+  });
+}
+
 /** Rivals bid on open offers near their HQ; the player's local standing makes them less likely to win. */
 export function rivalsTakeOffers(state: TycoonState, world: WorldMap, rng: Rng) {
   const today = dayOf(state.hour);
@@ -220,11 +251,23 @@ export function rivalsTakeOffers(state: TycoonState, world: WorldMap, rng: Rng) 
       const loyalty = gig.asksForYou ? 0.25 : 1;
       // More firms in the market split the work between them.
       const crowding = Math.min(1, 5 / state.rivals.length);
-      const chance = 0.05 * crowding * proximity * fit * specialty * loyalty * (1.15 - (rating / 100) * 0.6);
+      // Already working the area? The next date there is easy money (a run, like yours).
+      const nearby = rivalNearbyDates(state, world, rival.id, gig);
+      const onARun = nearby.length ? RIVAL_RUN_BONUS * (nearby.length > 1 ? 1.15 : 1) : 1;
+      const chance = 0.05 * crowding * proximity * fit * specialty * loyalty * onARun * (1.15 - (rating / 100) * 0.6);
       if (!rng.chance(chance)) continue;
 
       gig.status = 'rival';
       gig.rivalId = rival.id;
+      // The same truck takes it if the timing works; otherwise they send another.
+      const sameTruck = nearby.length ? runnableTruck(state, world, rival.id, gig) : undefined;
+      if (sameTruck) {
+        sameTruck.orders = [...sameTruck.orders, gig.id].sort(
+          (a, b) => (state.gigs.find(g => g.id === a)?.day ?? 0) - (state.gigs.find(g => g.id === b)?.day ?? 0),
+        );
+        pushNews(state, `${rival.name} strings ${gig.act} (${world.cityById.get(gig.cityId)?.name}) onto its run.`, 'info', { cityId: gig.cityId, gigId: gig.id });
+        break;
+      }
       const venue = world.venueById.get(gig.venueId);
       const city = world.cityById.get(gig.cityId);
       pushNews(state, `${rival.name} landed ${gig.act} at ${venue?.name}, ${city?.name}.`, 'info', {

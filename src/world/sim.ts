@@ -9,6 +9,7 @@
  */
 import { paperworkFor } from './paperwork';
 import { settleRuns } from './runs';
+import { dailyUtilisation } from './fleetReport';
 import { recordVenueNight } from './promoters';
 import { dailyAuctions, monthlyAuctions } from './auctions';
 import { annualReport, monthlyMilestones } from './milestones';
@@ -554,6 +555,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   dailyPoachBids(s);
   dailyAuctions(s, rng);
   settleRuns(s);
+  dailyUtilisation(s);
   dailyCrewDilemmas(s, rng, s.crewMorale);
   syncCrew(s);
   dailyIncidents(s, rng);

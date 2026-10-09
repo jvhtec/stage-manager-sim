@@ -259,6 +259,8 @@ export interface Vehicle {
   arrivedHour?: number;
   profitThisYear: number;
   profitLastYear: number;
+  /** How busy it's been lately, 0-1 (fleetReport.ts). */
+  util?: number;
   /** Leased rather than owned (finance.ts). */
   lease?: { monthly: number; sinceHour: number };
 }
