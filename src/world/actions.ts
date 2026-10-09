@@ -46,6 +46,7 @@ import { absorbRival, takeoverBlocker } from './rivals';
 import { bookTransfer, canReceive, describeQuote, transferQuote } from './transfers';
 import { AMBITIONS, rndBlocker, startProject } from './rnd';
 import { DEAL_YEARS } from './deals';
+import { headhuntBlocker, headhuntFee, headhuntRivalHealthAfter, headhuntTarget, HEADHUNT_REP_COST } from './headhunt';
 import { IPO_FLOAT, buybackCost, ipoProceeds, listingBlocker, tradingTotal } from './shares';
 import { DEPTS, type ActionOutcome, type DividendLevel, type BidLevel, type Dept, type RndAmbition, type Vehicle, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
 import { STAFF, canBaseVehicle, facilitySpec, nextUpgrade } from './facilities';
@@ -579,6 +580,29 @@ export function takePrivate(state: TycoonState): ActionOutcome {
   return ok(s, 'Taken private.');
 }
 
+
+/** Lure a rival's standout tech away — at a premium, and it costs you both. */
+export function headhunt(state: TycoonState, rivalId: string, depotId?: string): ActionOutcome {
+  const rival = state.rivals.find(r => r.id === rivalId);
+  if (!rival) return fail(state, 'Unknown rival.');
+  const why = headhuntBlocker(state, rival);
+  if (why) return fail(state, why);
+  const s = cloneState(state);
+  const r = s.rivals.find(x => x.id === rivalId)!;
+  const m = headhuntTarget(s, r);
+  const fee = headhuntFee(m);
+  m.id = newId(s, 'crew');
+  m.hiredHour = s.hour;
+  m.depotId = (s.depots.find(d => d.id === depotId) ?? s.depots[0]).id;
+  s.people.push(m);
+  syncCrew(s);
+  book(s, 'wages', -fee);
+  r.health = headhuntRivalHealthAfter(r);
+  s.company.reputation = Math.max(0, s.company.reputation - HEADHUNT_REP_COST);
+  (s.headhunted ??= {})[r.id] = dayOf(s.hour);
+  pushNews(s, `${s.company.name} lures ${m.name} away from ${r.name}.`, 'big');
+  return ok(s, `${m.name} (${levelOf(m)}★ ${roleOf(m)}) leaves ${r.name} to join you.`);
+}
 
 export function borrow(state: TycoonState): ActionOutcome {
   const limit = creditLimit(state);

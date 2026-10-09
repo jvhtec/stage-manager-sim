@@ -654,6 +654,8 @@ export interface TycoonState {
   townGrowth: Record<string, number>;
   /** Buzz and deals from trade shows (marketing.ts). */
   promo?: Promo;
+  /** Day each rival was last raided for crew (headhunt.ts). */
+  headhunted?: Record<string, number>;
   /** Stock-market listing, once you go public (shares.ts). */
   listing?: Listing;
   /** Rivals undercutting your towns (pricewars.ts). */

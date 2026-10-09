@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 182 tests):
+(`src/world/__tests__/*.test.ts`, 231 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -329,6 +329,12 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   price is company value × (0.7 + 0.6 × confidence). Below 30 an activist decision appears
   (special dividend +25 confidence, or stand firm −10 and reputation −2); under 8 for four months
   the board ousts you (game over). Going private again costs 120% of the stake's market value.
+
+- **Headhunting** (`headhunt.ts`) — every rival carries a standout tech (3★, 4★ at reputation 55+,
+  5★ at 80+; the department is the rival's specialty), stable within a month and drawn from a side
+  rng so the sim's sequence isn't disturbed. Luring them away costs triple the normal signing fee,
+  knocks 6 off the rival's finances and 1 off your reputation, and the star arrives expecting a
+  15% pay rise. Each rival can be raided once per 180 days. Buttons sit under each rival in the League.
 
 - **The world moves** — landmark rooms keep their real years (`content/venueYears.ts`): The O2
   opens in 2007, Wembley is shut 2001-2006, Palau Sant Jordi opens in 1990, the Stade de France in

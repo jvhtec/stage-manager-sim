@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { borrow, buyRival, goPublic, repay, setDividend, takePrivate } from '@/world/actions';
+import { borrow, buyRival, goPublic, headhunt, repay, setDividend, takePrivate } from '@/world/actions';
+import { headhuntBlocker, headhuntFee, headhuntTarget } from '@/world/headhunt';
+import { levelOf, roleOf } from '@/world/people';
 import { DIVIDENDS, IPO_FLOAT, buybackCost, ipoProceeds, listingBlocker, marketCap, sharePrice } from '@/world/shares';
 import type { DividendLevel } from '@/world/types';
 import { rivalHealth, takeoverBlocker, takeoverPrice } from '@/world/rivals';
@@ -346,7 +348,8 @@ export function HelpWindow() {
         <li>
           <b>Going public</b>: a big, reputable company can float 30% of itself for cash (Finance). Then shareholders
           want profits and dividends: losses drain their confidence, activists demand action, and a board with no confidence
-          at all will throw you out.
+          at all will throw you out. <b>Headhunting</b>: in the League table you can lure a rival's star tech away at triple
+          the usual signing fee — it dents their finances and your reputation, and the star expects a rise.
         </li>
         <li>
           <b>Fleet</b>: the Fleet window is a dashboard — how busy each truck is, what needs attention in the next two
@@ -659,6 +662,33 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
                     >
                       Buy {kmoney(takeoverPrice(r.rival))}
                     </button>
+                  </div>
+                )}
+                {'rival' in r && r.rival && (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', paddingLeft: 30, marginTop: 2 }}>
+                    {(() => {
+                      const rv = r.rival!;
+                      const star = headhuntTarget(state, rv);
+                      const why = headhuntBlocker(state, rv);
+                      return (
+                        <>
+                          <span className="tt-dim" style={{ fontSize: 11, whiteSpace: 'normal' }}>
+                            Star: {star.name}, {levelOf(star)}★ {roleOf(star)}
+                          </span>
+                          <button
+                            className="tt-btn sm"
+                            title={why ?? `Lure ${star.name} away: costs ${rv.name} 6 finances and you 1 reputation`}
+                            disabled={!!why}
+                            onClick={() => {
+                              const res = ctx.dispatch(s => headhunt(s, rv.id));
+                              if (res.message) ctx.toast(res.message, res.ok);
+                            }}
+                          >
+                            Headhunt {kmoney(headhuntFee(star))}
+                          </button>
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
               </td>
