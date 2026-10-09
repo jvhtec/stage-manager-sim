@@ -124,6 +124,7 @@ export type LedgerCategory =
   | 'marketing'
   | 'equity'
   | 'festival'
+  | 'venues'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -159,6 +160,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   marketing: 'Marketing & trade shows',
   equity: 'Shares & dividends',
   festival: 'Own festival',
+  venues: 'Owned venues',
   sales: 'Asset sales',
 };
 
@@ -410,6 +412,21 @@ export interface Auction {
   lots: AuctionLot[];
 }
 
+export type VenueProgramme = 'lease' | 'promote';
+
+/** A room you own (owned.ts). */
+export interface OwnedVenue {
+  venueId: string;
+  cityId: string;
+  price: number;
+  /** 0-100, falls with age. */
+  condition: number;
+  programme: VenueProgramme;
+  boughtHour: number;
+  /** Net since you bought it. */
+  earned: number;
+}
+
 export type FestTier = 'field' | 'weekender' | 'major';
 export type FestHeadliner = 'local' | 'name' | 'star';
 export type FestTicket = 'low' | 'fair' | 'premium';
@@ -479,7 +496,7 @@ export interface Run {
   bonus?: number;
 }
 
-export type DilemmaKind = 'ownfest' | 'shareholders' | 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
+export type DilemmaKind = 'venue' | 'ownfest' | 'shareholders' | 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
 
 /** A problem that needs your call (dilemmas.ts). */
 export interface Dilemma {
@@ -685,6 +702,8 @@ export interface TycoonState {
   promo?: Promo;
   /** Day each rival was last raided for crew (headhunt.ts). */
   headhunted?: Record<string, number>;
+  /** Rooms you own (owned.ts). */
+  ownedVenues: OwnedVenue[];
   /** This year's festival of your own, if any (ownfest.ts). */
   ownFestival?: OwnFestival;
   /** 0-100: how well the festival's name sells. */

@@ -67,7 +67,7 @@ export function breakdownDilemma(s: TycoonState, v: Vehicle) {
 
 type Maker = (s: TycoonState, gig: Gig, rng: Rng) => Omit<Dilemma, 'id' | 'gigId' | 'createdHour' | 'expiresHour'> | null;
 
-const MAKERS: Record<Exclude<DilemmaKind, 'breakdown' | 'raise' | 'burnout' | 'tradeshow' | 'pricewar' | 'shareholders' | 'ownfest'>, Maker> = {
+const MAKERS: Record<Exclude<DilemmaKind, 'breakdown' | 'raise' | 'burnout' | 'tradeshow' | 'pricewar' | 'shareholders' | 'ownfest' | 'venue'>, Maker> = {
   customs: (s, gig) =>
     !gig.overseas
       ? null
@@ -262,7 +262,7 @@ export function resolveDilemma(s: TycoonState, id: string, optionId: string, aut
   const gig = d.gigId ? gigById(s, d.gigId) : undefined;
   const v = d.vehicleId ? s.vehicles.find(x => x.id === d.vehicleId) : undefined;
   if (option.cost) {
-    book(s, d.kind === 'breakdown' ? 'servicing' : d.kind === 'tradeshow' || d.kind === 'pricewar' ? 'marketing' : d.kind === 'shareholders' ? 'equity' : d.kind === 'ownfest' ? 'festival' : 'onsite', -option.cost);
+    book(s, d.kind === 'breakdown' ? 'servicing' : d.kind === 'tradeshow' || d.kind === 'pricewar' ? 'marketing' : d.kind === 'shareholders' ? 'equity' : d.kind === 'ownfest' ? 'festival' : d.kind === 'venue' ? 'venues' : 'onsite', -option.cost);
     if (v) v.profitThisYear -= option.cost;
   }
   let line = `${d.title}: ${option.label.toLowerCase()}${option.cost ? ` (${money(s, option.cost)})` : ''}.`;
@@ -319,6 +319,12 @@ export function resolveDilemma(s: TycoonState, id: string, optionId: string, aut
       if (m) m.fatigue = 100;
       if (gig) addMods(gig, { quality: -0.03 });
       s.crewMorale = Math.max(0, s.crewMorale - 2);
+      break;
+    }
+    case 'venue:refurb':
+    case 'venue:patch': {
+      const o = s.ownedVenues.find(x => x.venueId === d.payload);
+      if (o) o.condition = Math.min(100, option.id === 'refurb' ? 90 : o.condition + 20);
       break;
     }
     case 'ownfest:cover':

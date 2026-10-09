@@ -1,6 +1,7 @@
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
-import { buildDepot, buyVehicle, leaseVehicle } from '@/world/actions';
+import { buildDepot, buyOwnedVenue, buyVehicle, leaseVehicle, sellOwnedVenue, setVenueProgramme } from '@/world/actions';
+import { buyBlocker, buyCost, expectedMonthly, ownable, ownedOf, saleValue, venuePrice, YIELD } from '@/world/owned';
 import { LEASE_TERM_MONTHS, leaseMonthly } from '@/world/finance';
 import { stockSize } from '@/world/loading';
 import { GearShop, WarehouseGear } from './gear';
@@ -223,6 +224,61 @@ export function VenueWindow({ ctx, venueId }: { ctx: WinCtx; venueId: string }) 
           🚧 Not open yet or closed for rebuilding — no bookings until{' '}
           {VENUE_YEARS[venue.name]?.opens && VENUE_YEARS[venue.name].opens! > yearOf(state, state.hour) ? VENUE_YEARS[venue.name].opens : VENUE_YEARS[venue.name]?.shut?.find(([, to]) => to > yearOf(state, state.hour))?.[1]}.
         </div>
+      )}
+      {ownable(venue) && (
+        <>
+          <h4>Ownership</h4>
+          {(() => {
+            const owned = ownedOf(state, venueId);
+            const act = (fn: Parameters<WinCtx['dispatch']>[0]) => {
+              const r = ctx.dispatch(fn);
+              if (r.message) ctx.toast(r.message, r.ok);
+            };
+            if (!owned) {
+              const why = buyBlocker(state, venue);
+              return (
+                <>
+                  <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+                    Lease it out for about {(YIELD.lease * 100).toFixed(1)}% of its value a month, or promote it yourself for about {(YIELD.promote * 100).toFixed(1)}% — less upkeep,
+                    and it keeps your name warm in town.
+                  </div>
+                  {why && <div className="tt-warn" style={{ marginTop: 4 }}>{why}</div>}
+                  <button className="tt-btn sm" style={{ marginTop: 6 }} disabled={!!why} onClick={() => act(s => buyOwnedVenue(s, venueId))}>
+                    Buy for {money(buyCost(venue))} <span className="tt-dim">(value {money(venuePrice(venue))})</span>
+                  </button>
+                </>
+              );
+            }
+            return (
+              <>
+                <Stat label="Condition">
+                  <span className={owned.condition < 40 ? 'tt-bad' : ''}>{Math.round(owned.condition)}</span>
+                </Stat>
+                <Bar value={owned.condition} max={100} color={owned.condition < 40 ? '#ef4444' : '#22c55e'} />
+                <Stat label="Expected / month">
+                  <b className={expectedMonthly(state, owned) < 0 ? 'tt-bad' : 'tt-good'}>{money(expectedMonthly(state, owned))}</b>
+                  <span className="tt-dim"> · {money(owned.earned)} so far</span>
+                </Stat>
+                <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
+                  {(['lease', 'promote'] as const).map(p => (
+                    <button key={p} className="tt-btn sm" data-on={owned.programme === p} onClick={() => act(s => setVenueProgramme(s, venueId, p))}>
+                      {owned.programme === p ? '● ' : '○ '}
+                      {p === 'lease' ? 'Lease it out' : 'Promote it yourself'}
+                    </button>
+                  ))}
+                  <button className="tt-btn sm" onClick={() => act(s => sellOwnedVenue(s, venueId))}>
+                    Sell · {money(saleValue(owned))}
+                  </button>
+                </div>
+                <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+                  {owned.programme === 'lease'
+                    ? 'Steady rent from a tenant promoter.'
+                    : 'Your own nights: pays more when the economy and your name in town are strong, less when they are not.'}
+                </div>
+              </>
+            );
+          })()}
+        </>
       )}
       {contract && (
         <>

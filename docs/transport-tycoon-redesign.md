@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 239 tests):
+(`src/world/__tests__/*.test.ts`, 245 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -329,6 +329,15 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   price is company value × (0.7 + 0.6 × confidence). Below 30 an activist decision appears
   (special dividend +25 confidence, or stand firm −10 and reputation −2); under 8 for four months
   the board ousts you (game over). Going private again costs 120% of the stake's market value.
+
+- **Owned venues** (`owned.ts`) — pubs, halls, clubs, theatres and arenas can be bought (venue
+  window) with a base in town and the reputation to book there: £90-450 a seat plus 8% fees. Lease
+  it out (0.9% of value a month) or promote it yourself (1.9% × the economy × your standing in
+  town, ±50% noise) against 0.35% upkeep; condition (50-80 at purchase) wears 1.2 a month, scales
+  income (0.6-1.0×, nothing below 12) and below 40 raises a refurbish / patch / defer decision. An
+  owned room keeps the town warm (+0.5 rating a month). Selling gets 55-95% of value by condition.
+  Net yield is ~6% a year leased and ~18% promoted — slower than a good fleet, so it's a place for
+  surplus cash, not a snowball.
 
 - **Your own festival** (`ownfest.ts`) — until the end of April you can promote a festival of
   your own from one of your bases (Market window): a field day (3,000 heads, reputation 35+), a

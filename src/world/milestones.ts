@@ -33,6 +33,7 @@ export const MILESTONES: Milestone[] = [
   { id: 'tour', label: 'Out on tour', blurb: 'Complete a national tour.', done: s => s.tours.some(t => t.status === 'done') },
   { id: 'world-tour', label: 'Round the world', blurb: 'Complete a world tour.', done: s => s.tours.some(t => t.status === 'done' && t.kind === 'world') },
   { id: 'own-festival', label: 'Headline promoter', blurb: 'Put on a sold-out festival of your own.', done: s => s.festivalHistory.some(e => e.attendance >= FEST_TIERS[e.tier].capacity * 0.9) },
+  { id: 'landlord', label: 'Landlord', blurb: 'Own a venue.', done: s => s.ownedVenues.length >= 1 },
   { id: 'festival', label: 'Mud and glory', blurb: 'Deliver a festival stage.', done: s => gigsDone(s).some(g => g.festival) },
   { id: 'event', label: 'Live to the world', blurb: 'Deliver a special event lot.', done: s => gigsDone(s).some(g => g.event) },
   { id: 'house-rig', label: 'House supplier', blurb: 'Hold a venue’s house contract.', done: s => s.contracts.some(c => c.status === 'active') },

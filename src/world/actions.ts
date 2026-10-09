@@ -48,8 +48,9 @@ import { AMBITIONS, rndBlocker, startProject } from './rnd';
 import { DEAL_YEARS } from './deals';
 import { headhuntBlocker, headhuntFee, headhuntRivalHealthAfter, headhuntTarget, HEADHUNT_REP_COST } from './headhunt';
 import { festBlocker, planFestival } from './ownfest';
+import { buyBlocker, buyVenue, ownedOf, sellVenue } from './owned';
 import { IPO_FLOAT, buybackCost, ipoProceeds, listingBlocker, tradingTotal } from './shares';
-import { DEPTS, type ActionOutcome, type DividendLevel, type FestHeadliner, type FestTicket, type FestTier, type BidLevel, type Dept, type RndAmbition, type Vehicle, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
+import { DEPTS, type ActionOutcome, type VenueProgramme, type DividendLevel, type FestHeadliner, type FestTicket, type FestTier, type BidLevel, type Dept, type RndAmbition, type Vehicle, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
 import { STAFF, canBaseVehicle, facilitySpec, nextUpgrade } from './facilities';
 import { aboard, hireFee, levelOf, makePerson, moveToDepot, roleOf, settlePoachBid, syncCrew, unpinFrom } from './people';
 import { BREAK_MONTHS, contractShortfall, installKit } from './contracts';
@@ -613,6 +614,30 @@ export function promoteFestival(state: TycoonState, tier: FestTier, headliner: F
   const s = cloneState(state);
   planFestival(s, tier, headliner, ticket, cityId);
   return ok(s, 'Festival announced.');
+}
+
+export function buyOwnedVenue(state: TycoonState, venueId: string): ActionOutcome {
+  const venue = worldOf(state).venueById.get(venueId);
+  if (!venue) return fail(state, 'Unknown venue.');
+  const why = buyBlocker(state, venue);
+  if (why) return fail(state, why);
+  const s = cloneState(state);
+  buyVenue(s, venue);
+  return ok(s, `${venue.name} is yours.`);
+}
+
+export function sellOwnedVenue(state: TycoonState, venueId: string): ActionOutcome {
+  if (!ownedOf(state, venueId)) return fail(state, 'You do not own it.');
+  const s = cloneState(state);
+  const proceeds = sellVenue(s, venueId);
+  return ok(s, `Sold for ${formatMoney(s, proceeds)}.`);
+}
+
+export function setVenueProgramme(state: TycoonState, venueId: string, programme: VenueProgramme): ActionOutcome {
+  if (!ownedOf(state, venueId)) return fail(state, 'You do not own it.');
+  const s = cloneState(state);
+  ownedOf(s, venueId)!.programme = programme;
+  return ok(s);
 }
 
 export function borrow(state: TycoonState): ActionOutcome {

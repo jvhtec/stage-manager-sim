@@ -346,6 +346,10 @@ export function HelpWindow() {
           <b>price war</b> in a town you work in (see Market) — ride it out, fight back or buy a truce.
         </li>
         <li>
+          <b>Owning a venue</b> (open the venue): lease it out for steady rent or promote it yourself for more, with more
+          swing. It wears out and asks for refurbishment now and then.
+        </li>
+        <li>
           <b>Your own festival</b> (Market): pay up front in spring for a field day, weekender or major, pick a headliner
           and ticket price, and hope the economy and the weather play along — a built brand sells out, a new one loses
           money.
