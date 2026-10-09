@@ -361,7 +361,7 @@ The classic build has systems that don't exist in the map game yet. Each has an 
 1. **Playtest & balance pass** — fee/wage/running-cost tuning, offer density, rival aggression.
 2. **Named crew** — done (`people.ts`), with pins, rest rota and counter-offers.
 3. **Road & show incidents** — done (`dilemmas.ts`): breakdown and venue decisions.
-4. **Tour planner** — drag-to-order a vehicle's show list, "add next show in route" suggestions,
+4. **Tour planner** — route lines for the selected vehicle are drawn on the map (numbered stops); still to come: drag-to-order a show list, "add next show in route" suggestions,
    route lines drawn on the map for the selected vehicle.
 5. **Gear transfers & local hire** — move stock between warehouses; hire locally when short.
 6. **Sound** — WebAudio engine hum, crowd swell at live venues, cash-register on payouts.
