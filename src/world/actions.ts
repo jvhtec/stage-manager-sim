@@ -48,6 +48,7 @@ import { AMBITIONS, rndBlocker, startProject } from './rnd';
 import { DEAL_YEARS } from './deals';
 import { headhuntBlocker, headhuntFee, headhuntRivalHealthAfter, headhuntTarget, HEADHUNT_REP_COST } from './headhunt';
 import { festBlocker, planFestival } from './ownfest';
+import { HEAT_HEADHUNT, addHeat, hireInvestigator, investigatorBlocker } from './rivalry';
 import { buyBlocker, buyVenue, ownedOf, sellVenue } from './owned';
 import { IPO_FLOAT, buybackCost, ipoProceeds, listingBlocker, tradingTotal } from './shares';
 import { DEPTS, type ActionOutcome, type VenueProgramme, type DividendLevel, type FestHeadliner, type FestTicket, type FestTier, type BidLevel, type Dept, type RndAmbition, type Vehicle, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
@@ -602,6 +603,7 @@ export function headhunt(state: TycoonState, rivalId: string, depotId?: string):
   r.health = headhuntRivalHealthAfter(r);
   s.company.reputation = Math.max(0, s.company.reputation - HEADHUNT_REP_COST);
   (s.headhunted ??= {})[r.id] = dayOf(s.hour);
+  addHeat(s, r.id, HEAT_HEADHUNT);
   pushNews(s, `${s.company.name} lures ${m.name} away from ${r.name}.`, 'big');
   return ok(s, `${m.name} (${levelOf(m)}★ ${roleOf(m)}) leaves ${r.name} to join you.`);
 }
@@ -638,6 +640,17 @@ export function setVenueProgramme(state: TycoonState, venueId: string, programme
   const s = cloneState(state);
   ownedOf(s, venueId)!.programme = programme;
   return ok(s);
+}
+
+/** Pay for an investigator to watch a rival: you see their heat, and they take fewer of your offers. */
+export function investigate(state: TycoonState, rivalId: string): ActionOutcome {
+  const rival = state.rivals.find(r => r.id === rivalId);
+  if (!rival) return fail(state, 'Unknown rival.');
+  const why = investigatorBlocker(state, rival);
+  if (why) return fail(state, why);
+  const s = cloneState(state);
+  const target = s.rivals.find(r => r.id === rivalId)!;
+  return ok(s, withRng(s, rng => hireInvestigator(s, target, rng)));
 }
 
 export function borrow(state: TycoonState): ActionOutcome {

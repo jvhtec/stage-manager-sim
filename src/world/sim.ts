@@ -18,6 +18,7 @@ import { monthlyPriceWars } from './pricewars';
 import { monthlyShares } from './shares';
 import { monthlyVenues } from './owned';
 import { monthlySponsors } from './sponsors';
+import { monthlyRivalry } from './rivalry';
 import { dailyUtilisation } from './fleetReport';
 import { recordVenueNight } from './promoters';
 import { dailyAuctions, monthlyAuctions } from './auctions';
@@ -625,6 +626,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     monthlyShares(s, p => rng.chance(p));
     monthlyVenues(s, rng);
     monthlySponsors(s, sideRng(s, dayOf(s.hour) + 7001));
+    monthlyRivalry(s, sideRng(s, dayOf(s.hour) + 7003));
     monthlyRnd(s, rng);
     monthlyDeals(s, rng);
   }

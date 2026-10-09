@@ -4,6 +4,7 @@
  * geography *is* the demand curve. Rivals snap up offers they're close to.
  */
 import { priceWarFactor, warWinBonus } from './pricewars';
+import { intelFactor } from './rivalry';
 import { difficultyOf } from './scenario';
 import { offerBuzz } from './marketing';
 import { relationFeeBonus, relationOfferWeight } from './promoters';
@@ -257,7 +258,7 @@ export function rivalsTakeOffers(state: TycoonState, world: WorldMap, rng: Rng) 
       // Already working the area? The next date there is easy money (a run, like yours).
       const nearby = rivalNearbyDates(state, world, rival.id, gig);
       const onARun = nearby.length ? RIVAL_RUN_BONUS * (nearby.length > 1 ? 1.15 : 1) : 1;
-      const chance = 0.05 * difficultyOf(state).rivals * warWinBonus(state, gig.cityId, rival.id) * crowding * proximity * fit * specialty * loyalty * onARun * (1.15 - (rating / 100) * 0.6);
+      const chance = 0.05 * difficultyOf(state).rivals * warWinBonus(state, gig.cityId, rival.id) * intelFactor(state, rival.id) * crowding * proximity * fit * specialty * loyalty * onARun * (1.15 - (rating / 100) * 0.6);
       if (!rng.chance(chance)) continue;
 
       gig.status = 'rival';

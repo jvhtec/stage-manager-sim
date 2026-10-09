@@ -165,6 +165,7 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     festivalHistory: [],
     ownedVenues: [],
     sponsors: [],
+    rivalry: {},
     venueRelations: {},
     reports: [],
     ownProducts: [],
@@ -308,6 +309,7 @@ export function migrate(state: Partial<TycoonState>): TycoonState {
   s.announcedWaves ??= TECH_WAVES.flatMap(w => [...(w.year - 2 <= yearOf(s, s.hour) ? [`${w.id}:rumour`] : []), ...(w.year <= yearOf(s, s.hour) ? [`${w.id}:arrival`] : [])]);
   s.ownedVenues ??= [];
   s.sponsors ??= [];
+  s.rivalry ??= {};
   s.venueRelations ??= {};
   s.reports ??= [];
   return s;

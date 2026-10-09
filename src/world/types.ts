@@ -510,7 +510,7 @@ export interface Run {
   bonus?: number;
 }
 
-export type DilemmaKind = 'sponsor' | 'charity' | 'venue' | 'ownfest' | 'shareholders' | 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
+export type DilemmaKind = 'dirty' | 'sponsor' | 'charity' | 'venue' | 'ownfest' | 'shareholders' | 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
 
 /** A problem that needs your call (dilemmas.ts). */
 export interface Dilemma {
@@ -718,6 +718,8 @@ export interface TycoonState {
   promo?: Promo;
   /** Day each rival was last raided for crew (headhunt.ts). */
   headhunted?: Record<string, number>;
+  /** Per-rival heat and investigator cover (rivalry.ts). */
+  rivalry: Record<string, { heat: number; intelUntil?: number }>;
   /** Brand sponsors and goodwill (sponsors.ts). */
   sponsors: SponsorDeal[];
   goodwill?: number;

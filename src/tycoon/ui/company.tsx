@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { borrow, buyRival, goPublic, headhunt, repay, setDividend, takePrivate } from '@/world/actions';
+import { borrow, buyRival, goPublic, headhunt, investigate, repay, setDividend, takePrivate } from '@/world/actions';
 import { brandOf } from '@/world/sponsors';
+import { HEAT_DIRTY, INTEL_DAYS, aggression, hasIntel, heatOf, investigatorBlocker, investigatorCost } from '@/world/rivalry';
 import { headhuntBlocker, headhuntFee, headhuntTarget } from '@/world/headhunt';
 import { levelOf, roleOf } from '@/world/people';
 import { DIVIDENDS, IPO_FLOAT, buybackCost, ipoProceeds, listingBlocker, marketCap, sharePrice } from '@/world/shares';
@@ -383,6 +384,11 @@ export function HelpWindow() {
           money.
         </li>
         <li>
+          <b>Rivalry</b>: provoke a rival (headhunting, price-war fights) or sit in an aggressive neighbour's patch and the heat
+          rises — then come rumours, tampered kit and tip-offs. Pay for security, hit back, or hire an investigator in the League
+          to watch them for a quarter.
+        </li>
+        <li>
           <b>Sponsors &amp; charity</b>: brands will pay a monthly retainer to be on your trucks if you keep a promised number of
           shows a month going (Finance lists them); say yes to a good cause now and then and they call more often.
         </li>
@@ -726,6 +732,36 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
                             }}
                           >
                             Headhunt {kmoney(headhuntFee(star))}
+                          </button>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
+                {'rival' in r && r.rival && (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', paddingLeft: 30, marginTop: 2 }}>
+                    {(() => {
+                      const rv = r.rival!;
+                      const heat = heatOf(state, rv.id);
+                      const watched = hasIntel(state, rv.id);
+                      const why = investigatorBlocker(state, rv);
+                      const mood = heat >= HEAT_DIRTY ? 'Hostile' : heat >= 15 ? 'Cool' : 'Cordial';
+                      return (
+                        <>
+                          <span className={heat >= HEAT_DIRTY ? 'tt-bad' : 'tt-dim'} style={{ fontSize: 11 }}>
+                            {watched || heat >= HEAT_DIRTY ? `Rivalry: ${mood} (${Math.round(heat)}${watched ? `, grudge ${Math.round(aggression(rv) * 100)}%` : ''})` : 'Rivalry: unknown'}
+                            {watched ? ' · watched' : ''}
+                          </span>
+                          <button
+                            className="tt-btn sm"
+                            title={why ?? `Hire an investigator: ${INTEL_DAYS} days of intel, and ${rv.name} take fewer of your offers`}
+                            disabled={!!why}
+                            onClick={() => {
+                              const res = ctx.dispatch(s => investigate(s, rv.id));
+                              if (res.message) ctx.toast(res.message, res.ok);
+                            }}
+                          >
+                            Investigate {kmoney(investigatorCost(state))}
                           </button>
                         </>
                       );

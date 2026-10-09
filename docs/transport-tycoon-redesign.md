@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 260 tests):
+(`src/world/__tests__/*.test.ts`, 268 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -329,6 +329,20 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   price is company value × (0.7 + 0.6 × confidence). Below 30 an activist decision appears
   (special dividend +25 confidence, or stand firm −10 and reputation −2); under 8 for four months
   the board ousts you (game over). Going private again costs 120% of the stake's market value.
+
+- **Rivalry** (`rivalry.ts`) — each rival carries heat (0-100) toward you. It rises 12 when you
+  headhunt them, 8 when you fight their price war (−5 for a truce), and each month by 4 × their
+  grudge (a stable 20-90% per rival) if their HQ is within 35 road tiles of a base of yours; it
+  cools 3 a month. From 35 up they play dirty (up to 35% a month, one at a time): rumours
+  (reputation −2), tampered racks (a product's condition −30) or a council tip-off (next show −5%
+  quality). A decision: security (stops it, −8 heat), hit back (55% you expose them for −8 finances
+  and −15 heat; otherwise it backfires, +10 heat and −1 reputation, and the trick lands) or ignore.
+  An investigator (one-and-a-half months of marketing spend) shows the heat and grudge for 90 days
+  and makes that rival take 40% fewer of your offers; 20% of the time they're caught (+8 heat,
+  reputation −1). Monthly rolls use a side rng.
+  Balance: over 6-9 year bot runs (the bot never answers decisions) it shaves a few reputation points
+  by the end — about 5 on GB 1995 over 9 years — and leaves cash and survival alone; GB 1979 over
+  7 years is unchanged.
 
 - **Sponsors and charity** (`sponsors.ts`) — once you have reputation 25+ and 10 shows behind you,
   each month there's a 10% chance (+0.2 points per goodwill) that an invented era-appropriate brand
