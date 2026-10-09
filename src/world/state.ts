@@ -1,3 +1,4 @@
+import { DIFFICULTIES } from './scenario';
 import { createRandomSeed, createRng } from '@/lib/rng';
 import {
   START_YEAR,
@@ -16,7 +17,7 @@ import { generateOffer } from './offers';
 import { marketNow } from './market';
 import { refreshCandidates, seedPeople, sideRng, syncCrew } from './people';
 import { roadDistance } from './pathfinding';
-import { DEPTS, type GearStock, type Policies, type TycoonState, type Vehicle } from './types';
+import { DEPTS, type Difficulty, type GearStock, type GoalId, type Policies, type TycoonState, type Vehicle } from './types';
 
 export const TYCOON_SAVE_KEY = 'stage-manager-sim:tycoon';
 // v2: gear became real products (GearStock), plus artist relations, riders
@@ -37,6 +38,8 @@ export interface NewGameOptions {
   hqCityId?: string;
   country?: CountryCode;
   startYear?: number;
+  difficulty?: Difficulty;
+  goal?: GoalId;
 }
 
 /**
@@ -123,7 +126,7 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
       name: options.companyName,
       color: options.color,
       reputation: STARTING_REPUTATION,
-      cash: STARTING_CASH,
+      cash: Math.round((STARTING_CASH * DIFFICULTIES[options.difficulty ?? 'normal'].startingCash) / 1000) * 1000,
       loan: 0,
       hqCityId: hq.id,
     },
@@ -166,7 +169,9 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     artistRelations: {},
     negativeMonths: 0,
     nextId: 0,
-    stats: { showsPlayed: 0, showsFailed: 0, peakCash: STARTING_CASH },
+    stats: { showsPlayed: 0, showsFailed: 0, peakCash: Math.round((STARTING_CASH * DIFFICULTIES[options.difficulty ?? 'normal'].startingCash) / 1000) * 1000 },
+    difficulty: options.difficulty ?? 'normal',
+    goal: options.goal ?? 'sandbox',
   };
 
   state.depots.push({
@@ -289,6 +294,8 @@ export function migrate(state: Partial<TycoonState>): TycoonState {
   s.milestones ??= [];
   s.partners ??= {};
   s.townGrowth ??= {};
+  s.difficulty ??= 'normal';
+  s.goal ??= 'sandbox';
   s.runs ??= [];
   s.venueRelations ??= {};
   s.reports ??= [];

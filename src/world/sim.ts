@@ -11,6 +11,7 @@ import { paperworkFor } from './paperwork';
 import { chargeZones, yearlyZones } from './regulation';
 import { settleRuns } from './runs';
 import { dailyTradeShows, monthlyMarketing } from './marketing';
+import { difficultyOf, monthlyGoal } from './scenario';
 import { dailyUtilisation } from './fleetReport';
 import { recordVenueNight } from './promoters';
 import { dailyAuctions, monthlyAuctions } from './auctions';
@@ -609,6 +610,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     monthlyPartners(s);
     monthlyTowns(s, world);
     monthlyMarketing(s);
+    monthlyGoal(s);
     monthlyRnd(s, rng);
     monthlyDeals(s, rng);
   }
@@ -637,7 +639,8 @@ function monthlyTick(s: TycoonState, rng: Rng) {
     pushNews(s, 'Month closed in the red — the bank is giving the whole industry breathing room until venues reopen.', 'info');
   } else if (s.company.cash < 0) {
     s.negativeMonths += 1;
-    if (s.negativeMonths >= NEGATIVE_MONTHS_GAME_OVER) {
+    const grace = difficultyOf(s).graceMonths;
+    if (s.negativeMonths >= grace) {
       s.gameOver = {
         hour: s.hour,
         reason: `${s.company.name} spent ${s.negativeMonths} months in the red and the bank has called in the receivers.`,
@@ -646,7 +649,7 @@ function monthlyTick(s: TycoonState, rng: Rng) {
     } else {
       pushNews(
         s,
-        `Month closed in the red. ${NEGATIVE_MONTHS_GAME_OVER - s.negativeMonths} more and the bank shuts you down.`,
+        `Month closed in the red. ${grace - s.negativeMonths} more and the bank shuts you down.`,
         'big',
       );
     }

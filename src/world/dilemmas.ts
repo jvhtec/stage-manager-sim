@@ -7,6 +7,7 @@
  * Venue choices don't play out until the show: they're kept on the gig as
  * `mods` and folded into the night's quality, failure risk and weather.
  */
+import { difficultyOf } from './scenario';
 import type { Rng } from '@/lib/rng';
 import { getModel } from './catalog';
 import { book, depotInCity, formatMoney, gigById, loadInHour, newId, pushNews, showStartHour } from './core';
@@ -170,7 +171,7 @@ export function hourlyCrises(s: TycoonState, rng: Rng) {
   s.gigs.forEach(gig => {
     if (gig.status !== 'booked' || s.hour !== loadInHour(gig)) return;
     if (!s.vehicles.some(v => v.owner === 'player' && v.orders.includes(gig.id))) return;
-    if (!rng.chance(gig.overseas ? OVERSEAS_CRISIS_CHANCE : CRISIS_CHANCE(gig.tier))) return;
+    if (!rng.chance((gig.overseas ? OVERSEAS_CRISIS_CHANCE : CRISIS_CHANCE(gig.tier)) * difficultyOf(s).crises)) return;
     // Abroad, the rig crossing a border is the likeliest thing to go wrong.
     const kinds = gig.overseas ? (['customs', 'customs', 'manager', 'injury'] as (keyof typeof MAKERS)[]) : VENUE_KINDS.filter(k => k !== 'storm' && k !== 'customs' || (k === 'storm' && !!gig.festival));
     for (let tries = 0; tries < 3; tries++) {

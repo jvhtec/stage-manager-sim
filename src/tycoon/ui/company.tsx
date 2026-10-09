@@ -10,13 +10,14 @@ import {
 } from '@/world/catalog';
 import { formatDay, formatHour, yearOf } from '@/world/core';
 import { MILESTONES } from '@/world/milestones';
+import { DIFFICULTIES, DIFFICULTY_IDS, GOALS, GOAL_IDS, goalDeadlineYear, legacyScore } from '@/world/scenario';
 import { worldOf } from '@/world/mapgen';
 import { companyValue } from '@/world/queries';
 import { awardsName, companyRating, rivalRating } from '@/world/awards';
 import { describeLoanRate } from '@/world/market';
 import { borrowStep, creditLimit } from '@/world/finance';
 import { suggestedHqCities } from '@/world/state';
-import { LEDGER_LABELS, type AnnualReport, type LedgerCategory, type TycoonState } from '@/world/types';
+import { LEDGER_LABELS, type AnnualReport, type Difficulty, type GoalId, type LedgerCategory, type TycoonState } from '@/world/types';
 import { createRandomSeed } from '@/lib/rng';
 import { COUNTRIES, type CountryCode } from '@/world/content/countries';
 
@@ -315,6 +316,10 @@ export function HelpWindow() {
           merge and start up. Your <b>annual report</b> lands every New Year, and the League tracks your career milestones.
         </li>
         <li>
+          <b>Your goal</b>: you choose one (and a difficulty) when you start a company — see how you're doing in the League,
+          along with your legacy score. Reach it and the game keeps going; the score is what you leave behind.
+        </li>
+        <li>
           Buy bigger trucks and more gear, and win reputation to unlock arenas and stadiums. Every January the industry awards
           judge your year.
         </li>
@@ -336,7 +341,7 @@ export function NewGameForm({
   onCancel,
 }: {
   onPreview: (seed: number, hqCityId?: string, country?: CountryCode) => void;
-  onStart: (opts: { companyName: string; color: string; seed: number; hqCityId: string; country: CountryCode; startYear: number }) => void;
+  onStart: (opts: { companyName: string; color: string; seed: number; hqCityId: string; country: CountryCode; startYear: number; difficulty: Difficulty; goal: GoalId }) => void;
   onCancel?: () => void;
 }) {
   const [name, setName] = useState('Roadcase & Rigging');
@@ -344,6 +349,8 @@ export function NewGameForm({
   const [seed, setSeed] = useState(() => createRandomSeed());
   const [country, setCountry] = useState<CountryCode>(() => guessCountry());
   const [startYear, setStartYear] = useState(1990);
+  const [difficulty, setDifficulty] = useState<Difficulty>('normal');
+  const [goal, setGoal] = useState<GoalId>('sandbox');
   const cities = useMemo(() => suggestedHqCities(seed, country), [seed, country]);
   const [hq, setHq] = useState<string>('');
   const hqId = cities.find(c => c.id === hq)?.id ?? cities.find(c => c.size === 'town')?.id ?? cities[0]?.id;
@@ -404,6 +411,36 @@ export function NewGameForm({
           ))}
         </div>
       </div>
+      <div>
+        <div className="tt-dim" style={{ marginBottom: 3 }}>
+          Difficulty
+        </div>
+        <div className="tt-years">
+          {DIFFICULTY_IDS.map(d => (
+            <button key={d} className="tt-btn sm" data-on={d === difficulty} onClick={() => setDifficulty(d)} title={DIFFICULTIES[d].blurb}>
+              {DIFFICULTIES[d].label}
+            </button>
+          ))}
+        </div>
+        <div className="tt-dim" style={{ marginTop: 3, fontSize: 11, whiteSpace: 'normal' }}>
+          {DIFFICULTIES[difficulty].blurb}
+        </div>
+      </div>
+      <div>
+        <div className="tt-dim" style={{ marginBottom: 3 }}>
+          Goal
+        </div>
+        <select className="tt-input" value={goal} onChange={e => setGoal(e.target.value as GoalId)} aria-label="Goal">
+          {GOAL_IDS.map(g => (
+            <option key={g} value={g}>
+              {GOALS[g].label}
+            </option>
+          ))}
+        </select>
+        <div className="tt-dim" style={{ marginTop: 3, fontSize: 11, whiteSpace: 'normal' }}>
+          {GOALS[goal].blurb}
+        </div>
+      </div>
       <label>
         <div className="tt-dim" style={{ marginBottom: 3 }}>
           Home town
@@ -429,7 +466,7 @@ export function NewGameForm({
           <button
             className="tt-btn primary"
             disabled={!name.trim() || !hqId}
-            onClick={() => onStart({ companyName: name.trim(), color, seed, hqCityId: hqId!, country, startYear })}
+            onClick={() => onStart({ companyName: name.trim(), color, seed, hqCityId: hqId!, country, startYear, difficulty, goal })}
           >
             Start company
           </button>
@@ -448,9 +485,60 @@ export function GameOverPanel({ state, onRestart }: { state: TycoonState; onRest
       <Stat label="Shows failed">{state.stats.showsFailed}</Stat>
       <Stat label="Peak cash">{money(state.stats.peakCash)}</Stat>
       <Stat label="Peak tier">{tierInfo(companyTier(state.company.reputation)).label}</Stat>
+      <Stat label="Legacy score">
+        <b>{legacyScore(state).total.toLocaleString('en-US')}</b>
+      </Stat>
+      {state.goalResult && (
+        <Stat label="Goal">
+          <span className={state.goalResult.status === 'won' ? 'tt-good' : 'tt-dim'}>
+            {GOALS[state.goal ?? 'sandbox'].label} — {state.goalResult.status === 'won' ? 'reached' : 'missed'}
+          </span>
+        </Stat>
+      )}
       <button className="tt-btn primary" style={{ marginTop: 10 }} onClick={onRestart}>
         Start a new company
       </button>
+    </div>
+  );
+}
+
+/** Your goal, its progress and the legacy score so far. */
+function CareerPanel({ state }: { state: TycoonState }) {
+  const goal = GOALS[state.goal ?? 'sandbox'];
+  const progress = goal.progress(state);
+  const score = legacyScore(state);
+  const deadline = goalDeadlineYear(state);
+  return (
+    <div style={{ marginBottom: 6 }}>
+      <h4 style={{ marginTop: 0 }}>
+        Your goal — {goal.label}
+        {state.difficulty && state.difficulty !== 'normal' ? <span className="tt-dim"> · {DIFFICULTIES[state.difficulty].label}</span> : null}
+      </h4>
+      {state.goal && state.goal !== 'sandbox' ? (
+        <>
+          <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+            {goal.blurb}
+            {deadline ? ` (by ${deadline})` : ''}
+          </div>
+          <div className="tt-row">
+            <span style={{ minWidth: 140 }}>{progress.text}</span>
+            <Bar value={Math.round(progress.fraction * 100)} max={100} color={state.goalResult?.status === 'won' ? '#22c55e' : state.company.color} />
+          </div>
+          {state.goalResult && (
+            <div className={state.goalResult.status === 'won' ? 'tt-good' : 'tt-dim'} style={{ marginTop: 2 }}>
+              {state.goalResult.status === 'won' ? '🏆 Reached — everything from here is a bonus.' : 'The deadline passed. The company carries on.'}
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="tt-dim">No goal — a sandbox. Pick one when you start a new company.</div>
+      )}
+      <div className="tt-row" style={{ marginTop: 4 }}>
+        <span className="tt-dim" title={score.parts.map(p => `${p.label}: ${p.points}`).join(' · ')}>
+          Legacy score
+        </span>
+        <b>{score.total.toLocaleString('en-US')}</b>
+      </div>
     </div>
   );
 }
@@ -485,6 +573,7 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
   ].sort((a, b) => b.rating - a.rating);
   return (
     <div>
+      <CareerPanel state={state} />
       <table className="tt-table">
         <thead>
           <tr>

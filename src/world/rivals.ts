@@ -149,6 +149,7 @@ export function absorbRival(s: TycoonState, r: Rival) {
   s.vehicles = s.vehicles.filter(v => v.owner !== r.id);
   s.goneRivals.push(r.id);
   unlock(s, 'takeover');
+  s.stats.rivalsBought = (s.stats.rivalsBought ?? 0) + 1;
 
   let base = depotInCity(s, r.hqCityId);
   if (!base) {

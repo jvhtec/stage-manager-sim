@@ -419,6 +419,15 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   reputation), walk the floor (+8% / 14 days, 5% / 7 days) or stay home (the default). Costs scale with your
   size and the distance (×1 at home, ×1.8 across Europe, ×3 overseas); kit discounts stack with partnerships.
 
+- **Goals, difficulty & legacy score** (`scenario.ts`) — pick a goal and a difficulty when you start. Goals:
+  sandbox, top of the industry (reputation 90 in 25 years), an empire (worth £5M in 20), around the world (three
+  world tours in 25), silverware (Production Company of the Year ×3), the consolidator (buy out three rivals in
+  25) and built to last (30 years). Progress shows in the League; reaching it is a big news moment and the
+  game carries on; missing the deadline is noted. Difficulty: Gentle (1.6× starting cash, rivals ×0.8, crises
+  ×0.7, five months in the red), Standard, Cutthroat (0.7× cash, rivals ×1.25, crises ×1.3, two months). The
+  **legacy score** sums the career (company value, reputation, shows, awards, milestones, years, a won goal ×1000),
+  scaled by difficulty, and shows in the League and on the game-over panel.
+
 **Balance check** (scripted bot: one local truck per idle van, GB 1979 / 1995, ES 2010, US 1985, 4-24 seeds
 each, vs the merged #19 baseline). Cash and survival are level or better (GB 1979, 12 seeds: mean £1.02M
 baseline vs £0.93M, 11/12 vs 12/12 alive; fresh seeds £924k vs £934k); reputation runs a few points lower
