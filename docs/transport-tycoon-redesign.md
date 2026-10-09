@@ -85,7 +85,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 339 tests):
+(`src/world/__tests__/*.test.ts`, 344 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -341,6 +341,22 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   *Crew lounge* (12k / 35k): techs resting at the base shed 3 / 6 extra fatigue a day (the second
   level adds a little morale). The base diorama grows a soundstage annex with a band, lighting bar
   and (from the production hall up) a video wall. A shutdown zeroes the rent but leaves the upkeep.
+
+- **Corporation tax** (`tax.ts`) — found by the balance pass below. On 31 December the year's
+  trading profit (everything except share dealings and asset sales, with only half of what you spent
+  on trucks and kit counted as a cost) is taxed 15% on the first 250k and 30% above, after any
+  losses carried forward. Booked as "Corporation tax"; the Briefing warns from October.
+
+- **Balance pass (smart bot)** — a script that plays competently (buys gear for the shows it
+  books, adds trucks and crew, takes tours and sponsors, answers decisions, builds a rehearsal stage,
+  trains riggers/first-aiders, factors invoices when short) on GB 1995, 9 years, 3 seeds: with only
+  gear and expansion it reaches ~7M company value; with the new systems ~14M (rep 80-100 instead of
+  40: the rehearsal stage unlocks the big shows) — before tax; with tax ~11-12M. Earlier eras land
+  at 5-11M in nine years. The economy is generous to competent play, so the "empire" goal moved from
+  5M to 15M in 20 years; the dumb bot (which never expands) is unchanged. One run (ES 2010 seed 2)
+  went bust in the 2010 slump after over-buying — early over-expansion in a crisis still bites.
+  The script lives in `src/world/__bench__/smart.bench.ts` (`npm run balance`; see its header for the
+  options). The dumb bot loses about 10% of its cash to the tax and keeps every run alive.
 
 - **The briefing** (`advisor.ts`, Briefing window) — a read-only list of what needs doing, sorted red /
   orange / blue, each with a way into the problem: decisions pending and rival poach offers; booked

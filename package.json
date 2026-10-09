@@ -12,7 +12,8 @@
     "preview": "vite preview",
     "test": "vitest",
     "test:run": "vitest run",
-    "budget:bundle": "node scripts/check-bundle-budget.mjs"
+    "budget:bundle": "node scripts/check-bundle-budget.mjs",
+    "balance": "vitest run --config vitest.balance.config.ts"
   },
   "dependencies": {
     "lucide-react": "^0.462.0",

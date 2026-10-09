@@ -16,6 +16,7 @@ import { worldOf } from './mapgen';
 import { dayRate } from './people';
 import { requiredStageLevel, bestStageLevel, stageName } from './annexes';
 import { showsThisMonth } from './sponsors';
+import { taxEstimate } from './tax';
 import type { TycoonState } from './types';
 
 export type AlertTone = 'bad' | 'warn' | 'info';
@@ -117,6 +118,19 @@ export function briefing(s: TycoonState): Alert[] {
       const score = auditScore(s, d).total;
       if (score < PASS_SCORE) out.push({ id: `audit-${d.id}`, tone: 'warn', text: `The council audits in September and your ${city(d.cityId)} base would score about ${score}.`, go: { kind: 'depot', refId: d.id } });
     });
+  }
+
+  // The taxman calls on 31 December.
+  if (dateOfDay(s, today).getUTCMonth() + 1 >= 10) {
+    const bill = taxEstimate(s);
+    if (bill > 0) {
+      out.push({
+        id: 'tax',
+        tone: s.company.cash < bill * 1.2 ? 'warn' : 'info',
+        text: `Corporation tax is due on 31 December: about ${formatMoney(s, bill)} on this year's profit${s.company.cash < bill * 1.2 ? ' — more than you can comfortably pay' : ''}. Spending on trucks and kit reduces it.`,
+        go: { kind: 'finance' },
+      });
+    }
   }
 
   // Opportunities.

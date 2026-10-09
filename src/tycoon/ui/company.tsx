@@ -419,6 +419,10 @@ export function HelpWindow() {
           money.
         </li>
         <li>
+          <b>Tax</b>: on 31 December the taxman takes 15% of the first £250k of the year's profit and 30% above it. Losses carry
+          forward and half of what you spend on trucks and kit is deductible.
+        </li>
+        <li>
           <b>Briefing</b> (clipboard button): a sorted list of what needs doing — shows without a truck, rehearsals, thin cash,
           a sponsor you're about to miss — with a tap to go straight to each.
         </li>

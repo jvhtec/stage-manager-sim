@@ -128,6 +128,7 @@ export type LedgerCategory =
   | 'facilities'
   | 'merch'
   | 'legal'
+  | 'tax'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -167,6 +168,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   facilities: 'Annexes & stages',
   merch: 'Merchandise',
   legal: 'Legal fees',
+  tax: 'Corporation tax',
   sales: 'Asset sales',
 };
 
@@ -776,6 +778,8 @@ export interface TycoonState {
   /** 0-100: how well the festival's name sells. */
   festivalBrand?: number;
   festivalHistory: FestivalEdition[];
+  /** Losses carried forward against future profits (tax.ts). */
+  taxLoss?: number;
   /** Days (since the start) on which you made an insurance claim (incidents.ts). */
   claims: number[];
   /** Moving average of the departments your recent shows needed (expertise.ts). */

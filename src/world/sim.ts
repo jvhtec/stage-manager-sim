@@ -7,6 +7,7 @@
  * Pure and deterministic: same state in → same state out (the only
  * randomness is the seeded rng carried in `state.rngState`).
  */
+import { isLastDayOfYear, yearEndTax } from './tax';
 import { monthlyAudits } from './audits';
 import { maybeDisputeShow } from './disputes';
 import { expertiseBonus, learnMix } from './expertise';
@@ -571,6 +572,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     annualReport(s, date.getUTCFullYear() - 1);
     yearlyZones(s, date.getUTCFullYear());
   }
+  if (isLastDayOfYear(s)) yearEndTax(s);
   announceModels(s, date.getUTCFullYear());
   announceGear(s, date.getUTCFullYear());
   announceWaves(s, date.getUTCFullYear());
