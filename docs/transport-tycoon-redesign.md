@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 245 tests):
+(`src/world/__tests__/*.test.ts`, 251 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -329,6 +329,14 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   price is company value × (0.7 + 0.6 × confidence). Below 30 an activist decision appears
   (special dividend +25 confidence, or stand firm −10 and reputation −2); under 8 for four months
   the board ousts you (game over). Going private again costs 120% of the stake's market value.
+
+- **Technology waves** (`content/techWaves.ts`) — formats come and go: moving lights (1986, dates
+  PAR cans), line arrays (1996, point-source PA), moving heads over scanners (1998), digital desks
+  (2000, analogue consoles) and LED over projection (2008). Each is rumoured two years ahead,
+  arrives with a news item, and ramps over 4-8 years to its full effect: obsolete kit loses 25-35%
+  of its quality on shows at the wave's minimum tier and up (tier 3, or 2 for scanners), and its
+  resale value (and so company value) slides by 35-50%. The Market window lists each wave and how
+  many of your units it hits. New games starting after a wave don't replay its news.
 
 - **Owned venues** (`owned.ts`) — pubs, halls, clubs, theatres and arenas can be bought (venue
   window) with a base in town and the reputation to book there: £90-450 a seat plus 8% fees. Lease

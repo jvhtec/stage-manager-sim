@@ -18,6 +18,9 @@ import { ZONES } from '@/world/content/regulations';
 import { dayOf, formatDay, yearOf } from '@/world/core';
 import { TENDER_CLOSES_DAYS, TENDER_OPENS_DAYS, festivalCalendar } from '@/world/festivals';
 import { worldOf } from '@/world/mapgen';
+import { TECH_WAVES, techQualityFactor, waveProgress } from '@/world/content/techWaves';
+import { getProduct } from '@/world/content/gear';
+import { ownedStock } from '@/world/wear';
 import { WAR_WIN_BONUS } from '@/world/pricewars';
 import type { Gig } from '@/world/types';
 import { Bar, Stat, TierChip } from './bits';
@@ -74,6 +77,9 @@ export function MarketWindow({ ctx }: { ctx: WinCtx }) {
           </div>
         </>
       )}
+
+      <h4>Technology</h4>
+      <TechWaves ctx={ctx} />
 
       <h4>Low-emission zones</h4>
       {(ZONES[state.country] ?? []).length ? (
@@ -292,6 +298,37 @@ function OwnFestivalPanel({ ctx }: { ctx: WinCtx }) {
         Plans close at the end of April and you pay up front. A bigger name and cheaper tickets fill the field; your own fleet trims the production bill. A
         storm can empty it, and a shutdown cancels it.
       </div>
+    </div>
+  );
+}
+
+/** Technology waves: what is coming, and how much of your kit it hits. */
+function TechWaves({ ctx }: { ctx: WinCtx }) {
+  const { state } = ctx;
+  const year = yearOf(state, state.hour);
+  const stock = ownedStock(state);
+  const shown = TECH_WAVES.filter(w => year >= w.year - 2 && waveProgress(w, year) < 1.5 + w.ramp);
+  const relevant = TECH_WAVES.filter(w => year >= w.year - 2);
+  if (!relevant.length) return <div className="tt-dim">Nothing on the horizon yet — new formats will be rumoured a couple of years ahead.</div>;
+  return (
+    <div className="tt-list">
+      {(shown.length ? shown : relevant.slice(-3)).map(w => {
+        const progress = waveProgress(w, year);
+        const units = Object.entries(stock).reduce((n, [id, qty]) => (w.obsolete.includes(getProduct(id).kind) ? n + qty : n), 0);
+        const status = year < w.year ? `Rumoured — arrives ${w.year}` : progress >= 1 ? 'Fully established' : `Spreading (${Math.round(progress * 100)}%)`;
+        const hit = Math.round((1 - techQualityFactor(w.obsolete[0], w.minTier, year)) * 100);
+        return (
+          <div key={w.id} className="tt-item" style={{ gap: 6 }}>
+            <div className="grow" style={{ whiteSpace: 'normal' }}>
+              <b>{w.label}</b> <span className="tt-dim">— {status}</span>
+              <div className="tt-dim">
+                Dated kit: {w.obsolete.join(', ')} · {hit > 0 ? `−${hit}% quality on tier ${w.minTier}+ shows` : 'no penalty yet'} · resale −{Math.round(w.resale * progress * 100)}%
+              </div>
+              {units > 0 && <div className={progress > 0 ? 'tt-warn' : 'tt-dim'}>You own {units} affected unit{units === 1 ? '' : 's'}.</div>}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

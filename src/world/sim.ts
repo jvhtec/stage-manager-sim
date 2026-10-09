@@ -7,6 +7,7 @@
  * Pure and deterministic: same state in → same state out (the only
  * randomness is the seeded rng carried in `state.rngState`).
  */
+import { TECH_WAVES } from './content/techWaves';
 import { hypeLabel, showPayout } from './gate';
 import { paperworkFor } from './paperwork';
 import { chargeZones, yearlyZones } from './regulation';
@@ -554,6 +555,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   }
   announceModels(s, date.getUTCFullYear());
   announceGear(s, date.getUTCFullYear());
+  announceWaves(s, date.getUTCFullYear());
   updateRivals(s, world, date.getUTCFullYear());
 
   // Running costs and wages land every day — idle trucks and idle crew cost money.
@@ -673,6 +675,21 @@ function announceModels(s: TycoonState, year: number) {
     if (model.introYear > year || s.announcedModels.includes(model.id)) return;
     s.announcedModels.push(model.id);
     pushNews(s, `New vehicle available: the ${model.name} (${model.gearCapacity} gear, ${model.crewSeats} seats).`, 'big');
+  });
+}
+
+function announceWaves(s: TycoonState, year: number) {
+  TECH_WAVES.forEach(w => {
+    const rumour = `${w.id}:rumour`;
+    const arrival = `${w.id}:arrival`;
+    if (year >= w.year - 2 && !s.announcedWaves.includes(rumour)) {
+      s.announcedWaves.push(rumour);
+      if (year < w.year) pushNews(s, w.rumour, 'info');
+    }
+    if (year >= w.year && !s.announcedWaves.includes(arrival)) {
+      s.announcedWaves.push(arrival);
+      pushNews(s, w.arrival, 'big');
+    }
   });
 }
 

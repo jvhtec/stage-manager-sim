@@ -676,6 +676,8 @@ export interface TycoonState {
   announcedModels: string[];
   /** Gear product ids already announced as available. */
   announcedGear: string[];
+  /** Technology waves already rumoured/arrived (content/techWaves.ts). */
+  announcedWaves: string[];
   policies: Policies;
   /** Company-wide crew morale, 0-100 (crew.ts). */
   crewMorale: number;

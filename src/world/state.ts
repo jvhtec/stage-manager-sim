@@ -1,3 +1,4 @@
+import { TECH_WAVES } from './content/techWaves';
 import { DIFFICULTIES } from './scenario';
 import { createRandomSeed, createRng } from '@/lib/rng';
 import {
@@ -7,7 +8,7 @@ import {
   VEHICLE_MODELS,
   getModel,
 } from './catalog';
-import { newId } from './core';
+import { newId, yearOf } from './core';
 import { expectedQuality, productsAvailableIn } from './content/gear';
 import { DEFAULT_COUNTRY, type CountryCode } from './content/countries';
 import { updateRivals } from './sim';
@@ -141,6 +142,7 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     ledger: {},
     announcedModels: VEHICLE_MODELS.filter(m => m.introYear <= startYear).map(m => m.id),
     announcedGear: productsAvailableIn(startYear).map(p => p.id),
+    announcedWaves: TECH_WAVES.flatMap(w => [w.year - 2 <= startYear ? `${w.id}:rumour` : '', w.year <= startYear ? `${w.id}:arrival` : '']).filter(Boolean),
     policies: { ...DEFAULT_POLICIES },
     crewMorale: 65,
     gearCondition: {},
@@ -302,6 +304,7 @@ export function migrate(state: Partial<TycoonState>): TycoonState {
   s.runs ??= [];
   s.priceWars ??= [];
   s.festivalHistory ??= [];
+  s.announcedWaves ??= TECH_WAVES.flatMap(w => [...(w.year - 2 <= yearOf(s, s.hour) ? [`${w.id}:rumour`] : []), ...(w.year <= yearOf(s, s.hour) ? [`${w.id}:arrival`] : [])]);
   s.ownedVenues ??= [];
   s.venueRelations ??= {};
   s.reports ??= [];

@@ -1,4 +1,5 @@
 /** Read-only projections for the UI — nothing here mutates state. */
+import { techResaleFactor } from './content/techWaves';
 import { zoneBill } from './regulation';
 import { paperworkFor } from './paperwork';
 import { GEAR_RESALE_RATE, HOTEL_NIGHT, HOURS_PER_DAY, PER_DIEM, fuelPerTile, getModel } from './catalog';
@@ -24,6 +25,7 @@ import {
   plannedDepartureHour,
   sellValue,
   travelHours,
+  yearOf,
 } from './core';
 import { gigBookingBar } from './standing';
 import { worldOf } from './mapgen';
@@ -200,16 +202,20 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
 }
 
 /** What a pile of kit would fetch, given its condition. */
-export function stockValue(stock: GearStock, condition: Record<string, number> = {}): number {
+export function stockValue(stock: GearStock, condition: Record<string, number> = {}, year?: number): number {
   let total = 0;
-  for (const id in stock) total += getProduct(id).price * GEAR_RESALE_RATE * (0.5 + 0.5 * ((condition[id] ?? 100) / 100)) * stock[id];
+  for (const id in stock) {
+    const p = getProduct(id);
+    const dated = year === undefined ? 1 : techResaleFactor(p.kind, year);
+    total += p.price * GEAR_RESALE_RATE * dated * (0.5 + 0.5 * ((condition[id] ?? 100) / 100)) * stock[id];
+  }
   return total;
 }
 
 export function companyValue(state: TycoonState): number {
   const fleet = state.vehicles.filter(v => v.owner === 'player' && !v.lease).reduce((sum, v) => sum + sellValue(v, state.hour), 0);
   // Everything you own, wherever it is: racks, trucks, couriers and venues' house rigs.
-  const gear = stockValue(ownedStock(state), state.gearCondition);
+  const gear = stockValue(ownedStock(state), state.gearCondition, yearOf(state, state.hour));
   return Math.round(state.company.cash - state.company.loan + fleet + gear + state.depots.length * 20000);
 }
 
