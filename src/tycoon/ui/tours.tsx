@@ -100,6 +100,12 @@ export function TourWindow({ ctx, tourId }: { ctx: WinCtx; tourId: string }) {
       <Stat label="Status">{rival ? <span style={{ color: rival.color, fontWeight: 700 }}>Won by {rival.name}</span> : STATUS_LABEL[tour.status]}</Stat>
       {tour.status === 'offer' && <Stat label="Book by">{formatDay(state, tour.acceptByDay)}</Stat>}
 
+      {tour.kind === 'world' && (
+        <button className="tt-btn sm" onClick={() => ctx.open('worldmap', tour.id)} style={{ marginTop: 4 }}>
+          🌍 Show on the world map
+        </button>
+      )}
+
       <h4>Dates</h4>
       <div className="tt-list">
         {gigs.map(g => {

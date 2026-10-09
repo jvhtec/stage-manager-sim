@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 140 tests):
+(`src/world/__tests__/*.test.ts`, 144 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -350,6 +350,13 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   bust, extra where you run a base (+0.15%) and have a name (up to +0.2%); nothing during a
   shutdown, capped at 2.5×. Population shows in the Towns window ("+x% since you started"), and the
   town's offer rate scales with it.
+
+- **World tour map** (`ui/worldMap.tsx`, `content/worldmap.ts`) — a stylised world (hand-simplified
+  continents, real coordinates for every overseas city, a home airport per country). Flight arcs run
+  from your home airport to each overseas leg, stops are numbered along the leg and turn green as
+  they're played, the next date pulses, and the way home is dashed. "Whole tour" frames the lot; each
+  leg button zooms to its region with city names. Reached from the tour window, the globe in the
+  toolbar, or the menu on phones.
 
 UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
 (workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the

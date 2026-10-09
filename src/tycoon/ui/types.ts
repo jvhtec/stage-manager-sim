@@ -21,6 +21,7 @@ export type WindowKind =
   | 'crew'
   | 'decisions'
   | 'auctions'
+  | 'worldmap'
   | 'help'
   | 'menu';
 

@@ -22,6 +22,7 @@ import {
   Users,
   AlertTriangle,
   Gavel,
+  Globe,
   Wallet,
   ZoomIn,
   ZoomOut,
@@ -46,6 +47,7 @@ import { MarketWindow } from './ui/market';
 import { PoliciesWindow } from './ui/policies';
 import { DecisionsWindow } from './ui/decisions';
 import { AuctionsWindow } from './ui/auctions';
+import { WorldMapWindow } from './ui/worldMap';
 import { RndWindow } from './ui/rnd';
 import { CrewWindow } from './ui/crewWindow';
 import { FinanceWindow, GameOverPanel, HelpWindow, LeagueWindow, NewGameForm, NewsWindow } from './ui/company';
@@ -250,6 +252,8 @@ export default function TycoonGame() {
         return 'Needs your call';
       case 'auctions':
         return 'Auctions';
+      case 'worldmap':
+        return 'World tour map';
       case 'help':
         return 'How to play';
       case 'menu':
@@ -299,6 +303,8 @@ export default function TycoonGame() {
         return <DecisionsWindow ctx={ctx} />;
       case 'auctions':
         return <AuctionsWindow ctx={ctx} />;
+      case 'worldmap':
+        return <WorldMapWindow ctx={ctx} tourId={w.refId} />;
       case 'help':
         return <HelpWindow />;
       case 'menu':
@@ -314,6 +320,9 @@ export default function TycoonGame() {
             </button>
             <button className="tt-btn" onClick={() => open('market')}>
               <TrendingUp /> Market
+            </button>
+            <button className="tt-btn" onClick={() => open('worldmap')}>
+              <Globe /> World tour map
             </button>
             <button className="tt-btn" onClick={() => open('auctions')}>
               <Gavel /> Auctions{state.auctions.length > 0 ? ` (${state.auctions.length})` : ''}
@@ -498,6 +507,9 @@ export default function TycoonGame() {
               <button className="tt-btn" onClick={() => open('market')} title="Market">
                 <TrendingUp />
               </button>
+              <button className="tt-btn" onClick={() => open('worldmap')} title="World tour map">
+                <Globe />
+              </button>
               <button className="tt-btn" onClick={() => open('auctions')} title="Auctions" data-on={state.auctions.length > 0 ? true : undefined}>
                 <Gavel />
                 {state.auctions.length > 0 && ` ${state.auctions.length}`}
@@ -578,7 +590,7 @@ export default function TycoonGame() {
                 x={w.x}
                 y={w.y}
                 z={w.z}
-                width={w.kind === 'finance' || w.kind === 'league' || w.kind === 'market' || w.kind === 'crew' || w.kind === 'decisions' ? 440 : 340}
+                width={w.kind === 'finance' || w.kind === 'league' || w.kind === 'market' || w.kind === 'crew' || w.kind === 'decisions' ? 440 : w.kind === 'worldmap' ? 560 : 340}
                 onMove={(x, y) => setWindows(prev => prev.map(o => (o.key === w.key ? { ...o, x, y } : o)))}
                 onFocus={() => focusWindow(w.key)}
                 onClose={() => (compact ? setWindows([]) : closeWindow(w.key))}
