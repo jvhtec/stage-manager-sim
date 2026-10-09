@@ -9,10 +9,12 @@ const ASSETS_DIR = join(process.cwd(), 'dist', 'assets');
 // Raw (pre-gzip) budget in KB. Current total is ~1000KB after the PR 1
 // code-split; this leaves headroom for the game-feel plan's remaining
 // workstreams (avatars, scene, map) before it needs raising again.
-// Raised 1400 -> 1500KB: the Transport Tycoon game (src/world + src/tycoon,
-// one lazy chunk of ~370KB, still under the per-chunk budget) has grown with
-// its strategy-depth systems; the rest of the app is unchanged.
-const TOTAL_BUDGET_KB = 1500;
+// Raised 1400 -> 1500 -> 1650KB: the Transport Tycoon game (src/world + src/tycoon)
+// has grown with its strategy-depth systems. Its rarely-opened windows (world
+// map, market, R&D, star techs, planner, auctions) are lazy chunks, so the main
+// game chunk stays well under the per-chunk budget below; the rest of the app is
+// unchanged.
+const TOTAL_BUDGET_KB = 1650;
 // No single chunk should silently balloon past this without a deliberate
 // decision (e.g. adding framer-motion in PR 2 should bump this, not blow
 // through it unnoticed).

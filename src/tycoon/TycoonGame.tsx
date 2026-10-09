@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
 import {
   Building2,
   CalendarDays,
@@ -43,14 +43,15 @@ import { CityWindow, DepotListWindow, DepotWindow, TownsWindow, VenueWindow } fr
 import { VehicleListWindow, VehicleWindow } from './ui/fleet';
 import { GigWindow, ShowsWindow } from './ui/shows';
 import { TourWindow } from './ui/tours';
-import { TalentWindow } from './ui/talent';
-import { MarketWindow } from './ui/market';
 import { PoliciesWindow } from './ui/policies';
 import { DecisionsWindow } from './ui/decisions';
-import { AuctionsWindow } from './ui/auctions';
-import { WorldMapWindow } from './ui/worldMap';
-import { PlannerWindow } from './ui/planner';
-import { RndWindow } from './ui/rnd';
+// Windows you open now and then load on demand, keeping the main game chunk lean.
+const TalentWindow = lazy(() => import('./ui/talent').then(m => ({ default: m.TalentWindow })));
+const MarketWindow = lazy(() => import('./ui/market').then(m => ({ default: m.MarketWindow })));
+const AuctionsWindow = lazy(() => import('./ui/auctions').then(m => ({ default: m.AuctionsWindow })));
+const WorldMapWindow = lazy(() => import('./ui/worldMap').then(m => ({ default: m.WorldMapWindow })));
+const PlannerWindow = lazy(() => import('./ui/planner').then(m => ({ default: m.PlannerWindow })));
+const RndWindow = lazy(() => import('./ui/rnd').then(m => ({ default: m.RndWindow })));
 import { CrewWindow } from './ui/crewWindow';
 import { Splash } from './ui/Splash';
 import { Intro, introSkipped } from './ui/Intro';
@@ -630,7 +631,7 @@ export default function TycoonGame() {
                 onBack={compact && windows.length > 1 ? () => closeWindow(w.key) : undefined}
                 sheet={compact}
               >
-                {renderWindow(w, ctx)}
+                <Suspense fallback={<div className="tt-dim">Loading…</div>}>{renderWindow(w, ctx)}</Suspense>
               </Window>
             );
           })}
