@@ -55,7 +55,7 @@ import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSiz
 import { GEAR_PRODUCTS, getProduct } from './content/gear';
 import { leftBehindChance, monthlyRent, monthlySalaries, prepFailureFactor, prepOf, prepRatio } from './facilities';
 import { monthlyTraining, PAY, freelancersFor, monthlyCrew, moraleBonus } from './crew';
-import { REST_AT, aboard, atDepot, dailyPeopleFatigue, dailyPoachBids, dayRate, evaluateCrew, learnFromShow, moveToDepot, moveToVehicle, pickCrew, refreshCandidates, syncCrew } from './people';
+import { REST_AT, crewDirectives, aboard, atDepot, dailyPeopleFatigue, dailyPoachBids, dayRate, evaluateCrew, learnFromShow, moveToDepot, moveToVehicle, pickCrew, refreshCandidates, syncCrew } from './people';
 import { dailyWorkshop, monthlyWorkshop, rollFailure, wearFromShow, type Failure } from './wear';
 import { rivalsFor } from './content/companies';
 import { getTech, techBonus, techsActiveIn } from './content/techs';
@@ -182,11 +182,13 @@ function loadVehicle(s: TycoonState, v: Vehicle, gig: Gig) {
 
   const picked = pickGear(depot.gear, remaining, model.gearCapacity - stockSize(v.cargo), gig.rider);
   addStock(v.cargo, picked);
-  const pinned = atDepot(s, depot.id).filter(m => m.pinnedVehicleId === v.id).length;
+  const directives = crewDirectives(s, gig);
+  const here = atDepot(s, depot.id);
+  const pinned = here.filter(m => m.pinnedVehicleId === v.id || directives.prefer.has(m.id)).length;
   const seats = Math.min(model.crewSeats - v.crew, Math.max(crewRemaining, pinned), depot.crew);
   if (seats > 0) {
-    // Pinned people first, then the freshest, best-matched people for the job ahead get on board.
-    const opts = { vehicleId: v.id, restAt: REST_AT[s.policies.rest] };
+    // Pinned and named people first, then the freshest, best-matched people for the job ahead get on board.
+    const opts = { vehicleId: v.id, restAt: REST_AT[s.policies.rest], ...directives };
     pickCrew(atDepot(s, depot.id), gig, seats, aboard(s, v.id), opts).forEach(m => moveToVehicle(m, v.id));
     syncCrew(s);
   }

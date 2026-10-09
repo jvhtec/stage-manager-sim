@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { answerPoach, fireMember, hireCandidate, hireCrew, pinCrew } from '@/world/actions';
+import { answerPoach, fireMember, hireCandidate, hireCrew, pinCrew, setCrewPicks } from '@/world/actions';
 import { CREW_HIRE_COST } from '@/world/catalog';
 import { PAY } from '@/world/crew';
-import { CREW_DEPTS, CREW_DEPT_LABEL, REST_AT, TRAITS, dayRate, hireFee, levelOf, roleOf } from '@/world/people';
+import { CREW_DEPTS, CREW_DEPT_LABEL, REST_AT, TRAITS, dayRate, evaluateCrew, hireFee, levelOf, roleOf } from '@/world/people';
 import { worldOf } from '@/world/mapgen';
-import type { CrewMember, TycoonState } from '@/world/types';
+import type { CrewMember, Gig, TycoonState } from '@/world/types';
 import { FatigueChip, Stat } from './bits';
 import { money } from './format';
 import type { WinCtx } from './types';
@@ -51,6 +51,66 @@ export function PersonRow({ state, m, right }: { state: TycoonState; m: CrewMemb
         </div>
       </div>
       {right}
+    </div>
+  );
+}
+
+/** Name exactly who works a booked show: tap people at the bases its trucks leave from. */
+export function CrewPicker({ ctx, gig }: { ctx: WinCtx; gig: Gig }) {
+  const { state } = ctx;
+  const homes = new Set(state.vehicles.filter(v => v.owner === 'player' && v.orders.includes(gig.id)).map(v => v.homeCityId));
+  const depots = state.depots.filter(d => homes.has(d.cityId));
+  const picks = gig.crewPicks ?? [];
+  const named = picks.map(id => state.people.find(m => m.id === id)).filter((m): m is CrewMember => !!m);
+  const act = (ids: string[]) => {
+    const r = ctx.dispatch(s => setCrewPicks(s, gig.id, ids));
+    if (r.message) ctx.toast(r.message, r.ok);
+  };
+  const evaluation = named.length ? evaluateCrew(named, gig) : null;
+  // People named for other shows are spoken for.
+  const elsewhere = new Map<string, string>();
+  state.gigs.forEach(g => g.id !== gig.id && g.status === 'booked' && (g.crewPicks ?? []).forEach(id => elsewhere.set(id, g.act)));
+  if (!depots.length) return <div className="tt-dim">Assign a vehicle to choose who goes.</div>;
+  const pool = state.people.filter(m => m.depotId && depots.some(d => d.id === m.depotId)).sort((a, b) => levelOf(b) - levelOf(a) || a.name.localeCompare(b.name));
+  return (
+    <div>
+      <div className="tt-dim" style={{ marginBottom: 4, whiteSpace: 'normal' }}>
+        {named.length}/{gig.crewNeeded} named{evaluation ? ` · fit ${Math.round(evaluation.match * 100)}%` : ' — the rest are picked automatically'}.{' '}
+        {named.length > 0 && (
+          <a style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => act([])}>
+            Back to automatic
+          </a>
+        )}
+      </div>
+      <div className="tt-list">
+        {pool.map(m => {
+          const on = picks.includes(m.id);
+          const other = elsewhere.get(m.id);
+          return (
+            <PersonRow
+              key={m.id}
+              state={state}
+              m={m}
+              right={
+                other && !on ? (
+                  <span className="tt-dim" title={`Named for ${other}`} style={{ fontSize: 11 }}>
+                    on {other.length > 12 ? `${other.slice(0, 11)}…` : other}
+                  </span>
+                ) : (
+                  <button
+                    className={`tt-btn sm${on ? ' primary' : ''}`}
+                    disabled={!on && picks.length >= gig.crewNeeded}
+                    onClick={() => act(on ? picks.filter(id => id !== m.id) : [...picks, m.id])}
+                  >
+                    {on ? '✓ Going' : 'Send'}
+                  </button>
+                )
+              }
+            />
+          );
+        })}
+        {!pool.length && <div className="tt-dim">Nobody at the base right now.</div>}
+      </div>
     </div>
   );
 }

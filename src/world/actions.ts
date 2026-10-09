@@ -104,6 +104,19 @@ export function bookGig(state: TycoonState, gigId: string): ActionOutcome {
   return ok(s, `Booked ${gig.act}. Now assign vehicles to get the gear there.`);
 }
 
+/** Name exactly who works a booked show (at most as many as it needs). */
+export function setCrewPicks(state: TycoonState, gigId: string, personIds: string[]): ActionOutcome {
+  const gig0 = gigById(state, gigId);
+  if (!gig0 || gig0.status !== 'booked') return fail(state, 'Book the show first.');
+  const unique = [...new Set(personIds)];
+  if (unique.some(id => !state.people.some(m => m.id === id))) return fail(state, 'Unknown crew member.');
+  if (unique.length > gig0.crewNeeded) return fail(state, `This show only needs ${gig0.crewNeeded} crew.`);
+  const s = cloneState(state);
+  const gig = gigById(s, gigId)!;
+  gig.crewPicks = unique.length ? unique : undefined;
+  return ok(s, unique.length ? `${unique.length} named for ${gig.act}.` : `Crew for ${gig.act} back to automatic.`);
+}
+
 /** One tap: book the offer and put this truck on it. */
 export function bookAndAssign(state: TycoonState, vehicleId: string, gigId: string): ActionOutcome {
   const booked = bookGig(state, gigId);

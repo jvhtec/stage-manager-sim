@@ -352,6 +352,8 @@ export interface Gig {
   bid?: BidLevel;
   /** You've already haggled over the fee (negotiate.ts). */
   negotiated?: boolean;
+  /** People you've named for this show (people.ts); they board first and are held back from other jobs. */
+  crewPicks?: string[];
   status: GigStatus;
   rivalId?: string;
   result?: GigResult;

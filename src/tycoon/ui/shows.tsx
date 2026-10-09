@@ -10,6 +10,7 @@ import { expectedQuality } from '@/world/content/gear';
 import { averageCondition, failureChance } from '@/world/wear';
 import { prepFailureFactor } from '@/world/facilities';
 import { levelOf } from '@/world/people';
+import { CrewPicker } from './crewWindow';
 import { ConditionChip } from './gear';
 import { ContractList } from './contracts';
 import { EventBid, EventList } from './events';
@@ -32,6 +33,7 @@ function nearestDepotDistance(state: TycoonState, gig: Gig): number {
 
 export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
   const { state } = ctx;
+  const [pickingCrew, setPickingCrew] = useState(false);
   const gig = state.gigs.find(g => g.id === gigId);
   if (!gig) return <div className="tt-dim">This show has dropped off the books.</div>;
   const world = worldOf(state);
@@ -197,6 +199,10 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
           </div>
           {projection.vehicles.length > 0 && (
             <div style={{ marginTop: 6 }}>
+              <button className="tt-btn sm" onClick={() => setPickingCrew(p => !p)} style={{ marginBottom: 6 }}>
+                {pickingCrew ? 'Hide crew' : `Choose the crew${gig.crewPicks?.length ? ` (${gig.crewPicks.length} named)` : ''}`}
+              </button>
+              {pickingCrew && <CrewPicker ctx={ctx} gig={gig} />}
               <Stat label="Kit vs expectations">
                 <span className={projection.evaluation.quality >= 0.95 ? 'tt-good' : projection.evaluation.quality >= 0.8 ? 'tt-warn' : 'tt-bad'}>
                   {Math.round(projection.evaluation.quality * 100)}%
