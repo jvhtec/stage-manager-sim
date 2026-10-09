@@ -314,6 +314,13 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   resell for, so no arbitrage — but each day another buyer may snap each lot up (2% rising to ~7%).
   Used kit blends its condition into what you own; used trucks keep their age and reliability.
 
+- **Price wars** (`pricewars.ts`) — monthly (~5%, ≤2 at once) a healthy rival based within ~35 road
+  tiles of a town you have a depot in starts undercutting it by 8-20% for 2-4 months. Fees there
+  fall by that much and the rival wins 30% more of the work; a decision offers ride it out (free; the
+  war costs the rival 2 health a month), fight back (marketing-scaled spend: you only lose half the
+  undercut, the rival loses 5 a month and gets no bonus) or buy a truce (twice the price, ends it
+  at once). A rival below 35 health backs down. The Market window lists live wars.
+
 - **The world moves** — landmark rooms keep their real years (`content/venueYears.ts`): The O2
   opens in 2007, Wembley is shut 2001-2006, Palau Sant Jordi opens in 1990, the Stade de France in
   1998, Roig Arena in 2025… A closed room gets no offers, tour dates, festival sites, event lots or

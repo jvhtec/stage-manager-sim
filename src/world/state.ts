@@ -159,6 +159,7 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     partners: {},
     townGrowth: {},
     runs: [],
+    priceWars: [],
     venueRelations: {},
     reports: [],
     ownProducts: [],
@@ -297,6 +298,7 @@ export function migrate(state: Partial<TycoonState>): TycoonState {
   s.difficulty ??= 'normal';
   s.goal ??= 'sandbox';
   s.runs ??= [];
+  s.priceWars ??= [];
   s.venueRelations ??= {};
   s.reports ??= [];
   return s;

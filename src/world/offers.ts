@@ -3,6 +3,7 @@
  * population, so the metropolis is busy and villages are quiet — the map's
  * geography *is* the demand curve. Rivals snap up offers they're close to.
  */
+import { priceWarFactor, warWinBonus } from './pricewars';
 import { difficultyOf } from './scenario';
 import { offerBuzz } from './marketing';
 import { relationFeeBonus, relationOfferWeight } from './promoters';
@@ -61,7 +62,7 @@ export function generateOffer(
   const { act, real } = pickAct(state, venue.tier, year, rng);
   const gig = buildGig(state, rng, { venue, day, act, real });
   gig.acceptByDay = Math.min(day - 3, today + rng.nextRange(3, 7));
-  gig.fee = Math.round((gig.fee * relationFeeBonus(state, venue.id)) / 10) * 10;
+  gig.fee = Math.round((gig.fee * relationFeeBonus(state, venue.id) * priceWarFactor(state, city.id)) / 10) * 10;
   return gig;
 }
 
@@ -256,7 +257,7 @@ export function rivalsTakeOffers(state: TycoonState, world: WorldMap, rng: Rng) 
       // Already working the area? The next date there is easy money (a run, like yours).
       const nearby = rivalNearbyDates(state, world, rival.id, gig);
       const onARun = nearby.length ? RIVAL_RUN_BONUS * (nearby.length > 1 ? 1.15 : 1) : 1;
-      const chance = 0.05 * difficultyOf(state).rivals * crowding * proximity * fit * specialty * loyalty * onARun * (1.15 - (rating / 100) * 0.6);
+      const chance = 0.05 * difficultyOf(state).rivals * warWinBonus(state, gig.cityId, rival.id) * crowding * proximity * fit * specialty * loyalty * onARun * (1.15 - (rating / 100) * 0.6);
       if (!rng.chance(chance)) continue;
 
       gig.status = 'rival';

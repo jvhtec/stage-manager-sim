@@ -4,6 +4,7 @@ import { ZONES } from '@/world/content/regulations';
 import { dayOf, formatDay } from '@/world/core';
 import { TENDER_CLOSES_DAYS, TENDER_OPENS_DAYS, festivalCalendar } from '@/world/festivals';
 import { worldOf } from '@/world/mapgen';
+import { WAR_WIN_BONUS } from '@/world/pricewars';
 import type { Gig } from '@/world/types';
 import { Bar, Stat, TierChip } from './bits';
 import { money } from './format';
@@ -37,6 +38,28 @@ export function MarketWindow({ ctx }: { ctx: WinCtx }) {
       <Stat label="Fees">
         <span className={tone(now.fees)}>{pct(now.fees)}</span>
       </Stat>
+
+      {(state.priceWars ?? []).length > 0 && (
+        <>
+          <h4>Price wars</h4>
+          <div className="tt-list">
+            {state.priceWars.map(w => {
+              const rival = state.rivals.find(r => r.id === w.rivalId);
+              return (
+                <div key={w.id} className="tt-item" style={{ gap: 6 }}>
+                  <div className="grow" style={{ minWidth: 0, whiteSpace: 'normal' }}>
+                    <b>{worldOf(state).cityById.get(w.cityId)?.name}</b> <span className="tt-dim">— {rival?.name ?? 'a rival'}</span>
+                    <div className="tt-dim">
+                      Fees −{Math.round(w.undercut * (w.fight ? 50 : 100))}%
+                      {w.fight ? ' (you are fighting back)' : `, they win ${Math.round((WAR_WIN_BONUS - 1) * 100)}% more work`} · ends {formatDay(state, w.endDay)}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
 
       <h4>Low-emission zones</h4>
       {(ZONES[state.country] ?? []).length ? (

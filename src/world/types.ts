@@ -406,6 +406,19 @@ export interface Auction {
   lots: AuctionLot[];
 }
 
+/** A rival undercutting a town's fees (pricewars.ts). */
+export interface PriceWar {
+  id: string;
+  cityId: string;
+  rivalId: string;
+  startDay: number;
+  endDay: number;
+  /** Share fees fall by. */
+  undercut: number;
+  /** You've stood up to them. */
+  fight: boolean;
+}
+
 /** A string of shows booked together on one truck (runs.ts). */
 export interface Run {
   id: string;
@@ -416,7 +429,7 @@ export interface Run {
   bonus?: number;
 }
 
-export type DilemmaKind = 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
+export type DilemmaKind = 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
 
 /** A problem that needs your call (dilemmas.ts). */
 export interface Dilemma {
@@ -620,6 +633,8 @@ export interface TycoonState {
   townGrowth: Record<string, number>;
   /** Buzz and deals from trade shows (marketing.ts). */
   promo?: Promo;
+  /** Rivals undercutting your towns (pricewars.ts). */
+  priceWars: PriceWar[];
   /** Planned road runs (runs.ts). */
   runs: Run[];
   /** Promoter relationship per venue, 0-8 (venues.ts). */
