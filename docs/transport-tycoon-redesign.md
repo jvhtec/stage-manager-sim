@@ -85,7 +85,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 333 tests):
+(`src/world/__tests__/*.test.ts`, 339 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -341,6 +341,16 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   *Crew lounge* (12k / 35k): techs resting at the base shed 3 / 6 extra fatigue a day (the second
   level adds a little morale). The base diorama grows a soundstage annex with a band, lighting bar
   and (from the production hall up) a video wall. A shutdown zeroes the rent but leaves the upkeep.
+
+- **The briefing** (`advisor.ts`, Briefing window) — a read-only list of what needs doing, sorted red /
+  orange / blue, each with a way into the problem: decisions pending and rival poach offers; booked
+  shows within 4 days with no vehicle, within a week still needing a rehearsal, or needing tickets
+  you have no one for; cash under a month (red) or 2.5 months (orange) of fixed costs (rent,
+  salaries, crew pay, insurance, loan interest); an uninsured fleet; expensive loans you could
+  clear; overdue or unreliable vehicles; worn-out crews; a sponsor you're about to miss this month;
+  bases that would fail August's pre-audit; a fuel spike with no contract; offers expiring within
+  a day; spring festival planning; and the missing rehearsal stage. The toolbar button badge counts
+  the red and orange ones.
 
 - **Disputes, claims and audits** (`disputes.ts`, `audits.ts`, `incidents.ts`) — three ways money
   and rules push back. *Promoter disputes*: a show under 62% quality at a tier-2+ venue may leave

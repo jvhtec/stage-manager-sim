@@ -419,6 +419,10 @@ export function HelpWindow() {
           money.
         </li>
         <li>
+          <b>Briefing</b> (clipboard button): a sorted list of what needs doing — shows without a truck, rehearsals, thin cash,
+          a sponsor you're about to miss — with a tap to go straight to each.
+        </li>
+        <li>
           <b>Disputes and audits</b>: a promoter unhappy with a poor night may hold back part of your fee, and an insurer may question a
           big claim — settle, argue or send in the lawyers. Every September the council audits each base (the Base tab shows
           your likely score); first aiders, a prep crew that keeps up and a tidy rack help.
