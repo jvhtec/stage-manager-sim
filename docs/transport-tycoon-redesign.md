@@ -85,7 +85,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 313 tests):
+(`src/world/__tests__/*.test.ts`, 318 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -341,6 +341,14 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   *Crew lounge* (12k / 35k): techs resting at the base shed 3 / 6 extra fatigue a day (the second
   level adds a little morale). The base diorama grows a soundstage annex with a band, lighting bar
   and (from the production hall up) a video wall. A shutdown zeroes the rent but leaves the upkeep.
+
+- **Getting paid** (`receivables.ts`) — pubs and clubs (tier 1) pay on the night;
+  tier 2 takes 14 days, tier 3 30, tier 4 45, festivals and events another 15. Until then the money
+  is an invoice ("Owed to you" in Finance, counted in company value). Each invoice has a small
+  default risk (0.8% / 1.5% / 2% by tier; ×2 in a downturn, ×3 in a shutdown) rolled when it falls
+  due. The *Invoices* policy: wait for it (carry the risk), sell to a factor (cash now for 96.5%)
+  or credit insurance (1.2% premium; a default is covered). The bot loses about 2% of cash to the
+  delay and keeps all its survival.
 
 - **Tour merchandise** (`merch.ts`) — before a booked tour's first date (3+ days out) you can order
   stock: a small run (5% of the tour's fees), a proper range (10%) or the full stand (18%). Stock

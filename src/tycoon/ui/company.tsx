@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { borrow, buyRival, goPublic, headhunt, investigate, repay, setDividend, takePrivate } from '@/world/actions';
 import { brandOf } from '@/world/sponsors';
+import { owed } from '@/world/receivables';
 import { HEAT_DIRTY, INTEL_DAYS, aggression, hasIntel, heatOf, investigatorBlocker, investigatorCost } from '@/world/rivalry';
 import { headhuntBlocker, headhuntFee, headhuntTarget } from '@/world/headhunt';
 import { levelOf, roleOf } from '@/world/people';
@@ -97,6 +98,20 @@ export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
         {money(state.company.loan)} <span className="tt-dim">/ {money(creditLimit(state))} @ {describeLoanRate(state)}</span>
       </Stat>
       <Stat label="Company value">{money(companyValue(state))}</Stat>
+      {state.receivables.length > 0 && (
+        <>
+          <Stat label="Owed to you">
+            <b>{money(owed(state))}</b> <span className="tt-dim">· {state.receivables.length} invoice{state.receivables.length === 1 ? '' : 's'}</span>
+          </Stat>
+          <div className="tt-dim" style={{ whiteSpace: 'normal', fontSize: 11 }}>
+            {[...state.receivables]
+              .sort((a, b) => a.dueDay - b.dueDay)
+              .slice(0, 4)
+              .map(i => `${i.act} ${money(i.amount)} (${formatDay(state, i.dueDay)}${i.insured ? ', insured' : ''})`)
+              .join(' · ')}
+          </div>
+        </>
+      )}
       <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
         <button className="tt-btn sm" disabled={state.company.loan >= creditLimit(state)} onClick={() => act(borrow)}>
           Borrow {money(Math.min(borrowStep(state), Math.max(0, creditLimit(state) - state.company.loan)))}
@@ -382,6 +397,10 @@ export function HelpWindow() {
           <b>Your own festival</b> (Market): pay up front in spring for a field day, weekender or major, pick a headliner
           and ticket price, and hope the economy and the weather play along — a built brand sells out, a new one loses
           money.
+        </li>
+        <li>
+          <b>Getting paid</b>: small venues pay on the night, bigger promoters take 2-6 weeks and sometimes go under. Policies lets you
+          sell invoices to a factor for cash now or insure them.
         </li>
         <li>
           <b>Merchandise</b>: on a booked tour you can stock the stands before the first date — a small order is safe, a big one

@@ -30,7 +30,7 @@ export const TYCOON_SAVE_KEY = 'stage-manager-sim:tycoon';
 export const TYCOON_SAVE_VERSION = 6;
 const OLDEST_MIGRATABLE = 5;
 
-export const DEFAULT_POLICIES: Policies = { workshop: 'basic', pay: 'standard', insurance: 'none', freelance: 'fill', subhire: 'fill', rentOut: 'off', training: 'none', rest: 'off', marketing: 'none', rehearsal: 'manual' };
+export const DEFAULT_POLICIES: Policies = { workshop: 'basic', pay: 'standard', insurance: 'none', freelance: 'fill', subhire: 'fill', rentOut: 'off', training: 'none', rest: 'off', marketing: 'none', rehearsal: 'manual', invoicing: 'hold' };
 
 export interface NewGameOptions {
   companyName: string;
@@ -165,6 +165,7 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     festivalHistory: [],
     ownedVenues: [],
     sponsors: [],
+    receivables: [],
     rivalry: {},
     venueRelations: {},
     reports: [],
@@ -309,6 +310,7 @@ export function migrate(state: Partial<TycoonState>): TycoonState {
   s.announcedWaves ??= TECH_WAVES.flatMap(w => [...(w.year - 2 <= yearOf(s, s.hour) ? [`${w.id}:rumour`] : []), ...(w.year <= yearOf(s, s.hour) ? [`${w.id}:arrival`] : [])]);
   s.ownedVenues ??= [];
   s.sponsors ??= [];
+  s.receivables ??= [];
   s.rivalry ??= {};
   s.venueRelations ??= {};
   s.reports ??= [];

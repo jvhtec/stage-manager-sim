@@ -1,3 +1,4 @@
+import { INVOICING, INVOICING_LEVELS } from '@/world/receivables';
 import { setPartner, setPolicy } from '@/world/actions';
 import { PARTNER_DISCOUNT, PARTNER_REPUTATION, PARTNER_SHARE, brandShare, brandsFor, sponsorship } from '@/world/partners';
 import { DEPT_LABELS } from '@/world/catalog';
@@ -60,7 +61,7 @@ export function Choice<T extends string>({
 
 export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
-  const set = <K extends 'workshop' | 'pay' | 'insurance' | 'freelance' | 'subhire' | 'rentOut' | 'training' | 'rest' | 'marketing' | 'rehearsal'>(key: K, value: (typeof state.policies)[K]) => ctx.dispatch(s => setPolicy(s, key, value));
+  const set = <K extends 'workshop' | 'pay' | 'insurance' | 'freelance' | 'subhire' | 'rentOut' | 'training' | 'rest' | 'marketing' | 'rehearsal' | 'invoicing'>(key: K, value: (typeof state.policies)[K]) => ctx.dispatch(s => setPolicy(s, key, value));
   const owned = ownedStock(state);
   return (
     <div>
@@ -119,6 +120,17 @@ export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
       <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
         Resting people stay at base when a truck loads — fresher crews and better morale, but more seats filled by freelancers.
         People pinned to a truck always go.
+      </div>
+
+      <h4>Invoices</h4>
+      <Choice
+        value={state.policies.invoicing}
+        options={INVOICING_LEVELS.map(id => ({ id, label: INVOICING[id].label, detail: INVOICING[id].blurb }))}
+        onPick={id => set('invoicing', id)}
+      />
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        Clubs and pubs pay on the night; arenas take about a month and stadiums and festivals longer. A promoter sometimes goes under owing you —
+        more often in a downturn.
       </div>
 
       <h4>Rehearsals</h4>

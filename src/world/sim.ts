@@ -7,6 +7,7 @@
  * Pure and deterministic: same state in → same state out (the only
  * randomness is the seeded rng carried in `state.rngState`).
  */
+import { collectOrInvoice, dailyReceivables } from './receivables';
 import { certPenalty, certShortfall, dailyCourses, monthlyCerts } from './certs';
 import { TECH_WAVES } from './content/techWaves';
 import { hypeLabel, showPayout } from './gate';
@@ -506,7 +507,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   }
 
   const payout = showPayout(gig, quality);
-  book(s, 'shows', payout);
+  collectOrInvoice(s, gig, payout);
   if (gig.overseas) {
     // Air freight for the rig and flights for the crew, there and back.
     const region = getRegion(gig.overseas.regionId);
@@ -576,6 +577,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   dailyWorkshop(s);
   dailyRehearsals(s);
   dailyCourses(s);
+  dailyReceivables(s, sideRng(s, dayOf(s.hour) + 7006));
   dailyRentOut(s);
   dailyPeopleFatigue(s);
   dailyPoachBids(s);

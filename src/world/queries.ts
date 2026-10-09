@@ -217,7 +217,8 @@ export function companyValue(state: TycoonState): number {
   const fleet = state.vehicles.filter(v => v.owner === 'player' && !v.lease).reduce((sum, v) => sum + sellValue(v, state.hour), 0);
   // Everything you own, wherever it is: racks, trucks, couriers and venues' house rigs.
   const gear = stockValue(ownedStock(state), state.gearCondition, yearOf(state, state.hour));
-  return Math.round(state.company.cash - state.company.loan + fleet + gear + state.depots.length * 20000);
+  const owedToYou = (state.receivables ?? []).reduce((sum, i) => sum + i.amount, 0);
+  return Math.round(state.company.cash - state.company.loan + fleet + gear + owedToYou + state.depots.length * 20000);
 }
 
 export function homeDepot(state: TycoonState, v: Vehicle) {

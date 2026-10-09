@@ -446,6 +446,19 @@ export type ModuleId = 'rehearsal' | 'workshop' | 'lounge' | 'academy';
 
 export type CertId = 'rigging' | 'safety';
 
+export type InvoicingPolicy = 'hold' | 'factor' | 'insure';
+
+/** Money a promoter owes you (receivables.ts). */
+export interface Invoice {
+  id: string;
+  gigId: string;
+  act: string;
+  amount: number;
+  dueDay: number;
+  tier: number;
+  insured: boolean;
+}
+
 export type MerchLevel = 'small' | 'medium' | 'large';
 
 export type VenueProgramme = 'lease' | 'promote';
@@ -631,6 +644,8 @@ export interface Policies {
   marketing: MarketingLevel;
   /** Book the rehearsals a show needs for you as the dates come close. */
   rehearsal: 'manual' | 'auto';
+  /** What to do with promoters' invoices (receivables.ts). */
+  invoicing: InvoicingPolicy;
 }
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
@@ -757,6 +772,8 @@ export interface TycoonState {
   /** 0-100: how well the festival's name sells. */
   festivalBrand?: number;
   festivalHistory: FestivalEdition[];
+  /** Invoices waiting to be paid (receivables.ts). */
+  receivables: Invoice[];
   /** A fuel contract: the locked price multiplier and when it ends (market.ts). */
   fuelLock?: { price: number; untilDay: number };
   /** Stock-market listing, once you go public (shares.ts). */
