@@ -104,6 +104,16 @@ export function bookGig(state: TycoonState, gigId: string): ActionOutcome {
   return ok(s, `Booked ${gig.act}. Now assign vehicles to get the gear there.`);
 }
 
+/** One tap: book the offer and put this truck on it. */
+export function bookAndAssign(state: TycoonState, vehicleId: string, gigId: string): ActionOutcome {
+  const booked = bookGig(state, gigId);
+  if (!booked.result.ok) return booked;
+  const assigned = assignVehicle(booked.state, vehicleId, gigId);
+  // If the truck can't take it after all, leave everything as it was.
+  if (!assigned.result.ok) return fail(state, assigned.result.message ?? 'That truck can’t take the job.');
+  return ok(assigned.state, `Booked and assigned: ${gigById(state, gigId)?.act}.`);
+}
+
 export function assignVehicle(state: TycoonState, vehicleId: string, gigId: string): ActionOutcome {
   const v0 = state.vehicles.find(v => v.id === vehicleId && v.owner === 'player');
   const gig0 = gigById(state, gigId);

@@ -3,6 +3,7 @@
  * population, so the metropolis is busy and villages are quiet — the map's
  * geography *is* the demand curve. Rivals snap up offers they're close to.
  */
+import { relationFeeBonus, relationOfferWeight } from './promoters';
 import { townGrowth } from './towns';
 import type { Rng } from '@/lib/rng';
 import { tierInfo } from './catalog';
@@ -39,7 +40,7 @@ export function generateOffer(
   const venues = city.venues.filter(v => v.kind !== 'airport' && v.tier <= (opts.maxTier ?? 4) && venueOpenIn(v.name, leadYear));
   if (!venues.length) return null;
   // Smaller rooms book far more often than stadiums.
-  const weights = venues.map(v => 5 - v.tier);
+  const weights = venues.map(v => (5 - v.tier) * relationOfferWeight(state, v.id));
   const total = weights.reduce((a, b) => a + b, 0);
   let roll = rng.next() * total;
   let venue = venues[0];
@@ -58,6 +59,7 @@ export function generateOffer(
   const { act, real } = pickAct(state, venue.tier, year, rng);
   const gig = buildGig(state, rng, { venue, day, act, real });
   gig.acceptByDay = Math.min(day - 3, today + rng.nextRange(3, 7));
+  gig.fee = Math.round((gig.fee * relationFeeBonus(state, venue.id)) / 10) * 10;
   return gig;
 }
 

@@ -96,4 +96,22 @@ describe('on-the-day decisions', () => {
     // Either something came up and we stopped early, or the run was quiet — never skipped past an open decision.
     if (jumped.dilemmas.length) expect(jumped.hour).toBeLessThan((gig.day + 3) * HOURS_PER_DAY);
   });
+
+  it('overseas rigs get held at customs: broker, partial release or wait', () => {
+    const { s, gig } = scenario();
+    const g = s.gigs.find(x => x.id === gig.id)!;
+    g.overseas = { regionId: 'europe', stops: [{ city: 'Paris', country: 'France', venue: 'Bercy', day: g.day }] };
+    s.hour = loadInHour(g);
+    hourlyCrises(s, yes);
+    expect(s.dilemmas[0]?.kind).toBe('customs');
+    const d = s.dilemmas[0];
+    expect(d.options.map(o => o.id)).toEqual(['broker', 'partial', 'wait']);
+    const cash = s.company.cash;
+    const broker = makeDecision(s, d.id, 'broker').state;
+    expect(cash - broker.company.cash).toBe(Math.round(g.fee * 0.03));
+    expect(broker.gigs.find(x => x.id === g.id)!.mods?.quality ?? 0).toBe(0);
+    const waited = makeDecision(s, d.id, 'wait').state;
+    expect(waited.gigs.find(x => x.id === g.id)!.mods!.quality).toBeLessThan(0);
+    expect(waited.company.cash).toBe(cash);
+  });
 });

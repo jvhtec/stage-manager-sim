@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { rehomeVehicle, sellVehicle, sendHome, serviceVehicle, unassignVehicle } from '@/world/actions';
+import { bookAndAssign, rehomeVehicle, sellVehicle, sendHome, serviceVehicle, unassignVehicle } from '@/world/actions';
 import { leaseReturnPenalty } from '@/world/finance';
 import { SERVICE_INTERVAL_DAYS, getModel } from '@/world/catalog';
 import { stockSize } from '@/world/loading';
@@ -7,7 +7,7 @@ import { StockLines } from './gear';
 import { getTech } from '@/world/content/techs';
 import { formatDay, gigById, sellValue, vehicleAgeYears } from '@/world/core';
 import { worldOf } from '@/world/mapgen';
-import { vehicleActivity } from '@/world/queries';
+import { suggestJobs, vehicleActivity } from '@/world/queries';
 import { Bar, Stat } from './bits';
 import { PersonRow } from './crewWindow';
 import { kmoney, money } from './format';
@@ -19,6 +19,7 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
   const v = state.vehicles.find(x => x.id === vehicleId);
   if (!v) return <div className="tt-dim">This vehicle has been sold.</div>;
   const world = worldOf(state);
+  const suggestions = suggestJobs(state, v);
   const model = getModel(v.modelId);
   const age = vehicleAgeYears(v, state.hour);
   const atHome = v.cityId === v.homeCityId && (v.status === 'parked' || v.status === 'scheduled');
@@ -125,6 +126,27 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
         </div>
       ) : (
         <div className="tt-dim">No orders. Open a booked show and assign this vehicle to it.</div>
+      )}
+
+      {v.owner === 'player' && suggestions.length > 0 && (
+        <>
+          <h4>Suggested next jobs</h4>
+          <div className="tt-list">
+            {suggestions.map(s => (
+              <div key={s.gig.id} className="tt-item" style={{ gap: 6 }}>
+                <div className="grow clickable" style={{ minWidth: 0, cursor: 'pointer' }} onClick={() => ctx.open('gig', s.gig.id)}>
+                  <b>{s.gig.act}</b>
+                  <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+                    {world.venueById.get(s.gig.venueId)?.name}, {world.cityById.get(s.gig.cityId)?.name} · {formatDay(state, s.gig.day)} · {Math.round(s.distance)} tiles on
+                  </div>
+                </div>
+                <button className="tt-btn sm primary" onClick={() => act(st => bookAndAssign(st, v.id, s.gig.id))}>
+                  Book {kmoney(s.gig.fee)}
+                </button>
+              </div>
+            ))}
+          </div>
+        </>
       )}
 
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 10 }}>

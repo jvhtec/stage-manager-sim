@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 144 tests):
+(`src/world/__tests__/*.test.ts`, 153 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -358,6 +358,16 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   leg button zooms to its region with city names. Reached from the tour window, the globe in the
   toolbar, or the menu on phones.
 
+- **Customs** (`dilemmas.ts`) — an overseas leg has a 25% chance of trouble at load-in, most often a rig
+  held at customs: hire a broker (3% of the fee), release it minus the flagged cases (thinner show),
+  or sit it out in the shed (rushed, tired show, morale dips).
+- **Promoter relationships** (`promoters.ts`) — each venue's promoter remembers your nights: great shows
+  (+1), solid ones (+½), bad ones (−1), disasters (−3), 0-8. Friendly promoters get picked for offers
+  more often (+25% weight per point) and pay up to +10%; shown as "Strangers → Family" in the venue window.
+- **Suggested next jobs** — the vehicle window lists up to three open offers that fit on the end of a
+  truck's orders (bookable, reachable before load-in, within 36 tiles), best fee for the driving first,
+  with a one-tap Book & assign.
+
 UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
 (workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the
 show forecast, rating and trophy cabinet in the **League**.
@@ -378,7 +388,7 @@ The classic build has systems that don't exist in the map game yet. Each has an 
 1. **Playtest & balance pass** — fee/wage/running-cost tuning, offer density, rival aggression.
 2. **Named crew** — done (`people.ts`), with pins, rest rota and counter-offers.
 3. **Road & show incidents** — done (`dilemmas.ts`): breakdown and venue decisions.
-4. **Tour planner** — route lines for the selected vehicle are drawn on the map (numbered stops); still to come: drag-to-order a show list, "add next show in route" suggestions,
+4. **Tour planner** — route lines for the selected vehicle are drawn on the map (numbered stops) and the vehicle window suggests the next job; still to come: drag-to-order a show list,
    route lines drawn on the map for the selected vehicle.
 5. **Gear transfers & local hire** — move stock between warehouses; hire locally when short.
 6. **Sound** — WebAudio engine hum, crowd swell at live venues, cash-register on payouts.

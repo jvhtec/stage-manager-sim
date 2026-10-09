@@ -10,6 +10,7 @@ import {
 } from '@/world/catalog';
 import { dayOf, depotInCity, formatDay, freeLot, yearOf } from '@/world/core';
 import { localFame } from '@/world/offers';
+import { relationFeeBonus, relationLabel, venueRelation } from '@/world/promoters';
 import { populationOf, townGrowth } from '@/world/towns';
 import { VENUE_YEARS, venueOpenIn } from '@/world/content/venueYears';
 import { worldOf } from '@/world/mapgen';
@@ -208,6 +209,15 @@ export function VenueWindow({ ctx, venueId }: { ctx: WinCtx; venueId: string }) 
       </div>
       <VenueDiorama state={state} venue={venue} />
       <Stat label="Capacity">{venue.capacity.toLocaleString()}</Stat>
+      <Stat label="Promoter">
+        <b>{relationLabel(venueRelation(state, venueId))}</b>
+        {venueRelation(state, venueId) > 0 && (
+          <span className="tt-dim">
+            {' '}
+            · calls you more, pays +{Math.round((relationFeeBonus(state, venueId) - 1) * 100)}%
+          </span>
+        )}
+      </Stat>
       {!venueOpenIn(venue.name, yearOf(state, state.hour)) && (
         <div className="tt-dim" style={{ whiteSpace: 'normal', margin: '4px 0' }}>
           🚧 Not open yet or closed for rebuilding — no bookings until{' '}

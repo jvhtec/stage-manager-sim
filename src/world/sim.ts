@@ -7,6 +7,7 @@
  * Pure and deterministic: same state in → same state out (the only
  * randomness is the seeded rng carried in `state.rngState`).
  */
+import { recordVenueNight } from './promoters';
 import { dailyAuctions, monthlyAuctions } from './auctions';
 import { annualReport, monthlyMilestones } from './milestones';
 import { monthlyPartners } from './partners';
@@ -457,6 +458,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     s.cityRatings[gig.cityId] = Math.max(0, rating - 20);
     s.stats.showsFailed += 1;
     strike(s, gig.act, `the show at ${where} fell apart`);
+    recordVenueNight(s, gig.venueId, quality, true);
     recordShow(s, yearOf(s, s.hour), quality, true, !!gig.festival);
     pushNews(
       s,
@@ -492,6 +494,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   s.company.reputation = Math.max(0, Math.min(100, reputationAfterShow(s.company.reputation, gig.tier, quality) + stakes.reputation));
   if (gig.event && !gig.event.citywide) recordEvent(s, yearOf(s, s.hour), quality);
   if (quality < BAD_NIGHT) strike(s, gig.act, `a bad night at ${where}`);
+  recordVenueNight(s, gig.venueId, quality, false);
   s.cityRatings[gig.cityId] = Math.max(0, Math.min(100, rating + (quality - 0.5) * 30));
   s.stats.showsPlayed += 1;
   learnFromShow(s, people, crewEval.assigned, gig.tier >= 3 || !!gig.festival || !!gig.event);

@@ -390,7 +390,7 @@ export interface Auction {
   lots: AuctionLot[];
 }
 
-export type DilemmaKind = 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
+export type DilemmaKind = 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
 
 /** A problem that needs your call (dilemmas.ts). */
 export interface Dilemma {
@@ -576,6 +576,8 @@ export interface TycoonState {
   /** Manufacturer partnership per department (partners.ts). */
   /** Town size multipliers over the game (towns.ts). */
   townGrowth: Record<string, number>;
+  /** Promoter relationship per venue, 0-8 (venues.ts). */
+  venueRelations: Record<string, number>;
   partners: Partial<Record<Dept, { brand: string; sinceDay: number; lapse: number }>>;
   reports: AnnualReport[];
   /** Exclusive production deals with acts (deals.ts). */

@@ -12,11 +12,14 @@ import { getModel } from './catalog';
 import { book, depotInCity, formatMoney, gigById, loadInHour, newId, pushNews, showStartHour } from './core';
 import { FREELANCE_DAY_RATE } from './crew';
 import { aboard, moveToDepot, syncCrew } from './people';
+import { getRegion } from './content/world';
 import type { Dilemma, DilemmaKind, Gig, ShowMods, TycoonState, Vehicle } from './types';
 
 const money = (s: TycoonState, n: number) => formatMoney(s, n);
 
 /** Chance a booked show throws up a problem at load-in (a bit more for big shows). */
+/** A rig crossing a border is far likelier to hit trouble. */
+export const OVERSEAS_CRISIS_CHANCE = 0.25;
 export const CRISIS_CHANCE = (tier: number) => 0.06 + 0.012 * tier;
 
 const addMods = (gig: Gig, mods: ShowMods) => {
@@ -63,6 +66,20 @@ export function breakdownDilemma(s: TycoonState, v: Vehicle) {
 type Maker = (s: TycoonState, gig: Gig, rng: Rng) => Omit<Dilemma, 'id' | 'gigId' | 'createdHour' | 'expiresHour'> | null;
 
 const MAKERS: Record<Exclude<DilemmaKind, 'breakdown'>, Maker> = {
+  customs: (s, gig) =>
+    !gig.overseas
+      ? null
+      : {
+          kind: 'customs',
+          title: 'Held at customs',
+          text: `The rig for ${gig.act}'s ${getRegion(gig.overseas.regionId).name} is stuck in the customs shed — the carnet paperwork doesn't match the flight cases.`,
+          options: [
+            { id: 'broker', label: 'Hire a customs broker', detail: 'Cleared by the afternoon, no fuss.', cost: Math.round(gig.fee * 0.03) },
+            { id: 'partial', label: 'Release it minus the flagged cases', detail: 'Free, but some kit stays behind: a thinner show.' },
+            { id: 'wait', label: 'Sit it out in the shed', detail: 'Free — and the crew lose a day: a rushed, tired show.' },
+          ],
+          defaultOption: 'wait',
+        },
   power: (s, gig) =>
     gig.overseas
       ? null
@@ -152,8 +169,9 @@ export function hourlyCrises(s: TycoonState, rng: Rng) {
   s.gigs.forEach(gig => {
     if (gig.status !== 'booked' || s.hour !== loadInHour(gig)) return;
     if (!s.vehicles.some(v => v.owner === 'player' && v.orders.includes(gig.id))) return;
-    if (!rng.chance(CRISIS_CHANCE(gig.tier))) return;
-    const kinds = VENUE_KINDS.filter(k => k !== 'storm' || gig.festival);
+    if (!rng.chance(gig.overseas ? OVERSEAS_CRISIS_CHANCE : CRISIS_CHANCE(gig.tier))) return;
+    // Abroad, the rig crossing a border is the likeliest thing to go wrong.
+    const kinds = gig.overseas ? (['customs', 'customs', 'manager', 'injury'] as (keyof typeof MAKERS)[]) : VENUE_KINDS.filter(k => k !== 'storm' && k !== 'customs' || (k === 'storm' && !!gig.festival));
     for (let tries = 0; tries < 3; tries++) {
       const made = MAKERS[rng.pick(kinds)](s, gig, rng);
       if (!made) continue;
@@ -189,6 +207,13 @@ export function resolveDilemma(s: TycoonState, id: string, optionId: string, aut
         v.brokenUntil = s.hour;
         v.reliability = Math.max(10, v.reliability - 8);
       }
+      break;
+    case 'customs:partial':
+      if (gig) addMods(gig, { quality: -0.07, failureFactor: 1.15 });
+      break;
+    case 'customs:wait':
+      if (gig) addMods(gig, { quality: -0.05 });
+      s.crewMorale = Math.max(0, s.crewMorale - 2);
       break;
     case 'power:house':
       if (gig) addMods(gig, { quality: -0.03, failureFactor: 1.6 });
