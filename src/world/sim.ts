@@ -87,7 +87,7 @@ import { bookSubHire, dailyRentOut, subHireFor } from './hire';
 import { awardsNight, recordEvent, recordShow } from './awards';
 import { dailyIncidents, monthlyInsurance, rollWeather } from './incidents';
 import { dailyContracts, houseRigAt, monthlyContracts } from './contracts';
-import { dailyMarket, marketNow, monthlyInterest } from './market';
+import { dailyMarket, fuelMultiplier, marketNow, monthlyInterest } from './market';
 import { getRegion } from './content/world';
 import { getCityPath } from './pathfinding';
 import { DEPTS, type GearStock, type Gig, type TycoonState, type Vehicle, type WorldMap } from './types';
@@ -348,7 +348,7 @@ function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
   const model = getModel(v.modelId);
   route.progress += model.speed;
   if (v.owner === 'player') {
-    const fuel = model.speed * fuelPerTile(model);
+    const fuel = model.speed * fuelPerTile(model) * fuelMultiplier(s);
     book(s, 'fuel', -fuel);
     v.profitThisYear -= fuel;
   }

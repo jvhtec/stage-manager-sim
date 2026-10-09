@@ -85,7 +85,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 294 tests):
+(`src/world/__tests__/*.test.ts`, 299 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -341,6 +341,14 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   *Crew lounge* (12k / 35k): techs resting at the base shed 3 / 6 extra fatigue a day (the second
   level adds a little morale). The base diorama grows a soundstage annex with a band, lighting bar
   and (from the production hall up) a video wall. A shutdown zeroes the rent but leaves the upkeep.
+
+- **Fuel prices** (`content/economy.ts`, `market.ts`) — diesel has a price index (1.0 = a normal
+  year) joined between real-history anchors: the 1979-81 plateau, the early-1986 collapse, the 1990
+  Gulf blip, the 1998 low, 2008's spike, 2020's trough and 2022's surge. It multiplies every fuel
+  cost (the sim, job estimates and the run planner). News breaks when a three-month swing crosses
+  ±15%. A fuel contract (Market window) locks today's price plus 8% for 6 or 12 months — worth it
+  before a spike, a waste before a slide. The index averages about 1.07 over 1975-2024, and the
+  bot (which drives short local runs) barely notices.
 
 - **Mandatory rehearsals** (`annexes.ts`, `standing.ts`) — bigger jobs can't be booked without a
   rehearsal stage of the right size, and then must go through it: arena shows (tier 3) need a

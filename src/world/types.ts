@@ -745,6 +745,8 @@ export interface TycoonState {
   /** 0-100: how well the festival's name sells. */
   festivalBrand?: number;
   festivalHistory: FestivalEdition[];
+  /** A fuel contract: the locked price multiplier and when it ends (market.ts). */
+  fuelLock?: { price: number; untilDay: number };
   /** Stock-market listing, once you go public (shares.ts). */
   listing?: Listing;
   /** Rivals undercutting your towns (pricewars.ts). */

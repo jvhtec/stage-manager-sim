@@ -384,6 +384,10 @@ export function HelpWindow() {
           money.
         </li>
         <li>
+          <b>Fuel</b> follows real history (Market): spikes in 1979-81, 2008 and 2022, a collapse in 1986. Lock the price for 6 or
+          12 months if you see a spike coming.
+        </li>
+        <li>
           <b>Rehearsals are mandatory</b> for big jobs: arena shows, stadiums, broadcast events and tours can't be booked
           without a rehearsal stage of the right size (Base → Annexes), and an unrehearsed show suffers. Policies has an
           automatic option.

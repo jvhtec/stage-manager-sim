@@ -1,4 +1,5 @@
 /** Read-only projections for the UI — nothing here mutates state. */
+import { fuelMultiplier } from './market';
 import { techResaleFactor } from './content/techWaves';
 import { zoneBill } from './regulation';
 import { paperworkFor } from './paperwork';
@@ -251,7 +252,7 @@ export function estimateJobCosts(state: TycoonState, gig: Gig, projection = proj
     const model = getModel(v.modelId);
     const dist = roadDistance(world, v.homeCityId, gig.cityId);
     if (!Number.isFinite(dist)) return;
-    fuel += dist * 2 * fuelPerTile(model);
+    fuel += dist * 2 * fuelPerTile(model) * fuelMultiplier(state);
     if (v.homeCityId === gig.cityId && !gig.overseas) return;
     const away = Math.max(1, Math.ceil((loadOutDoneHour(gig) - loadInHour(gig) + (2 * dist) / model.speed) / HOURS_PER_DAY));
     const crew = Math.min(model.crewSeats, gig.crewNeeded);

@@ -48,6 +48,7 @@ import { AMBITIONS, rndBlocker, startProject } from './rnd';
 import { DEAL_YEARS } from './deals';
 import { headhuntBlocker, headhuntFee, headhuntRivalHealthAfter, headhuntTarget, HEADHUNT_REP_COST } from './headhunt';
 import { festBlocker, planFestival } from './ownfest';
+import { FUEL_LOCK_MONTHS, FUEL_LOCK_PREMIUM, fuelLockBlocker, marketNow } from './market';
 import { MODULES, buildModule, moduleBlocker, rehearsalBlocker, rehearse } from './annexes';
 import { HEAT_HEADHUNT, addHeat, hireInvestigator, investigatorBlocker } from './rivalry';
 import { buyBlocker, buyVenue, ownedOf, sellVenue } from './owned';
@@ -671,6 +672,19 @@ export function rehearseShow(state: TycoonState, targetId: string): ActionOutcom
   if (why) return fail(state, why);
   const s = cloneState(state);
   return ok(s, rehearse(s, targetId));
+}
+
+/** Lock the fuel price for 6 or 12 months at today's pump price plus a premium. */
+export function lockFuel(state: TycoonState, months: number): ActionOutcome {
+  const why = fuelLockBlocker(state);
+  if (why) return fail(state, why);
+  if (!FUEL_LOCK_MONTHS.includes(months)) return fail(state, 'Contracts run for 6 or 12 months.');
+  const s = cloneState(state);
+  const spot = marketNow(s).fuel;
+  const price = Math.round(spot * (1 + FUEL_LOCK_PREMIUM) * 100) / 100;
+  s.fuelLock = { price, untilDay: dayOf(s.hour) + months * 30 };
+  pushNews(s, `${s.company.name} signs a ${months}-month fuel contract at ${Math.round((price - 1) * 100)}% ${price >= 1 ? 'above' : 'below'} the normal price.`, 'info');
+  return ok(s, `Fuel locked at ${price.toFixed(2)}× for ${months} months.`);
 }
 
 export function borrow(state: TycoonState): ActionOutcome {

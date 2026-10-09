@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { promoteFestival } from '@/world/actions';
+import { lockFuel, promoteFestival } from '@/world/actions';
 import {
   FEST_HEADLINERS,
   FEST_HEADLINER_IDS,
@@ -12,7 +12,7 @@ import {
   festQuote,
 } from '@/world/ownfest';
 import type { FestHeadliner, FestTicket, FestTier } from '@/world/types';
-import { LOAN_MARGIN, marketNow, monthlyInterest } from '@/world/market';
+import { FUEL_LOCK_MONTHS, FUEL_LOCK_PREMIUM, LOAN_MARGIN, fuelLockBlocker, fuelMultiplier, marketNow, marketOnDay, monthlyInterest } from '@/world/market';
 import { SEASON, baseRate } from '@/world/content/economy';
 import { ZONES } from '@/world/content/regulations';
 import { dayOf, formatDay, yearOf } from '@/world/core';
@@ -77,6 +77,9 @@ export function MarketWindow({ ctx }: { ctx: WinCtx }) {
           </div>
         </>
       )}
+
+      <h4>Fuel</h4>
+      <FuelPanel ctx={ctx} />
 
       <h4>Technology</h4>
       <TechWaves ctx={ctx} />
@@ -329,6 +332,58 @@ function TechWaves({ ctx }: { ctx: WinCtx }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+/** Pump prices: where they are, where they've been, and the option of locking them in. */
+function FuelPanel({ ctx }: { ctx: WinCtx }) {
+  const { state } = ctx;
+  const today = dayOf(state.hour);
+  const spot = marketNow(state).fuel;
+  const paying = fuelMultiplier(state);
+  const history = Array.from({ length: 12 }, (_, i) => marketOnDay(state, today - (11 - i) * 30).fuel);
+  const max = Math.max(...history, 1.2);
+  const lock = state.fuelLock && state.fuelLock.untilDay > today ? state.fuelLock : null;
+  const why = fuelLockBlocker(state);
+  const trend = spot / history[8] - 1;
+  return (
+    <div>
+      <Stat label="Pump price">
+        <b className={spot > 1.15 ? 'tt-bad' : spot < 0.9 ? 'tt-good' : ''}>{Math.round(spot * 100)}%</b>
+        <span className="tt-dim"> of normal · {trend > 0.05 ? 'rising' : trend < -0.05 ? 'falling' : 'steady'}</span>
+      </Stat>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 3, alignItems: 'end', height: 36 }}>
+        {history.map((v, i) => (
+          <div key={i} style={{ height: `${Math.max(8, (v / max) * 100)}%`, background: i === 11 ? '#f59e0b' : '#64748b', borderRadius: 2 }} title={`${Math.round(v * 100)}%`} />
+        ))}
+      </div>
+      {lock ? (
+        <div className="tt-good" style={{ marginTop: 6, whiteSpace: 'normal' }}>
+          Contract running: you pay {Math.round(lock.price * 100)}% until {formatDay(state, lock.untilDay)} ({paying > spot ? 'above' : 'below'} the pump right now).
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
+          {FUEL_LOCK_MONTHS.map(m => (
+            <button
+              key={m}
+              className="tt-btn sm"
+              disabled={!!why}
+              title={`Lock today's price plus ${Math.round(FUEL_LOCK_PREMIUM * 100)}% for ${m} months`}
+              onClick={() => {
+                const res = ctx.dispatch(s => lockFuel(s, m));
+                if (res.message) ctx.toast(res.message, res.ok);
+              }}
+            >
+              Lock for {m} months · {Math.round(spot * (1 + FUEL_LOCK_PREMIUM) * 100)}%
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        Fuel is a running cost on every mile. Prices swing with history — the 1979 and 2008 spikes, the 1986 collapse — and a contract buys certainty at a
+        premium: worth it before a spike, a waste before a slide.
+      </div>
     </div>
   );
 }
