@@ -10,8 +10,8 @@
 import type { Rng } from '@/lib/rng';
 import { getModel } from './catalog';
 import { book, depotInCity, formatMoney, gigById, loadInHour, newId, pushNews, showStartHour } from './core';
-import { FREELANCE_DAY_RATE } from './crew';
-import { aboard, moveToDepot, syncCrew } from './people';
+import { FREELANCE_DAY_RATE, PAY } from './crew';
+import { aboard, dayRate, moveToDepot, roleOf, syncCrew } from './people';
 import { getRegion } from './content/world';
 import type { Dilemma, DilemmaKind, Gig, ShowMods, TycoonState, Vehicle } from './types';
 
@@ -65,7 +65,7 @@ export function breakdownDilemma(s: TycoonState, v: Vehicle) {
 
 type Maker = (s: TycoonState, gig: Gig, rng: Rng) => Omit<Dilemma, 'id' | 'gigId' | 'createdHour' | 'expiresHour'> | null;
 
-const MAKERS: Record<Exclude<DilemmaKind, 'breakdown'>, Maker> = {
+const MAKERS: Record<Exclude<DilemmaKind, 'breakdown' | 'raise' | 'burnout'>, Maker> = {
   customs: (s, gig) =>
     !gig.overseas
       ? null
@@ -185,6 +185,72 @@ export function hourlyCrises(s: TycoonState, rng: Rng) {
     .forEach(d => resolveDilemma(s, d.id, d.defaultOption, true));
 }
 
+// ---------------------------------------------------------------------------
+// Crew: people on the road have their own problems
+// ---------------------------------------------------------------------------
+
+/** Daily chance, per star on the road, that they ask for more. Likelier when morale is low. */
+export const RAISE_CHANCE = 0.012;
+/** Daily chance an exhausted tech on the road hits the wall. */
+export const BURNOUT_CHANCE = 0.04;
+export const RAISE_BUMP = 1.15;
+const RAISE_STARS = 3;
+const BURNOUT_FATIGUE = 75;
+
+/** Daily: stars on the road ask for a raise; the exhausted burn out. Each person has at most one open question. */
+export function dailyCrewDilemmas(s: TycoonState, rng: Rng, morale: number) {
+  const open = new Set(s.dilemmas.map(d => d.personId).filter(Boolean));
+  const unhappy = 1 + Math.max(0, (70 - morale) / 25);
+  s.people.forEach(m => {
+    if (!m.vehicleId || open.has(m.id)) return;
+    const v = s.vehicles.find(x => x.id === m.vehicleId);
+    const gig = v?.orders.map(id => gigById(s, id)).find(g => g && g.status === 'booked');
+    if (!v || !gig) return;
+    const level = Math.floor(m.skills[m.primary]);
+    const wage = Math.round(dayRate(m) * PAY[s.policies.pay].wage);
+    if (m.fatigue >= BURNOUT_FATIGUE && rng.chance(BURNOUT_CHANCE)) {
+      s.dilemmas.push({
+        id: newId(s, 'dl'),
+        kind: 'burnout',
+        title: `${m.name} has hit the wall`,
+        text: `${m.name} has been on the road too long and can barely stand at the desk. ${gig.act} is the next show.`,
+        options: [
+          { id: 'rest', label: 'Send them home to rest', detail: 'Off the tour; back at base they’ll recover.' },
+          { id: 'push', label: 'They’ll push through', detail: 'They play on — a rougher show, and the crew grumbles.' },
+        ],
+        defaultOption: 'rest',
+        gigId: gig.id,
+        vehicleId: v.id,
+        personId: m.id,
+        createdHour: s.hour,
+        expiresHour: s.hour + 18,
+      });
+      open.add(m.id);
+      return;
+    }
+    if (level >= RAISE_STARS && (m.loyalUntil ?? 0) <= s.hour && rng.chance(RAISE_CHANCE * unhappy)) {
+      s.dilemmas.push({
+        id: newId(s, 'dl'),
+        kind: 'raise',
+        title: `${m.name} wants more`,
+        text: `${m.name}, your ${level}★ ${roleOf(m)}, says other firms are calling and wants better pay — or they walk at the next stop.`,
+        options: [
+          { id: 'raise', label: `A ${Math.round((RAISE_BUMP - 1) * 100)}% raise`, detail: `Costs ${money(s, Math.round(wage * (RAISE_BUMP - 1)))}/day for good, and they’ll turn rivals down for six months.` },
+          { id: 'bonus', label: 'A one-off bonus', detail: 'Twelve days’ pay now; they stay for a couple of months, then ask again.', cost: wage * 12 },
+          { id: 'refuse', label: 'Call their bluff', detail: 'They walk. Free — and a gap in the crew.' },
+        ],
+        defaultOption: 'bonus',
+        gigId: gig.id,
+        vehicleId: v.id,
+        personId: m.id,
+        createdHour: s.hour,
+        expiresHour: s.hour + 24,
+      });
+      open.add(m.id);
+    }
+  });
+}
+
 /** Mutating: apply a choice. Returns a line for the toast. */
 export function resolveDilemma(s: TycoonState, id: string, optionId: string, auto = false): string | null {
   const d = s.dilemmas.find(x => x.id === id);
@@ -208,6 +274,51 @@ export function resolveDilemma(s: TycoonState, id: string, optionId: string, aut
         v.reliability = Math.max(10, v.reliability - 8);
       }
       break;
+    case 'raise:raise': {
+      const m = s.people.find(p => p.id === d.personId);
+      if (m) {
+        m.payBump = Math.round((m.payBump ?? 1) * RAISE_BUMP * 100) / 100;
+        m.loyalUntil = s.hour + 24 * 180;
+        line = `${m.name} gets the raise and stays.`;
+      }
+      break;
+    }
+    case 'raise:bonus': {
+      const m = s.people.find(p => p.id === d.personId);
+      if (m) {
+        m.loyalUntil = s.hour + 24 * 60;
+        line = `${m.name} pockets the bonus and stays — for now.`;
+      }
+      break;
+    }
+    case 'raise:refuse': {
+      const m = s.people.find(p => p.id === d.personId);
+      if (m) {
+        s.people = s.people.filter(p => p.id !== m.id);
+        s.poachBids = s.poachBids.filter(b => b.personId !== m.id);
+        syncCrew(s);
+        line = `${m.name} walks off the tour.`;
+        pushNews(s, `${m.name} quit mid-tour over pay. The crew are a person short.`, 'bad', v ? { vehicleId: v.id } : undefined);
+      }
+      break;
+    }
+    case 'burnout:rest': {
+      const m = s.people.find(p => p.id === d.personId);
+      const base = v ? depotInCity(s, v.homeCityId) : undefined;
+      if (m && base) {
+        moveToDepot(m, base.id);
+        syncCrew(s);
+        line = `${m.name} is on the train home to rest.`;
+      }
+      break;
+    }
+    case 'burnout:push': {
+      const m = s.people.find(p => p.id === d.personId);
+      if (m) m.fatigue = 100;
+      if (gig) addMods(gig, { quality: -0.03 });
+      s.crewMorale = Math.max(0, s.crewMorale - 2);
+      break;
+    }
     case 'customs:partial':
       if (gig) addMods(gig, { quality: -0.07, failureFactor: 1.15 });
       break;

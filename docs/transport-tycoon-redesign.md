@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 163 tests):
+(`src/world/__tests__/*.test.ts`, 169 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -379,6 +379,26 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   carnets for Europe from 2021), and a work visa per head for the US, Canada, Japan, Korea,
   Australia, Singapore, Brazil (rising over the decades). Estimated on the world map and in the road
   costs, charged when the rig turns up, whatever the show's result.
+
+- **Run planner** (`runs.ts`, `ui/planner.tsx`) — pick a truck, tick open offers in its reach (up to 2.5× the
+  suggestion range) and see the whole run before committing: tiles on and hours spare at every load-in
+  (the plan is checked as if the truck already had those orders), fees, driving and fuel, nights away
+  and a net. Booking is all-or-nothing (book + assign each date, or none). A run of 2+ dates earns a
+  **run bonus** of 3% per extra date (cap 12%) of the fees, paid when every date is played with
+  quality ≥ 60%; one failure or rough night and it's forfeited ("Run bonuses" in the ledger).
+- **Crew on the road** (`dilemmas.ts`) — each day a 3★+ person aboard a truck with a show ahead may ask for
+  a raise (1.2% × a morale factor; not while "loyal"): accept (+15% pay for good, loyal six months), a one-off
+  bonus (twelve days' pay, loyal two months — the default if ignored) or call their bluff (they walk,
+  leaving the crew a person short). Someone at 75+ fatigue may burn out (4%/day): send them home or push
+  through (a rougher show, morale dips). One open question per person.
+
+**Balance check** (scripted bot: one local truck per idle van, GB 1979 / 1995, ES 2010, US 1985, 4-24 seeds
+each, vs the merged #19 baseline). Cash and survival are level or better (GB 1979, 12 seeds: mean £1.02M
+baseline vs £0.93M, 11/12 vs 12/12 alive; fresh seeds £924k vs £934k); reputation runs a few points lower
+for a bot that never answers a decision — unanswered decisions take the free default, which costs a little
+show quality. A smarter bot that plans 3-date runs, haggles at ≥60% odds, takes partnerships and answers
+decisions earns about 2× the plain bot, almost all from keeping each truck booked (run bonuses paid on only
+3-6 runs in 7 years; sponsorship is ~£500/month per department), so there's no runaway from the new tools.
 
 UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
 (workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the

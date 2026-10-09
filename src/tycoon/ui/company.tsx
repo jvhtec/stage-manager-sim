@@ -281,11 +281,12 @@ export function HelpWindow() {
         </li>
         <li>
           <b>Needs your call</b>: a breakdown with a show waiting, a rig held at customs, undersized power, a union call, an
-          injured tech… The game pauses and asks. Ignore it and the cheap default happens at the deadline.
+          injured tech, a star demanding a raise mid-tour… The game pauses and asks. Ignore it and the cheap default happens at the deadline.
         </li>
         <li>
           <b>Planning a truck</b>: select it and its route is drawn on the map; its window lists each stop with the hours spare
-          at load-in, and suggests the next jobs that fit, bookable in one tap. Single-show offers can be <b>haggled</b> once
+          at load-in, and suggests the next jobs that fit, bookable in one tap. <b>Plan a run</b> (route icon) strings
+          several offers onto one truck — check every load-in, then book them all; deliver every date well for a run bonus. Single-show offers can be <b>haggled</b> once
           for +12% — a refusal may make the promoter walk, so push when you hold the stronger hand.
         </li>
         <li>

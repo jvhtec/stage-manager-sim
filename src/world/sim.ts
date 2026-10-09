@@ -8,12 +8,13 @@
  * randomness is the seeded rng carried in `state.rngState`).
  */
 import { paperworkFor } from './paperwork';
+import { settleRuns } from './runs';
 import { recordVenueNight } from './promoters';
 import { dailyAuctions, monthlyAuctions } from './auctions';
 import { annualReport, monthlyMilestones } from './milestones';
 import { monthlyPartners } from './partners';
 import { monthlyTowns } from './towns';
-import { breakdownDilemma, hourlyCrises } from './dilemmas';
+import { breakdownDilemma, dailyCrewDilemmas, hourlyCrises } from './dilemmas';
 import type { Rng } from '@/lib/rng';
 import {
   HOTEL_NIGHT,
@@ -552,6 +553,8 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   dailyPeopleFatigue(s);
   dailyPoachBids(s);
   dailyAuctions(s, rng);
+  settleRuns(s);
+  dailyCrewDilemmas(s, rng, s.crewMorale);
   syncCrew(s);
   dailyIncidents(s, rng);
   s.vehicles.forEach(v => {

@@ -119,6 +119,7 @@ export type LedgerCategory =
   | 'onsite'
   | 'sponsorship'
   | 'paperwork'
+  | 'bonuses'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -149,6 +150,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   onsite: 'On-the-day extras',
   sponsorship: 'Maker sponsorship',
   paperwork: 'Visas & carnets',
+  bonuses: 'Run bonuses',
   sales: 'Asset sales',
 };
 
@@ -394,7 +396,17 @@ export interface Auction {
   lots: AuctionLot[];
 }
 
-export type DilemmaKind = 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
+/** A string of shows booked together on one truck (runs.ts). */
+export interface Run {
+  id: string;
+  vehicleId: string;
+  gigIds: string[];
+  bonusRate: number;
+  status: 'active' | 'paid' | 'broken';
+  bonus?: number;
+}
+
+export type DilemmaKind = 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
 
 /** A problem that needs your call (dilemmas.ts). */
 export interface Dilemma {
@@ -580,6 +592,8 @@ export interface TycoonState {
   /** Manufacturer partnership per department (partners.ts). */
   /** Town size multipliers over the game (towns.ts). */
   townGrowth: Record<string, number>;
+  /** Planned road runs (runs.ts). */
+  runs: Run[];
   /** Promoter relationship per venue, 0-8 (venues.ts). */
   venueRelations: Record<string, number>;
   partners: Partial<Record<Dept, { brand: string; sinceDay: number; lapse: number }>>;

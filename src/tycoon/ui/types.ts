@@ -22,6 +22,7 @@ export type WindowKind =
   | 'decisions'
   | 'auctions'
   | 'worldmap'
+  | 'planner'
   | 'help'
   | 'menu';
 

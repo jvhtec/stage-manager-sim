@@ -2,6 +2,7 @@
  * Player commands. Each takes the current state and returns
  * `{ state, result }` — a new state on success, the untouched one on failure.
  */
+import { openRun, planRun } from './runs';
 import { haggle, haggleBlocker } from './negotiate';
 import { PARTNER_DISCOUNT, PARTNER_SHARE, endPartner, partnerBlocker, partnerPrice, signPartner } from './partners';
 import { lotBlocker, lotName, takeLot } from './auctions';
@@ -115,6 +116,28 @@ export function setCrewPicks(state: TycoonState, gigId: string, personIds: strin
   const gig = gigById(s, gigId)!;
   gig.crewPicks = unique.length ? unique : undefined;
   return ok(s, unique.length ? `${unique.length} named for ${gig.act}.` : `Crew for ${gig.act} back to automatic.`);
+}
+
+/** Book a whole planned run onto one truck: all of it, or none. */
+export function bookRun(state: TycoonState, vehicleId: string, gigIds: string[]): ActionOutcome {
+  const v = state.vehicles.find(x => x.id === vehicleId && x.owner === 'player');
+  if (!v) return fail(state, 'Unknown vehicle.');
+  if (!gigIds.length) return fail(state, 'Pick some shows first.');
+  const plan = planRun(state, v, gigIds);
+  const bad = plan.stops.find(s => s.blocker || s.spare < 0);
+  if (bad) return fail(state, bad.blocker ?? `${v.name} can't make ${bad.gig.act} in time.`);
+  let s = state;
+  for (const g of plan.stops) {
+    const booked = bookGig(s, g.gig.id);
+    if (!booked.result.ok) return fail(state, booked.result.message ?? 'A booking failed.');
+    const assigned = assignVehicle(booked.state, vehicleId, g.gig.id);
+    if (!assigned.result.ok) return fail(state, assigned.result.message ?? 'The truck can’t take it.');
+    s = assigned.state;
+  }
+  s = cloneState(s);
+  openRun(s, vehicleId, plan.stops.map(x => x.gig.id));
+  const bonus = plan.bonusRate ? ` Deliver all of it well for a ${Math.round(plan.bonusRate * 100)}% run bonus.` : '';
+  return ok(s, `${v.name} booked on ${plan.stops.length} date${plan.stops.length > 1 ? 's' : ''}.${bonus}`);
 }
 
 /** One tap: book the offer and put this truck on it. */

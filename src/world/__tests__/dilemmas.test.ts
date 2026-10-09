@@ -3,7 +3,8 @@ import { createTycoonGame } from '../state';
 import { advanceHours } from '../sim';
 import { assignVehicle, bookGig, makeDecision } from '../actions';
 import { HOURS_PER_DAY } from '../catalog';
-import { breakdownDilemma, hourlyCrises, recoveryCost, resolveDilemma } from '../dilemmas';
+import { breakdownDilemma, dailyCrewDilemmas, hourlyCrises, recoveryCost, resolveDilemma } from '../dilemmas';
+import { dayRate } from '../people';
 import { loadInHour } from '../core';
 import { rollWeather } from '../incidents';
 import type { Gig, TycoonState } from '../types';
@@ -113,5 +114,78 @@ describe('on-the-day decisions', () => {
     const waited = makeDecision(s, d.id, 'wait').state;
     expect(waited.gigs.find(x => x.id === g.id)!.mods!.quality).toBeLessThan(0);
     expect(waited.company.cash).toBe(cash);
+  });
+
+  describe('crew on the road', () => {
+    /** A booked show with the truck loaded: a star and an exhausted tech aboard. */
+    function aboardScenario() {
+      const { s } = scenario();
+      const v = s.vehicles.find(x => x.owner === 'player')!;
+      const star = s.people[0];
+      const tired = s.people[1];
+      star.skills[star.primary] = 4;
+      tired.fatigue = 90;
+      tired.skills[tired.primary] = 2;
+      [star, tired].forEach(m => {
+        m.vehicleId = v.id;
+        m.depotId = undefined;
+      });
+      return { s, v, star, tired };
+    }
+
+    it('a star on the road can ask for a raise: accept, bonus or lose them', () => {
+      const { s, star } = aboardScenario();
+      dailyCrewDilemmas(s, yes, 40);
+      const d = s.dilemmas.find(x => x.kind === 'raise' && x.personId === star.id)!;
+      expect(d).toBeTruthy();
+      expect(d.options.map(o => o.id)).toEqual(['raise', 'bonus', 'refuse']);
+      expect(d.defaultOption).toBe('bonus');
+
+      const before = dayRate(star);
+      const raised = makeDecision(s, d.id, 'raise').state;
+      const m = raised.people.find(p => p.id === star.id)!;
+      expect(dayRate(m)).toBeCloseTo(before * 1.15, 5);
+      expect(m.loyalUntil).toBeGreaterThan(s.hour);
+
+      const cash = s.company.cash;
+      const bonus = makeDecision(s, d.id, 'bonus').state;
+      expect(cash - bonus.company.cash).toBe(d.options[1].cost);
+      expect(bonus.people.some(p => p.id === star.id)).toBe(true);
+
+      const walked = makeDecision(s, d.id, 'refuse').state;
+      expect(walked.people.some(p => p.id === star.id)).toBe(false);
+      expect(walked.news[0].text).toMatch(/quit mid-tour/);
+    });
+
+    it('exhausted people can burn out: send home or push through', () => {
+      const { s, tired, v } = aboardScenario();
+      dailyCrewDilemmas(s, yes, 80);
+      const d = s.dilemmas.find(x => x.kind === 'burnout' && x.personId === tired.id)!;
+      expect(d).toBeTruthy();
+      const home = makeDecision(s, d.id, 'rest').state;
+      const p = home.people.find(x => x.id === tired.id)!;
+      expect(p.vehicleId).toBeUndefined();
+      expect(p.depotId).toBeTruthy();
+      expect(home.vehicles.find(x => x.id === v.id)!.crew).toBeLessThan(2);
+      const pushed = makeDecision(s, d.id, 'push').state;
+      expect(pushed.people.find(x => x.id === tired.id)!.vehicleId).toBe(v.id);
+      expect(pushed.gigs.find(g => g.id === d.gigId)!.mods!.quality).toBeLessThan(0);
+    });
+
+    it('asks at most once per person, never for rested juniors at home, and not while loyal', () => {
+      const { s, star, tired } = aboardScenario();
+      dailyCrewDilemmas(s, yes, 40);
+      const n = s.dilemmas.length;
+      dailyCrewDilemmas(s, yes, 40);
+      expect(s.dilemmas.length).toBe(n);
+      s.dilemmas = [];
+      star.loyalUntil = s.hour + 100;
+      tired.fatigue = 0;
+      dailyCrewDilemmas(s, yes, 40);
+      expect(s.dilemmas).toHaveLength(0);
+      const home = scenario().s;
+      dailyCrewDilemmas(home, yes, 40);
+      expect(home.dilemmas.filter(x => x.kind === 'raise' || x.kind === 'burnout')).toHaveLength(0);
+    });
   });
 });

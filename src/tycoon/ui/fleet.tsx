@@ -167,6 +167,12 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
         </>
       )}
 
+      {v.owner === 'player' && (
+        <button className="tt-btn sm" onClick={() => ctx.open('planner', v.id)} style={{ marginTop: 6 }}>
+          Plan a run with this truck…
+        </button>
+      )}
+
       <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 10 }}>
         <button className="tt-btn sm" disabled={!v.orders.length} onClick={() => act(s => sendHome(s, v.id))}>
           Send home
