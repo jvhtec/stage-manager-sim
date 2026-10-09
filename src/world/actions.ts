@@ -2,6 +2,7 @@
  * Player commands. Each takes the current state and returns
  * `{ state, result }` — a new state on success, the untouched one on failure.
  */
+import { PARTNER_DISCOUNT, PARTNER_SHARE, endPartner, partnerBlocker, partnerPrice, signPartner } from './partners';
 import { lotBlocker, lotName, takeLot } from './auctions';
 import { resolveDilemma } from './dilemmas';
 import {
@@ -226,7 +227,7 @@ export function rehomeVehicle(state: TycoonState, vehicleId: string, depotId: st
 export function buyGear(state: TycoonState, depotId: string, productId: string, qty = 1): ActionOutcome {
   const product = getProduct(productId);
   if (!state.announcedGear.includes(productId) && !state.ownProducts.includes(productId)) return fail(state, `${product.brand} ${product.name} isn't out yet.`);
-  const cost = product.price * qty;
+  const cost = partnerPrice(state, productId) * qty;
   if (state.company.cash < cost) return fail(state, `Not enough cash (${formatMoney(state, cost)}).`);
   const d0 = state.depots.find(d => d.id === depotId);
   if (!d0) return fail(state, 'Unknown depot.');
@@ -332,6 +333,22 @@ export function pinCrew(state: TycoonState, personId: string, vehicleId?: string
   const s = cloneState(state);
   s.people.find(m => m.id === personId)!.pinnedVehicleId = vehicleId;
   return ok(s, v ? `${m0.name} now rides ${v.name}.` : `${m0.name} goes wherever they’re needed.`);
+}
+
+/** Sign, switch or (with no brand) end a manufacturer partnership for a department. */
+export function setPartner(state: TycoonState, dept: Dept, brand?: string): ActionOutcome {
+  if (!brand) {
+    const current = state.partners[dept];
+    if (!current) return fail(state, 'No partnership to end.');
+    const s = cloneState(state);
+    endPartner(s, dept);
+    return ok(s, `Ended the ${current.brand} partnership.`);
+  }
+  const blocker = partnerBlocker(state, dept, brand);
+  if (blocker) return fail(state, blocker);
+  const s = cloneState(state);
+  signPartner(s, dept, brand);
+  return ok(s, `${brand} are now your ${dept} partner: ${Math.round(PARTNER_DISCOUNT * 100)}% off their kit, sponsorship while ${Math.round(PARTNER_SHARE * 100)}%+ of your racks wear their name.`);
 }
 
 /** Buy a lot at today's asking price, sent to one of your bases. */

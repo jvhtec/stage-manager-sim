@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 126 tests):
+(`src/world/__tests__/*.test.ts`, 131 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -335,6 +335,11 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   event, house contract, own product, takeover, 5★ tech, first profitable year, seven then eight
   figures, a decade in business…) tick off monthly and show in the League; pure recognition, no
   economic effect.
+
+- **Maker partnerships** (`partners.ts`) — from reputation 25, commit a department to one maker
+  (Meyer for sound, Martin for lights…): 10% off their kit, and a monthly sponsorship of
+  `share × (150 + reputation × 6)` while ≥50% of that department's racks wear their name. Below
+  that they warn you for two months, then walk. A partner can't be swapped inside a year.
 
 UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
 (workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the

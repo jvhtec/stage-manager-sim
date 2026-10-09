@@ -117,6 +117,7 @@ export type LedgerCategory =
   | 'deals'
   | 'training'
   | 'onsite'
+  | 'sponsorship'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -145,6 +146,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   deals: 'Production deals',
   training: 'Crew training',
   onsite: 'On-the-day extras',
+  sponsorship: 'Maker sponsorship',
   sales: 'Asset sales',
 };
 
@@ -569,6 +571,8 @@ export interface TycoonState {
   auctions: Auction[];
   /** Career milestones reached (milestones.ts) and the yearly reports. */
   milestones: { id: string; day: number }[];
+  /** Manufacturer partnership per department (partners.ts). */
+  partners: Partial<Record<Dept, { brand: string; sinceDay: number; lapse: number }>>;
   reports: AnnualReport[];
   /** Exclusive production deals with acts (deals.ts). */
   deals: { id: string; act: string; tier: number; monthly: number; startDay: number; endDay: number; strikes: number; status: 'offer' | 'active' | 'ended'; offerExpires: number }[];
