@@ -8,7 +8,9 @@ import {
   companyTier,
   getModel,
 } from '@/world/catalog';
-import { dayOf, depotInCity, formatDay, freeLot } from '@/world/core';
+import { dayOf, depotInCity, formatDay, freeLot, yearOf } from '@/world/core';
+import { localFame } from '@/world/offers';
+import { VENUE_YEARS, venueOpenIn } from '@/world/content/venueYears';
 import { worldOf } from '@/world/mapgen';
 import { vehicleActivity } from '@/world/queries';
 import type { Gig } from '@/world/types';
@@ -84,6 +86,7 @@ export function CityWindow({ ctx, cityId }: { ctx: WinCtx; cityId: string }) {
       <Stat label="Population (metro)">{city.population.toLocaleString('en-US')}</Stat>
       <Stat label="Your local rating">
         <span className={rating >= 50 ? 'tt-good' : 'tt-bad'}>{ratingLabel(rating)}</span>
+        <span className="tt-dim"> · offers ×{localFame(state, cityId).toFixed(2)}</span>
       </Stat>
       <h4>Venues</h4>
       <div className="tt-list">
@@ -201,6 +204,12 @@ export function VenueWindow({ ctx, venueId }: { ctx: WinCtx; venueId: string }) 
       </div>
       <VenueDiorama state={state} venue={venue} />
       <Stat label="Capacity">{venue.capacity.toLocaleString()}</Stat>
+      {!venueOpenIn(venue.name, yearOf(state, state.hour)) && (
+        <div className="tt-dim" style={{ whiteSpace: 'normal', margin: '4px 0' }}>
+          🚧 Not open yet or closed for rebuilding — no bookings until{' '}
+          {VENUE_YEARS[venue.name]?.opens && VENUE_YEARS[venue.name].opens! > yearOf(state, state.hour) ? VENUE_YEARS[venue.name].opens : VENUE_YEARS[venue.name]?.shut?.find(([, to]) => to > yearOf(state, state.hour))?.[1]}.
+        </div>
+      )}
       {contract && (
         <>
           <h4>House contract</h4>

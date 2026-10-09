@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 109 tests):
+(`src/world/__tests__/*.test.ts`, 116 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -314,6 +314,13 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   resell for, so no arbitrage — but each day another buyer may snap each lot up (2% rising to ~7%).
   Used kit blends its condition into what you own; used trucks keep their age and reliability.
 
+- **The world moves** — landmark rooms keep their real years (`content/venueYears.ts`): The O2
+  opens in 2007, Wembley is shut 2001-2006, Palau Sant Jordi opens in 1990, the Stade de France in
+  1998, Roig Arena in 2025… A closed room gets no offers, tour dates, festival sites, event lots or
+  house tenders, and the New Year news announces openings, rebuilds and reopenings (world tours
+  need an open home room). **Local fame**: towns you've done proud (rating above 50) post up to
+  +20% more offers, towns you've let down −20%.
+
 UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
 (workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the
 show forecast, rating and trophy cabinet in the **League**.
@@ -338,6 +345,6 @@ The classic build has systems that don't exist in the map game yet. Each has an 
    route lines drawn on the map for the selected vehicle.
 5. **Gear transfers & local hire** — move stock between warehouses; hire locally when short.
 6. **Sound** — WebAudio engine hum, crowd swell at live venues, cash-register on payouts.
-7. **Town growth & more eras** — towns grow with successful shows; new gear tech (LED walls,
-   line arrays) unlocks by year like vehicle models.
+7. **Town growth** — landmark venues now open and close in their real years and local fame
+   steers offers; still to come: towns that grow over the decades.
 8. **Retire `/classic`** once its systems are ported.

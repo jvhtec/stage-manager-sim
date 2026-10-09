@@ -55,7 +55,7 @@ import { REST_AT, aboard, atDepot, dailyPeopleFatigue, dailyPoachBids, dayRate, 
 import { dailyWorkshop, monthlyWorkshop, rollFailure, wearFromShow, type Failure } from './wear';
 import { rivalsFor } from './content/companies';
 import { getTech, techBonus, techsActiveIn } from './content/techs';
-import { dailyOffers, pruneGigs, rivalsTakeOffers } from './offers';
+import { dailyOffers, pruneGigs, rivalsTakeOffers, yearlyVenues } from './offers';
 import { dailyTours } from './tours';
 import { dailyFestivals } from './festivals';
 import { dailyEvents, eventStakes } from './events';
@@ -518,6 +518,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     });
     pushNews(s, `It's ${date.getUTCFullYear()}. Last year's books are closed — check the finances.`, 'info');
     if (s.hour > HOURS_PER_DAY) awardsNight(s, date.getUTCFullYear() - 1);
+    yearlyVenues(s, world, date.getUTCFullYear());
   }
   announceModels(s, date.getUTCFullYear());
   announceGear(s, date.getUTCFullYear());

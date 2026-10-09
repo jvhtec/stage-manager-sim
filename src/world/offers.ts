@@ -5,7 +5,9 @@
  */
 import type { Rng } from '@/lib/rng';
 import { tierInfo } from './catalog';
-import { dateOfDay, dayOf, newId, pushNews } from './core';
+import { dateOfDay, dayOf, newId, pushNews, yearOf } from './core';
+import { VENUE_YEARS, closuresIn, openingsIn, reopeningsIn, venueOpenIn } from './content/venueYears';
+import { venueOpenIn } from './content/venueYears';
 import { artistsTouringAt, homeWeight } from './content/artists';
 import { expectedQuality, productsAvailableIn } from './content/gear';
 import { roadDistance } from './pathfinding';
@@ -33,7 +35,8 @@ export function generateOffer(
   opts: { minLeadDays?: number; maxTier?: number } = {},
 ): Gig | null {
   const minLeadDays = opts.minLeadDays ?? 6;
-  const venues = city.venues.filter(v => v.kind !== 'airport' && v.tier <= (opts.maxTier ?? 4));
+  const leadYear = yearOf(state, state.hour + minLeadDays * 24);
+  const venues = city.venues.filter(v => v.kind !== 'airport' && v.tier <= (opts.maxTier ?? 4) && venueOpenIn(v.name, leadYear));
   if (!venues.length) return null;
   // Smaller rooms book far more often than stadiums.
   const weights = venues.map(v => 5 - v.tier);
@@ -155,10 +158,30 @@ function pickRider(needs: DeptCounts, tier: number, year: number, rng: Rng): Rid
 /** Daily chance of a new show offer, by how much venue a town has (not raw population). */
 const OFFER_RATE: Record<CitySize, number> = { village: 0.05, town: 0.075, city: 0.15, metropolis: 0.36 };
 
+/** Towns you've done proud ask for you more; towns you've let down go quiet (rating 50 is neutral). */
+export const localFame = (state: TycoonState, cityId: string) => 1 + ((state.cityRatings[cityId] ?? 50) - 50) / 250;
+
+/** New Year: landmark rooms that open, close for rebuilding, or reopen this year. */
+export function yearlyVenues(state: TycoonState, world: WorldMap, year: number) {
+  const find = (name: string) => world.cities.flatMap(c => c.venues.map(v => ({ v, c }))).find(x => x.v.name === name);
+  openingsIn(year).forEach(name => {
+    const hit = find(name);
+    if (hit) pushNews(state, `${name} opens in ${hit.c.name}${VENUE_YEARS[name].note ? ` — ${VENUE_YEARS[name].note}` : ''}. A new room for ${['', 'club', 'theatre', 'arena', 'stadium'][hit.v.tier]}-sized shows.`, 'big', { cityId: hit.c.id });
+  });
+  reopeningsIn(year).forEach(name => {
+    const hit = find(name);
+    if (hit) pushNews(state, `${name} reopens in ${hit.c.name}${VENUE_YEARS[name].note ? ` — ${VENUE_YEARS[name].note}` : ''}.`, 'big', { cityId: hit.c.id });
+  });
+  closuresIn(year).forEach(name => {
+    const hit = find(name);
+    if (hit) pushNews(state, `${name} in ${hit.c.name} closes for rebuilding. No shows there until it reopens.`, 'info', { cityId: hit.c.id });
+  });
+}
+
 export function dailyOffers(state: TycoonState, world: WorldMap, rng: Rng) {
   const { demand } = marketNow(state);
   world.cities.forEach(city => {
-    const chance = OFFER_RATE[city.size] * demand * (1 + salesBoost(state, world, city.id));
+    const chance = OFFER_RATE[city.size] * demand * localFame(state, city.id) * (1 + salesBoost(state, world, city.id));
     if (rng.chance(chance)) {
       const gig = generateOffer(state, world, city, rng);
       if (gig) state.gigs.push(gig);
