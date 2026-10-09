@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { borrow, buyRival, goPublic, headhunt, repay, setDividend, takePrivate } from '@/world/actions';
+import { brandOf } from '@/world/sponsors';
 import { headhuntBlocker, headhuntFee, headhuntTarget } from '@/world/headhunt';
 import { levelOf, roleOf } from '@/world/people';
 import { DIVIDENDS, IPO_FLOAT, buybackCost, ipoProceeds, listingBlocker, marketCap, sharePrice } from '@/world/shares';
@@ -154,6 +155,33 @@ export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
           </button>
         </>
       )}
+      <h4>Sponsors &amp; goodwill</h4>
+      {state.sponsors.some(d => d.status === 'active') ? (
+        <div className="tt-list">
+          {state.sponsors
+            .filter(d => d.status === 'active')
+            .map(d => (
+              <div key={d.id} className="tt-item" style={{ gap: 6 }}>
+                <div className="grow" style={{ whiteSpace: 'normal' }}>
+                  <b>{brandOf(d.brandId)?.name}</b> <span className="tt-dim">— {money(d.monthly)}/month</span>
+                  <div className="tt-dim">
+                    {d.minShows}+ shows a month · until {formatDay(state, d.endDay)} · {money(d.paid)} paid
+                  </div>
+                  {d.shortfalls > 0 && <div className="tt-bad">Missed last month — one more and they walk.</div>}
+                </div>
+              </div>
+            ))}
+        </div>
+      ) : (
+        <div className="tt-dim" style={{ whiteSpace: 'normal' }}>No sponsors yet. Brands call once you have a name and some shows behind you.</div>
+      )}
+      <Stat label="Goodwill">
+        <b>{Math.round(state.goodwill ?? 0)}</b> <span className="tt-dim">/ 100 · {state.charityDone ?? 0} charity night{(state.charityDone ?? 0) === 1 ? '' : 's'}</span>
+      </Stat>
+      <Bar value={state.goodwill ?? 0} max={100} color="#ec4899" />
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        Good causes cost money now and build goodwill, which brings more sponsor offers at better rates. Goodwill fades slowly.
+      </div>
       <h4>Reputation</h4>
       <div className="tt-row">
         <span>
@@ -353,6 +381,10 @@ export function HelpWindow() {
           <b>Your own festival</b> (Market): pay up front in spring for a field day, weekender or major, pick a headliner
           and ticket price, and hope the economy and the weather play along — a built brand sells out, a new one loses
           money.
+        </li>
+        <li>
+          <b>Sponsors &amp; charity</b>: brands will pay a monthly retainer to be on your trucks if you keep a promised number of
+          shows a month going (Finance lists them); say yes to a good cause now and then and they call more often.
         </li>
         <li>
           <b>Going public</b>: a big, reputable company can float 30% of itself for cash (Finance). Then shareholders

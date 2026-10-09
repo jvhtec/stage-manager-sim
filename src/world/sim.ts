@@ -17,6 +17,7 @@ import { difficultyOf, monthlyGoal } from './scenario';
 import { monthlyPriceWars } from './pricewars';
 import { monthlyShares } from './shares';
 import { monthlyVenues } from './owned';
+import { monthlySponsors } from './sponsors';
 import { dailyUtilisation } from './fleetReport';
 import { recordVenueNight } from './promoters';
 import { dailyAuctions, monthlyAuctions } from './auctions';
@@ -66,7 +67,7 @@ import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSiz
 import { GEAR_PRODUCTS, getProduct } from './content/gear';
 import { leftBehindChance, monthlyRent, monthlySalaries, prepFailureFactor, prepOf, prepRatio } from './facilities';
 import { monthlyTraining, PAY, freelancersFor, monthlyCrew, moraleBonus } from './crew';
-import { REST_AT, crewDirectives, aboard, atDepot, dailyPeopleFatigue, dailyPoachBids, dayRate, evaluateCrew, learnFromShow, moveToDepot, moveToVehicle, pickCrew, refreshCandidates, syncCrew } from './people';
+import { REST_AT, crewDirectives, aboard, atDepot, dailyPeopleFatigue, dailyPoachBids, dayRate, evaluateCrew, learnFromShow, moveToDepot, moveToVehicle, pickCrew, refreshCandidates, sideRng, syncCrew } from './people';
 import { dailyWorkshop, monthlyWorkshop, rollFailure, wearFromShow, type Failure } from './wear';
 import { rivalsFor } from './content/companies';
 import { getTech, techBonus, techsActiveIn } from './content/techs';
@@ -620,9 +621,10 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     monthlyTowns(s, world);
     monthlyMarketing(s);
     monthlyGoal(s);
-    monthlyPriceWars(s, rng);
+    monthlyPriceWars(s, sideRng(s, dayOf(s.hour) + 7002));
     monthlyShares(s, p => rng.chance(p));
     monthlyVenues(s, rng);
+    monthlySponsors(s, sideRng(s, dayOf(s.hour) + 7001));
     monthlyRnd(s, rng);
     monthlyDeals(s, rng);
   }

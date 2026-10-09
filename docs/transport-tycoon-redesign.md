@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 251 tests):
+(`src/world/__tests__/*.test.ts`, 260 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -329,6 +329,16 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   price is company value × (0.7 + 0.6 × confidence). Below 30 an activist decision appears
   (special dividend +25 confidence, or stand firm −10 and reputation −2); under 8 for four months
   the board ousts you (game over). Going private again costs 120% of the stake's market value.
+
+- **Sponsors and charity** (`sponsors.ts`) — once you have reputation 25+ and 10 shows behind you,
+  each month there's a 10% chance (+0.2 points per goodwill) that an invented era-appropriate brand
+  (a lager, a cola, a bank, a fuel firm, telecoms, tech…; one per category, two at a time) offers a
+  12-month retainer of (500 + 30 × reputation) × fleet/3 × goodwill bonus a month, for a promised
+  1.5 shows a month per vehicle. Sign, push for +20% (40% they walk) or decline (the default).
+  Miss the show count and no retainer is paid; two months running and they walk (reputation −1,
+  goodwill −10). Separately, ~4% of months a charity asks for a free benefit night (full production:
+  goodwill +15, reputation +0.8, town +4; basic rig: half price, +6). Goodwill decays 1 a month. These
+  monthly rolls use a side rng, so they don't disturb the rest of the sim.
 
 - **Technology waves** (`content/techWaves.ts`) — formats come and go: moving lights (1986, dates
   PAR cans), line arrays (1996, point-source PA), moving heads over scanners (1998), digital desks

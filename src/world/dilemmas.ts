@@ -7,6 +7,7 @@
  * Venue choices don't play out until the show: they're kept on the gig as
  * `mods` and folded into the night's quality, failure risk and weather.
  */
+import { dealRng, declineSponsor, giveCharity, signSponsor } from './sponsors';
 import { difficultyOf } from './scenario';
 import type { Rng } from '@/lib/rng';
 import { getModel } from './catalog';
@@ -67,7 +68,7 @@ export function breakdownDilemma(s: TycoonState, v: Vehicle) {
 
 type Maker = (s: TycoonState, gig: Gig, rng: Rng) => Omit<Dilemma, 'id' | 'gigId' | 'createdHour' | 'expiresHour'> | null;
 
-const MAKERS: Record<Exclude<DilemmaKind, 'breakdown' | 'raise' | 'burnout' | 'tradeshow' | 'pricewar' | 'shareholders' | 'ownfest' | 'venue'>, Maker> = {
+const MAKERS: Record<Exclude<DilemmaKind, 'breakdown' | 'raise' | 'burnout' | 'tradeshow' | 'pricewar' | 'shareholders' | 'ownfest' | 'venue' | 'sponsor' | 'charity'>, Maker> = {
   customs: (s, gig) =>
     !gig.overseas
       ? null
@@ -262,7 +263,7 @@ export function resolveDilemma(s: TycoonState, id: string, optionId: string, aut
   const gig = d.gigId ? gigById(s, d.gigId) : undefined;
   const v = d.vehicleId ? s.vehicles.find(x => x.id === d.vehicleId) : undefined;
   if (option.cost) {
-    book(s, d.kind === 'breakdown' ? 'servicing' : d.kind === 'tradeshow' || d.kind === 'pricewar' ? 'marketing' : d.kind === 'shareholders' ? 'equity' : d.kind === 'ownfest' ? 'festival' : d.kind === 'venue' ? 'venues' : 'onsite', -option.cost);
+    book(s, d.kind === 'breakdown' ? 'servicing' : d.kind === 'tradeshow' || d.kind === 'pricewar' ? 'marketing' : d.kind === 'shareholders' ? 'equity' : d.kind === 'ownfest' ? 'festival' : d.kind === 'venue' ? 'venues' : d.kind === 'charity' ? 'marketing' : 'onsite', -option.cost);
     if (v) v.profitThisYear -= option.cost;
   }
   let line = `${d.title}: ${option.label.toLowerCase()}${option.cost ? ` (${money(s, option.cost)})` : ''}.`;
@@ -321,6 +322,20 @@ export function resolveDilemma(s: TycoonState, id: string, optionId: string, aut
       s.crewMorale = Math.max(0, s.crewMorale - 2);
       break;
     }
+    case 'sponsor:sign':
+    case 'sponsor:haggle':
+      line = signSponsor(s, d.payload ?? '', option.id === 'haggle', dealRng(s, d.payload ?? '')) || line;
+      break;
+    case 'sponsor:decline':
+      declineSponsor(s, d.payload ?? '');
+      break;
+    case 'charity:donate':
+    case 'charity:half':
+      giveCharity(s, d.payload, option.id === 'donate');
+      break;
+    case 'charity:decline':
+      s.goodwill = Math.max(0, (s.goodwill ?? 0) - 2);
+      break;
     case 'venue:refurb':
     case 'venue:patch': {
       const o = s.ownedVenues.find(x => x.venueId === d.payload);

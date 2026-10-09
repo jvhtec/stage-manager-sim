@@ -412,6 +412,20 @@ export interface Auction {
   lots: AuctionLot[];
 }
 
+/** A brand sponsoring your trucks (sponsors.ts). */
+export interface SponsorDeal {
+  id: string;
+  brandId: string;
+  monthly: number;
+  /** Shows a month you've promised. */
+  minShows: number;
+  status: 'offer' | 'active';
+  startDay: number;
+  endDay: number;
+  shortfalls: number;
+  paid: number;
+}
+
 export type VenueProgramme = 'lease' | 'promote';
 
 /** A room you own (owned.ts). */
@@ -496,7 +510,7 @@ export interface Run {
   bonus?: number;
 }
 
-export type DilemmaKind = 'venue' | 'ownfest' | 'shareholders' | 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
+export type DilemmaKind = 'sponsor' | 'charity' | 'venue' | 'ownfest' | 'shareholders' | 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
 
 /** A problem that needs your call (dilemmas.ts). */
 export interface Dilemma {
@@ -704,6 +718,12 @@ export interface TycoonState {
   promo?: Promo;
   /** Day each rival was last raided for crew (headhunt.ts). */
   headhunted?: Record<string, number>;
+  /** Brand sponsors and goodwill (sponsors.ts). */
+  sponsors: SponsorDeal[];
+  goodwill?: number;
+  charityDone?: number;
+  /** showsPlayed at the last monthly sponsor check. */
+  sponsorMark?: number;
   /** Rooms you own (owned.ts). */
   ownedVenues: OwnedVenue[];
   /** This year's festival of your own, if any (ownfest.ts). */
