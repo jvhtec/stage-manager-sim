@@ -123,6 +123,7 @@ export type LedgerCategory =
   | 'zones'
   | 'marketing'
   | 'equity'
+  | 'festival'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -157,6 +158,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   zones: 'Low-emission zones',
   marketing: 'Marketing & trade shows',
   equity: 'Shares & dividends',
+  festival: 'Own festival',
   sales: 'Asset sales',
 };
 
@@ -408,6 +410,33 @@ export interface Auction {
   lots: AuctionLot[];
 }
 
+export type FestTier = 'field' | 'weekender' | 'major';
+export type FestHeadliner = 'local' | 'name' | 'star';
+export type FestTicket = 'low' | 'fair' | 'premium';
+
+/** The festival you promote yourself (ownfest.ts). */
+export interface OwnFestival {
+  year: number;
+  tier: FestTier;
+  headliner: FestHeadliner;
+  ticket: FestTicket;
+  cityId: string;
+  day: number;
+  /** Spent up front. */
+  paid: number;
+  covered: boolean;
+  status: 'planned' | 'done';
+  result?: { attendance: number; revenue: number; profit: number; stormed: boolean };
+}
+
+export interface FestivalEdition {
+  year: number;
+  tier: FestTier;
+  attendance: number;
+  profit: number;
+  brand: number;
+}
+
 export type DividendLevel = 'none' | 'modest' | 'generous';
 
 /** The company's stock-market listing (shares.ts). */
@@ -450,7 +479,7 @@ export interface Run {
   bonus?: number;
 }
 
-export type DilemmaKind = 'shareholders' | 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
+export type DilemmaKind = 'ownfest' | 'shareholders' | 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
 
 /** A problem that needs your call (dilemmas.ts). */
 export interface Dilemma {
@@ -656,6 +685,11 @@ export interface TycoonState {
   promo?: Promo;
   /** Day each rival was last raided for crew (headhunt.ts). */
   headhunted?: Record<string, number>;
+  /** This year's festival of your own, if any (ownfest.ts). */
+  ownFestival?: OwnFestival;
+  /** 0-100: how well the festival's name sells. */
+  festivalBrand?: number;
+  festivalHistory: FestivalEdition[];
   /** Stock-market listing, once you go public (shares.ts). */
   listing?: Listing;
   /** Rivals undercutting your towns (pricewars.ts). */

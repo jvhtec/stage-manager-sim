@@ -47,8 +47,9 @@ import { bookTransfer, canReceive, describeQuote, transferQuote } from './transf
 import { AMBITIONS, rndBlocker, startProject } from './rnd';
 import { DEAL_YEARS } from './deals';
 import { headhuntBlocker, headhuntFee, headhuntRivalHealthAfter, headhuntTarget, HEADHUNT_REP_COST } from './headhunt';
+import { festBlocker, planFestival } from './ownfest';
 import { IPO_FLOAT, buybackCost, ipoProceeds, listingBlocker, tradingTotal } from './shares';
-import { DEPTS, type ActionOutcome, type DividendLevel, type BidLevel, type Dept, type RndAmbition, type Vehicle, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
+import { DEPTS, type ActionOutcome, type DividendLevel, type FestHeadliner, type FestTicket, type FestTier, type BidLevel, type Dept, type RndAmbition, type Vehicle, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
 import { STAFF, canBaseVehicle, facilitySpec, nextUpgrade } from './facilities';
 import { aboard, hireFee, levelOf, makePerson, moveToDepot, roleOf, settlePoachBid, syncCrew, unpinFrom } from './people';
 import { BREAK_MONTHS, contractShortfall, installKit } from './contracts';
@@ -602,6 +603,16 @@ export function headhunt(state: TycoonState, rivalId: string, depotId?: string):
   (s.headhunted ??= {})[r.id] = dayOf(s.hour);
   pushNews(s, `${s.company.name} lures ${m.name} away from ${r.name}.`, 'big');
   return ok(s, `${m.name} (${levelOf(m)}★ ${roleOf(m)}) leaves ${r.name} to join you.`);
+}
+
+/** Put on a festival of your own this summer. */
+export function promoteFestival(state: TycoonState, tier: FestTier, headliner: FestHeadliner, ticket: FestTicket, cityId: string): ActionOutcome {
+  const why = festBlocker(state, tier, headliner);
+  if (why) return fail(state, why);
+  if (!state.depots.some(d => d.cityId === cityId)) return fail(state, 'Host it from one of your bases.');
+  const s = cloneState(state);
+  planFestival(s, tier, headliner, ticket, cityId);
+  return ok(s, 'Festival announced.');
 }
 
 export function borrow(state: TycoonState): ActionOutcome {

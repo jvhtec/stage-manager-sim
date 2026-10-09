@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 231 tests):
+(`src/world/__tests__/*.test.ts`, 239 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -329,6 +329,17 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   price is company value × (0.7 + 0.6 × confidence). Below 30 an activist decision appears
   (special dividend +25 confidence, or stand firm −10 and reputation −2); under 8 for four months
   the board ousts you (game over). Going private again costs 120% of the stake's market value.
+
+- **Your own festival** (`ownfest.ts`) — until the end of April you can promote a festival of
+  your own from one of your bases (Market window): a field day (3,000 heads, reputation 35+), a
+  weekender (15,000, 55+) or a major (50,000, 72+), a headliner (local / a big name / a global
+  star) and a ticket price (cheap / fair / premium). Everything is paid up front — set-up, per-head
+  production (your fleet trims it 5% a vehicle, to 30%) and the headliner. Two days out a weather
+  decision offers covered stages; on the day attendance = capacity × (0.5 + 0.5 × brand/100) ×
+  headliner draw × ticket demand × the market × your standing in the town × noise, with an 18%
+  storm (×0.4, or ×0.75 if covered). A shutdown cancels it and returns 40%. Attendance ≥ 90% adds
+  9 festival brand, ≥ 70% adds 4, < 50% costs 5, so first editions lose money and a built brand
+  sells out. The "Headline promoter" milestone rewards a sell-out.
 
 - **Headhunting** (`headhunt.ts`) — every rival carries a standout tech (3★, 4★ at reputation 55+,
   5★ at 80+; the department is the rival's specialty), stable within a month and drawn from a side

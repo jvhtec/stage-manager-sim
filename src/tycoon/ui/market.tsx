@@ -1,7 +1,21 @@
+import { useState } from 'react';
+import { promoteFestival } from '@/world/actions';
+import {
+  FEST_HEADLINERS,
+  FEST_HEADLINER_IDS,
+  FEST_TICKETS,
+  FEST_TICKET_IDS,
+  FEST_TIERS,
+  FEST_TIER_IDS,
+  festBlocker,
+  festDemand,
+  festQuote,
+} from '@/world/ownfest';
+import type { FestHeadliner, FestTicket, FestTier } from '@/world/types';
 import { LOAN_MARGIN, marketNow, monthlyInterest } from '@/world/market';
 import { SEASON, baseRate } from '@/world/content/economy';
 import { ZONES } from '@/world/content/regulations';
-import { dayOf, formatDay } from '@/world/core';
+import { dayOf, formatDay, yearOf } from '@/world/core';
 import { TENDER_CLOSES_DAYS, TENDER_OPENS_DAYS, festivalCalendar } from '@/world/festivals';
 import { worldOf } from '@/world/mapgen';
 import { WAR_WIN_BONUS } from '@/world/pricewars';
@@ -110,6 +124,9 @@ export function MarketWindow({ ctx }: { ctx: WinCtx }) {
         for the winter.
       </div>
 
+      <h4>Your own festival</h4>
+      <OwnFestivalPanel ctx={ctx} />
+
       <h4>Festival season</h4>
       <FestivalCalendar ctx={ctx} />
       <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
@@ -172,6 +189,109 @@ export function FestivalCalendar({ ctx }: { ctx: WinCtx }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function Pick<T extends string>({ label, value, ids, text, onPick }: { label: string; value: T; ids: T[]; text: (id: T) => string; onPick: (id: T) => void }) {
+  return (
+    <div style={{ marginTop: 6 }}>
+      <div className="tt-dim">{label}</div>
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        {ids.map(id => (
+          <button key={id} className="tt-btn sm" data-on={id === value} onClick={() => onPick(id)}>
+            {text(id)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Promote your own festival: size, headliner, ticket price, host town. */
+function OwnFestivalPanel({ ctx }: { ctx: WinCtx }) {
+  const { state } = ctx;
+  const world = worldOf(state);
+  const [tier, setTier] = useState<FestTier>('field');
+  const [headliner, setHeadliner] = useState<FestHeadliner>('name');
+  const [ticket, setTicket] = useState<FestTicket>('fair');
+  const hosts = [...new Set(state.depots.map(d => d.cityId))];
+  const [city, setCity] = useState(hosts[0] ?? '');
+  const cityId = hosts.includes(city) ? city : hosts[0] ?? '';
+  const f = state.ownFestival;
+  const history = state.festivalHistory;
+  const current = f && f.year === yearOf(state, state.hour) ? f : undefined;
+  const quote = festQuote(state, tier, headliner);
+  const why = festBlocker(state, tier, headliner);
+  const share = festDemand(state, { tier, headliner, ticket, cityId });
+  const hostName = (id: string) => world.cityById.get(id)?.name ?? id;
+
+  return (
+    <div>
+      <Stat label="Your brand">
+        <b>{Math.round(state.festivalBrand ?? 0)}</b> <span className="tt-dim">/ 100 · {history.length} edition{history.length === 1 ? '' : 's'}</span>
+      </Stat>
+      <Bar value={state.festivalBrand ?? 0} max={100} color="#a855f7" />
+      {current ? (
+        <div className="tt-item" style={{ marginTop: 6 }}>
+          <div className="grow" style={{ whiteSpace: 'normal' }}>
+            <b>
+              {FEST_TIERS[current.tier].label} in {hostName(current.cityId)}
+            </b>
+            <div className="tt-dim">
+              {formatDay(state, current.day)} · {FEST_HEADLINERS[current.headliner].label} · {FEST_TICKETS[current.ticket].label} tickets · {money(current.paid)} spent
+            </div>
+            {current.status === 'planned' ? (
+              <div className="tt-good" style={{ fontSize: 11 }}>
+                {current.covered ? 'Stages covered.' : 'Watch the forecast two days out.'}
+              </div>
+            ) : (
+              current.result && (
+                <div className={current.result.profit >= 0 ? 'tt-good' : 'tt-bad'}>
+                  {current.result.attendance.toLocaleString()} came{current.result.stormed ? ' (in a storm)' : ''} · {current.result.profit >= 0 ? 'profit' : 'loss'}{' '}
+                  {money(Math.abs(current.result.profit))}
+                </div>
+              )
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
+          <Pick label="Size" value={tier} ids={FEST_TIER_IDS} text={id => `${FEST_TIERS[id].label} (${FEST_TIERS[id].capacity.toLocaleString()})`} onPick={v => setTier(v as FestTier)} />
+          <Pick label="Headliner" value={headliner} ids={FEST_HEADLINER_IDS} text={id => FEST_HEADLINERS[id].label} onPick={v => setHeadliner(v as FestHeadliner)} />
+          <Pick label="Tickets" value={ticket} ids={FEST_TICKET_IDS} text={id => `${FEST_TICKETS[id].label} ${money(FEST_TICKETS[id].price)}`} onPick={v => setTicket(v as FestTicket)} />
+          {hosts.length > 1 && <Pick label="Host base" value={cityId} ids={hosts} text={hostName} onPick={setCity} />}
+          <div className="tt-dim" style={{ marginTop: 6, whiteSpace: 'normal' }}>
+            Up front {money(quote.total)} (set-up {money(quote.setup)}, production {money(quote.production)}, headliner {money(quote.headliner)}). Expected
+            crowd about {Math.round(Math.min(1, share) * 100)}% of capacity — a fresh name sells poorly, a built brand sells out.
+          </div>
+          {why && <div className="tt-warn" style={{ marginTop: 4 }}>{why}</div>}
+          <button
+            className="tt-btn sm"
+            style={{ marginTop: 6 }}
+            disabled={!!why}
+            onClick={() => {
+              const res = ctx.dispatch(s => promoteFestival(s, tier, headliner, ticket, cityId));
+              if (res.message) ctx.toast(res.message, res.ok);
+            }}
+          >
+            Announce the festival
+          </button>
+        </>
+      )}
+      {history.length > 0 && (
+        <div className="tt-dim" style={{ marginTop: 6, whiteSpace: 'normal' }}>
+          Past editions:{' '}
+          {history
+            .slice(-4)
+            .map(e => `${e.year} ${e.attendance ? e.attendance.toLocaleString() : 'cancelled'} (${e.profit >= 0 ? '+' : '−'}${money(Math.abs(e.profit))})`)
+            .join(' · ')}
+        </div>
+      )}
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        Plans close at the end of April and you pay up front. A bigger name and cheaper tickets fill the field; your own fleet trims the production bill. A
+        storm can empty it, and a shutdown cancels it.
+      </div>
     </div>
   );
 }

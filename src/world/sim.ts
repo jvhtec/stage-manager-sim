@@ -71,6 +71,7 @@ import { getTech, techBonus, techsActiveIn } from './content/techs';
 import { dailyOffers, pruneGigs, rivalsTakeOffers, yearlyVenues } from './offers';
 import { dailyTours } from './tours';
 import { dailyFestivals } from './festivals';
+import { dailyOwnFestival } from './ownfest';
 import { dailyEvents, eventStakes } from './events';
 import { deliverTransfers } from './transfers';
 import { monthlyRivals } from './rivals';
@@ -592,6 +593,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   rivalsTakeOffers(s, world, rng);
   dailyTours(s, world, rng);
   dailyFestivals(s, world, rng);
+  dailyOwnFestival(s, rng);
   dailyEvents(s, world, rng);
   dailyContracts(s, world);
   pruneGigs(s);

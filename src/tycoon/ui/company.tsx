@@ -346,6 +346,11 @@ export function HelpWindow() {
           <b>price war</b> in a town you work in (see Market) — ride it out, fight back or buy a truce.
         </li>
         <li>
+          <b>Your own festival</b> (Market): pay up front in spring for a field day, weekender or major, pick a headliner
+          and ticket price, and hope the economy and the weather play along — a built brand sells out, a new one loses
+          money.
+        </li>
+        <li>
           <b>Going public</b>: a big, reputable company can float 30% of itself for cash (Finance). Then shareholders
           want profits and dividends: losses drain their confidence, activists demand action, and a board with no confidence
           at all will throw you out. <b>Headhunting</b>: in the League table you can lure a rival's star tech away at triple
