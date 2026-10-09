@@ -76,7 +76,7 @@ describe('world generation', () => {
       expect(c.venues.length).toBeGreaterThan(0);
       // Oversized towns may sprawl into each other, but never sit on top of one another.
       map.cities.forEach(o => {
-        if (o !== c) expect(Math.hypot(o.x - c.x, o.y - c.y)).toBeGreaterThanOrEqual(0.4 * (c.radius + o.radius + 1) - 0.01);
+        if (o !== c) expect(Math.hypot(o.x - c.x, o.y - c.y)).toBeGreaterThanOrEqual(0.3 * (c.radius + o.radius + 1) - 0.01);
       });
     });
     expect(map.cities.find(c => c.size === 'metropolis')!.venues.some(v => v.kind === 'stadium')).toBe(true);

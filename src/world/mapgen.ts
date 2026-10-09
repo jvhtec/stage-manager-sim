@@ -373,7 +373,7 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
     // Keep the full elbow room if a spot within a few tiles of the real one has it; in crowded
     // regions let neighbouring towns sprawl into each other (a conurbation) rather than be exiled.
     let chosen: { x: number; y: number } | null = null;
-    for (let slack = 1; slack >= 0.4; slack -= 0.1) {
+    for (let slack = 1; slack >= 0.3; slack -= 0.1) {
       let best: { x: number; y: number } | null = null;
       let bestD = Infinity;
       for (const t of roomyTiles) {
@@ -383,7 +383,7 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
         bestD = d;
         best = t;
       }
-      if (best && (bestD <= 3.5 || slack < 0.45)) {
+      if (best && (bestD <= Math.max(1.5, 20 / proj.kmPerTile) || slack < 0.35)) {
         chosen = best;
         break;
       }
