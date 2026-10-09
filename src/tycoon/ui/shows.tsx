@@ -1,6 +1,7 @@
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
-import { assignVehicle, bookGig, haggleGig, unassignVehicle } from '@/world/actions';
+import { assignVehicle, bookGate, bookGig, haggleGig, unassignVehicle } from '@/world/actions';
+import { expectedPayout, gateBlocker, gatePayout, hypeLabel } from '@/world/gate';
 import { HAGGLE_RAISE, haggleBlocker, haggleChance } from '@/world/negotiate';
 import { DEPT_COLORS, DEPT_LABELS, LOAD_IN_HOUR, SHOW_END_HOUR, SHOW_START_HOUR, getModel } from '@/world/catalog';
 import { dateOfDay, dayOf, formatDay, formatHour, loadInHour, loadOutDoneHour, sumCounts } from '@/world/core';
@@ -166,6 +167,15 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
               <button className="tt-btn primary" onClick={() => act(s => bookGig(s, gig.id))}>
                 {tour ? 'Book the whole tour' : 'Book this show'}
               </button>
+              {!tour && !gateBlocker(gig) && (
+                <button
+                  className="tt-btn"
+                  title={`Instead of ${money(gig.fee)} flat: ${money(Math.round(gatePayout(gig.fee, 0.9, 1)))} for a great show on a normal night, ${money(Math.round(gatePayout(gig.fee, 0.9, 1.4)))} if it sells out, ${money(Math.round(gatePayout(gig.fee, 0.6, 0.7)))} for an average show and slow tickets`}
+                  onClick={() => act(s => bookGate(s, gig.id))}
+                >
+                  Share of the gate
+                </button>
+              )}
               {!tour && !haggleBlocker(state, gig) && (
                 <button
                   className="tt-btn"
@@ -180,6 +190,11 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
         </div>
       )}
 
+      {gig.gate && (
+        <Stat label="Deal">
+          Share of the gate <span className="tt-dim">· tickets forecast {hypeLabel(gig.gate.forecast)}{gig.status === 'booked' ? ' — the real number comes on the night' : ''}</span>
+        </Stat>
+      )}
       {gig.status === 'booked' && projection && (
         <>
           <div className="tt-item" style={{ marginTop: 8 }}>
@@ -266,8 +281,8 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
                       </span>
                     </Stat>
                     <Stat label="Margin (est.)">
-                      <b className={gig.fee * (0.35 + 0.65 * projection.expectedQuality) - c.total >= 0 ? 'tt-good' : 'tt-bad'}>
-                        {money(Math.round(gig.fee * (0.35 + 0.65 * projection.expectedQuality) - c.total))}
+                      <b className={expectedPayout(gig, projection.expectedQuality) - c.total >= 0 ? 'tt-good' : 'tt-bad'}>
+                        {money(Math.round(expectedPayout(gig, projection.expectedQuality) - c.total))}
                       </b>
                     </Stat>
                   </>

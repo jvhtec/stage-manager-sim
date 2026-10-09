@@ -2,6 +2,7 @@
  * Player commands. Each takes the current state and returns
  * `{ state, result }` — a new state on success, the untouched one on failure.
  */
+import { gateBlocker, hypeLabel, rollGate } from './gate';
 import { retrofitBlocker, retrofitCost, vehicleClass } from './regulation';
 import { openRun, planRun } from './runs';
 import { haggle, haggleBlocker } from './negotiate';
@@ -155,6 +156,21 @@ export function retrofitVehicle(state: TycoonState, vehicleId: string): ActionOu
   v.profitThisYear -= cost;
   serviceNow(s, v);
   return ok(s, `${v.name} fitted with a filter: emission class ${vehicleClass(v, s)}.`);
+}
+
+/** Book a single show on a share of the gate rather than a flat fee. */
+export function bookGate(state: TycoonState, gigId: string): ActionOutcome {
+  const gig0 = gigById(state, gigId);
+  if (!gig0) return fail(state, 'That offer is no longer available.');
+  const blocker = gateBlocker(gig0);
+  if (blocker) return fail(state, blocker);
+  const booked = bookGig(state, gigId);
+  if (!booked.result.ok) return booked;
+  const s = cloneState(booked.state);
+  const gig = gigById(s, gigId)!;
+  const { hype, forecast } = withRng(s, rng => rollGate(s, gig, rng));
+  gig.gate = { hype, forecast };
+  return ok(s, `Booked ${gig.act} on a share of the gate. Ticket sales are forecast as ${hypeLabel(forecast)}.`);
 }
 
 /** One tap: book the offer and put this truck on it. */

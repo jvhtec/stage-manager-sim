@@ -7,6 +7,7 @@
  * Pure and deterministic: same state in → same state out (the only
  * randomness is the seeded rng carried in `state.rngState`).
  */
+import { hypeLabel, showPayout } from './gate';
 import { paperworkFor } from './paperwork';
 import { chargeZones, yearlyZones } from './regulation';
 import { settleRuns } from './runs';
@@ -489,7 +490,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     return;
   }
 
-  const payout = Math.round(gig.fee * (0.35 + 0.65 * quality));
+  const payout = showPayout(gig, quality);
   book(s, 'shows', payout);
   if (gig.overseas) {
     // Air freight for the rig and flights for the crew, there and back.
@@ -521,7 +522,8 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const riderNote = gear.riderMet === undefined ? '' : gear.riderMet ? ` Rider (${gig.rider!.brand}) honoured.` : ` They wanted ${gig.rider!.brand} and didn't get it.`;
   const kitNote = gear.quality < 0.8 ? ' Reviewers called the kit dated.' : '';
   const techNote = techIds.length ? ` ${techIds.map(id => getTech(id).name).join(' & ')} on the crew.` : '';
-  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}.${weather?.note ?? ''}${failureNote}${freelanceNote}${hire.units ? ` Sub-hired ${hire.units} unit${hire.units > 1 ? 's' : ''} from ${hire.from.join(' & ')}.` : ''}${stakes.note}${riderNote}${kitNote}${techNote}`, quality >= 0.7 ? 'good' : 'info', {
+  const gateNote = gig.gate ? ` Tickets: ${hypeLabel(gig.gate.hype)} (gate deal).` : '';
+  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}.${gateNote}${weather?.note ?? ''}${failureNote}${freelanceNote}${hire.units ? ` Sub-hired ${hire.units} unit${hire.units > 1 ? 's' : ''} from ${hire.from.join(' & ')}.` : ''}${stakes.note}${riderNote}${kitNote}${techNote}`, quality >= 0.7 ? 'good' : 'info', {
     cityId: gig.cityId,
     gigId: gig.id,
   });

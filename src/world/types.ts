@@ -364,6 +364,8 @@ export interface Gig {
   bid?: BidLevel;
   /** You've already haggled over the fee (negotiate.ts). */
   negotiated?: boolean;
+  /** On a share of the gate instead of a flat fee (gate.ts): the true ticket-sales hype and your forecast of it. */
+  gate?: { hype: number; forecast: number };
   /** People you've named for this show (people.ts); they board first and are held back from other jobs. */
   crewPicks?: string[];
   status: GigStatus;
