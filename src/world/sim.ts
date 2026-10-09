@@ -10,6 +10,7 @@
 import { dailyAuctions, monthlyAuctions } from './auctions';
 import { annualReport, monthlyMilestones } from './milestones';
 import { monthlyPartners } from './partners';
+import { monthlyTowns } from './towns';
 import { breakdownDilemma, hourlyCrises } from './dilemmas';
 import type { Rng } from '@/lib/rng';
 import {
@@ -581,6 +582,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     monthlyAuctions(s, rng);
     monthlyMilestones(s);
     monthlyPartners(s);
+    monthlyTowns(s, world);
     monthlyRnd(s, rng);
     monthlyDeals(s, rng);
   }

@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 136 tests):
+(`src/world/__tests__/*.test.ts`, 140 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -346,6 +346,11 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   your history with the act, and whether they asked for you by name. If they refuse, half the time the
   promoter also walks and books someone else — so it only pays when you hold the stronger hand.
 
+- **Growing towns** (`towns.ts`) — every month each town grows by 0.15% plus the era's boom or
+  bust, extra where you run a base (+0.15%) and have a name (up to +0.2%); nothing during a
+  shutdown, capped at 2.5×. Population shows in the Towns window ("+x% since you started"), and the
+  town's offer rate scales with it.
+
 UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
 (workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the
 show forecast, rating and trophy cabinet in the **League**.
@@ -371,5 +376,5 @@ The classic build has systems that don't exist in the map game yet. Each has an 
 5. **Gear transfers & local hire** — move stock between warehouses; hire locally when short.
 6. **Sound** — WebAudio engine hum, crowd swell at live venues, cash-register on payouts.
 7. **Town growth** — landmark venues now open and close in their real years and local fame
-   steers offers; still to come: towns that grow over the decades.
+   steers offers; towns also grow over the decades (`towns.ts`).
 8. **Retire `/classic`** once its systems are ported.

@@ -10,6 +10,7 @@ import {
 } from '@/world/catalog';
 import { dayOf, depotInCity, formatDay, freeLot, yearOf } from '@/world/core';
 import { localFame } from '@/world/offers';
+import { populationOf, townGrowth } from '@/world/towns';
 import { VENUE_YEARS, venueOpenIn } from '@/world/content/venueYears';
 import { worldOf } from '@/world/mapgen';
 import { vehicleActivity } from '@/world/queries';
@@ -83,7 +84,10 @@ export function CityWindow({ ctx, cityId }: { ctx: WinCtx; cityId: string }) {
           Show on map
         </button>
       </div>
-      <Stat label="Population (metro)">{city.population.toLocaleString('en-US')}</Stat>
+      <Stat label="Population (metro)">
+        {populationOf(state, city).toLocaleString('en-US')}
+        {townGrowth(state, city.id) >= 1.02 && <span className="tt-good"> · +{Math.round((townGrowth(state, city.id) - 1) * 100)}% since you started</span>}
+      </Stat>
       <Stat label="Your local rating">
         <span className={rating >= 50 ? 'tt-good' : 'tt-bad'}>{ratingLabel(rating)}</span>
         <span className="tt-dim"> · offers ×{localFame(state, cityId).toFixed(2)}</span>
@@ -416,7 +420,7 @@ export function TownsWindow({ ctx }: { ctx: WinCtx }) {
                 {rival ? <span style={{ color: rival.color }}> ●</span> : null}
               </div>
               <div className="tt-dim">
-                {formatPopulation(c.population)} · {ratingLabel(rating)}
+                {formatPopulation(populationOf(state, c))} · {ratingLabel(rating)}
                 {offers ? ` · ${offers} offer${offers > 1 ? 's' : ''}` : ''}
               </div>
             </div>
