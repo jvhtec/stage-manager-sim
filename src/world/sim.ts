@@ -8,6 +8,7 @@
  * randomness is the seeded rng carried in `state.rngState`).
  */
 import { paperworkFor } from './paperwork';
+import { chargeZones, yearlyZones } from './regulation';
 import { settleRuns } from './runs';
 import { dailyUtilisation } from './fleetReport';
 import { recordVenueNight } from './promoters';
@@ -454,6 +455,8 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const tw = TIER_WEIGHT[gig.tier];
   const rating = s.cityRatings[gig.cityId] ?? 50;
 
+  // Working a low-emission zone costs the old trucks a daily charge, show or no show.
+  if (onSite.length) chargeZones(s, gig, onSite);
   // A rig that crossed a border paid its visas and carnet whether or not the night went well.
   if (gig.overseas && onSite.length) {
     const papers = paperworkFor(s, gig, working, crew, yearOf(s, s.hour));
@@ -539,6 +542,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     if (s.hour > HOURS_PER_DAY) awardsNight(s, date.getUTCFullYear() - 1);
     yearlyVenues(s, world, date.getUTCFullYear());
     annualReport(s, date.getUTCFullYear() - 1);
+    yearlyZones(s, date.getUTCFullYear());
   }
   announceModels(s, date.getUTCFullYear());
   announceGear(s, date.getUTCFullYear());

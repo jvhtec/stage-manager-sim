@@ -120,6 +120,7 @@ export type LedgerCategory =
   | 'sponsorship'
   | 'paperwork'
   | 'bonuses'
+  | 'zones'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -151,6 +152,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   sponsorship: 'Maker sponsorship',
   paperwork: 'Visas & carnets',
   bonuses: 'Run bonuses',
+  zones: 'Low-emission zones',
   sales: 'Asset sales',
 };
 
@@ -261,6 +263,8 @@ export interface Vehicle {
   profitLastYear: number;
   /** How busy it's been lately, 0-1 (fleetReport.ts). */
   util?: number;
+  /** Filters fitted to an older engine, each adding an emission class (regulation.ts). */
+  retrofit?: number;
   /** Leased rather than owned (finance.ts). */
   lease?: { monthly: number; sinceHour: number };
 }

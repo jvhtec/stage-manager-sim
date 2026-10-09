@@ -2,8 +2,9 @@
  * The whole fleet at a glance: how hard each vehicle works, what needs
  * attention in the next two weeks, and which trucks earn their keep.
  */
+import { zoneBill } from './regulation';
 import { SERVICE_INTERVAL_DAYS, getModel } from './catalog';
-import { dayOf, gigById, vehicleAgeYears } from './core';
+import { dayOf, formatMoney, gigById, vehicleAgeYears } from './core';
 import { projectCoverage } from './queries';
 import type { Gig, TycoonState, Vehicle } from './types';
 
@@ -87,6 +88,17 @@ export function fleetSummary(state: TycoonState): FleetSummary {
     } else if (p.evaluation.coverage < 0.95 || p.crew < g.crewNeeded) {
       alerts.push({ id: `s-${g.id}`, severity: 'warn', text: `${g.act} (${when}) is short on ${p.evaluation.coverage < 0.95 ? 'gear' : 'crew'}.`, gigId: g.id });
     } else covered++;
+  });
+
+  // Trucks that would be charged in a low-emission zone for a booked show.
+  state.vehicles.filter(v => v.owner === 'player').forEach(v => {
+    v.orders
+      .map(id => gigById(state, id))
+      .filter((g): g is Gig => !!g && g.status === 'booked')
+      .forEach(g => {
+        const bill = zoneBill(state, v, g);
+        if (bill) alerts.push({ id: `z-${v.id}-${g.id}`, severity: 'warn', text: `${v.name} (class ${bill.vehicleClass}) will be charged ${formatMoney(state, bill.total)} in the ${bill.zone.name} for ${g.act}.`, vehicleId: v.id, gigId: g.id });
+      });
   });
 
   rows.forEach(r => {

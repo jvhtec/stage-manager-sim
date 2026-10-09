@@ -262,6 +262,7 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
                         {c.freelance ? ` · freelancers ${money(c.freelance)}` : ''}
                         {c.subhire ? ` · sub-hire ${money(c.subhire)}` : ''}
                         {c.paperwork ? ` · visas & carnet ${money(c.paperwork)}` : ''}
+                        {c.zones ? ` · low-emission zone ${money(c.zones)}` : ''}
                       </span>
                     </Stat>
                     <Stat label="Margin (est.)">

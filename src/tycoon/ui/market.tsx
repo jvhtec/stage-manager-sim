@@ -1,5 +1,6 @@
 import { LOAN_MARGIN, marketNow, monthlyInterest } from '@/world/market';
 import { SEASON, baseRate } from '@/world/content/economy';
+import { ZONES } from '@/world/content/regulations';
 import { dayOf, formatDay } from '@/world/core';
 import { TENDER_CLOSES_DAYS, TENDER_OPENS_DAYS, festivalCalendar } from '@/world/festivals';
 import { worldOf } from '@/world/mapgen';
@@ -36,6 +37,31 @@ export function MarketWindow({ ctx }: { ctx: WinCtx }) {
       <Stat label="Fees">
         <span className={tone(now.fees)}>{pct(now.fees)}</span>
       </Stat>
+
+      <h4>Low-emission zones</h4>
+      {(ZONES[state.country] ?? []).length ? (
+        <div className="tt-list">
+          {(ZONES[state.country] ?? []).map(z => {
+            const live = now.year >= z.from;
+            return (
+              <div key={`${z.name}-${z.from}`} className="tt-item" style={{ gap: 6, opacity: live ? 1 : 0.6 }}>
+                <div className="grow" style={{ minWidth: 0, whiteSpace: 'normal' }}>
+                  <b>{z.name}</b> <span className="tt-dim">— {z.cities.join(', ')}</span>
+                  <div className="tt-dim">
+                    {live ? 'In force' : `From ${z.from}`}: class {z.minClass}+ or {money(z.charge)} a day
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div className="tt-dim">No low-emission zones in your market yet.</div>
+      )}
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        A truck's emission class is what it met when it was built (1992 class 1 … 2014 class 6); a retrofit adds one. Check a
+        vehicle's class in its window.
+      </div>
 
       <h4>Season</h4>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 3, alignItems: 'end', height: 56 }}>

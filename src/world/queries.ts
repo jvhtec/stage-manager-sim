@@ -1,4 +1,5 @@
 /** Read-only projections for the UI — nothing here mutates state. */
+import { zoneBill } from './regulation';
 import { paperworkFor } from './paperwork';
 import { GEAR_RESALE_RATE, HOTEL_NIGHT, HOURS_PER_DAY, PER_DIEM, fuelPerTile, getModel } from './catalog';
 import { getProduct } from './content/gear';
@@ -223,6 +224,8 @@ export interface JobCosts {
   subhire: number;
   /** Visas and carnets on a leg abroad. */
   paperwork: number;
+  /** Low-emission zone charges for the trucks assigned. */
+  zones: number;
   total: number;
   nights: number;
 }
@@ -252,5 +255,6 @@ export function estimateJobCosts(state: TycoonState, gig: Gig, projection = proj
   const freelance = projection.freelance.cost;
   const subhire = projection.subhire.cost;
   const paperwork = gig.overseas ? paperworkFor(state, gig, projection.delivered, projection.crew || gig.crewNeeded, dateOfDay(state, gig.day).getUTCFullYear()).total : 0;
-  return { fuel: Math.round(fuel), travel: Math.round(travel), freelance, subhire, paperwork, total: Math.round(fuel + travel + freelance + subhire + paperwork), nights };
+  const zones = projection.vehicles.reduce((sum, v) => sum + (zoneBill(state, v, gig)?.total ?? 0), 0);
+  return { fuel: Math.round(fuel), travel: Math.round(travel), freelance, subhire, paperwork, zones, total: Math.round(fuel + travel + freelance + subhire + paperwork + zones), nights };
 }

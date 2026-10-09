@@ -2,6 +2,7 @@
  * Player commands. Each takes the current state and returns
  * `{ state, result }` — a new state on success, the untouched one on failure.
  */
+import { retrofitBlocker, retrofitCost, vehicleClass } from './regulation';
 import { openRun, planRun } from './runs';
 import { haggle, haggleBlocker } from './negotiate';
 import { PARTNER_DISCOUNT, PARTNER_SHARE, endPartner, partnerBlocker, partnerPrice, signPartner } from './partners';
@@ -138,6 +139,22 @@ export function bookRun(state: TycoonState, vehicleId: string, gigIds: string[])
   openRun(s, vehicleId, plan.stops.map(x => x.gig.id));
   const bonus = plan.bonusRate ? ` Deliver all of it well for a ${Math.round(plan.bonusRate * 100)}% run bonus.` : '';
   return ok(s, `${v.name} booked on ${plan.stops.length} date${plan.stops.length > 1 ? 's' : ''}.${bonus}`);
+}
+
+/** Fit a filter to an older truck: one emission class up, at its depot. */
+export function retrofitVehicle(state: TycoonState, vehicleId: string): ActionOutcome {
+  const v0 = state.vehicles.find(v => v.id === vehicleId && v.owner === 'player');
+  if (!v0) return fail(state, 'Unknown vehicle.');
+  const blocker = retrofitBlocker(state, v0);
+  if (blocker) return fail(state, blocker);
+  const s = cloneState(state);
+  const v = s.vehicles.find(x => x.id === vehicleId)!;
+  const cost = retrofitCost(v);
+  v.retrofit = (v.retrofit ?? 0) + 1;
+  book(s, 'servicing', -cost);
+  v.profitThisYear -= cost;
+  serviceNow(s, v);
+  return ok(s, `${v.name} fitted with a filter: emission class ${vehicleClass(v, s)}.`);
 }
 
 /** One tap: book the offer and put this truck on it. */

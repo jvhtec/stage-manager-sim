@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { bookAndAssign, rehomeVehicle, sellVehicle, sendHome, serviceVehicle, unassignVehicle } from '@/world/actions';
+import { bookAndAssign, retrofitVehicle, rehomeVehicle, sellVehicle, sendHome, serviceVehicle, unassignVehicle } from '@/world/actions';
 import { leaseReturnPenalty } from '@/world/finance';
 import { SERVICE_INTERVAL_DAYS, getModel } from '@/world/catalog';
 import { stockSize } from '@/world/loading';
@@ -10,6 +10,7 @@ import { worldOf } from '@/world/mapgen';
 import { estimateArrival, suggestJobs, vehicleActivity } from '@/world/queries';
 import { roadDistance } from '@/world/pathfinding';
 import { fleetSummary } from '@/world/fleetReport';
+import { retrofitBlocker, retrofitCost, vehicleClass } from '@/world/regulation';
 import { Bar, Stat } from './bits';
 import { PersonRow } from './crewWindow';
 import { kmoney, money } from './format';
@@ -67,6 +68,17 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
       <Stat label="Last service">
         {daysSinceService}d ago <span className="tt-dim">(every {SERVICE_INTERVAL_DAYS}d)</span>
       </Stat>
+      {v.owner === 'player' && (
+        <Stat label="Emission class">
+          <b>{vehicleClass(v, state)}</b>
+          {(v.retrofit ?? 0) > 0 && <span className="tt-dim"> (filter ×{v.retrofit})</span>}
+          {atHome && !retrofitBlocker(state, v) && (
+            <button className="tt-btn sm" style={{ marginLeft: 6 }} onClick={() => act(s => retrofitVehicle(s, v.id))} title="Fit a particulate filter: one class cleaner">
+              Retrofit {money(retrofitCost(v))}
+            </button>
+          )}
+        </Stat>
+      )}
       <Stat label="Profit this year">
         <span className={v.profitThisYear >= 0 ? 'tt-good' : 'tt-bad'}>{money(v.profitThisYear)}</span>
       </Stat>
