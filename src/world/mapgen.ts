@@ -24,10 +24,8 @@ import {
 } from './types';
 import { MinHeap } from './heap';
 import { DEFAULT_COUNTRY, getCountry } from './content/countries';
-import { geoCities, geoExcluded, homeMask, landMask, projectionFor, rangeLift } from './content/geo';
+import { geoCities, geoExcluded, homeMask, sizeOfGeo, landMask, projectionFor, rangeLift } from './content/geo';
 
-export const MAP_WIDTH = 72;
-export const MAP_HEIGHT = 56;
 const MAX_LEVEL = 5;
 const CITY_COUNT = 16;
 
@@ -284,14 +282,14 @@ function seaDistance(land: Uint8Array, cw: number, ch: number): Uint16Array {
 
 export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTRY): WorldMap {
   const country = getCountry(countryCode);
-  const width = MAP_WIDTH;
-  const height = MAP_HEIGHT;
+  const [width, height] = sizeOfGeo(country.code);
   const rng = createRng(seed ^ 0x5eed ^ (country.code.charCodeAt(0) * 131 + country.code.charCodeAt(1)));
   const cw = width + 1;
   const ch = height + 1;
 
   // 1. The real country: coast, mountains.
   const land = landMask(country.code);
+  const proj0 = projectionFor(country.code);
   const home = homeMask(country.code);
   const lift = rangeLift(country.code);
   const toSea = seaDistance(land, cw, ch);
@@ -316,6 +314,7 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
     seed,
     width,
     height,
+    kmPerTile: proj0.kmPerTile,
     terrain: new Uint8Array(width * height),
     road: new Uint8Array(width * height),
     foreign: new Uint8Array(width * height),

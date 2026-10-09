@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { generateWorld, getWorld, isFlat } from '../mapgen';
-import { getCityPath, roadDistance } from '../pathfinding';
+import { KM_PER_UNIT, getCityPath, roadDistance } from '../pathfinding';
 import { createTycoonGame } from '../state';
 import { advanceHours } from '../sim';
 import { assignVehicle, bookGig, buildDepot, buyVehicle, borrow, repay } from '../actions';
@@ -80,6 +80,25 @@ describe('world generation', () => {
       });
     });
     expect(map.cities.find(c => c.size === 'metropolis')!.venues.some(v => v.kind === 'stadium')).toBe(true);
+  });
+
+  it('measures distance in real kilometres, whatever the size of the tile', () => {
+    const gb = generateWorld(SEED, 'GB');
+    const us = generateWorld(SEED, 'US');
+    // Britain is drawn on a finer grid than the States...
+    expect(gb.kmPerTile).toBeLessThan(us.kmPerTile / 4);
+    [gb, us].forEach(map => {
+      const [a, b] = [map.cities[0], map.cities[1]];
+      const tiles = getCityPath(map, a.id, b.id).length - 1;
+      expect(roadDistance(map, a.id, b.id) * KM_PER_UNIT).toBeCloseTo(tiles * map.kmPerTile, 5);
+    });
+    // ...and the biggest cities are a plausible real distance apart (Madrid-Barcelona ~ 620 km by air).
+    const es = generateWorld(SEED, 'ES');
+    const km = roadDistance(es, 'city-0', 'city-1') * KM_PER_UNIT;
+    expect(km).toBeGreaterThan(500);
+    expect(km).toBeLessThan(1100);
+    // Finer grids give the cramped countries room.
+    expect(gb.width * gb.height).toBeGreaterThan(72 * 56);
   });
 
   it('gives bigger places bigger venues, on flat dry lots', () => {

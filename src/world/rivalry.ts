@@ -20,7 +20,7 @@ export const HEAT_DIRTY = 35;
 export const HEAT_MAX = 100;
 /** Cooling each month. */
 export const HEAT_DECAY = 3;
-/** How near a rival must be (road tiles) to a base of yours to resent it. */
+/** How near a rival must be (game distance units, 18 km each) to a base of yours to resent it. */
 export const NEIGHBOUR_REACH = 35;
 /** Provocations. */
 export const HEAT_HEADHUNT = 12;

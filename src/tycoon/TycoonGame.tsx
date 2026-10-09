@@ -38,7 +38,7 @@ import type { Selection } from './render/renderer';
 import { useTycoon, SPEEDS } from './useTycoon';
 import { useInstallPrompt, useLayout } from './useLayout';
 import { Window } from './ui/Window';
-import { money, setCurrency } from './ui/format';
+import { money, setCurrency, setDistanceUnit } from './ui/format';
 import { getCountry } from '@/world/content/countries';
 import { CityWindow, DepotListWindow, DepotWindow, TownsWindow, VenueWindow } from './ui/places';
 import { VehicleListWindow, VehicleWindow } from './ui/fleet';
@@ -233,6 +233,7 @@ export default function TycoonGame() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage, game.state]);
   setCurrency(getCountry(state?.country).currency);
+  setDistanceUnit(state?.country);
   const world = state ? worldOf(state) : null;
 
   const titleFor = (w: OpenWindow): string => {

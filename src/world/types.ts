@@ -76,6 +76,8 @@ export interface WorldMap {
   seed: number;
   width: number;
   height: number;
+  /** Ground distance of one tile — game distances and travel times follow real kilometres. */
+  kmPerTile: number;
   terrain: Uint8Array;
   road: Uint8Array;
   /** 1 on land that belongs to a neighbouring country (drawn muted, no towns, roads avoid it). */

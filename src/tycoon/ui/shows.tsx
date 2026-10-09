@@ -25,7 +25,7 @@ import { estimateArrival, estimateJobCosts, projectCoverage } from '@/world/quer
 import { DEPTS, type Gig, type TycoonState } from '@/world/types';
 import { Bar, Stat, TierChip } from './bits';
 import { BrandBadge } from './brands';
-import { kmoney, money } from './format';
+import { distance, kmoney, money } from './format';
 import type { WinCtx } from './types';
 import { READINESS_CLASS, gigDates, gigReadiness, gigWhere } from './gigInfo';
 import { TourList } from './tours';
@@ -146,7 +146,7 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
       {gig.status === 'offer' && (
         <Stat label="Book by">
           {formatDay(state, gig.acceptByDay)}{' '}
-          <span className="tt-dim">· {Math.round(nearestDepotDistance(state, gig))} tiles from your nearest depot</span>
+          <span className="tt-dim">· {distance(nearestDepotDistance(state, gig))} from your nearest depot</span>
         </Stat>
       )}
 
@@ -545,7 +545,7 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
                 <div className="tt-dim">
                   {g.tourId ? '🎫 ' : ''}
                   {gigWhere(state, g)} · {gigDates(state, g)}
-                  {tab === 'offers' ? ` · ${Math.round(dist)} tiles` : ''}
+                  {tab === 'offers' ? ` · ${distance(dist)}` : ''}
                 </div>
               </div>
               {tab === 'offers' && <TierChip tier={g.tier} locked={!!isLocked(g)} />}

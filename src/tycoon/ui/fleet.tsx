@@ -13,7 +13,7 @@ import { fleetSummary } from '@/world/fleetReport';
 import { retrofitBlocker, retrofitCost, vehicleClass } from '@/world/regulation';
 import { Bar, Stat } from './bits';
 import { PersonRow } from './crewWindow';
-import { kmoney, money } from './format';
+import { distance, kmoney, money } from './format';
 import type { WinCtx } from './types';
 
 export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: string }) {
@@ -128,7 +128,7 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
                     {world.venueById.get(g.venueId)?.name}, {world.cityById.get(g.cityId)?.name} · {formatDay(state, g.day)}
                   </div>
                   <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
-                    {Number.isFinite(leg) && leg > 0 ? `${Math.round(leg)} tiles on · ` : ''}
+                    {Number.isFinite(leg) && leg > 0 ? `${distance(leg)} on · ` : ''}
                     <span className={spare < 0 ? 'tt-bad' : spare < 6 ? 'tt-warn' : 'tt-good'}>
                       {spare < 0 ? `late by ${Math.ceil(-spare)}h` : spare < 6 ? `tight: ${Math.floor(spare)}h spare` : `${Math.floor(spare)}h spare at load-in`}
                     </span>
@@ -151,7 +151,7 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
             {(() => {
               const last = gigById(state, v.orders[v.orders.length - 1]);
               const back = last ? roadDistance(world, last.cityId, v.homeCityId) : NaN;
-              return Number.isFinite(back) && back > 0 ? ` — ${Math.round(back)} tiles, about ${Math.ceil(back / model.speed)}h.` : '.';
+              return Number.isFinite(back) && back > 0 ? ` — ${distance(back)}, about ${Math.ceil(back / model.speed)}h.` : '.';
             })()}
           </div>
         </div>
@@ -168,7 +168,7 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
                 <div className="grow clickable" style={{ minWidth: 0, cursor: 'pointer' }} onClick={() => ctx.open('gig', s.gig.id)}>
                   <b>{s.gig.act}</b>
                   <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
-                    {world.venueById.get(s.gig.venueId)?.name}, {world.cityById.get(s.gig.cityId)?.name} · {formatDay(state, s.gig.day)} · {Math.round(s.distance)} tiles on
+                    {world.venueById.get(s.gig.venueId)?.name}, {world.cityById.get(s.gig.cityId)?.name} · {formatDay(state, s.gig.day)} · {distance(s.distance)} on
                   </div>
                 </div>
                 <button className="tt-btn sm primary" onClick={() => act(st => bookAndAssign(st, v.id, s.gig.id))}>

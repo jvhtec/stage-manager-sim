@@ -23,7 +23,7 @@ import { VenueDiorama } from './scenes';
 import { DELEGATION, RENT_FACTOR, WAREHOUSES, canBaseVehicle, facilitySpec } from '@/world/facilities';
 import { ContractCard } from './contracts';
 import { Bar, Stat, TierChip } from './bits';
-import { formatPopulation, kmoney, marketLabel, money, ratingLabel } from './format';
+import { distance, formatPopulation, kmoney, marketLabel, money, ratingLabel } from './format';
 import type { WinCtx } from './types';
 
 const VENUE_KIND_LABEL: Record<string, string> = {
@@ -385,7 +385,7 @@ export function DepotWindow({ ctx, depotId }: { ctx: WinCtx; depotId: string }) 
                 <div className="grow">
                   <div style={{ fontWeight: 700 }}>{m.name}</div>
                   <div className="tt-dim">
-                    {m.gearCapacity} gear · {m.crewSeats} seats · {Math.round(m.speed * 24)} tiles/day · {kmoney(m.runningCostPerYear)}/yr
+                    {m.gearCapacity} gear · {m.crewSeats} seats · {distance(m.speed * 24)}/day · {kmoney(m.runningCostPerYear)}/yr
                   </div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}>
                     <span className="tt-dim" style={{ fontSize: 11 }}>

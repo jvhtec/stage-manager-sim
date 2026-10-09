@@ -30,7 +30,7 @@ import {
 } from './core';
 import { gigBookingBar } from './standing';
 import { worldOf } from './mapgen';
-import { roadDistance } from './pathfinding';
+import { roadDistance, unitsPerTile } from './pathfinding';
 import { DEPTS, type CrewMember, type DeptCounts, type GearStock, type Gig, type TycoonState, type Vehicle } from './types';
 
 export function vehicleActivity(state: TycoonState, v: Vehicle): string {
@@ -68,7 +68,7 @@ export function estimateArrival(state: TycoonState, v: Vehicle, gig: Gig): numbe
   }
   if (v.status === 'driving' || v.status === 'broken') {
     const to = v.route!.to;
-    const remaining = Math.ceil((roadDistance(world, v.route!.from, to) - v.route!.progress) / getModel(v.modelId).speed);
+    const remaining = Math.ceil((roadDistance(world, v.route!.from, to) - v.route!.progress * unitsPerTile(world)) / getModel(v.modelId).speed);
     const start = state.hour + Math.max(0, remaining) + Math.max(0, (v.brokenUntil ?? 0) - state.hour);
     return start + travelHours(world, v.modelId, to, gig.cityId);
   }

@@ -95,7 +95,7 @@ import { dailyIncidents, monthlyInsurance, rollWeather } from './incidents';
 import { dailyContracts, houseRigAt, monthlyContracts } from './contracts';
 import { dailyMarket, fuelMultiplier, marketNow, monthlyInterest } from './market';
 import { getRegion } from './content/world';
-import { getCityPath } from './pathfinding';
+import { getCityPath, unitsPerTile } from './pathfinding';
 import { DEPTS, type GearStock, type Gig, type TycoonState, type Vehicle, type WorldMap } from './types';
 import { findArtist } from './content/artists';
 
@@ -352,7 +352,7 @@ function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
   const route = v.route!;
   const path = getCityPath(world, route.from, route.to);
   const model = getModel(v.modelId);
-  route.progress += model.speed;
+  route.progress += model.speed / unitsPerTile(world); // progress is in path tiles
   if (v.owner === 'player') {
     const fuel = model.speed * fuelPerTile(model) * fuelMultiplier(s);
     book(s, 'fuel', -fuel);

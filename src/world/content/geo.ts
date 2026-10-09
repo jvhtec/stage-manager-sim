@@ -5,10 +5,10 @@
  * The projection must match scripts/gen-landmask.mjs, which rasterised the coastlines.
  */
 import params from './geoParams.json';
-import { HOMEMASKS, LANDMASKS } from './landmasks';
+import { HOMEMASKS, LANDMASKS, SIZES } from './landmasks';
 
-export const GEO_W = 72;
-export const GEO_H = 56;
+/** Grid size in tiles. */
+export const sizeOfGeo = (code: string): [number, number] => SIZES[code];
 
 interface Range {
   name: string;
@@ -39,6 +39,7 @@ export interface Projection {
 
 export function projectionFor(code: string): Projection {
   const p = PARAMS[code];
+  const [GEO_W, GEO_H] = SIZES[code];
   const [latMin, latMax] = p.lat;
   const [lonMin, lonMax] = p.lon;
   const latC = (latMin + latMax) / 2;
@@ -54,19 +55,19 @@ export function projectionFor(code: string): Projection {
 export const geoCities = (code: string) => PARAMS[code].cities;
 export const geoExcluded = (code: string) => PARAMS[code].exclude;
 
-function unpack(b64: string): Uint8Array {
+function unpack(code: string, b64: string): Uint8Array {
   const bin = atob(b64);
-  const n = (GEO_W + 1) * (GEO_H + 1);
+  const n = (SIZES[code][0] + 1) * (SIZES[code][1] + 1);
   const out = new Uint8Array(n);
   for (let i = 0; i < n; i++) out[i] = (bin.charCodeAt(i >> 3) >> (i & 7)) & 1;
   return out;
 }
 
 /** Land (1) / sea (0) on the (W+1)×(H+1) corner grid — neighbouring countries count as land. */
-export const landMask = (code: string) => unpack(LANDMASKS[code]);
+export const landMask = (code: string) => unpack(code, LANDMASKS[code]);
 
 /** 1 where the corner lies inside the country itself. */
-export const homeMask = (code: string) => unpack(HOMEMASKS[code]);
+export const homeMask = (code: string) => unpack(code, HOMEMASKS[code]);
 
 /** How strongly the country's mountain ranges lift the ground at a corner, 0 to ~1. */
 export function rangeLift(code: string): (x: number, y: number) => number {

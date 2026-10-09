@@ -6,7 +6,7 @@ import { worldOf } from '@/world/mapgen';
 import { roadDistance } from '@/world/pathfinding';
 import { gigBookingBar } from '@/world/standing';
 import { Stat } from './bits';
-import { kmoney, money } from './format';
+import { distance, kmoney, money } from './format';
 import type { WinCtx } from './types';
 
 /** String several offers onto one truck: see the timing, the driving and the bonus before you commit. */
@@ -62,12 +62,12 @@ export function PlannerWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId?: str
               <div className="grow" style={{ minWidth: 0 }}>
                 <b>{g.act}</b>
                 <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
-                  {world.venueById.get(g.venueId)?.name}, {world.cityById.get(g.cityId)?.name} · {formatDay(state, g.day)} · {Math.round(roadDistance(world, v.homeCityId, g.cityId))} tiles from base
+                  {world.venueById.get(g.venueId)?.name}, {world.cityById.get(g.cityId)?.name} · {formatDay(state, g.day)} · {distance(roadDistance(world, v.homeCityId, g.cityId))} from base
                   {reason ? ` · ${reason}` : ''}
                 </div>
                 {on && stop && (
                   <div style={{ fontSize: 11 }} className={stop.spare < 0 ? 'tt-bad' : stop.spare < 6 ? 'tt-warn' : 'tt-good'}>
-                    {stop.leg ? `${Math.round(stop.leg)} tiles on · ` : ''}
+                    {stop.leg ? `${distance(stop.leg)} on · ` : ''}
                     {stop.spare < 0 ? `late by ${Math.ceil(-stop.spare)}h` : `${Math.floor(stop.spare)}h spare`}
                   </div>
                 )}
@@ -94,7 +94,7 @@ export function PlannerWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId?: str
             )}
           </Stat>
           <Stat label="Driving">
-            {Math.round(plan.distance)} tiles · fuel {money(plan.fuel)}
+            {distance(plan.distance)} · fuel {money(plan.fuel)}
           </Stat>
           <Stat label="Nights away">
             {plan.nights} · {money(plan.travel)}

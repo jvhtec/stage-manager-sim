@@ -67,11 +67,20 @@ export function getCityPath(map: WorldMap, fromCityId: string, toCityId: string)
   return path;
 }
 
-/** Road distance in tiles; Infinity if the cities aren't connected. */
+/**
+ * Game distance is real distance: one unit is this many kilometres, and vehicle speeds,
+ * fuel, ranges and trip times are all measured in units. A 300 km run takes the same
+ * time in Britain as in the States; only the map's tile size differs.
+ */
+export const KM_PER_UNIT = 18;
+export const unitsPerTile = (map: Pick<WorldMap, 'kmPerTile'>) => map.kmPerTile / KM_PER_UNIT;
+export const unitsToKm = (units: number) => Math.round(units * KM_PER_UNIT);
+
+/** Road distance in game units (see KM_PER_UNIT); Infinity if the cities aren't connected. */
 export function roadDistance(map: WorldMap, fromCityId: string, toCityId: string): number {
   if (fromCityId === toCityId) return 0;
   const path = getCityPath(map, fromCityId, toCityId);
-  return path.length ? path.length - 1 : Infinity;
+  return path.length ? (path.length - 1) * unitsPerTile(map) : Infinity;
 }
 
 /** Fractional tile-space position (tile centres at +0.5) after `progress` tiles along a path. */

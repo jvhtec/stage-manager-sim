@@ -171,9 +171,14 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
   coast is flat beach. Towns near the sea sit at beach level, inland ones may stand on a low
   plateau; roads cross narrow straits on bridges. The seed only varies the rolling hills, the
   woods, venue sizes and each town's street layout — "Reroll terrain" in the setup screen.
-  Every map is the same 72×56 tiles, so a tile is ~17 km in Spain, ~19 km in Britain and ~74 km
-  in the US: game distances are compressed by country, which keeps trips playable everywhere.
-  Saves from before this change are discarded (save v7).
+  Grid size follows the country: Spain, France and the US use 72×56; Britain (59×91, ~11 km a
+  tile), Italy (80×91, ~13 km) and Germany (59×81, ~11 km) get finer, taller grids so their oversized
+  towns aren't cramped. **Distance is real distance**: a tile knows its kilometres, one game unit
+  is 18 km, and speeds, fuel, ranges and trip times are all in units, so a 300 km run takes the same
+  time in Britain as in the States and the UI speaks km (miles in Britain and the US) rather than
+  tiles. The consequence is that America is huge — its towns are ~3,500 km apart on average, so
+  play there is regional circuits and the odd long haul (a smart-bot test company ends 9 years at
+  roughly £5M value against £7–12M elsewhere). Saves from before the real maps are discarded (save v7).
 
 - **Start years** (1975, 1980, 1985, 1990, 2000, 2010) — the era sets which trucks, gear and
   desks exist (Bedford TK, Altec A4s, Yamaha PM1000 and Strand lanterns in 1975; no video kit
@@ -572,7 +577,7 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
 - **Choosing the crew** — on a booked show, name exactly who goes (up to the crew it needs): named
   people board first, even over better-matched techs, and are held back from other booked shows;
   the gig window shows the crew fit.
-- **Truck itinerary** — each order in a vehicle's list shows the tiles from the previous stop and
+- **Truck itinerary** — each order in a vehicle's list shows the distance (km or miles) from the previous stop and
   the hours spare at load-in (green 6h+, amber under 6h, red if late), plus the way back to depot.
   (Orders stay sorted by show date, so there's nothing to drag into order.)
 - **Visas & carnets** (`paperwork.ts`) — a rig that crosses a border pays an ATA carnet (£400 +

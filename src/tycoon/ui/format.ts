@@ -1,3 +1,5 @@
+import { KM_PER_UNIT } from '@/world/pathfinding';
+
 let symbol = '$';
 
 /** Set once per render from the save's home country (€, £, $). */
@@ -6,6 +8,19 @@ export function setCurrency(next: string) {
 }
 
 export const currencySymbol = () => symbol;
+
+let miles = false;
+
+/** Britain and America measure roads in miles. */
+export function setDistanceUnit(country: string | undefined) {
+  miles = country === 'GB' || country === 'US';
+}
+
+/** A game distance (18 km per unit) in the player's own unit: "320 km" / "199 mi". */
+export function distance(units: number): string {
+  const km = units * KM_PER_UNIT;
+  return miles ? `${Math.round(km * 0.621371).toLocaleString('en-US')} mi` : `${Math.round(km).toLocaleString('en-US')} km`;
+}
 
 export const money = (n: number) => `${n < 0 ? '-' : ''}${symbol}${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
 

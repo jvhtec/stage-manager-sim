@@ -29,7 +29,7 @@ const NATIONAL_TOUR_CHANCE = 0.08;
 const WORLD_TOUR_CHANCE = 0.035;
 const NATIONAL_BONUS = 0.25;
 const WORLD_BONUS = 0.3;
-/** Planning speed for spacing dates (tiles/hour) — a little slower than a Luton. */
+/** Planning speed for spacing dates (distance units/hour) — a little slower than a Luton. */
 const PLANNING_SPEED = 1.3;
 
 function shuffled<T>(items: readonly T[], rng: Rng): T[] {
