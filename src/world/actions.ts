@@ -2,6 +2,7 @@
  * Player commands. Each takes the current state and returns
  * `{ state, result }` — a new state on success, the untouched one on failure.
  */
+import { haggle, haggleBlocker } from './negotiate';
 import { PARTNER_DISCOUNT, PARTNER_SHARE, endPartner, partnerBlocker, partnerPrice, signPartner } from './partners';
 import { lotBlocker, lotName, takeLot } from './auctions';
 import { resolveDilemma } from './dilemmas';
@@ -333,6 +334,21 @@ export function pinCrew(state: TycoonState, personId: string, vehicleId?: string
   const s = cloneState(state);
   s.people.find(m => m.id === personId)!.pinnedVehicleId = vehicleId;
   return ok(s, v ? `${m0.name} now rides ${v.name}.` : `${m0.name} goes wherever they’re needed.`);
+}
+
+/** Push an offer for a better fee — once. The promoter may fold, dig in, or walk. */
+export function haggleGig(state: TycoonState, gigId: string): ActionOutcome {
+  const gig0 = gigById(state, gigId);
+  if (!gig0) return fail(state, 'That offer is no longer available.');
+  const blocker = haggleBlocker(state, gig0);
+  if (blocker) return fail(state, blocker);
+  const s = cloneState(state);
+  const gig = gigById(s, gigId)!;
+  const fee0 = gig.fee;
+  const result = withRng(s, rng => haggle(s, gig, rng));
+  if (result === 'won') return ok(s, `${gig.act}'s promoter gives way: ${formatMoney(state, fee0)} → ${formatMoney(state, gig.fee)}.`);
+  if (result === 'walked') return { state: s, result: { ok: false, message: `${gig.act}'s promoter walks away and books someone else.` } };
+  return { state: s, result: { ok: false, message: `${gig.act}'s promoter won't budge — the fee stands at ${formatMoney(state, gig.fee)}.` } };
 }
 
 /** Sign, switch or (with no brand) end a manufacturer partnership for a department. */

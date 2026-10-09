@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 131 tests):
+(`src/world/__tests__/*.test.ts`, 136 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -340,6 +340,11 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   (Meyer for sound, Martin for lights…): 10% off their kit, and a monthly sponsorship of
   `share × (150 + reputation × 6)` while ≥50% of that department's racks wear their name. Below
   that they warn you for two months, then walk. A partner can't be swapped inside a year.
+
+- **Haggling** (`negotiate.ts`) — any single-show offer (not tours, festival or event tenders) can be pushed
+  once for +12% fee. Odds are 15-85%: your standing beyond what the act demands, the town's opinion,
+  your history with the act, and whether they asked for you by name. If they refuse, half the time the
+  promoter also walks and books someone else — so it only pays when you hold the stronger hand.
 
 UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
 (workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the

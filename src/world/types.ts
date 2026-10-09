@@ -350,6 +350,8 @@ export interface Gig {
   event?: { id: string; year: number; name: string; lot: Dept; broadcast: boolean; scale: number; citywide?: boolean };
   /** Your sealed bid on an event lot. */
   bid?: BidLevel;
+  /** You've already haggled over the fee (negotiate.ts). */
+  negotiated?: boolean;
   status: GigStatus;
   rivalId?: string;
   result?: GigResult;

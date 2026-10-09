@@ -1,6 +1,7 @@
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
-import { assignVehicle, bookGig, unassignVehicle } from '@/world/actions';
+import { assignVehicle, bookGig, haggleGig, unassignVehicle } from '@/world/actions';
+import { HAGGLE_RAISE, haggleBlocker, haggleChance } from '@/world/negotiate';
 import { DEPT_COLORS, DEPT_LABELS, LOAD_IN_HOUR, SHOW_END_HOUR, SHOW_START_HOUR, getModel } from '@/world/catalog';
 import { dateOfDay, dayOf, formatDay, formatHour, loadInHour, loadOutDoneHour, sumCounts } from '@/world/core';
 import { getRegion } from '@/world/content/world';
@@ -159,9 +160,20 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
               {lock} You have {Math.round(state.company.reputation)}.
             </div>
           ) : (
-            <button className="tt-btn primary" onClick={() => act(s => bookGig(s, gig.id))}>
-              {tour ? 'Book the whole tour' : 'Book this show'}
-            </button>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <button className="tt-btn primary" onClick={() => act(s => bookGig(s, gig.id))}>
+                {tour ? 'Book the whole tour' : 'Book this show'}
+              </button>
+              {!tour && !haggleBlocker(state, gig) && (
+                <button
+                  className="tt-btn"
+                  title={`Push for +${Math.round(HAGGLE_RAISE * 100)}% — ${Math.round(haggleChance(state, gig) * 100)}% they agree; if not, they may walk away`}
+                  onClick={() => act(s => haggleGig(s, gig.id))}
+                >
+                  Haggle +{Math.round(HAGGLE_RAISE * 100)}% ({Math.round(haggleChance(state, gig) * 100)}%)
+                </button>
+              )}
+            </div>
           )}
         </div>
       )}
