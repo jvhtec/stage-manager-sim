@@ -7,7 +7,7 @@ import { ARTISTS, findArtist } from '../content/artists';
 import { rivalsFor } from '../content/companies';
 import { generateOffer } from '../offers';
 import { generateWorldTour, tourGigs } from '../tours';
-import { formatMoney } from '../core';
+import { formatMoney, formatMoneyShort } from '../core';
 import { deptTotals } from '../loading';
 import type { Tour } from '../types';
 
@@ -94,9 +94,22 @@ describe('countries', () => {
     );
   });
 
-  it('formats money in the home currency', () => {
-    expect(formatMoney(game('ES'), 12500)).toBe('€12,500');
-    expect(formatMoney(game('GB'), -300)).toBe('-£300');
+  it('formats money in the home currency, as it was spelt in the year', () => {
+    const at = (code: 'ES' | 'GB' | 'US' | 'DE' | 'FR' | 'IT', startYear: number) =>
+      createTycoonGame({ companyName: 'T', color: '#f00', seed: 5, country: code, startYear });
+    // The euro only arrives in 2002.
+    expect(formatMoney(at('ES', 2010), 12500)).toBe('€12,500');
+    expect(formatMoney(at('ES', 1990), 3000)).toBe('499,158 pts');
+    expect(formatMoney(at('DE', 1985), 1000)).toBe('1,956 DM');
+    expect(formatMoney(at('FR', 1985), 1000)).toBe('6,560 F');
+    expect(formatMoney(at('IT', 1985), 1000)).toBe('L.1,936,270');
+    expect(formatMoneyShort(at('IT', 1985), 3000)).toBe('L.5.8M');
+    expect(formatMoney(at('GB', 1980), -300)).toBe('-£300');
+    expect(formatMoney(at('US', 2010), 40)).toBe('$40');
+    // ...and it changes over on its own as the years pass.
+    const s = at('ES', 2000);
+    expect(formatMoney(s, 1000)).toBe('166,386 pts');
+    expect(formatMoney({ ...s, hour: s.hour + 24 * 365 * 3 }, 1000)).toBe('€1,000');
   });
 
   it('starts with a full rig including consoles', () => {

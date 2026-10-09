@@ -16,7 +16,7 @@ import {
 } from './catalog';
 import { roadDistance } from './pathfinding';
 import { getRegion } from './content/world';
-import { getCountry } from './content/countries';
+import { currencyFor, formatAmount, formatCompact, type Currency } from './content/currency';
 import type {
   DeptCounts,
   Gig,
@@ -174,8 +174,16 @@ export function freeLot(state: TycoonState, world: WorldMap, cityId: string): nu
   return city.lots.findIndex((_, i) => !used.has(i));
 }
 
-/** Money in the home country's currency, e.g. "€12,500". */
-export function formatMoney(state: Pick<TycoonState, 'country'>, amount: number): string {
-  const symbol = getCountry(state.country).currency;
-  return `${amount < 0 ? '-' : ''}${symbol}${Math.abs(Math.round(amount)).toLocaleString('en-US')}`;
+/** The home country's money as it was spelt this year (pesetas before the euro), e.g. "€12,500". */
+export function currencyOf(state: Pick<TycoonState, 'country' | 'startYear' | 'hour'>): Currency {
+  return currencyFor(state.country, yearOf(state, state.hour));
+}
+
+export function formatMoney(state: Pick<TycoonState, 'country' | 'startYear' | 'hour'>, amount: number): string {
+  return formatAmount(currencyOf(state), amount);
+}
+
+/** "€3.0k" / "500k pts". */
+export function formatMoneyShort(state: Pick<TycoonState, 'country' | 'startYear' | 'hour'>, amount: number): string {
+  return formatCompact(currencyOf(state), amount);
 }

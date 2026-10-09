@@ -30,7 +30,7 @@ import {
   ZoomOut,
 } from 'lucide-react';
 import { companyTier, tierInfo } from '@/world/catalog';
-import { formatDay, formatHour } from '@/world/core';
+import { formatDay, formatHour, yearOf } from '@/world/core';
 import { worldOf } from '@/world/mapgen';
 import type { NewsItem } from '@/world/types';
 import { MapCanvas, type MapHandle, type Pick } from './MapCanvas';
@@ -232,7 +232,7 @@ export default function TycoonGame() {
     if (stage === 'splash' && !game.state) game.preview(createRandomSeed(), undefined, DEFAULT_COUNTRY);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage, game.state]);
-  setCurrency(getCountry(state?.country).currency);
+  setCurrency(state?.country, state ? yearOf(state, state.hour) : 2000);
   setDistanceUnit(state?.country);
   const world = state ? worldOf(state) : null;
 

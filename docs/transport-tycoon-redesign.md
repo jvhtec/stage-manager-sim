@@ -145,7 +145,7 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
   at new game. Each is a **miniature of the real country** (see below); towns are the real
   cities (biggest = the capital/largest city, with real populations), venues are named the local way (Sala…, Zénith de…, PalaSport di…) and
   famous rooms appear where the map puts them (Bernabéu, WiZink, Wembley, MSG, Bercy, San
-  Siro…). Prices show in €, £ or $. Rivals are the local firms of that country plus the
+  Siro…). Prices show in the money of the day: £ and $ throughout, but pesetas, marks, francs and lire before the euro arrives in 2002 (`content/currency.ts` — the game's numbers are kept in euro-equivalents and printed at the fixed conversion rates, so a €3,000 fee in 1990 Spain reads 499,158 pts). Rivals are the local firms of that country plus the
   international giants (Clair, PRG, Solotech); local acts (Héroes del Silencio, Estopa, Rosalía…;
   Die Toten Hosen; Indochine; Vasco Rossi…) only tour at home and come up more often there.
   World-tour legs never fly to your own country.

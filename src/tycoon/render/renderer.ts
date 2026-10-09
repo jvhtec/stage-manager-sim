@@ -10,7 +10,7 @@
 import { gigBookingBar } from '@/world/standing';
 import { getModel, SHOW_END_HOUR, SHOW_START_HOUR, tierInfo } from '@/world/catalog';
 import { dayOf, loadInHour, loadOutDoneHour } from '@/world/core';
-import { getCountry } from '@/world/content/countries';
+import { kmoney } from '../ui/format';
 import { tileCorners } from '@/world/mapgen';
 import { getCityPath, positionOnPath, unitsPerTile } from '@/world/pathfinding';
 import { Terrain, type City, type Gig, type TycoonState, type Venue, type Vehicle, type WorldMap } from '@/world/types';
@@ -699,7 +699,6 @@ function drawGigMarkers(rc: RC, state: TycoonState, venueTop: Map<string, Pt>, h
   });
 
   const scale = Math.max(0.85, Math.min(1.2, cam.zoom * 0.55));
-  const cur = getCountry(state.country).currency;
   byVenue.forEach((gigs, venueId) => {
     const top = venueTop.get(venueId);
     if (!top) return;
@@ -719,7 +718,7 @@ function drawGigMarkers(rc: RC, state: TycoonState, venueTop: Map<string, Pt>, h
       bg = state.company.color;
     } else if (g.status === 'offer') {
       const locked = !!gigBookingBar(state, g).reason;
-      label = `${g.tourId ? 'TOUR ' : ''}${locked ? '🔒 ' : g.asksForYou ? '♥ ' : ''}${cur}${g.fee >= 10000 ? `${Math.round(g.fee / 1000)}k` : `${(g.fee / 1000).toFixed(1)}k`}`;
+      label = `${g.tourId ? 'TOUR ' : ''}${locked ? '🔒 ' : g.asksForYou ? '♥ ' : ''}${kmoney(g.fee)}`;
       bg = locked ? '#3f3f46' : tierInfo(g.tier).color;
       fg = locked ? '#a1a1aa' : '#0b0d12';
     } else {
