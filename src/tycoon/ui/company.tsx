@@ -384,6 +384,10 @@ export function HelpWindow() {
           money.
         </li>
         <li>
+          <b>Merchandise</b>: on a booked tour you can stock the stands before the first date — a small order is safe, a big one
+          only pays if the tour sells out.
+        </li>
+        <li>
           <b>Tickets</b>: arena and stadium shows are inspected — you need riggers and a first aider in the crew. Hire people who
           have them, or send your own on a course from the crew list (a training room or academy at a warehouse makes it
           cheaper).

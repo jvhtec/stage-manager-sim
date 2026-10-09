@@ -49,12 +49,13 @@ import { DEAL_YEARS } from './deals';
 import { headhuntBlocker, headhuntFee, headhuntRivalHealthAfter, headhuntTarget, HEADHUNT_REP_COST } from './headhunt';
 import { festBlocker, planFestival } from './ownfest';
 import { courseBlocker, startCourse } from './certs';
+import { merchBlocker, orderMerch } from './merch';
 import { FUEL_LOCK_MONTHS, FUEL_LOCK_PREMIUM, fuelLockBlocker, marketNow } from './market';
 import { MODULES, buildModule, moduleBlocker, rehearsalBlocker, rehearse } from './annexes';
 import { HEAT_HEADHUNT, addHeat, hireInvestigator, investigatorBlocker } from './rivalry';
 import { buyBlocker, buyVenue, ownedOf, sellVenue } from './owned';
 import { IPO_FLOAT, buybackCost, ipoProceeds, listingBlocker, tradingTotal } from './shares';
-import { DEPTS, type ActionOutcome, type CertId, type ModuleId, type VenueProgramme, type DividendLevel, type FestHeadliner, type FestTicket, type FestTier, type BidLevel, type Dept, type RndAmbition, type Vehicle, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
+import { DEPTS, type ActionOutcome, type MerchLevel, type CertId, type ModuleId, type VenueProgramme, type DividendLevel, type FestHeadliner, type FestTicket, type FestTier, type BidLevel, type Dept, type RndAmbition, type Vehicle, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
 import { STAFF, canBaseVehicle, facilitySpec, nextUpgrade } from './facilities';
 import { aboard, hireFee, levelOf, makePerson, moveToDepot, roleOf, settlePoachBid, syncCrew, unpinFrom } from './people';
 import { BREAK_MONTHS, contractShortfall, installKit } from './contracts';
@@ -696,6 +697,16 @@ export function trainCrew(state: TycoonState, personId: string, cert: CertId): A
   if (why) return fail(state, why);
   const s = cloneState(state);
   return ok(s, startCourse(s, s.people.find(m => m.id === personId)!, cert));
+}
+
+/** Order merchandise for a booked tour. */
+export function orderTourMerch(state: TycoonState, tourId: string, level: MerchLevel): ActionOutcome {
+  const tour = state.tours.find(t => t.id === tourId);
+  if (!tour) return fail(state, 'Unknown tour.');
+  const why = merchBlocker(state, tour, level);
+  if (why) return fail(state, why);
+  const s = cloneState(state);
+  return ok(s, orderMerch(s, s.tours.find(t => t.id === tourId)!, level));
 }
 
 export function borrow(state: TycoonState): ActionOutcome {

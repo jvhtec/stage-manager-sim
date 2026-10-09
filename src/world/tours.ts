@@ -9,6 +9,8 @@
  *
  * Book the whole tour or none of it; play every date for the completion bonus.
  */
+import { sideRng } from './people';
+import { settleMerch } from './merch';
 import type { Rng } from '@/lib/rng';
 import { getModel } from './catalog';
 import { actReputationBar, reachWeight, tourBookingBar } from './standing';
@@ -269,9 +271,11 @@ export function dailyTours(state: TycoonState, world: WorldMap, rng: Rng) {
       state.artistRelations[tour.act] = (state.artistRelations[tour.act] ?? 0) + 2;
       state.company.reputation = Math.min(100, state.company.reputation + (tour.kind === 'world' ? 3 : 1.5));
       pushNews(state, `Tour complete! ${tour.name} wrapped — completion bonus ${formatMoney(state, tour.bonus)}.`, 'good');
+      settleMerch(state, tour, sideRng(state, dayOf(state.hour) + 7005));
     } else {
       tour.status = 'failed';
       pushNews(state, `${tour.name} finished with dropped dates — no completion bonus.`, 'bad');
+      settleMerch(state, tour, sideRng(state, dayOf(state.hour) + 7005));
     }
   });
 

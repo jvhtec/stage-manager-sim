@@ -126,6 +126,7 @@ export type LedgerCategory =
   | 'festival'
   | 'venues'
   | 'facilities'
+  | 'merch'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -163,6 +164,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   festival: 'Own festival',
   venues: 'Owned venues',
   facilities: 'Annexes & stages',
+  merch: 'Merchandise',
   sales: 'Asset sales',
 };
 
@@ -344,6 +346,8 @@ export interface Tour {
   acceptByDay: number;
   status: TourStatus;
   rivalId?: string;
+  /** Stock ordered for the road, and what it made (merch.ts). */
+  merch?: { level: MerchLevel; invested: number; revenue?: number };
 }
 
 /** An artist's rider asking for a particular brand in one department. */
@@ -441,6 +445,8 @@ export interface SponsorDeal {
 export type ModuleId = 'rehearsal' | 'workshop' | 'lounge' | 'academy';
 
 export type CertId = 'rigging' | 'safety';
+
+export type MerchLevel = 'small' | 'medium' | 'large';
 
 export type VenueProgramme = 'lease' | 'promote';
 
