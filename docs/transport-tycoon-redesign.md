@@ -85,7 +85,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 318 tests):
+(`src/world/__tests__/*.test.ts`, 323 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -341,6 +341,14 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   *Crew lounge* (12k / 35k): techs resting at the base shed 3 / 6 extra fatigue a day (the second
   level adds a little morale). The base diorama grows a soundstage annex with a band, lighting bar
   and (from the production hall up) a video wall. A shutdown zeroes the rent but leaves the upkeep.
+
+- **Speciality** (`expertise.ts`) — a moving average of the department mix of the shows you play
+  (each show moves it 4-10%, bigger shows more) sets 160 expertise points to share between five
+  departments (each caps at 100). A show's fee is adjusted by 12% × (how well its needs match your
+  expertise − an even mix): about +8% for a pure specialist on a show that leans on their
+  department, −4% for an off-speciality job, 0 for an all-rounder. You're "known for" a department at
+  60+. The Finance window shows the bars; the show window shows the adjustment, and the news line
+  names it. The bot gains ~3% from its natural mix drift.
 
 - **Getting paid** (`receivables.ts`) — pubs and clubs (tier 1) pay on the night;
   tier 2 takes 14 days, tier 3 30, tier 4 45, festivals and events another 15. Until then the money

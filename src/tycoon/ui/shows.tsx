@@ -2,6 +2,7 @@ import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
 import { assignVehicle, bookGate, bookGig, haggleGig, rehearseShow, unassignVehicle } from '@/world/actions';
 import { certCount, requiredCerts } from '@/world/certs';
+import { expertiseBonus } from '@/world/expertise';
 import { MODULES, REHEARSAL_QUALITY, bestStageLevel, gigRehearsalCost, rehearsalBlocker, requiredStageLevel, stageName, tourRehearsalCost } from '@/world/annexes';
 import { expectedPayout, gateBlocker, gatePayout, hypeLabel } from '@/world/gate';
 import { HAGGLE_RAISE, haggleBlocker, haggleChance } from '@/world/negotiate';
@@ -166,6 +167,14 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
           {' · '}
           <span className={certCount(state.people, 'safety') >= requiredCerts(gig).safety ? '' : 'tt-bad'}>
             {requiredCerts(gig).safety} first aider ({certCount(state.people, 'safety')} on staff)
+          </span>
+        </Stat>
+      )}
+      {gig.status !== 'done' && Math.abs(expertiseBonus(state, gig)) >= 0.01 && (
+        <Stat label="Your speciality">
+          <span className={expertiseBonus(state, gig) > 0 ? 'tt-good' : 'tt-bad'}>
+            {expertiseBonus(state, gig) > 0 ? '+' : ''}
+            {Math.round(expertiseBonus(state, gig) * 100)}% on the fee
           </span>
         </Stat>
       )}

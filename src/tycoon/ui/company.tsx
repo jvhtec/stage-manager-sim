@@ -2,6 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { borrow, buyRival, goPublic, headhunt, investigate, repay, setDividend, takePrivate } from '@/world/actions';
 import { brandOf } from '@/world/sponsors';
 import { owed } from '@/world/receivables';
+import { expertise, knownForLabel } from '@/world/expertise';
+import { DEPT_COLORS, DEPT_LABELS } from '@/world/catalog';
+import { DEPTS } from '@/world/types';
 import { HEAT_DIRTY, INTEL_DAYS, aggression, hasIntel, heatOf, investigatorBlocker, investigatorCost } from '@/world/rivalry';
 import { headhuntBlocker, headhuntFee, headhuntTarget } from '@/world/headhunt';
 import { levelOf, roleOf } from '@/world/people';
@@ -210,6 +213,23 @@ export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
           ? `Reach ${next.minReputation} to book ${next.label} venues. Bigger rooms are what raise reputation past each tier.`
           : 'Top of the industry — every stadium in the land will take your call.'}
       </div>
+      <Stat label="Known for">
+        <b>{knownForLabel(state)}</b>
+      </Stat>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4 }}>
+        {DEPTS.map(d => (
+          <div key={d} title={`${DEPT_LABELS[d]}: ${Math.round(expertise(state, d))}`} style={{ textAlign: 'center' }}>
+            <div style={{ height: 34, display: 'flex', alignItems: 'flex-end' }}>
+              <div style={{ width: '100%', height: `${Math.max(6, expertise(state, d))}%`, background: DEPT_COLORS[d], borderRadius: 2 }} />
+            </div>
+            <div className="tt-dim" style={{ fontSize: 10 }}>{DEPT_LABELS[d]}</div>
+          </div>
+        ))}
+      </div>
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        A moving average of the kind of work you do. Specialists earn up to ~8% more on shows that lean on their speciality and a little less
+        outside it; generalists sit in the middle.
+      </div>
       <Stat label="Shows played / failed">
         {state.stats.showsPlayed} / <span className={state.stats.showsFailed ? 'tt-bad' : ''}>{state.stats.showsFailed}</span>
       </Stat>
@@ -397,6 +417,10 @@ export function HelpWindow() {
           <b>Your own festival</b> (Market): pay up front in spring for a field day, weekender or major, pick a headliner
           and ticket price, and hope the economy and the weather play along — a built brand sells out, a new one loses
           money.
+        </li>
+        <li>
+          <b>Speciality</b>: the kind of work you do shapes your name (Finance). Specialists earn more on shows that lean on their
+          department and a little less on others; generalists sit in the middle.
         </li>
         <li>
           <b>Getting paid</b>: small venues pay on the night, bigger promoters take 2-6 weeks and sometimes go under. Policies lets you

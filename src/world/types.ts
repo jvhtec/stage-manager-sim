@@ -772,6 +772,8 @@ export interface TycoonState {
   /** 0-100: how well the festival's name sells. */
   festivalBrand?: number;
   festivalHistory: FestivalEdition[];
+  /** Moving average of the departments your recent shows needed (expertise.ts). */
+  mix?: Record<Dept, number>;
   /** Invoices waiting to be paid (receivables.ts). */
   receivables: Invoice[];
   /** A fuel contract: the locked price multiplier and when it ends (market.ts). */
