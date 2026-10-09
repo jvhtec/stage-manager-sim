@@ -85,3 +85,29 @@ export function climateAt(country: CountryCode, year: number, month: number): Cl
 
 /** Busy summers, dead Januaries: share of a normal month's offers. */
 export const SEASON = [0.6, 0.75, 0.95, 1, 1.1, 1.25, 1.3, 1.2, 1.05, 1.05, 1, 0.95];
+
+/**
+ * The price of diesel relative to a "normal" year (1.0), as year-with-fraction
+ * anchors joined by straight lines: the 1970s shocks, the 1986 collapse, the
+ * 2008 spike and the 2022 surge. Roughly real history, in shape if not in size.
+ */
+export const FUEL_ANCHORS: [number, number][] = [
+  [1974, 1.3], [1976, 1.2], [1978.9, 0.95], [1979.6, 1.45], [1981, 1.45], [1983, 1.15], [1985.9, 1.0], [1986.2, 0.65], [1989, 0.8],
+  [1990.5, 0.85], [1990.8, 1.15], [1991.3, 0.85], [1996, 0.8], [1998.5, 0.65], [2000.3, 1.0], [2002, 0.85], [2005, 1.1], [2007, 1.3],
+  [2008.3, 1.7], [2009.1, 0.95], [2011, 1.3], [2013, 1.35], [2015, 0.9], [2016, 0.7], [2019.9, 0.9], [2020.3, 0.65], [2021.4, 1.0],
+  [2022.1, 1.8], [2023.6, 1.3], [2025, 1.2], [2030, 1.2],
+];
+
+export function fuelIndexAt(year: number, month: number): number {
+  const t = year + (month - 0.5) / 12;
+  const a = FUEL_ANCHORS;
+  if (t <= a[0][0]) return a[0][1];
+  for (let i = 1; i < a.length; i++) {
+    if (t <= a[i][0]) {
+      const [t0, v0] = a[i - 1];
+      const [t1, v1] = a[i];
+      return Math.round((v0 + ((v1 - v0) * (t - t0)) / (t1 - t0)) * 100) / 100;
+    }
+  }
+  return a[a.length - 1][1];
+}

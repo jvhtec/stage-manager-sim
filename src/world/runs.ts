@@ -4,6 +4,7 @@
  * book the lot and deliver all of it well — pays a bonus for the efficiency
  * of a tight route (promoters like a supplier who's already in the area).
  */
+import { fuelMultiplier } from './market';
 import { HOTEL_NIGHT, PER_DIEM, fuelPerTile, getModel } from './catalog';
 import { book, dayOf, formatMoney, gigById, loadInHour, newId, pushNews } from './core';
 import { estimateArrival, SUGGEST_RANGE } from './queries';
@@ -81,7 +82,7 @@ export function planRun(state: TycoonState, v: Vehicle, gigIds: string[]): RunPl
   const home = roadDistance(world, at, v.homeCityId);
   if (Number.isFinite(home)) distance += home;
   const fees = gigs.reduce((sum, g) => sum + g.fee, 0);
-  const fuel = Math.round(distance * fuelPerTile(model));
+  const fuel = Math.round(distance * fuelPerTile(model) * fuelMultiplier(state));
   const days = new Set(gigs.map(g => g.day));
   const away = gigs.filter(g => g.cityId !== v.homeCityId);
   const nights = away.length ? Math.max(1, new Set(away.map(g => g.day)).size + (days.size > 1 ? days.size - 1 : 0)) : 0;

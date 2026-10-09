@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Building2,
   CalendarDays,
@@ -21,6 +21,7 @@ import {
   Truck,
   Users,
   AlertTriangle,
+  ClipboardList,
   Gavel,
   Globe,
   Route,
@@ -45,6 +46,8 @@ import { GigWindow, ShowsWindow } from './ui/shows';
 import { TourWindow } from './ui/tours';
 import { PoliciesWindow } from './ui/policies';
 import { DecisionsWindow } from './ui/decisions';
+import { BriefingWindow } from './ui/briefing';
+import { briefing, attentionCount } from '@/world/advisor';
 // Windows you open now and then load on demand, keeping the main game chunk lean.
 const TalentWindow = lazy(() => import('./ui/talent').then(m => ({ default: m.TalentWindow })));
 const MarketWindow = lazy(() => import('./ui/market').then(m => ({ default: m.MarketWindow })));
@@ -76,6 +79,7 @@ const SPEED_LABELS = ['Paused', '▶', '▶▶', '▶▶▶', 'Fast-forward'];
 export default function TycoonGame() {
   const game = useTycoon();
   const { state } = game;
+  const attention = useMemo(() => (state ? attentionCount(briefing(state)) : 0), [state]);
   const mapRef = useRef<MapHandle>(null);
   const [windows, setWindows] = useState<OpenWindow[]>([]);
   const zCounter = useRef(1);
@@ -274,6 +278,8 @@ export default function TycoonGame() {
         return 'Crew';
       case 'decisions':
         return 'Needs your call';
+      case 'briefing':
+        return 'Briefing';
       case 'auctions':
         return 'Auctions';
       case 'worldmap':
@@ -327,6 +333,8 @@ export default function TycoonGame() {
         return <CrewWindow ctx={ctx} />;
       case 'decisions':
         return <DecisionsWindow ctx={ctx} />;
+      case 'briefing':
+        return <BriefingWindow ctx={ctx} />;
       case 'auctions':
         return <AuctionsWindow ctx={ctx} />;
       case 'worldmap':
@@ -343,6 +351,9 @@ export default function TycoonGame() {
                 <AlertTriangle /> Needs your call ({state.dilemmas.length})
               </button>
             )}
+            <button className="tt-btn" onClick={() => open('briefing')} style={attention ? { color: '#fb923c' } : undefined}>
+              <ClipboardList /> Briefing{attention > 0 ? ` (${attention})` : ''}
+            </button>
             <button className="tt-btn" onClick={() => open('crew')}>
               <Users /> Crew
             </button>
@@ -532,6 +543,9 @@ export default function TycoonGame() {
                   <AlertTriangle /> {state.dilemmas.length}
                 </button>
               )}
+              <button className="tt-btn" onClick={() => open('briefing')} title="Briefing: what needs doing" style={attention ? { color: '#fb923c' } : undefined}>
+                <ClipboardList /> {attention > 0 ? attention : ''}
+              </button>
               <button className="tt-btn" onClick={() => open('crew')} title="Crew">
                 <Users />
               </button>
@@ -624,7 +638,7 @@ export default function TycoonGame() {
                 x={w.x}
                 y={w.y}
                 z={w.z}
-                width={w.kind === 'finance' || w.kind === 'league' || w.kind === 'market' || w.kind === 'crew' || w.kind === 'decisions' || w.kind === 'vehicles' ? 440 : w.kind === 'worldmap' ? 560 : w.kind === 'planner' ? 440 : 340}
+                width={w.kind === 'finance' || w.kind === 'league' || w.kind === 'market' || w.kind === 'crew' || w.kind === 'decisions' || w.kind === 'briefing' || w.kind === 'vehicles' ? 440 : w.kind === 'worldmap' ? 560 : w.kind === 'planner' ? 440 : 340}
                 onMove={(x, y) => setWindows(prev => prev.map(o => (o.key === w.key ? { ...o, x, y } : o)))}
                 onFocus={() => focusWindow(w.key)}
                 onClose={() => (compact ? setWindows([]) : closeWindow(w.key))}
@@ -757,10 +771,7 @@ export default function TycoonGame() {
         <div className="tt-overlay">
           <Window title="Start a new company?" x={0} y={0} z={100} onMove={() => undefined} onFocus={() => undefined} onClose={() => setConfirmQuit(false)}>
             <p style={{ marginTop: 0 }}>Your current company will be lost.</p>
-            <div style={{ display: 'flex', gap: 6, justifyContent: 'space-between', flexWrap: 'wrap' }}>
-              <a className="tt-btn sm" href={`${import.meta.env.BASE_URL}classic`}>
-                Open the classic version
-              </a>
+            <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
               <div style={{ display: 'flex', gap: 6 }}>
                 <button className="tt-btn" onClick={() => setConfirmQuit(false)}>
                   Keep playing

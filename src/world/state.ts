@@ -1,3 +1,4 @@
+import { TECH_WAVES } from './content/techWaves';
 import { DIFFICULTIES } from './scenario';
 import { createRandomSeed, createRng } from '@/lib/rng';
 import {
@@ -7,7 +8,7 @@ import {
   VEHICLE_MODELS,
   getModel,
 } from './catalog';
-import { newId } from './core';
+import { newId, yearOf } from './core';
 import { expectedQuality, productsAvailableIn } from './content/gear';
 import { DEFAULT_COUNTRY, type CountryCode } from './content/countries';
 import { updateRivals } from './sim';
@@ -29,7 +30,7 @@ export const TYCOON_SAVE_KEY = 'stage-manager-sim:tycoon';
 export const TYCOON_SAVE_VERSION = 6;
 const OLDEST_MIGRATABLE = 5;
 
-export const DEFAULT_POLICIES: Policies = { workshop: 'basic', pay: 'standard', insurance: 'none', freelance: 'fill', subhire: 'fill', rentOut: 'off', training: 'none', rest: 'off', marketing: 'none' };
+export const DEFAULT_POLICIES: Policies = { workshop: 'basic', pay: 'standard', insurance: 'none', freelance: 'fill', subhire: 'fill', rentOut: 'off', training: 'none', rest: 'off', marketing: 'none', rehearsal: 'manual', invoicing: 'hold' };
 
 export interface NewGameOptions {
   companyName: string;
@@ -141,6 +142,7 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     ledger: {},
     announcedModels: VEHICLE_MODELS.filter(m => m.introYear <= startYear).map(m => m.id),
     announcedGear: productsAvailableIn(startYear).map(p => p.id),
+    announcedWaves: TECH_WAVES.flatMap(w => [w.year - 2 <= startYear ? `${w.id}:rumour` : '', w.year <= startYear ? `${w.id}:arrival` : '']).filter(Boolean),
     policies: { ...DEFAULT_POLICIES },
     crewMorale: 65,
     gearCondition: {},
@@ -160,6 +162,12 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     townGrowth: {},
     runs: [],
     priceWars: [],
+    festivalHistory: [],
+    ownedVenues: [],
+    sponsors: [],
+    receivables: [],
+    claims: [],
+    rivalry: {},
     venueRelations: {},
     reports: [],
     ownProducts: [],
@@ -299,6 +307,13 @@ export function migrate(state: Partial<TycoonState>): TycoonState {
   s.goal ??= 'sandbox';
   s.runs ??= [];
   s.priceWars ??= [];
+  s.festivalHistory ??= [];
+  s.announcedWaves ??= TECH_WAVES.flatMap(w => [...(w.year - 2 <= yearOf(s, s.hour) ? [`${w.id}:rumour`] : []), ...(w.year <= yearOf(s, s.hour) ? [`${w.id}:arrival`] : [])]);
+  s.ownedVenues ??= [];
+  s.sponsors ??= [];
+  s.receivables ??= [];
+  s.claims ??= [];
+  s.rivalry ??= {};
   s.venueRelations ??= {};
   s.reports ??= [];
   return s;

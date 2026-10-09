@@ -1,141 +1,15 @@
 @tailwind base;
-@tailwind components;
-@tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
-All colors MUST be HSL.
-*/
-
-@layer base {
-  :root {
-    /* Pro Dashboard Theme - Light mode fallback */
-    --background: 220 15% 97%;
-    --foreground: 220 25% 10%;
-    --card: 0 0% 100%;
-    --card-foreground: 220 25% 10%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 25% 10%;
-    --primary: 220 90% 56%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 15% 92%;
-    --secondary-foreground: 220 25% 10%;
-    --muted: 220 15% 92%;
-    --muted-foreground: 220 10% 45%;
-    --accent: 45 93% 58%;
-    --accent-foreground: 220 25% 10%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 15% 88%;
-    --input: 220 15% 88%;
-    --ring: 220 90% 56%;
-    --radius: 0.5rem;
-
-    /* Department Colors */
-    --audio: 210 100% 56%;
-    --audio-foreground: 0 0% 100%;
-    --lighting: 45 93% 58%;
-    --lighting-foreground: 220 25% 10%;
-    --video: 280 65% 60%;
-    --video-foreground: 0 0% 100%;
-    --stage: 160 60% 50%;
-    --stage-foreground: 0 0% 100%;
-
-    /* Status Colors */
-    --success: 142 71% 45%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 0 0% 100%;
-    --info: 199 89% 48%;
-    --info-foreground: 0 0% 100%;
-
-    /* Reputation Tier Accents — Local Circuit through World Class, matching
-       src/lib/reputationTiers.ts and the VenueArt scene palette. */
-    --tier-1: 30 35% 45%;
-    --tier-2: 260 45% 60%;
-    --tier-3: 210 70% 58%;
-    --tier-4: 300 55% 55%;
-  }
-
-  .dark {
-    /* Pro Dashboard Theme - Dark mode (primary) */
-    --background: 220 25% 8%;
-    --foreground: 220 15% 95%;
-    --card: 220 20% 11%;
-    --card-foreground: 220 15% 95%;
-    --popover: 220 22% 10%;
-    --popover-foreground: 220 15% 95%;
-    --primary: 220 90% 56%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 220 20% 16%;
-    --secondary-foreground: 220 15% 95%;
-    --muted: 220 20% 16%;
-    --muted-foreground: 220 10% 60%;
-    --accent: 45 93% 58%;
-    --accent-foreground: 220 25% 10%;
-    --destructive: 0 72% 51%;
-    --destructive-foreground: 0 0% 100%;
-    --border: 220 20% 18%;
-    --input: 220 20% 18%;
-    --ring: 220 90% 56%;
-
-    /* Department Colors (dark mode) */
-    --audio: 210 100% 56%;
-    --audio-foreground: 0 0% 100%;
-    --lighting: 45 93% 58%;
-    --lighting-foreground: 220 25% 10%;
-    --video: 280 65% 60%;
-    --video-foreground: 0 0% 100%;
-    --stage: 160 60% 50%;
-    --stage-foreground: 0 0% 100%;
-
-    /* Status Colors */
-    --success: 142 71% 45%;
-    --success-foreground: 0 0% 100%;
-    --warning: 38 92% 50%;
-    --warning-foreground: 220 25% 10%;
-    --info: 199 89% 48%;
-    --info-foreground: 0 0% 100%;
-
-    /* Reputation Tier Accents (dark mode) */
-    --tier-1: 30 40% 55%;
-    --tier-2: 260 50% 68%;
-    --tier-3: 210 75% 65%;
-    --tier-4: 300 60% 65%;
-  }
+/* The map game styles itself (src/tycoon/tycoon.css); this is only the page
+   behind it and the reset Tailwind's base layer provides. */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
-    /* A faint radial glow plus a tiny inline noise texture (no network
-       request, no asset pipeline) so the background reads as atmosphere
-       rather than a flat fill. Opacity is deliberately subtle — this must
-       never compete with foreground text contrast. */
-    background-image:
-      radial-gradient(ellipse 80% 60% at 50% -10%, hsl(var(--primary) / 0.12), transparent),
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
-    background-attachment: fixed;
-  }
-
-  /* Display heading treatment — a styled system font stack (no webfont
-     fetch) applied broadly via element selectors so individual components
-     don't need to opt in. Weight/spacing on components that already set
-     their own (e.g. CardTitle's tracking-tight) are left alone; only the
-     font-family changes here. */
-  h1, h2, h3 {
-    font-family: ui-rounded, "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
-  }
-}
-
-@layer utilities {
-  /* Tier-colored glow for interactive cards/badges — src/lib/reputationTiers.ts
-     tier.level (1-4) maps directly to these. */
-  .tier-glow-1 { box-shadow: 0 0 0 1px hsl(var(--tier-1) / 0.4), 0 0 16px hsl(var(--tier-1) / 0.25); }
-  .tier-glow-2 { box-shadow: 0 0 0 1px hsl(var(--tier-2) / 0.4), 0 0 16px hsl(var(--tier-2) / 0.25); }
-  .tier-glow-3 { box-shadow: 0 0 0 1px hsl(var(--tier-3) / 0.4), 0 0 16px hsl(var(--tier-3) / 0.25); }
-  .tier-glow-4 { box-shadow: 0 0 0 1px hsl(var(--tier-4) / 0.4), 0 0 16px hsl(var(--tier-4) / 0.25); }
+body {
+  background: #10131a;
+  color: #e5e7eb;
 }

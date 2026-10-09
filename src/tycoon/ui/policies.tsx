@@ -1,3 +1,4 @@
+import { INVOICING, INVOICING_LEVELS } from '@/world/receivables';
 import { setPartner, setPolicy } from '@/world/actions';
 import { PARTNER_DISCOUNT, PARTNER_REPUTATION, PARTNER_SHARE, brandShare, brandsFor, sponsorship } from '@/world/partners';
 import { DEPT_LABELS } from '@/world/catalog';
@@ -11,7 +12,7 @@ import { CREW_WAGE_PER_DAY } from '@/world/catalog';
 import { FREELANCE_DAY_RATE, PAY, PAY_LEVELS, TRAINING, TRAINING_LEVELS, averageExperience, averageFatigue, moraleTarget } from '@/world/crew';
 import { ConditionChip } from './gear';
 import { SUBHIRE_DAY_RATE, rentOutMonthly } from '@/world/hire';
-import { INSURANCE, INSURANCE_LEVELS, insuredValue, monthlyPremium } from '@/world/incidents';
+import { INSURANCE, INSURANCE_LEVELS, claimsRecord, insuredValue, monthlyPremium, premiumFactor } from '@/world/incidents';
 import { money } from './format';
 import type { WinCtx } from './types';
 
@@ -60,7 +61,7 @@ export function Choice<T extends string>({
 
 export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
-  const set = <K extends 'workshop' | 'pay' | 'insurance' | 'freelance' | 'subhire' | 'rentOut' | 'training' | 'rest' | 'marketing'>(key: K, value: (typeof state.policies)[K]) => ctx.dispatch(s => setPolicy(s, key, value));
+  const set = <K extends 'workshop' | 'pay' | 'insurance' | 'freelance' | 'subhire' | 'rentOut' | 'training' | 'rest' | 'marketing' | 'rehearsal' | 'invoicing'>(key: K, value: (typeof state.policies)[K]) => ctx.dispatch(s => setPolicy(s, key, value));
   const owned = ownedStock(state);
   return (
     <div>
@@ -119,6 +120,31 @@ export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
       <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
         Resting people stay at base when a truck loads — fresher crews and better morale, but more seats filled by freelancers.
         People pinned to a truck always go.
+      </div>
+
+      <h4>Invoices</h4>
+      <Choice
+        value={state.policies.invoicing}
+        options={INVOICING_LEVELS.map(id => ({ id, label: INVOICING[id].label, detail: INVOICING[id].blurb }))}
+        onPick={id => set('invoicing', id)}
+      />
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        Clubs and pubs pay on the night; arenas take about a month and stadiums and festivals longer. A promoter sometimes goes under owing you —
+        more often in a downturn.
+      </div>
+
+      <h4>Rehearsals</h4>
+      <Choice
+        value={state.policies.rehearsal}
+        options={[
+          { id: 'manual', label: 'Manual', detail: 'You book each rehearsal yourself. A reminder arrives a week out.' },
+          { id: 'auto', label: 'Automatic', detail: 'Required rehearsals are booked for you in the fortnight before the first date, if the stage is free and you can pay.' },
+        ]}
+        onPick={id => set('rehearsal', id)}
+      />
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        Arena and stadium shows, broadcast events and tours need a rehearsal stage (Base → Annexes) to book, and have to go through it
+        before the first date: an unrehearsed show loses 10% quality and fails 30% more often.
       </div>
 
       <h4>Crew training</h4>
@@ -260,6 +286,12 @@ export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
       <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
         Warehouses get broken into, trucks crash, and outdoor festivals get rained on — British summers most of all.
       </div>
+      {state.policies.insurance !== 'none' && (
+        <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+          Claims in the last year: <b>{claimsRecord(state).lastYear}</b> — premiums are{' '}
+          {premiumFactor(state) > 1 ? `${Math.round((premiumFactor(state) - 1) * 100)}% higher` : premiumFactor(state) < 1 ? `${Math.round((1 - premiumFactor(state)) * 100)}% lower (no-claims discount)` : 'at the standard rate'}. Large claims are sometimes disputed.
+        </div>
+      )}
     </div>
   );
 }

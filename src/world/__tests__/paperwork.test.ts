@@ -63,6 +63,10 @@ describe('visas and carnets', () => {
   it('a world tour leg books visas and carnets in the ledger when the rig turns up', () => {
     let s = createTycoonGame({ companyName: 'W', color: '#e11d48', seed: 42, country: 'GB', startYear: 1998 });
     s.company.reputation = 90;
+    // World tours need a production hall to rehearse in.
+    s.depots[0].kind = 'warehouse';
+    s.depots[0].size = 4;
+    s.depots[0].modules = { rehearsal: 3 };
     const world = worldOf(s);
     let tour: Tour | null = null;
     for (let i = 1; i < 80 && !tour; i++) tour = generateWorldTour(s, world, createRng(i));

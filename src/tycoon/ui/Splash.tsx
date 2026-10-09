@@ -129,8 +129,6 @@ export function Splash({
         </div>
 
         <div className="tt-splash-foot">
-          <a href={`${import.meta.env.BASE_URL}classic`}>Classic version</a>
-          <span>·</span>
           <span>Inspired by Transport Tycoon · made with Claude</span>
         </div>
       </div>

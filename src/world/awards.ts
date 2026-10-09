@@ -39,7 +39,7 @@ export function recordTour(s: TycoonState, year: number, world: boolean) {
 }
 
 const yearProfit = (state: TycoonState, year: number) =>
-  Object.entries(state.ledger[year] ?? {}).reduce((a, [c, v]) => (c === 'equity' ? a : a + (v ?? 0)), 0);
+  Object.entries(state.ledger[year] ?? {}).reduce((a, [c, v]) => (c === 'equity' || c === 'tax' ? a : a + (v ?? 0)), 0);
 
 export interface RatingBreakdown {
   total: number;

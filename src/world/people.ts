@@ -12,6 +12,8 @@
  * as cached summaries by `syncCrew`, so code that only needs headcounts keeps
  * reading them.
  */
+import { hasCert, requiredCerts, startingCerts } from './certs';
+import { loungeRest } from './annexes';
 import { createRng, type Rng } from '@/lib/rng';
 import { CREW_HIRE_COST, CREW_WAGE_PER_DAY } from './catalog';
 import { newId, pushNews } from './core';
@@ -66,8 +68,10 @@ export function makePerson(s: TycoonState, rng: Rng, level: number, primary?: Cr
     const second = rng.pick(CREW_DEPTS.filter(d => d !== main));
     skills[second] = Math.max(1, Math.min(skills[main] - 1, 1 + rng.nextInt(2)));
   }
+  const id = newId(s, 'crew');
+  const certs = startingCerts(id, main, skills[main]);
   return {
-    id: newId(s, 'crew'),
+    id,
     name: makeName(rng, s.country),
     primary: main,
     skills,
@@ -75,6 +79,7 @@ export function makePerson(s: TycoonState, rng: Rng, level: number, primary?: Cr
     trait: rng.chance(0.35) ? rng.pick(TRAIT_IDS) : undefined,
     fatigue: 0,
     hiredHour: s.hour,
+    ...(certs.length ? { certs } : {}),
   };
 }
 
@@ -214,6 +219,7 @@ export interface PickOptions {
 
 /** Whether `m` may board the truck being loaded. */
 export function mayBoard(m: CrewMember, opts: PickOptions = {}): boolean {
+  if (m.course) return false;
   if (opts.reserved?.has(m.id) && !opts.prefer?.has(m.id)) return false;
   if (opts.prefer?.has(m.id)) return true;
   if (m.pinnedVehicleId && m.pinnedVehicleId !== opts.vehicleId) return false;
@@ -240,7 +246,9 @@ export function pickCrew(pool: CrewMember[], gig: Gig, seats: number, alreadyAbo
       const fit = Math.max(...CREW_DEPTS.map(d => (slots[d] > 0 ? m.skills[d] + 1 : m.skills[d] * 0.3)));
       const pinned = opts.vehicleId && m.pinnedVehicleId === opts.vehicleId ? 100 : 0;
       const named = opts.prefer?.has(m.id) ? 150 : 0;
-      const score = pinned + named + fit - m.fatigue / 40;
+      const need = requiredCerts(gig);
+      const ticketed = (need.rigging && hasCert(m, 'rigging') ? 6 : 0) + (need.safety && hasCert(m, 'safety') ? 4 : 0);
+      const score = pinned + named + fit + ticketed - m.fatigue / 40;
       if (score > bestScore || (score === bestScore && best >= 0 && m.id < pool[best].id)) {
         best = i;
         bestScore = score;
@@ -302,13 +310,14 @@ export function learnFromShow(s: TycoonState, people: CrewMember[], assigned: Ma
 
 export function dailyPeopleFatigue(s: TycoonState) {
   const status = new Map(s.vehicles.map(v => [v.id, v.status]));
+  const depotById = new Map(s.depots.map(d => [d.id, d]));
   s.people.forEach(m => {
     if (m.vehicleId) {
       const base = status.get(m.vehicleId) === 'on-site' ? 4 : 3;
       const mult = m.trait === 'roadwarrior' ? 0.6 : m.trait === 'party' ? 1.2 : 1;
       m.fatigue = Math.min(100, m.fatigue + base * mult);
     } else {
-      m.fatigue = Math.max(0, m.fatigue - 10);
+      m.fatigue = Math.max(0, m.fatigue - 10 - (m.depotId ? loungeRest(depotById.get(m.depotId) ?? {}) : 0));
     }
   });
 }

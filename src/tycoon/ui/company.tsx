@@ -1,5 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { borrow, buyRival, goPublic, headhunt, repay, setDividend, takePrivate } from '@/world/actions';
+import { borrow, buyRival, goPublic, headhunt, investigate, repay, setDividend, takePrivate } from '@/world/actions';
+import { brandOf } from '@/world/sponsors';
+import { owed } from '@/world/receivables';
+import { expertise, knownForLabel } from '@/world/expertise';
+import { DEPT_COLORS, DEPT_LABELS } from '@/world/catalog';
+import { DEPTS } from '@/world/types';
+import { HEAT_DIRTY, INTEL_DAYS, aggression, hasIntel, heatOf, investigatorBlocker, investigatorCost } from '@/world/rivalry';
 import { headhuntBlocker, headhuntFee, headhuntTarget } from '@/world/headhunt';
 import { levelOf, roleOf } from '@/world/people';
 import { DIVIDENDS, IPO_FLOAT, buybackCost, ipoProceeds, listingBlocker, marketCap, sharePrice } from '@/world/shares';
@@ -95,6 +101,20 @@ export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
         {money(state.company.loan)} <span className="tt-dim">/ {money(creditLimit(state))} @ {describeLoanRate(state)}</span>
       </Stat>
       <Stat label="Company value">{money(companyValue(state))}</Stat>
+      {state.receivables.length > 0 && (
+        <>
+          <Stat label="Owed to you">
+            <b>{money(owed(state))}</b> <span className="tt-dim">· {state.receivables.length} invoice{state.receivables.length === 1 ? '' : 's'}</span>
+          </Stat>
+          <div className="tt-dim" style={{ whiteSpace: 'normal', fontSize: 11 }}>
+            {[...state.receivables]
+              .sort((a, b) => a.dueDay - b.dueDay)
+              .slice(0, 4)
+              .map(i => `${i.act} ${money(i.amount)} (${formatDay(state, i.dueDay)}${i.insured ? ', insured' : ''})`)
+              .join(' · ')}
+          </div>
+        </>
+      )}
       <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
         <button className="tt-btn sm" disabled={state.company.loan >= creditLimit(state)} onClick={() => act(borrow)}>
           Borrow {money(Math.min(borrowStep(state), Math.max(0, creditLimit(state) - state.company.loan)))}
@@ -154,6 +174,33 @@ export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
           </button>
         </>
       )}
+      <h4>Sponsors &amp; goodwill</h4>
+      {state.sponsors.some(d => d.status === 'active') ? (
+        <div className="tt-list">
+          {state.sponsors
+            .filter(d => d.status === 'active')
+            .map(d => (
+              <div key={d.id} className="tt-item" style={{ gap: 6 }}>
+                <div className="grow" style={{ whiteSpace: 'normal' }}>
+                  <b>{brandOf(d.brandId)?.name}</b> <span className="tt-dim">— {money(d.monthly)}/month</span>
+                  <div className="tt-dim">
+                    {d.minShows}+ shows a month · until {formatDay(state, d.endDay)} · {money(d.paid)} paid
+                  </div>
+                  {d.shortfalls > 0 && <div className="tt-bad">Missed last month — one more and they walk.</div>}
+                </div>
+              </div>
+            ))}
+        </div>
+      ) : (
+        <div className="tt-dim" style={{ whiteSpace: 'normal' }}>No sponsors yet. Brands call once you have a name and some shows behind you.</div>
+      )}
+      <Stat label="Goodwill">
+        <b>{Math.round(state.goodwill ?? 0)}</b> <span className="tt-dim">/ 100 · {state.charityDone ?? 0} charity night{(state.charityDone ?? 0) === 1 ? '' : 's'}</span>
+      </Stat>
+      <Bar value={state.goodwill ?? 0} max={100} color="#ec4899" />
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        Good causes cost money now and build goodwill, which brings more sponsor offers at better rates. Goodwill fades slowly.
+      </div>
       <h4>Reputation</h4>
       <div className="tt-row">
         <span>
@@ -165,6 +212,23 @@ export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
         {next
           ? `Reach ${next.minReputation} to book ${next.label} venues. Bigger rooms are what raise reputation past each tier.`
           : 'Top of the industry — every stadium in the land will take your call.'}
+      </div>
+      <Stat label="Known for">
+        <b>{knownForLabel(state)}</b>
+      </Stat>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4 }}>
+        {DEPTS.map(d => (
+          <div key={d} title={`${DEPT_LABELS[d]}: ${Math.round(expertise(state, d))}`} style={{ textAlign: 'center' }}>
+            <div style={{ height: 34, display: 'flex', alignItems: 'flex-end' }}>
+              <div style={{ width: '100%', height: `${Math.max(6, expertise(state, d))}%`, background: DEPT_COLORS[d], borderRadius: 2 }} />
+            </div>
+            <div className="tt-dim" style={{ fontSize: 10 }}>{DEPT_LABELS[d]}</div>
+          </div>
+        ))}
+      </div>
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        A moving average of the kind of work you do. Specialists earn up to ~8% more on shows that lean on their speciality and a little less
+        outside it; generalists sit in the middle.
       </div>
       <Stat label="Shows played / failed">
         {state.stats.showsPlayed} / <span className={state.stats.showsFailed ? 'tt-bad' : ''}>{state.stats.showsFailed}</span>
@@ -344,6 +408,67 @@ export function HelpWindow() {
           enquiries and cheaper kit. <b>Low-emission zones</b> (Market) start charging older trucks in big cities from the
           2000s on: check a vehicle's emission class, and retrofit a filter or replace it. A rival may start a{' '}
           <b>price war</b> in a town you work in (see Market) — ride it out, fight back or buy a truce.
+        </li>
+        <li>
+          <b>Owning a venue</b> (open the venue): lease it out for steady rent or promote it yourself for more, with more
+          swing. It wears out and asks for refurbishment now and then.
+        </li>
+        <li>
+          <b>Your own festival</b> (Market): pay up front in spring for a field day, weekender or major, pick a headliner
+          and ticket price, and hope the economy and the weather play along — a built brand sells out, a new one loses
+          money.
+        </li>
+        <li>
+          <b>Tax</b>: on 31 December the taxman takes 15% of the first £250k of the year's profit and 30% above it. Losses carry
+          forward and half of what you spend on trucks and kit is deductible.
+        </li>
+        <li>
+          <b>Briefing</b> (clipboard button): a sorted list of what needs doing — shows without a truck, rehearsals, thin cash,
+          a sponsor you're about to miss — with a tap to go straight to each.
+        </li>
+        <li>
+          <b>Disputes and audits</b>: a promoter unhappy with a poor night may hold back part of your fee, and an insurer may question a
+          big claim — settle, argue or send in the lawyers. Every September the council audits each base (the Base tab shows
+          your likely score); first aiders, a prep crew that keeps up and a tidy rack help.
+        </li>
+        <li>
+          <b>Speciality</b>: the kind of work you do shapes your name (Finance). Specialists earn more on shows that lean on their
+          department and a little less on others; generalists sit in the middle.
+        </li>
+        <li>
+          <b>Getting paid</b>: small venues pay on the night, bigger promoters take 2-6 weeks and sometimes go under. Policies lets you
+          sell invoices to a factor for cash now or insure them.
+        </li>
+        <li>
+          <b>Merchandise</b>: on a booked tour you can stock the stands before the first date — a small order is safe, a big one
+          only pays if the tour sells out.
+        </li>
+        <li>
+          <b>Tickets</b>: arena and stadium shows are inspected — you need riggers and a first aider in the crew. Hire people who
+          have them, or send your own on a course from the crew list (a training room or academy at a warehouse makes it
+          cheaper).
+        </li>
+        <li>
+          <b>Fuel</b> follows real history (Market): spikes in 1979-81, 2008 and 2022, a collapse in 1986. Lock the price for 6 or
+          12 months if you see a spike coming.
+        </li>
+        <li>
+          <b>Rehearsals are mandatory</b> for big jobs: arena shows, stadiums, broadcast events and tours can't be booked
+          without a rehearsal stage of the right size (Base → Annexes), and an unrehearsed show suffers. Policies has an
+          automatic option.
+        </li>
+        <li>
+          <b>Upgrading a base</b>: a warehouse grows up to a production campus, and the Base tab adds annexes — a rehearsal
+          stage (rehearse a show or tour for better quality, rent it to bands in between), a workshop bench and a crew lounge.
+        </li>
+        <li>
+          <b>Rivalry</b>: provoke a rival (headhunting, price-war fights) or sit in an aggressive neighbour's patch and the heat
+          rises — then come rumours, tampered kit and tip-offs. Pay for security, hit back, or hire an investigator in the League
+          to watch them for a quarter.
+        </li>
+        <li>
+          <b>Sponsors &amp; charity</b>: brands will pay a monthly retainer to be on your trucks if you keep a promised number of
+          shows a month going (Finance lists them); say yes to a good cause now and then and they call more often.
         </li>
         <li>
           <b>Going public</b>: a big, reputable company can float 30% of itself for cash (Finance). Then shareholders
@@ -685,6 +810,36 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
                             }}
                           >
                             Headhunt {kmoney(headhuntFee(star))}
+                          </button>
+                        </>
+                      );
+                    })()}
+                  </div>
+                )}
+                {'rival' in r && r.rival && (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', paddingLeft: 30, marginTop: 2 }}>
+                    {(() => {
+                      const rv = r.rival!;
+                      const heat = heatOf(state, rv.id);
+                      const watched = hasIntel(state, rv.id);
+                      const why = investigatorBlocker(state, rv);
+                      const mood = heat >= HEAT_DIRTY ? 'Hostile' : heat >= 15 ? 'Cool' : 'Cordial';
+                      return (
+                        <>
+                          <span className={heat >= HEAT_DIRTY ? 'tt-bad' : 'tt-dim'} style={{ fontSize: 11 }}>
+                            {watched || heat >= HEAT_DIRTY ? `Rivalry: ${mood} (${Math.round(heat)}${watched ? `, grudge ${Math.round(aggression(rv) * 100)}%` : ''})` : 'Rivalry: unknown'}
+                            {watched ? ' · watched' : ''}
+                          </span>
+                          <button
+                            className="tt-btn sm"
+                            title={why ?? `Hire an investigator: ${INTEL_DAYS} days of intel, and ${rv.name} take fewer of your offers`}
+                            disabled={!!why}
+                            onClick={() => {
+                              const res = ctx.dispatch(s => investigate(s, rv.id));
+                              if (res.message) ctx.toast(res.message, res.ok);
+                            }}
+                          >
+                            Investigate {kmoney(investigatorCost(state))}
                           </button>
                         </>
                       );

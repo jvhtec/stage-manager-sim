@@ -1,9 +1,26 @@
-import { LOAN_MARGIN, marketNow, monthlyInterest } from '@/world/market';
+import { useState } from 'react';
+import { lockFuel, promoteFestival } from '@/world/actions';
+import {
+  FEST_HEADLINERS,
+  FEST_HEADLINER_IDS,
+  FEST_TICKETS,
+  FEST_TICKET_IDS,
+  FEST_TIERS,
+  FEST_TIER_IDS,
+  festBlocker,
+  festDemand,
+  festQuote,
+} from '@/world/ownfest';
+import type { FestHeadliner, FestTicket, FestTier } from '@/world/types';
+import { FUEL_LOCK_MONTHS, FUEL_LOCK_PREMIUM, LOAN_MARGIN, fuelLockBlocker, fuelMultiplier, marketNow, marketOnDay, monthlyInterest } from '@/world/market';
 import { SEASON, baseRate } from '@/world/content/economy';
 import { ZONES } from '@/world/content/regulations';
-import { dayOf, formatDay } from '@/world/core';
+import { dayOf, formatDay, yearOf } from '@/world/core';
 import { TENDER_CLOSES_DAYS, TENDER_OPENS_DAYS, festivalCalendar } from '@/world/festivals';
 import { worldOf } from '@/world/mapgen';
+import { TECH_WAVES, techQualityFactor, waveProgress } from '@/world/content/techWaves';
+import { getProduct } from '@/world/content/gear';
+import { ownedStock } from '@/world/wear';
 import { WAR_WIN_BONUS } from '@/world/pricewars';
 import type { Gig } from '@/world/types';
 import { Bar, Stat, TierChip } from './bits';
@@ -61,6 +78,12 @@ export function MarketWindow({ ctx }: { ctx: WinCtx }) {
         </>
       )}
 
+      <h4>Fuel</h4>
+      <FuelPanel ctx={ctx} />
+
+      <h4>Technology</h4>
+      <TechWaves ctx={ctx} />
+
       <h4>Low-emission zones</h4>
       {(ZONES[state.country] ?? []).length ? (
         <div className="tt-list">
@@ -109,6 +132,9 @@ export function MarketWindow({ ctx }: { ctx: WinCtx }) {
         Summer is festival season and pays best; January is dead. Have the trucks and crew ready by June, and keep cash in hand
         for the winter.
       </div>
+
+      <h4>Your own festival</h4>
+      <OwnFestivalPanel ctx={ctx} />
 
       <h4>Festival season</h4>
       <FestivalCalendar ctx={ctx} />
@@ -172,6 +198,192 @@ export function FestivalCalendar({ ctx }: { ctx: WinCtx }) {
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function Pick<T extends string>({ label, value, ids, text, onPick }: { label: string; value: T; ids: T[]; text: (id: T) => string; onPick: (id: T) => void }) {
+  return (
+    <div style={{ marginTop: 6 }}>
+      <div className="tt-dim">{label}</div>
+      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+        {ids.map(id => (
+          <button key={id} className="tt-btn sm" data-on={id === value} onClick={() => onPick(id)}>
+            {text(id)}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Promote your own festival: size, headliner, ticket price, host town. */
+function OwnFestivalPanel({ ctx }: { ctx: WinCtx }) {
+  const { state } = ctx;
+  const world = worldOf(state);
+  const [tier, setTier] = useState<FestTier>('field');
+  const [headliner, setHeadliner] = useState<FestHeadliner>('name');
+  const [ticket, setTicket] = useState<FestTicket>('fair');
+  const hosts = [...new Set(state.depots.map(d => d.cityId))];
+  const [city, setCity] = useState(hosts[0] ?? '');
+  const cityId = hosts.includes(city) ? city : hosts[0] ?? '';
+  const f = state.ownFestival;
+  const history = state.festivalHistory;
+  const current = f && f.year === yearOf(state, state.hour) ? f : undefined;
+  const quote = festQuote(state, tier, headliner);
+  const why = festBlocker(state, tier, headliner);
+  const share = festDemand(state, { tier, headliner, ticket, cityId });
+  const hostName = (id: string) => world.cityById.get(id)?.name ?? id;
+
+  return (
+    <div>
+      <Stat label="Your brand">
+        <b>{Math.round(state.festivalBrand ?? 0)}</b> <span className="tt-dim">/ 100 · {history.length} edition{history.length === 1 ? '' : 's'}</span>
+      </Stat>
+      <Bar value={state.festivalBrand ?? 0} max={100} color="#a855f7" />
+      {current ? (
+        <div className="tt-item" style={{ marginTop: 6 }}>
+          <div className="grow" style={{ whiteSpace: 'normal' }}>
+            <b>
+              {FEST_TIERS[current.tier].label} in {hostName(current.cityId)}
+            </b>
+            <div className="tt-dim">
+              {formatDay(state, current.day)} · {FEST_HEADLINERS[current.headliner].label} · {FEST_TICKETS[current.ticket].label} tickets · {money(current.paid)} spent
+            </div>
+            {current.status === 'planned' ? (
+              <div className="tt-good" style={{ fontSize: 11 }}>
+                {current.covered ? 'Stages covered.' : 'Watch the forecast two days out.'}
+              </div>
+            ) : (
+              current.result && (
+                <div className={current.result.profit >= 0 ? 'tt-good' : 'tt-bad'}>
+                  {current.result.attendance.toLocaleString()} came{current.result.stormed ? ' (in a storm)' : ''} · {current.result.profit >= 0 ? 'profit' : 'loss'}{' '}
+                  {money(Math.abs(current.result.profit))}
+                </div>
+              )
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
+          <Pick label="Size" value={tier} ids={FEST_TIER_IDS} text={id => `${FEST_TIERS[id].label} (${FEST_TIERS[id].capacity.toLocaleString()})`} onPick={v => setTier(v as FestTier)} />
+          <Pick label="Headliner" value={headliner} ids={FEST_HEADLINER_IDS} text={id => FEST_HEADLINERS[id].label} onPick={v => setHeadliner(v as FestHeadliner)} />
+          <Pick label="Tickets" value={ticket} ids={FEST_TICKET_IDS} text={id => `${FEST_TICKETS[id].label} ${money(FEST_TICKETS[id].price)}`} onPick={v => setTicket(v as FestTicket)} />
+          {hosts.length > 1 && <Pick label="Host base" value={cityId} ids={hosts} text={hostName} onPick={setCity} />}
+          <div className="tt-dim" style={{ marginTop: 6, whiteSpace: 'normal' }}>
+            Up front {money(quote.total)} (set-up {money(quote.setup)}, production {money(quote.production)}, headliner {money(quote.headliner)}). Expected
+            crowd about {Math.round(Math.min(1, share) * 100)}% of capacity — a fresh name sells poorly, a built brand sells out.
+          </div>
+          {why && <div className="tt-warn" style={{ marginTop: 4 }}>{why}</div>}
+          <button
+            className="tt-btn sm"
+            style={{ marginTop: 6 }}
+            disabled={!!why}
+            onClick={() => {
+              const res = ctx.dispatch(s => promoteFestival(s, tier, headliner, ticket, cityId));
+              if (res.message) ctx.toast(res.message, res.ok);
+            }}
+          >
+            Announce the festival
+          </button>
+        </>
+      )}
+      {history.length > 0 && (
+        <div className="tt-dim" style={{ marginTop: 6, whiteSpace: 'normal' }}>
+          Past editions:{' '}
+          {history
+            .slice(-4)
+            .map(e => `${e.year} ${e.attendance ? e.attendance.toLocaleString() : 'cancelled'} (${e.profit >= 0 ? '+' : '−'}${money(Math.abs(e.profit))})`)
+            .join(' · ')}
+        </div>
+      )}
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        Plans close at the end of April and you pay up front. A bigger name and cheaper tickets fill the field; your own fleet trims the production bill. A
+        storm can empty it, and a shutdown cancels it.
+      </div>
+    </div>
+  );
+}
+
+/** Technology waves: what is coming, and how much of your kit it hits. */
+function TechWaves({ ctx }: { ctx: WinCtx }) {
+  const { state } = ctx;
+  const year = yearOf(state, state.hour);
+  const stock = ownedStock(state);
+  const shown = TECH_WAVES.filter(w => year >= w.year - 2 && waveProgress(w, year) < 1.5 + w.ramp);
+  const relevant = TECH_WAVES.filter(w => year >= w.year - 2);
+  if (!relevant.length) return <div className="tt-dim">Nothing on the horizon yet — new formats will be rumoured a couple of years ahead.</div>;
+  return (
+    <div className="tt-list">
+      {(shown.length ? shown : relevant.slice(-3)).map(w => {
+        const progress = waveProgress(w, year);
+        const units = Object.entries(stock).reduce((n, [id, qty]) => (w.obsolete.includes(getProduct(id).kind) ? n + qty : n), 0);
+        const status = year < w.year ? `Rumoured — arrives ${w.year}` : progress >= 1 ? 'Fully established' : `Spreading (${Math.round(progress * 100)}%)`;
+        const hit = Math.round((1 - techQualityFactor(w.obsolete[0], w.minTier, year)) * 100);
+        return (
+          <div key={w.id} className="tt-item" style={{ gap: 6 }}>
+            <div className="grow" style={{ whiteSpace: 'normal' }}>
+              <b>{w.label}</b> <span className="tt-dim">— {status}</span>
+              <div className="tt-dim">
+                Dated kit: {w.obsolete.join(', ')} · {hit > 0 ? `−${hit}% quality on tier ${w.minTier}+ shows` : 'no penalty yet'} · resale −{Math.round(w.resale * progress * 100)}%
+              </div>
+              {units > 0 && <div className={progress > 0 ? 'tt-warn' : 'tt-dim'}>You own {units} affected unit{units === 1 ? '' : 's'}.</div>}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Pump prices: where they are, where they've been, and the option of locking them in. */
+function FuelPanel({ ctx }: { ctx: WinCtx }) {
+  const { state } = ctx;
+  const today = dayOf(state.hour);
+  const spot = marketNow(state).fuel;
+  const paying = fuelMultiplier(state);
+  const history = Array.from({ length: 12 }, (_, i) => marketOnDay(state, today - (11 - i) * 30).fuel);
+  const max = Math.max(...history, 1.2);
+  const lock = state.fuelLock && state.fuelLock.untilDay > today ? state.fuelLock : null;
+  const why = fuelLockBlocker(state);
+  const trend = spot / history[8] - 1;
+  return (
+    <div>
+      <Stat label="Pump price">
+        <b className={spot > 1.15 ? 'tt-bad' : spot < 0.9 ? 'tt-good' : ''}>{Math.round(spot * 100)}%</b>
+        <span className="tt-dim"> of normal · {trend > 0.05 ? 'rising' : trend < -0.05 ? 'falling' : 'steady'}</span>
+      </Stat>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: 3, alignItems: 'end', height: 36 }}>
+        {history.map((v, i) => (
+          <div key={i} style={{ height: `${Math.max(8, (v / max) * 100)}%`, background: i === 11 ? '#f59e0b' : '#64748b', borderRadius: 2 }} title={`${Math.round(v * 100)}%`} />
+        ))}
+      </div>
+      {lock ? (
+        <div className="tt-good" style={{ marginTop: 6, whiteSpace: 'normal' }}>
+          Contract running: you pay {Math.round(lock.price * 100)}% until {formatDay(state, lock.untilDay)} ({paying > spot ? 'above' : 'below'} the pump right now).
+        </div>
+      ) : (
+        <div style={{ display: 'flex', gap: 4, marginTop: 6, flexWrap: 'wrap' }}>
+          {FUEL_LOCK_MONTHS.map(m => (
+            <button
+              key={m}
+              className="tt-btn sm"
+              disabled={!!why}
+              title={`Lock today's price plus ${Math.round(FUEL_LOCK_PREMIUM * 100)}% for ${m} months`}
+              onClick={() => {
+                const res = ctx.dispatch(s => lockFuel(s, m));
+                if (res.message) ctx.toast(res.message, res.ok);
+              }}
+            >
+              Lock for {m} months · {Math.round(spot * (1 + FUEL_LOCK_PREMIUM) * 100)}%
+            </button>
+          ))}
+        </div>
+      )}
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        Fuel is a running cost on every mile. Prices swing with history — the 1979 and 2008 spikes, the 1986 collapse — and a contract buys certainty at a
+        premium: worth it before a spike, a waste before a slide.
+      </div>
     </div>
   );
 }

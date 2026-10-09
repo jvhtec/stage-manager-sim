@@ -1,23 +1,18 @@
 #!/usr/bin/env node
 // Fails the build if dist/assets/*.js grows past a budget. Run after
-// `npm run build` / `npm run build:pages`. See docs/game-feel-plan.md
-// workstream G — code-splitting only pays off if regressions get caught.
+// `npm run build` / `npm run build:pages`. Code-splitting only pays
+// off if regressions get caught.
 import { readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 
 const ASSETS_DIR = join(process.cwd(), 'dist', 'assets');
-// Raw (pre-gzip) budget in KB. Current total is ~1000KB after the PR 1
-// code-split; this leaves headroom for the game-feel plan's remaining
-// workstreams (avatars, scene, map) before it needs raising again.
-// Raised 1400 -> 1500 -> 1650KB: the Transport Tycoon game (src/world + src/tycoon)
-// has grown with its strategy-depth systems. Its rarely-opened windows (world
-// map, market, R&D, star techs, planner, auctions) are lazy chunks, so the main
-// game chunk stays well under the per-chunk budget below; the rest of the app is
-// unchanged.
-const TOTAL_BUDGET_KB = 1650;
+// Raw (pre-gzip) budget in KB. The map game (src/world + src/tycoon) is the
+// whole app now that the old dashboard build is gone: about 640KB today, with
+// its rarely-opened windows (world map, market, R&D, star techs, planner,
+// auctions) as lazy chunks. This leaves room to grow before it needs raising.
+const TOTAL_BUDGET_KB = 900;
 // No single chunk should silently balloon past this without a deliberate
-// decision (e.g. adding framer-motion in PR 2 should bump this, not blow
-// through it unnoticed).
+// decision.
 const CHUNK_BUDGET_KB = 500;
 
 let files;

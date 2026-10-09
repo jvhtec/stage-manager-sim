@@ -1,8 +1,7 @@
 # Stage Manager Sim — The Transport Tycoon Redesign
 
-> **Status:** first playable slice shipped on `claude/transport-tycoon-redesign-2qfm5y`. The
-> map game is now the default experience at `/`; the previous dashboard build is kept intact at
-> `/classic` while its systems are ported across. This document supersedes the sequencing in
+> **Status:** shipped. The map game is the whole app; the previous dashboard build (`/classic`)
+> has been retired and removed. This document supersedes the sequencing in
 > `docs/game-feel-plan.md` and `docs/tycoon-game-plan.md` — those plans polished a management
 > dashboard; this one changes what kind of game it is.
 
@@ -86,7 +85,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 231 tests):
+(`src/world/__tests__/*.test.ts`, 344 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -95,7 +94,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 - All randomness goes through the seeded `rngState` (same discipline as `src/lib/rng.ts`).
 - Actions (`src/world/actions.ts`) are `(state, …) → { state, result }`, same pattern as
   `src/engine/**`.
-- Save key `stage-manager-sim:tycoon` (v6: market, festivals, wear, crew, contracts, awards; v5 saves are migrated by `migrate()`) — separate from the classic save.
+- Save key `stage-manager-sim:tycoon` (v6: market, festivals, wear, crew, contracts, awards; v5 saves are migrated by `migrate()`) — the dashboard build's old save key is no longer read.
 
 A headless bot played two in-game years on three seeds during tuning: it survives, but stalls at
 Local Circuit unless it buys bigger trucks and more gear. That upgrade pressure is intended.
@@ -330,6 +329,168 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   (special dividend +25 confidence, or stand firm −10 and reputation −2); under 8 for four months
   the board ousts you (game over). Going private again costs 120% of the stake's market value.
 
+- **Facility upgrades** (`annexes.ts`) — warehouses now grow through four sizes (a fourth
+  "production campus": 2,000 units, 28 prep / 10 office staff, £5,200 rent, reputation tier 4) and
+  take annexes, each needing a minimum warehouse size and charging monthly upkeep:
+  *rehearsal stage* (room 25k / soundstage 70k / production hall 160k / arena hall 320k, upkeep
+  £400-5,000): rehearse a booked show (5% of its fee) or a whole tour (60% of its legs' combined
+  cost) for +2/4/6/8% quality and −6/12/18/24% failure chance (×0.8 share across a tour), taking the
+  stage for a day or more; free time is rented to bands (£350-6,500 a month × the economy × the
+  town), and a busy stage keeps the town warm. *Workshop bench* (18k / 55k): +0.08 / +0.18
+  condition a day to all kit (caps 85/95; more benches add 30%), on top of the workshop policy.
+  *Crew lounge* (12k / 35k): techs resting at the base shed 3 / 6 extra fatigue a day (the second
+  level adds a little morale). The base diorama grows a soundstage annex with a band, lighting bar
+  and (from the production hall up) a video wall. A shutdown zeroes the rent but leaves the upkeep.
+
+- **Corporation tax** (`tax.ts`) — found by the balance pass below. On 31 December the year's
+  trading profit (everything except share dealings and asset sales, with only half of what you spent
+  on trucks and kit counted as a cost) is taxed 15% on the first 250k and 30% above, after any
+  losses carried forward. Booked as "Corporation tax"; the Briefing warns from October.
+
+- **Balance pass (smart bot)** — a script that plays competently (buys gear for the shows it
+  books, adds trucks and crew, takes tours and sponsors, answers decisions, builds a rehearsal stage,
+  trains riggers/first-aiders, factors invoices when short) on GB 1995, 9 years, 3 seeds: with only
+  gear and expansion it reaches ~7M company value; with the new systems ~14M (rep 80-100 instead of
+  40: the rehearsal stage unlocks the big shows) — before tax; with tax ~11-12M. Earlier eras land
+  at 5-11M in nine years. The economy is generous to competent play, so the "empire" goal moved from
+  5M to 15M in 20 years; the dumb bot (which never expands) is unchanged. One run (ES 2010 seed 2)
+  went bust in the 2010 slump after over-buying — early over-expansion in a crisis still bites.
+  The script lives in `src/world/__bench__/smart.bench.ts` (`npm run balance`; see its header for the
+  options). The dumb bot loses about 10% of its cash to the tax and keeps every run alive.
+
+- **The briefing** (`advisor.ts`, Briefing window) — a read-only list of what needs doing, sorted red /
+  orange / blue, each with a way into the problem: decisions pending and rival poach offers; booked
+  shows within 4 days with no vehicle, within a week still needing a rehearsal, or needing tickets
+  you have no one for; cash under a month (red) or 2.5 months (orange) of fixed costs (rent,
+  salaries, crew pay, insurance, loan interest); an uninsured fleet; expensive loans you could
+  clear; overdue or unreliable vehicles; worn-out crews; a sponsor you're about to miss this month;
+  bases that would fail August's pre-audit; a fuel spike with no contract; offers expiring within
+  a day; spring festival planning; and the missing rehearsal stage. The toolbar button badge counts
+  the red and orange ones.
+
+- **Disputes, claims and audits** (`disputes.ts`, `audits.ts`, `incidents.ts`) — three ways money
+  and rules push back. *Promoter disputes*: a show under 62% quality at a tier-2+ venue may leave
+  the promoter holding back 25% of the payout (chance 20% + 1.6 per point under 62%, −4% a
+  relationship point); settle (take 40% of it), argue (55% they pay in full, else it's gone and the
+  relationship cools) or send lawyers (16% of the held amount up front, 70% win; a loss costs 1
+  reputation). *Insurer disputes*: a claim over 1,500 is questioned 22% of the time — accept half or
+  fight (8% fees, 60% paid in full). *Premiums*: each claim in the last year loads the premium 8%
+  (max +60%); two clean years earn −10%. *Safety audits*: each September the council scores every
+  base older than four months (60 + prep ratio × 20, −20 over capacity, +10/+15 for first aiders on
+  site, +4 each for a lounge and a bench, ±10 luck): 70+ passes with a little reputation; 45-69
+  is an improvement notice (fix 4% of the base's build cost, appeal 1.5% for 40% to overturn,
+  or pay a 7% fine and mark your insurance record); under 45 a prohibition (fix 8%, or shut for
+  a week: 15% fine, −3 morale, −1 reputation). The Base tab shows the likely score and why.
+  Legal fees and fines land in a new "Legal fees" ledger line.
+
+- **Speciality** (`expertise.ts`) — a moving average of the department mix of the shows you play
+  (each show moves it 4-10%, bigger shows more) sets 160 expertise points to share between five
+  departments (each caps at 100). A show's fee is adjusted by 12% × (how well its needs match your
+  expertise − an even mix): about +8% for a pure specialist on a show that leans on their
+  department, −4% for an off-speciality job, 0 for an all-rounder. You're "known for" a department at
+  60+. The Finance window shows the bars; the show window shows the adjustment, and the news line
+  names it. The bot gains ~3% from its natural mix drift.
+
+- **Getting paid** (`receivables.ts`) — pubs and clubs (tier 1) pay on the night;
+  tier 2 takes 14 days, tier 3 30, tier 4 45, festivals and events another 15. Until then the money
+  is an invoice ("Owed to you" in Finance, counted in company value). Each invoice has a small
+  default risk (0.8% / 1.5% / 2% by tier; ×2 in a downturn, ×3 in a shutdown) rolled when it falls
+  due. The *Invoices* policy: wait for it (carry the risk), sell to a factor (cash now for 96.5%)
+  or credit insurance (1.2% premium; a default is covered). The bot loses about 2% of cash to the
+  delay and keeps all its survival.
+
+- **Tour merchandise** (`merch.ts`) — before a booked tour's first date (3+ days out) you can order
+  stock: a small run (5% of the tour's fees), a proper range (10%) or the full stand (18%). Stock
+  is worth three times its cost at the stands; demand is the played dates' fees × the act's pull
+  (6% for local bands, 15-30% for real names by their tier) × how well tickets went × show quality
+  × a little noise. You keep 60% of what's sold; unsold stock fetches a quarter of its cost.
+  Settled when the tour ends (even if dates were dropped, on what was played). So a small run
+  almost always profits, the middle order wins on a good tour, and the full stand only pays on a
+  sell-out. Booked under the new "Merchandise" ledger line.
+
+- **Tickets and the training academy** (`certs.ts`) — shows from tier 3 are inspected: tier 3
+  wants one rigging-ticketed and one first-aid-trained person aboard, tier 4 two riggers and a
+  first aider. A missing rigger costs 4% quality and 12% more kit failures; a missing first aider 6%
+  more failures; each missing ticket is a fine of 5% of the fee. People in the hiring market arrive
+  with tickets by a deterministic hash of their id (stage hands rigger-qualified over half the
+  time) and crew selection favours ticketed people on the big shows. Anyone at base can be sent on
+  a course (rigging £900 / 5 days, first aid £350 / 3 days; they can't be loaded meanwhile). The
+  *training room* annex cuts course fees 30% and days 40%; the *academy* halves fees, cuts days
+  60% and graduates a free apprentice (60% with a ticket) every quarter. Ticket chips show on every
+  crew row and the show window lists what a show needs and what you have.
+
+- **Fuel prices** (`content/economy.ts`, `market.ts`) — diesel has a price index (1.0 = a normal
+  year) joined between real-history anchors: the 1979-81 plateau, the early-1986 collapse, the 1990
+  Gulf blip, the 1998 low, 2008's spike, 2020's trough and 2022's surge. It multiplies every fuel
+  cost (the sim, job estimates and the run planner). News breaks when a three-month swing crosses
+  ±15%. A fuel contract (Market window) locks today's price plus 8% for 6 or 12 months — worth it
+  before a spike, a waste before a slide. The index averages about 1.07 over 1975-2024, and the
+  bot (which drives short local runs) barely notices.
+
+- **Mandatory rehearsals** (`annexes.ts`, `standing.ts`) — bigger jobs can't be booked without a
+  rehearsal stage of the right size, and then must go through it: arena shows (tier 3) need a
+  rehearsal room, stadium shows (tier 4) and broadcast events a soundstage, national tours a room /
+  soundstage / production hall by their biggest date (tier 2 / 3 / 4), world tours and overseas legs a
+  production hall. Festival stages are exempt. The booking bar reports the missing stage (and a
+  show less than three days out is "too late to rehearse"). A required show that reaches its date
+  unrehearsed loses 10% quality and fails 30% more often; reminders arrive a week and three days out,
+  or set the *Rehearsals* policy to automatic and they're booked for you in the fortnight before the
+  first date if the stage is free and you can pay. A rehearsal needs a free stage at least as big as
+  the requirement. Effect on the bot: shut out of arena shows, GB 1995 over 9 years ends ~5% poorer;
+  GB 1979 over 7 years is unchanged.
+
+- **Rivalry** (`rivalry.ts`) — each rival carries heat (0-100) toward you. It rises 12 when you
+  headhunt them, 8 when you fight their price war (−5 for a truce), and each month by 4 × their
+  grudge (a stable 20-90% per rival) if their HQ is within 35 road tiles of a base of yours; it
+  cools 3 a month. From 35 up they play dirty (up to 35% a month, one at a time): rumours
+  (reputation −2), tampered racks (a product's condition −30) or a council tip-off (next show −5%
+  quality). A decision: security (stops it, −8 heat), hit back (55% you expose them for −8 finances
+  and −15 heat; otherwise it backfires, +10 heat and −1 reputation, and the trick lands) or ignore.
+  An investigator (one-and-a-half months of marketing spend) shows the heat and grudge for 90 days
+  and makes that rival take 40% fewer of your offers; 20% of the time they're caught (+8 heat,
+  reputation −1). Monthly rolls use a side rng.
+  Balance: over 6-9 year bot runs (the bot never answers decisions) it shaves a few reputation points
+  by the end — about 5 on GB 1995 over 9 years — and leaves cash and survival alone; GB 1979 over
+  7 years is unchanged.
+
+- **Sponsors and charity** (`sponsors.ts`) — once you have reputation 25+ and 10 shows behind you,
+  each month there's a 10% chance (+0.2 points per goodwill) that an invented era-appropriate brand
+  (a lager, a cola, a bank, a fuel firm, telecoms, tech…; one per category, two at a time) offers a
+  12-month retainer of (500 + 30 × reputation) × fleet/3 × goodwill bonus a month, for a promised
+  1.5 shows a month per vehicle. Sign, push for +20% (40% they walk) or decline (the default).
+  Miss the show count and no retainer is paid; two months running and they walk (reputation −1,
+  goodwill −10). Separately, ~4% of months a charity asks for a free benefit night (full production:
+  goodwill +15, reputation +0.8, town +4; basic rig: half price, +6). Goodwill decays 1 a month. These
+  monthly rolls use a side rng, so they don't disturb the rest of the sim.
+
+- **Technology waves** (`content/techWaves.ts`) — formats come and go: moving lights (1986, dates
+  PAR cans), line arrays (1996, point-source PA), moving heads over scanners (1998), digital desks
+  (2000, analogue consoles) and LED over projection (2008). Each is rumoured two years ahead,
+  arrives with a news item, and ramps over 4-8 years to its full effect: obsolete kit loses 25-35%
+  of its quality on shows at the wave's minimum tier and up (tier 3, or 2 for scanners), and its
+  resale value (and so company value) slides by 35-50%. The Market window lists each wave and how
+  many of your units it hits. New games starting after a wave don't replay its news.
+
+- **Owned venues** (`owned.ts`) — pubs, halls, clubs, theatres and arenas can be bought (venue
+  window) with a base in town and the reputation to book there: £90-450 a seat plus 8% fees. Lease
+  it out (0.9% of value a month) or promote it yourself (1.9% × the economy × your standing in
+  town, ±50% noise) against 0.35% upkeep; condition (50-80 at purchase) wears 1.2 a month, scales
+  income (0.6-1.0×, nothing below 12) and below 40 raises a refurbish / patch / defer decision. An
+  owned room keeps the town warm (+0.5 rating a month). Selling gets 55-95% of value by condition.
+  Net yield is ~6% a year leased and ~18% promoted — slower than a good fleet, so it's a place for
+  surplus cash, not a snowball.
+
+- **Your own festival** (`ownfest.ts`) — until the end of April you can promote a festival of
+  your own from one of your bases (Market window): a field day (3,000 heads, reputation 35+), a
+  weekender (15,000, 55+) or a major (50,000, 72+), a headliner (local / a big name / a global
+  star) and a ticket price (cheap / fair / premium). Everything is paid up front — set-up, per-head
+  production (your fleet trims it 5% a vehicle, to 30%) and the headliner. Two days out a weather
+  decision offers covered stages; on the day attendance = capacity × (0.5 + 0.5 × brand/100) ×
+  headliner draw × ticket demand × the market × your standing in the town × noise, with an 18%
+  storm (×0.4, or ×0.75 if covered). A shutdown cancels it and returns 40%. Attendance ≥ 90% adds
+  9 festival brand, ≥ 70% adds 4, < 50% costs 5, so first editions lose money and a built brand
+  sells out. The "Headline promoter" milestone rewards a sell-out.
+
 - **Headhunting** (`headhunt.ts`) — every rival carries a standout tech (3★, 4★ at reputation 55+,
   5★ at 80+; the department is the rival's specialty), stable within a month and drawn from a side
   rng so the sim's sequence isn't disturbed. Luring them away costs triple the normal signing fee,
@@ -483,9 +644,9 @@ show forecast, rating and trophy cabinet in the **League**.
 
 ## 8. Not ported yet (and where each lands)
 
-The classic build has systems that don't exist in the map game yet. Each has an obvious home:
+The retired dashboard build had systems that were ported to the map game like so:
 
-| Classic system | Map-game home |
+| Dashboard system | Map-game home |
 |---|---|
 | Individual crew (skills, XP, avatars, hiring market) | Done: named people with skills, traits, XP, a hiring market (people.ts); avatars still to come |
 | Crises (planning / execution prompts) | **Road incidents** (breakdown: wait, tow, or hire a local van), **show incidents** at the venue, both as TT-style pop-ups with choices |
@@ -503,4 +664,4 @@ The classic build has systems that don't exist in the map game yet. Each has an 
 6. **Sound** — WebAudio engine hum, crowd swell at live venues, cash-register on payouts.
 7. **Town growth** — landmark venues now open and close in their real years and local fame
    steers offers; towns also grow over the decades (`towns.ts`).
-8. **Retire `/classic`** once its systems are ported.
+8. ~~Retire `/classic`~~ — done: the dashboard build and its code have been removed.

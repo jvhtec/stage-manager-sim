@@ -1,6 +1,9 @@
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
-import { assignVehicle, bookGate, bookGig, haggleGig, unassignVehicle } from '@/world/actions';
+import { assignVehicle, bookGate, bookGig, haggleGig, rehearseShow, unassignVehicle } from '@/world/actions';
+import { certCount, requiredCerts } from '@/world/certs';
+import { expertiseBonus } from '@/world/expertise';
+import { MODULES, REHEARSAL_QUALITY, bestStageLevel, gigRehearsalCost, rehearsalBlocker, requiredStageLevel, stageName, tourRehearsalCost } from '@/world/annexes';
 import { expectedPayout, gateBlocker, gatePayout, hypeLabel } from '@/world/gate';
 import { HAGGLE_RAISE, haggleBlocker, haggleChance } from '@/world/negotiate';
 import { DEPT_COLORS, DEPT_LABELS, LOAD_IN_HOUR, SHOW_END_HOUR, SHOW_START_HOUR, getModel } from '@/world/catalog';
@@ -154,13 +157,45 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
         ))}
         <Row label="Crew" color="#e5e7eb" need={gig.crewNeeded} have={projection?.crew} />
       </div>
+      {(requiredCerts(gig).rigging > 0 || requiredCerts(gig).safety > 0) && (
+        <Stat label="Tickets">
+          {requiredCerts(gig).rigging > 0 && (
+            <span className={certCount(state.people, 'rigging') >= requiredCerts(gig).rigging ? '' : 'tt-bad'}>
+              {requiredCerts(gig).rigging} rigger{requiredCerts(gig).rigging > 1 ? 's' : ''} ({certCount(state.people, 'rigging')} on staff)
+            </span>
+          )}
+          {' · '}
+          <span className={certCount(state.people, 'safety') >= requiredCerts(gig).safety ? '' : 'tt-bad'}>
+            {requiredCerts(gig).safety} first aider ({certCount(state.people, 'safety')} on staff)
+          </span>
+        </Stat>
+      )}
+      {gig.status !== 'done' && Math.abs(expertiseBonus(state, gig)) >= 0.01 && (
+        <Stat label="Your speciality">
+          <span className={expertiseBonus(state, gig) > 0 ? 'tt-good' : 'tt-bad'}>
+            {expertiseBonus(state, gig) > 0 ? '+' : ''}
+            {Math.round(expertiseBonus(state, gig) * 100)}% on the fee
+          </span>
+        </Stat>
+      )}
+      {requiredStageLevel(state, gig) > 0 && (
+        <Stat label="Rehearsal">
+          {gig.rehearsed && gig.rehearsed >= requiredStageLevel(state, gig) ? (
+            <span className="tt-good">done</span>
+          ) : (
+            <span className={bestStageLevel(state) >= requiredStageLevel(state, gig) ? 'tt-warn' : 'tt-bad'}>
+              required — a {stageName(requiredStageLevel(state, gig))} or better
+            </span>
+          )}
+        </Stat>
+      )}
 
       {gig.status === 'offer' && gig.event && !gig.event.citywide && <EventBid ctx={ctx} gig={gig} />}
       {gig.status === 'offer' && !(gig.event && !gig.event.citywide) && (
         <div style={{ marginTop: 10 }}>
           {locked ? (
             <div className="tt-warn">
-              {lock} You have {Math.round(state.company.reputation)}.
+              {lock}{!gigBookingBar(state, gig).stage && ` You have ${Math.round(state.company.reputation)}.`}
             </div>
           ) : (
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
@@ -194,6 +229,31 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
         <Stat label="Deal">
           Share of the gate <span className="tt-dim">· tickets forecast {hypeLabel(gig.gate.forecast)}{gig.status === 'booked' ? ' — the real number comes on the night' : ''}</span>
         </Stat>
+      )}
+      {gig.status === 'booked' && gig.rehearsed && (
+        <Stat label="Rehearsed">
+          <span className="tt-good">in your {MODULES.rehearsal.levels[gig.rehearsed - 1].label.toLowerCase()}</span>
+        </Stat>
+      )}
+      {gig.status === 'booked' && !gig.rehearsed && bestStageLevel(state) > 0 && (
+        <div style={{ marginTop: 6 }}>
+          {(() => {
+            const id = tour ? tour.id : gig.id;
+            const why = rehearsalBlocker(state, id);
+            const cost = tour ? tourRehearsalCost(state, tour) : gigRehearsalCost(gig);
+            return (
+              <button
+                className="tt-btn sm"
+                disabled={!!why}
+                title={why ?? `Run it through your stage: quality +${Math.round(REHEARSAL_QUALITY[bestStageLevel(state)] * 100)}%, fewer failures`}
+                onClick={() => act(s => rehearseShow(s, id))}
+              >
+                {tour ? 'Rehearse the tour' : 'Rehearse'} · {money(cost)}
+              </button>
+            );
+          })()}
+          {rehearsalBlocker(state, tour ? tour.id : gig.id) && <span className="tt-dim"> {rehearsalBlocker(state, tour ? tour.id : gig.id)}</span>}
+        </div>
       )}
       {gig.status === 'booked' && projection && (
         <>

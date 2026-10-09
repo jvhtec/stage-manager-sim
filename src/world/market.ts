@@ -6,7 +6,7 @@
  */
 import { HOURS_PER_DAY } from './catalog';
 import { book, dateOfDay, dayOf, formatMoney, pushNews } from './core';
-import { SEASON, WAGE_SCHEMES, baseRate, climateAt, type ClimatePeriod } from './content/economy';
+import { SEASON, WAGE_SCHEMES, baseRate, climateAt, fuelIndexAt, type ClimatePeriod } from './content/economy';
 import type { TycoonState } from './types';
 
 /** What banks add on top of the central-bank rate for a small events firm. */
@@ -26,6 +26,8 @@ export interface MarketNow {
   shutdown: boolean;
   /** Annual loan interest, as a fraction. */
   loanRate: number;
+  /** Diesel price relative to a normal year. */
+  fuel: number;
 }
 
 export function marketOnDay(state: Pick<TycoonState, 'startYear' | 'country'>, day: number): MarketNow {
@@ -46,14 +48,41 @@ export function marketOnDay(state: Pick<TycoonState, 'startYear' | 'country'>, d
     periods,
     shutdown: periods.some(p => p.shutdown),
     loanRate: baseRate(state.country, year) / 100 + LOAN_MARGIN,
+    fuel: fuelIndexAt(year, month),
   };
 }
 
 export const marketNow = (state: TycoonState) => marketOnDay(state, dayOf(state.hour));
 
+/** A fuel contract locks the price for a while — at a premium on the day you sign. */
+export const FUEL_LOCK_PREMIUM = 0.08;
+export const FUEL_LOCK_MONTHS = [6, 12];
+
+/** What fuel costs you now: the pump price, or your locked price while the contract runs. */
+export function fuelMultiplier(state: Pick<TycoonState, 'fuelLock' | 'hour' | 'startYear' | 'country'>): number {
+  const day = dayOf(state.hour);
+  if (state.fuelLock && state.fuelLock.untilDay > day) return state.fuelLock.price;
+  return marketOnDay(state, day).fuel;
+}
+
+export function fuelLockBlocker(state: TycoonState): string | null {
+  if (state.fuelLock && state.fuelLock.untilDay > dayOf(state.hour)) return 'You already have a fuel contract running.';
+  return null;
+}
+
 /** Daily: announce turns in the economy; a shutdown cancels the calendar and the state chips in on wages. */
 export function dailyMarket(s: TycoonState, wagesToday: number) {
   const now = marketNow(s);
+  // On the first of the month, tell the player when pump prices lurch.
+  if (dateOfDay(s, dayOf(s.hour)).getUTCDate() === 1 && s.hour > HOURS_PER_DAY) {
+    // Three-month swings, announced when they first cross the line.
+    const day = dayOf(s.hour);
+    const swing = (d: number) => marketOnDay(s, d).fuel / marketOnDay(s, d - 90).fuel - 1;
+    const change = swing(day);
+    const prior = swing(day - 30);
+    if (change >= 0.15 && prior < 0.15) pushNews(s, `Fuel prices are surging: up ${Math.round(change * 100)}% in three months. Diesel is ${Math.round((now.fuel - 1) * 100)}% ${now.fuel >= 1 ? 'above' : 'below'} normal.`, 'bad');
+    else if (change <= -0.15 && prior > -0.15) pushNews(s, `Fuel prices are tumbling: down ${Math.round(-change * 100)}% in three months.`, 'good');
+  }
   now.periods.forEach(p => {
     if (s.announcedClimate.includes(p.id)) return;
     s.announcedClimate.push(p.id);

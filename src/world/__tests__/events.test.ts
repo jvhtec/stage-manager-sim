@@ -35,6 +35,10 @@ describe('special events', () => {
     expect(bidEvent(low.s, low.lots[0].id, 'sharp').result.ok).toBe(false);
 
     const { s: s0, lots } = toTender(95);
+    // Broadcast events need a rehearsal stage.
+    s0.depots[0].kind = 'warehouse';
+    s0.depots[0].size = 4;
+    s0.depots[0].modules = { rehearsal: 4 };
     let s = s0;
     s.rivals.forEach(r => (r.reputation = 20));
     lots.forEach(g => (s = bidEvent(s, g.id, 'sharp').state));

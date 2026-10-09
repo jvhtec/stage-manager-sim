@@ -8,6 +8,7 @@ import { tierInfo } from './catalog';
 import { yearOf } from './core';
 import { findArtist, type Artist } from './content/artists';
 import { EVENT_REPUTATION } from './events';
+import { requiredStageLevel, stageBlocker, tourStageLevel } from './annexes';
 import type { Gig, Tour, TycoonState } from './types';
 
 /** Reputation management wants, by the biggest tier the act has played so far. */
@@ -38,6 +39,8 @@ export interface BookingBar {
   needed: number;
   /** Why you can't book it yet (null when you can). */
   reason: string | null;
+  /** The blocker is a missing rehearsal stage rather than reputation. */
+  stage?: boolean;
 }
 
 function bar(state: TycoonState, act: string, tier: number, what: string): BookingBar {
@@ -53,7 +56,7 @@ function bar(state: TycoonState, act: string, tier: number, what: string): Booki
   return { needed, reason };
 }
 
-export function gigBookingBar(state: TycoonState, gig: Gig): BookingBar {
+function repBar(state: TycoonState, gig: Gig): BookingBar {
   if (gig.event && !gig.event.citywide) {
     const needed = Math.max(tierInfo(gig.tier).minReputation, EVENT_REPUTATION[gig.event.scale as 3 | 4 | 5]);
     return { needed, reason: state.company.reputation >= needed ? null : `The organisers only consider firms with reputation ${needed}+.` };
@@ -61,8 +64,20 @@ export function gigBookingBar(state: TycoonState, gig: Gig): BookingBar {
   return bar(state, gig.act, gig.tier, '');
 }
 
+/** Reputation first; then, for shows that must be rehearsed, a stage big enough and time to use it. */
+export function gigBookingBar(state: TycoonState, gig: Gig): BookingBar {
+  const rep = repBar(state, gig);
+  if (rep.reason || gig.status !== 'offer') return rep;
+  const why = stageBlocker(state, requiredStageLevel(state, gig), gig.day);
+  return why ? { ...rep, reason: why, stage: true } : rep;
+}
+
 export function tourBookingBar(state: TycoonState, tour: Tour, maxTier: number): BookingBar {
-  return bar(state, tour.act, maxTier, "this tour's ");
+  const rep = bar(state, tour.act, maxTier, "this tour's ");
+  if (rep.reason) return rep;
+  const first = Math.min(...tour.gigIds.map(id => state.gigs.find(g => g.id === id)?.day ?? Infinity));
+  const why = stageBlocker(state, tourStageLevel(tour.kind, maxTier), Number.isFinite(first) ? first : Infinity);
+  return why ? { ...rep, reason: why, stage: true } : rep;
 }
 
 /**

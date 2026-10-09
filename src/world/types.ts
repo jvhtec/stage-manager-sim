@@ -8,10 +8,10 @@
  * - The *state* (everything that changes as the clock runs) is plain JSON
  *   and is what gets persisted.
  */
-import type { Department } from '@/types/game';
 import type { CountryCode } from './content/countries';
 
 /** Gear slots: the classic departments plus mixing consoles (FOH / monitors). */
+export type Department = 'audio' | 'lighting' | 'video' | 'stage';
 export type Dept = Department | 'console';
 export const DEPTS: Dept[] = ['audio', 'console', 'lighting', 'video', 'stage'];
 export type DeptCounts = Record<Dept, number>;
@@ -123,6 +123,12 @@ export type LedgerCategory =
   | 'zones'
   | 'marketing'
   | 'equity'
+  | 'festival'
+  | 'venues'
+  | 'facilities'
+  | 'merch'
+  | 'legal'
+  | 'tax'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -157,6 +163,12 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   zones: 'Low-emission zones',
   marketing: 'Marketing & trade shows',
   equity: 'Shares & dividends',
+  festival: 'Own festival',
+  venues: 'Owned venues',
+  facilities: 'Annexes & stages',
+  merch: 'Merchandise',
+  legal: 'Legal fees',
+  tax: 'Corporation tax',
   sales: 'Asset sales',
 };
 
@@ -186,6 +198,10 @@ export interface CrewMember {
   payBump?: number;
   /** Won't listen to rivals' offers until this hour. */
   loyalUntil?: number;
+  /** Tickets held (certs.ts). */
+  certs?: CertId[];
+  /** On a course until this day: unavailable for jobs. */
+  course?: { cert: CertId; untilDay: number };
 }
 
 /** A rival trying to hire one of your people away: match it or lose them. */
@@ -221,6 +237,12 @@ export interface Depot {
   /** Average experience (0-100) of the crew based here. */
   experience?: number;
   builtHour: number;
+  /** Annexes and their level (annexes.ts). */
+  modules?: Partial<Record<ModuleId, number>>;
+  /** Day the rehearsal stage is free again. */
+  stageBusyUntil?: number;
+  /** The last council safety audit (audits.ts). */
+  audit?: { year: number; score: number };
 }
 
 export type VehicleStatus =
@@ -330,6 +352,8 @@ export interface Tour {
   acceptByDay: number;
   status: TourStatus;
   rivalId?: string;
+  /** Stock ordered for the road, and what it made (merch.ts). */
+  merch?: { level: MerchLevel; invested: number; revenue?: number };
 }
 
 /** An artist's rider asking for a particular brand in one department. */
@@ -375,6 +399,8 @@ export interface Gig {
   result?: GigResult;
   /** What your on-the-day decisions did to the show (dilemmas.ts). */
   mods?: ShowMods;
+  /** Level of the stage it rehearsed on (annexes.ts). */
+  rehearsed?: number;
 }
 
 export interface ShowMods {
@@ -406,6 +432,81 @@ export interface Auction {
   startDay: number;
   endDay: number;
   lots: AuctionLot[];
+}
+
+/** A brand sponsoring your trucks (sponsors.ts). */
+export interface SponsorDeal {
+  id: string;
+  brandId: string;
+  monthly: number;
+  /** Shows a month you've promised. */
+  minShows: number;
+  status: 'offer' | 'active';
+  startDay: number;
+  endDay: number;
+  shortfalls: number;
+  paid: number;
+}
+
+export type ModuleId = 'rehearsal' | 'workshop' | 'lounge' | 'academy';
+
+export type CertId = 'rigging' | 'safety';
+
+export type InvoicingPolicy = 'hold' | 'factor' | 'insure';
+
+/** Money a promoter owes you (receivables.ts). */
+export interface Invoice {
+  id: string;
+  gigId: string;
+  act: string;
+  amount: number;
+  dueDay: number;
+  tier: number;
+  insured: boolean;
+}
+
+export type MerchLevel = 'small' | 'medium' | 'large';
+
+export type VenueProgramme = 'lease' | 'promote';
+
+/** A room you own (owned.ts). */
+export interface OwnedVenue {
+  venueId: string;
+  cityId: string;
+  price: number;
+  /** 0-100, falls with age. */
+  condition: number;
+  programme: VenueProgramme;
+  boughtHour: number;
+  /** Net since you bought it. */
+  earned: number;
+}
+
+export type FestTier = 'field' | 'weekender' | 'major';
+export type FestHeadliner = 'local' | 'name' | 'star';
+export type FestTicket = 'low' | 'fair' | 'premium';
+
+/** The festival you promote yourself (ownfest.ts). */
+export interface OwnFestival {
+  year: number;
+  tier: FestTier;
+  headliner: FestHeadliner;
+  ticket: FestTicket;
+  cityId: string;
+  day: number;
+  /** Spent up front. */
+  paid: number;
+  covered: boolean;
+  status: 'planned' | 'done';
+  result?: { attendance: number; revenue: number; profit: number; stormed: boolean };
+}
+
+export interface FestivalEdition {
+  year: number;
+  tier: FestTier;
+  attendance: number;
+  profit: number;
+  brand: number;
 }
 
 export type DividendLevel = 'none' | 'modest' | 'generous';
@@ -450,7 +551,7 @@ export interface Run {
   bonus?: number;
 }
 
-export type DilemmaKind = 'shareholders' | 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
+export type DilemmaKind = 'audit' | 'dispute' | 'dirty' | 'sponsor' | 'charity' | 'venue' | 'ownfest' | 'shareholders' | 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
 
 /** A problem that needs your call (dilemmas.ts). */
 export interface Dilemma {
@@ -547,6 +648,10 @@ export interface Policies {
   /** Rest rota: keep tired people at base instead of sending them out. */
   rest: RestRota;
   marketing: MarketingLevel;
+  /** Book the rehearsals a show needs for you as the dates come close. */
+  rehearsal: 'manual' | 'auto';
+  /** What to do with promoters' invoices (receivables.ts). */
+  invoicing: InvoicingPolicy;
 }
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
@@ -630,6 +735,8 @@ export interface TycoonState {
   announcedModels: string[];
   /** Gear product ids already announced as available. */
   announcedGear: string[];
+  /** Technology waves already rumoured/arrived (content/techWaves.ts). */
+  announcedWaves: string[];
   policies: Policies;
   /** Company-wide crew morale, 0-100 (crew.ts). */
   crewMorale: number;
@@ -656,6 +763,31 @@ export interface TycoonState {
   promo?: Promo;
   /** Day each rival was last raided for crew (headhunt.ts). */
   headhunted?: Record<string, number>;
+  /** Per-rival heat and investigator cover (rivalry.ts). */
+  rivalry: Record<string, { heat: number; intelUntil?: number }>;
+  /** Brand sponsors and goodwill (sponsors.ts). */
+  sponsors: SponsorDeal[];
+  goodwill?: number;
+  charityDone?: number;
+  /** showsPlayed at the last monthly sponsor check. */
+  sponsorMark?: number;
+  /** Rooms you own (owned.ts). */
+  ownedVenues: OwnedVenue[];
+  /** This year's festival of your own, if any (ownfest.ts). */
+  ownFestival?: OwnFestival;
+  /** 0-100: how well the festival's name sells. */
+  festivalBrand?: number;
+  festivalHistory: FestivalEdition[];
+  /** Losses carried forward against future profits (tax.ts). */
+  taxLoss?: number;
+  /** Days (since the start) on which you made an insurance claim (incidents.ts). */
+  claims: number[];
+  /** Moving average of the departments your recent shows needed (expertise.ts). */
+  mix?: Record<Dept, number>;
+  /** Invoices waiting to be paid (receivables.ts). */
+  receivables: Invoice[];
+  /** A fuel contract: the locked price multiplier and when it ends (market.ts). */
+  fuelLock?: { price: number; untilDay: number };
   /** Stock-market listing, once you go public (shares.ts). */
   listing?: Listing;
   /** Rivals undercutting your towns (pricewars.ts). */

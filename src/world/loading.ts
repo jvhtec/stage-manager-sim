@@ -3,6 +3,7 @@
  * happens) and the UI projection (what will happen if nothing changes) so
  * the two can never disagree.
  */
+import { techQualityFactor } from './content/techWaves';
 import { expectedQuality, getProduct } from './content/gear';
 import { DEPTS, type DeptCounts, type Gig, type GearStock, type Rider } from './types';
 
@@ -79,7 +80,7 @@ export function evaluateGear(delivered: GearStock, gig: Gig, year: number, condi
   const qualitySum: DeptCounts = { audio: 0, console: 0, lighting: 0, video: 0, stage: 0 };
   for (const id in delivered) {
     const p = getProduct(id);
-    qualitySum[p.dept] += p.quality * conditionFactor(condition[id] ?? 100) * delivered[id];
+    qualitySum[p.dept] += p.quality * conditionFactor(condition[id] ?? 100) * techQualityFactor(p.kind, gig.tier, year) * delivered[id];
   }
   const avgQuality: DeptCounts = { audio: 0, console: 0, lighting: 0, video: 0, stage: 0 };
   const need = DEPTS.reduce((s, d) => s + gig.needs[d], 0) || 1;

@@ -7,6 +7,10 @@
  * Venue choices don't play out until the show: they're kept on the gig as
  * `mods` and folded into the night's quality, failure risk and weather.
  */
+import { resolveAudit } from './audits';
+import { resolveDispute } from './disputes';
+import { HEAT_FIGHT, HEAT_TRUCE, addHeat, answerTrick } from './rivalry';
+import { dealRng, declineSponsor, giveCharity, signSponsor } from './sponsors';
 import { difficultyOf } from './scenario';
 import type { Rng } from '@/lib/rng';
 import { getModel } from './catalog';
@@ -67,7 +71,7 @@ export function breakdownDilemma(s: TycoonState, v: Vehicle) {
 
 type Maker = (s: TycoonState, gig: Gig, rng: Rng) => Omit<Dilemma, 'id' | 'gigId' | 'createdHour' | 'expiresHour'> | null;
 
-const MAKERS: Record<Exclude<DilemmaKind, 'breakdown' | 'raise' | 'burnout' | 'tradeshow' | 'pricewar' | 'shareholders'>, Maker> = {
+const MAKERS: Record<Exclude<DilemmaKind, 'breakdown' | 'raise' | 'burnout' | 'tradeshow' | 'pricewar' | 'shareholders' | 'ownfest' | 'venue' | 'sponsor' | 'charity' | 'dirty' | 'dispute' | 'audit'>, Maker> = {
   customs: (s, gig) =>
     !gig.overseas
       ? null
@@ -262,7 +266,7 @@ export function resolveDilemma(s: TycoonState, id: string, optionId: string, aut
   const gig = d.gigId ? gigById(s, d.gigId) : undefined;
   const v = d.vehicleId ? s.vehicles.find(x => x.id === d.vehicleId) : undefined;
   if (option.cost) {
-    book(s, d.kind === 'breakdown' ? 'servicing' : d.kind === 'tradeshow' || d.kind === 'pricewar' ? 'marketing' : d.kind === 'shareholders' ? 'equity' : 'onsite', -option.cost);
+    book(s, d.kind === 'breakdown' ? 'servicing' : d.kind === 'tradeshow' || d.kind === 'pricewar' ? 'marketing' : d.kind === 'shareholders' ? 'equity' : d.kind === 'ownfest' ? 'festival' : d.kind === 'venue' ? 'venues' : d.kind === 'charity' ? 'marketing' : d.kind === 'dirty' ? 'marketing' : d.kind === 'dispute' || d.kind === 'audit' ? 'legal' : 'onsite', -option.cost);
     if (v) v.profitThisYear -= option.cost;
   }
   let line = `${d.title}: ${option.label.toLowerCase()}${option.cost ? ` (${money(s, option.cost)})` : ''}.`;
@@ -321,6 +325,46 @@ export function resolveDilemma(s: TycoonState, id: string, optionId: string, aut
       s.crewMorale = Math.max(0, s.crewMorale - 2);
       break;
     }
+    case 'audit:fix':
+    case 'audit:appeal':
+    case 'audit:ignore':
+    case 'audit:close':
+      line = `${d.title}: ${option.label.toLowerCase()}. ${resolveAudit(s, d.id, option.id, d.payload ?? '', dealRng(s, d.id))}`;
+      break;
+    case 'dispute:settle':
+    case 'dispute:argue':
+    case 'dispute:lawyers':
+    case 'dispute:fight':
+      line = `${d.title}: ${option.label.toLowerCase()}. ${resolveDispute(s, d.id, option.id, d.payload ?? '')}`;
+      break;
+    case 'dirty:security':
+    case 'dirty:retaliate':
+    case 'dirty:ignore':
+      line = `${d.title}: ${option.label.toLowerCase()}. ${answerTrick(s, d.payload ?? '', option.id, dealRng(s, d.id))}`;
+      break;
+    case 'sponsor:sign':
+    case 'sponsor:haggle':
+      line = signSponsor(s, d.payload ?? '', option.id === 'haggle', dealRng(s, d.payload ?? '')) || line;
+      break;
+    case 'sponsor:decline':
+      declineSponsor(s, d.payload ?? '');
+      break;
+    case 'charity:donate':
+    case 'charity:half':
+      giveCharity(s, d.payload, option.id === 'donate');
+      break;
+    case 'charity:decline':
+      s.goodwill = Math.max(0, (s.goodwill ?? 0) - 2);
+      break;
+    case 'venue:refurb':
+    case 'venue:patch': {
+      const o = s.ownedVenues.find(x => x.venueId === d.payload);
+      if (o) o.condition = Math.min(100, option.id === 'refurb' ? 90 : o.condition + 20);
+      break;
+    }
+    case 'ownfest:cover':
+      if (s.ownFestival) s.ownFestival.covered = true;
+      break;
     case 'shareholders:appease':
       if (s.listing) s.listing.confidence = Math.min(100, s.listing.confidence + 25);
       break;
@@ -330,7 +374,10 @@ export function resolveDilemma(s: TycoonState, id: string, optionId: string, aut
       break;
     case 'pricewar:fight': {
       const war = s.priceWars.find(w => w.id === d.payload);
-      if (war) war.fight = true;
+      if (war) {
+        war.fight = true;
+        addHeat(s, war.rivalId, HEAT_FIGHT);
+      }
       break;
     }
     case 'pricewar:truce': {
@@ -338,6 +385,7 @@ export function resolveDilemma(s: TycoonState, id: string, optionId: string, aut
       s.priceWars = s.priceWars.filter(w => w.id !== d.payload);
       const rival = s.rivals.find(r => r.id === war?.rivalId);
       if (rival) rival.reputation = Math.min(100, rival.reputation + 1);
+      if (war) addHeat(s, war.rivalId, HEAT_TRUCE);
       break;
     }
     case 'tradeshow:stand':

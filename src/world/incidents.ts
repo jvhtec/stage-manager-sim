@@ -5,7 +5,8 @@
  */
 import type { Rng } from '@/lib/rng';
 import { getModel } from './catalog';
-import { book, formatMoney, pushNews } from './core';
+import { book, dayOf, formatMoney, pushNews } from './core';
+import { maybeDisputeClaim } from './disputes';
 import { getProduct } from './content/gear';
 import { replacementValue, ownedStock, condition } from './wear';
 import type { Gig, InsuranceLevel, TycoonState, Vehicle } from './types';
@@ -40,17 +41,35 @@ export function insuredValue(state: TycoonState): number {
   return replacementValue(ownedStock(state)) + fleet;
 }
 
-export const monthlyPremium = (state: TycoonState, level = state.policies.insurance) => Math.round(insuredValue(state) * INSURANCE[level].monthlyRate);
+/** Premium loading from your claims record: +8% a claim in the last year (max +60%); −10% after two clean years. */
+export const CLAIM_LOADING = 0.08;
+export const MAX_LOADING = 0.6;
+export const CLEAN_DISCOUNT = 0.1;
+export function claimsRecord(state: Pick<TycoonState, 'claims' | 'hour'>) {
+  const today = dayOf(state.hour);
+  const lastYear = (state.claims ?? []).filter(d => today - d <= 365).length;
+  const lastTwo = (state.claims ?? []).filter(d => today - d <= 730).length;
+  return { lastYear, clean: lastTwo === 0 && today > 730 };
+}
+export function premiumFactor(state: Pick<TycoonState, 'claims' | 'hour'>): number {
+  const r = claimsRecord(state);
+  return r.clean ? 1 - CLEAN_DISCOUNT : 1 + Math.min(MAX_LOADING, r.lastYear * CLAIM_LOADING);
+}
+
+export const monthlyPremium = (state: TycoonState, level = state.policies.insurance) => Math.round(insuredValue(state) * INSURANCE[level].monthlyRate * premiumFactor(state));
 
 export function monthlyInsurance(s: TycoonState) {
   book(s, 'insurance', -monthlyPremium(s));
 }
 
 /** Pays a claim on `loss` per the current policy; returns the note for the news. */
-function claim(s: TycoonState, loss: number, weather = false): string {
+function claim(s: TycoonState, loss: number, rng: Rng, weather = false): string {
   const policy = INSURANCE[s.policies.insurance];
   if (!policy.cover || (weather && !policy.weather)) return s.policies.insurance === 'none' ? ' Uninsured.' : ' Not covered.';
   const paid = Math.round(loss * policy.cover);
+  s.claims.push(dayOf(s.hour));
+  // A big claim may be questioned: you decide how to answer, and nothing is paid yet.
+  if (maybeDisputeClaim(s, loss, paid, weather, rng)) return ` The insurer is disputing the ${formatMoney(s, paid)} claim.`;
   book(s, 'insurance', paid);
   return ` Insurance paid ${formatMoney(s, paid)}.`;
 }
@@ -66,7 +85,7 @@ export function dailyIncidents(s: TycoonState, rng: Rng) {
     if (!d.gear[id]) delete d.gear[id];
     const p = getProduct(id);
     const loss = p.price * units;
-    pushNews(s, `Break-in at your warehouse: ${units}× ${p.brand} ${p.name} stolen (${formatMoney(s, loss)}).${claim(s, loss)}`, 'bad', { cityId: d.cityId });
+    pushNews(s, `Break-in at your warehouse: ${units}× ${p.brand} ${p.name} stolen (${formatMoney(s, loss)}).${claim(s, loss, rng)}`, 'bad', { cityId: d.cityId });
   });
   // Accidents on the road.
   s.vehicles.forEach(v => {
@@ -91,7 +110,7 @@ function crash(s: TycoonState, v: Vehicle, rng: Rng) {
   book(s, 'servicing', -repair);
   v.profitThisYear -= repair;
   const loss = repair + Math.round(damage);
-  pushNews(s, `${v.name} has been in an accident — off the road for a day or two, ${formatMoney(s, repair)} in repairs${damage ? ', and the load took a knock' : ''}.${claim(s, loss)}`, 'bad', { vehicleId: v.id });
+  pushNews(s, `${v.name} has been in an accident — off the road for a day or two, ${formatMoney(s, repair)} in repairs${damage ? ', and the load took a knock' : ''}.${claim(s, loss, rng)}`, 'bad', { vehicleId: v.id });
 }
 
 export interface Weather {
@@ -112,6 +131,6 @@ export function rollWeather(s: TycoonState, gig: Gig, rng: Rng): Weather | null 
   if (!storms) return null;
   const penalty = Math.min(0.2, 0.07 * storms);
   const loss = Math.round(gig.fee * 0.12 * storms);
-  const note = ` ${storms > 1 ? `${storms} days of storms` : 'A storm'} hit the site.${claim(s, loss, true)}`;
+  const note = ` ${storms > 1 ? `${storms} days of storms` : 'A storm'} hit the site.${claim(s, loss, rng, true)}`;
   return { penalty, extraWear: storms, note };
 }

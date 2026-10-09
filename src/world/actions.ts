@@ -47,8 +47,15 @@ import { bookTransfer, canReceive, describeQuote, transferQuote } from './transf
 import { AMBITIONS, rndBlocker, startProject } from './rnd';
 import { DEAL_YEARS } from './deals';
 import { headhuntBlocker, headhuntFee, headhuntRivalHealthAfter, headhuntTarget, HEADHUNT_REP_COST } from './headhunt';
+import { festBlocker, planFestival } from './ownfest';
+import { courseBlocker, startCourse } from './certs';
+import { merchBlocker, orderMerch } from './merch';
+import { FUEL_LOCK_MONTHS, FUEL_LOCK_PREMIUM, fuelLockBlocker, marketNow } from './market';
+import { MODULES, buildModule, moduleBlocker, rehearsalBlocker, rehearse } from './annexes';
+import { HEAT_HEADHUNT, addHeat, hireInvestigator, investigatorBlocker } from './rivalry';
+import { buyBlocker, buyVenue, ownedOf, sellVenue } from './owned';
 import { IPO_FLOAT, buybackCost, ipoProceeds, listingBlocker, tradingTotal } from './shares';
-import { DEPTS, type ActionOutcome, type DividendLevel, type BidLevel, type Dept, type RndAmbition, type Vehicle, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
+import { DEPTS, type ActionOutcome, type MerchLevel, type CertId, type ModuleId, type VenueProgramme, type DividendLevel, type FestHeadliner, type FestTicket, type FestTier, type BidLevel, type Dept, type RndAmbition, type Vehicle, type FacilityKind, type Policies, type StaffRole, type TycoonState } from './types';
 import { STAFF, canBaseVehicle, facilitySpec, nextUpgrade } from './facilities';
 import { aboard, hireFee, levelOf, makePerson, moveToDepot, roleOf, settlePoachBid, syncCrew, unpinFrom } from './people';
 import { BREAK_MONTHS, contractShortfall, installKit } from './contracts';
@@ -320,7 +327,7 @@ export function buyGear(state: TycoonState, depotId: string, productId: string, 
   depot.gear[productId] = (depot.gear[productId] ?? 0) + qty;
   onBought(s, productId, qty);
   book(s, 'purchases', -cost);
-  return ok(s);
+  return ok(s, `Bought ${qty > 1 ? `${qty} × ` : ''}${product.brand} ${product.name} for ${formatMoney(s, cost)}.`);
 }
 
 export function sellGear(state: TycoonState, depotId: string, productId: string, qty = 1): ActionOutcome {
@@ -331,7 +338,7 @@ export function sellGear(state: TycoonState, depotId: string, productId: string,
   if (!depot.gear[productId]) delete depot.gear[productId];
   book(s, 'sales', resaleValue(state, productId) * qty);
   if (!ownedStock(s)[productId]) delete s.gearCondition[productId];
-  return ok(s);
+  return ok(s, `Sold ${qty > 1 ? `${qty} × ` : ''}${getProduct(productId).brand} ${getProduct(productId).name} for ${formatMoney(s, resaleValue(state, productId) * qty)}.`);
 }
 
 /** Restores a whole product line to as-new condition. */
@@ -600,8 +607,106 @@ export function headhunt(state: TycoonState, rivalId: string, depotId?: string):
   r.health = headhuntRivalHealthAfter(r);
   s.company.reputation = Math.max(0, s.company.reputation - HEADHUNT_REP_COST);
   (s.headhunted ??= {})[r.id] = dayOf(s.hour);
+  addHeat(s, r.id, HEAT_HEADHUNT);
   pushNews(s, `${s.company.name} lures ${m.name} away from ${r.name}.`, 'big');
   return ok(s, `${m.name} (${levelOf(m)}★ ${roleOf(m)}) leaves ${r.name} to join you.`);
+}
+
+/** Put on a festival of your own this summer. */
+export function promoteFestival(state: TycoonState, tier: FestTier, headliner: FestHeadliner, ticket: FestTicket, cityId: string): ActionOutcome {
+  const why = festBlocker(state, tier, headliner);
+  if (why) return fail(state, why);
+  if (!state.depots.some(d => d.cityId === cityId)) return fail(state, 'Host it from one of your bases.');
+  const s = cloneState(state);
+  planFestival(s, tier, headliner, ticket, cityId);
+  return ok(s, 'Festival announced.');
+}
+
+export function buyOwnedVenue(state: TycoonState, venueId: string): ActionOutcome {
+  const venue = worldOf(state).venueById.get(venueId);
+  if (!venue) return fail(state, 'Unknown venue.');
+  const why = buyBlocker(state, venue);
+  if (why) return fail(state, why);
+  const s = cloneState(state);
+  buyVenue(s, venue);
+  return ok(s, `${venue.name} is yours.`);
+}
+
+export function sellOwnedVenue(state: TycoonState, venueId: string): ActionOutcome {
+  if (!ownedOf(state, venueId)) return fail(state, 'You do not own it.');
+  const s = cloneState(state);
+  const proceeds = sellVenue(s, venueId);
+  return ok(s, `Sold for ${formatMoney(s, proceeds)}.`);
+}
+
+export function setVenueProgramme(state: TycoonState, venueId: string, programme: VenueProgramme): ActionOutcome {
+  if (!ownedOf(state, venueId)) return fail(state, 'You do not own it.');
+  const s = cloneState(state);
+  ownedOf(s, venueId)!.programme = programme;
+  return ok(s);
+}
+
+/** Pay for an investigator to watch a rival: you see their heat, and they take fewer of your offers. */
+export function investigate(state: TycoonState, rivalId: string): ActionOutcome {
+  const rival = state.rivals.find(r => r.id === rivalId);
+  if (!rival) return fail(state, 'Unknown rival.');
+  const why = investigatorBlocker(state, rival);
+  if (why) return fail(state, why);
+  const s = cloneState(state);
+  const target = s.rivals.find(r => r.id === rivalId)!;
+  return ok(s, withRng(s, rng => hireInvestigator(s, target, rng)));
+}
+
+/** Add or upgrade an annex at a warehouse. */
+export function buildAnnex(state: TycoonState, depotId: string, module: ModuleId): ActionOutcome {
+  const d0 = state.depots.find(d => d.id === depotId);
+  if (!d0) return fail(state, 'Unknown base.');
+  const why = moduleBlocker(state, d0, module);
+  if (why) return fail(state, why);
+  const s = cloneState(state);
+  buildModule(s, s.depots.find(d => d.id === depotId)!, module);
+  return ok(s, `${MODULES[module].label} built.`);
+}
+
+/** Run a booked show, or a whole tour, through your rehearsal stage. */
+export function rehearseShow(state: TycoonState, targetId: string): ActionOutcome {
+  const why = rehearsalBlocker(state, targetId);
+  if (why) return fail(state, why);
+  const s = cloneState(state);
+  return ok(s, rehearse(s, targetId));
+}
+
+/** Lock the fuel price for 6 or 12 months at today's pump price plus a premium. */
+export function lockFuel(state: TycoonState, months: number): ActionOutcome {
+  const why = fuelLockBlocker(state);
+  if (why) return fail(state, why);
+  if (!FUEL_LOCK_MONTHS.includes(months)) return fail(state, 'Contracts run for 6 or 12 months.');
+  const s = cloneState(state);
+  const spot = marketNow(s).fuel;
+  const price = Math.round(spot * (1 + FUEL_LOCK_PREMIUM) * 100) / 100;
+  s.fuelLock = { price, untilDay: dayOf(s.hour) + months * 30 };
+  pushNews(s, `${s.company.name} signs a ${months}-month fuel contract at ${Math.round((price - 1) * 100)}% ${price >= 1 ? 'above' : 'below'} the normal price.`, 'info');
+  return ok(s, `Fuel locked at ${price.toFixed(2)}× for ${months} months.`);
+}
+
+/** Send someone on a course for a ticket. */
+export function trainCrew(state: TycoonState, personId: string, cert: CertId): ActionOutcome {
+  const m0 = state.people.find(m => m.id === personId);
+  if (!m0) return fail(state, 'Unknown crew member.');
+  const why = courseBlocker(state, m0, cert);
+  if (why) return fail(state, why);
+  const s = cloneState(state);
+  return ok(s, startCourse(s, s.people.find(m => m.id === personId)!, cert));
+}
+
+/** Order merchandise for a booked tour. */
+export function orderTourMerch(state: TycoonState, tourId: string, level: MerchLevel): ActionOutcome {
+  const tour = state.tours.find(t => t.id === tourId);
+  if (!tour) return fail(state, 'Unknown tour.');
+  const why = merchBlocker(state, tour, level);
+  if (why) return fail(state, why);
+  const s = cloneState(state);
+  return ok(s, orderMerch(s, s.tours.find(t => t.id === tourId)!, level));
 }
 
 export function borrow(state: TycoonState): ActionOutcome {

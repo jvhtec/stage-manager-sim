@@ -118,7 +118,7 @@ export function WarehouseGear({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
             {owned.map(id => {
               const p = getProduct(id);
               return (
-                <div key={id} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <div key={id} style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
                   <GearSprite productId={id} size={30} />
                   <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {p.brand} <span className="tt-dim">{p.name}</span>
@@ -126,26 +126,33 @@ export function WarehouseGear({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
                   <QualityChip quality={p.quality} state={state} />
                   <ConditionChip value={condition(state, id)} />
                   <b style={{ minWidth: 26, textAlign: 'right' }}>×{depot.gear[id]}</b>
-                  {condition(state, id) < 95 && (
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'flex-end', flexBasis: '100%' }}>
+                    {condition(state, id) < 95 && (
+                      <button
+                        className="tt-btn sm"
+                        title={`Refurbish every ${p.name} you own to as-new`}
+                        onClick={() => act(s => refurbishGear(s, id))}
+                      >
+                        🔧 Refurbish {money(refurbishCost(state, id))}
+                      </button>
+                    )}
+                    {target && (
+                      <button className="tt-btn sm" title={`Courier one to ${world.cityById.get(target.cityId)?.name}`} onClick={() => act(s => transferGear(s, depot.id, target.id, id))}>
+                        → Send
+                      </button>
+                    )}
+                    <button className="tt-btn sm" title={`Sell one for ${money(resaleValue(state, id))}`} onClick={() => act(s => sellGear(s, depot.id, id))}>
+                      Sell +{kmoney(resaleValue(state, id))}
+                    </button>
                     <button
                       className="tt-btn sm"
-                      title={`Refurbish every ${p.name} you own to as-new: ${money(refurbishCost(state, id))}`}
-                      onClick={() => act(s => refurbishGear(s, id))}
+                      title={`Buy one more for ${money(partnerPrice(state, id))}`}
+                      disabled={state.company.cash < partnerPrice(state, id)}
+                      onClick={() => act(s => buyGear(s, depot.id, id))}
                     >
-                      🔧
+                      Buy −{kmoney(partnerPrice(state, id))}
                     </button>
-                  )}
-                  {target && (
-                    <button className="tt-btn sm" title={`Courier one to ${world.cityById.get(target.cityId)?.name}`} onClick={() => act(s => transferGear(s, depot.id, target.id, id))}>
-                      →
-                    </button>
-                  )}
-                  <button className="tt-btn sm" title={`Sell one for ${money(resaleValue(state, id))}`} onClick={() => act(s => sellGear(s, depot.id, id))}>
-                    −
-                  </button>
-                  <button className="tt-btn sm" title={`Buy one for ${money(p.price)}`} onClick={() => act(s => buyGear(s, depot.id, id))}>
-                    +
-                  </button>
+                  </div>
                 </div>
               );
             })}

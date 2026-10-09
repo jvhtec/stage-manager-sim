@@ -108,7 +108,7 @@ export function EventBid({ ctx, gig }: { ctx: WinCtx; gig: Gig }) {
       </div>
       {lock ? (
         <div className="tt-warn">
-          {lock} You have {Math.round(state.company.reputation)}.
+          {lock}{!gigBookingBar(state, gig).stage && ` You have ${Math.round(state.company.reputation)}.`}
         </div>
       ) : (
         <div className="tt-list">

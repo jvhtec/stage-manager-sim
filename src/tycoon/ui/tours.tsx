@@ -1,5 +1,6 @@
 import { tourBookingBar } from '@/world/standing';
-import { assignVehicleToTour, bookTour } from '@/world/actions';
+import { assignVehicleToTour, bookTour, orderTourMerch } from '@/world/actions';
+import { MERCH, MERCH_LEVELS, merchBlocker, merchCost } from '@/world/merch';
 import { getModel } from '@/world/catalog';
 import { dayOf, formatDay, lastShowDay } from '@/world/core';
 import { findArtist } from '@/world/content/artists';
@@ -143,12 +144,42 @@ export function TourWindow({ ctx, tourId }: { ctx: WinCtx; tourId: string }) {
           </button>
         ) : (
           <div className="tt-warn" style={{ marginTop: 8, whiteSpace: 'normal' }}>
-            {tourBookingBar(state, tour, maxTier).reason} You have {Math.round(state.company.reputation)}.
+            {tourBookingBar(state, tour, maxTier).reason}
+            {!tourBookingBar(state, tour, maxTier).stage && ` You have ${Math.round(state.company.reputation)}.`}
           </div>
         ))}
 
       {tour.status === 'booked' && (
         <>
+          <h4>Merchandise</h4>
+          {tour.merch ? (
+            <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+              {MERCH[tour.merch.level].label} ordered for {money(tour.merch.invested)}.{' '}
+              {tour.merch.revenue === undefined ? 'It sells at the stands and settles when the tour ends.' : `Sold for ${money(tour.merch.revenue)}.`}
+            </div>
+          ) : (
+            <>
+              <div className="tt-dim" style={{ whiteSpace: 'normal', marginBottom: 4 }}>
+                Stock the stands before the first date. A big name sells a lot; order too much and the leftovers go for peanuts.
+              </div>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                {MERCH_LEVELS.map(l => {
+                  const why = merchBlocker(state, tour, l);
+                  return (
+                    <button
+                      key={l}
+                      className="tt-btn sm"
+                      disabled={!!why}
+                      title={why ?? MERCH[l].blurb}
+                      onClick={() => act(s => orderTourMerch(s, tour.id, l))}
+                    >
+                      {MERCH[l].label} · {money(merchCost(state, tour, l))}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
           <h4>Put a vehicle on every date</h4>
           <div className="tt-dim" style={{ whiteSpace: 'normal', marginBottom: 4 }}>
             It tours the route in order: straight from venue to venue, then to the airport for any legs abroad.

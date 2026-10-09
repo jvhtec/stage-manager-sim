@@ -101,6 +101,8 @@
 .tt-btn svg { width: 16px; height: 16px; }
 .tt-btn .tt-label { display: inline; }
 @media (max-width: 720px) { .tt-btn .tt-label { display: none; } }
+/* Mid-width windows: icons only, so the whole toolbar (speed, zoom) stays reachable. */
+@media (min-width: 721px) and (max-width: 1400px) { .tt-toolbar .tt-btn .tt-label { display: none; } }
 
 /* ---- Status bar ----------------------------------------------------------- */
 .tt-status {
