@@ -324,7 +324,7 @@ export function buyGear(state: TycoonState, depotId: string, productId: string, 
   depot.gear[productId] = (depot.gear[productId] ?? 0) + qty;
   onBought(s, productId, qty);
   book(s, 'purchases', -cost);
-  return ok(s);
+  return ok(s, `Bought ${qty > 1 ? `${qty} × ` : ''}${product.brand} ${product.name} for ${formatMoney(s, cost)}.`);
 }
 
 export function sellGear(state: TycoonState, depotId: string, productId: string, qty = 1): ActionOutcome {
@@ -335,7 +335,7 @@ export function sellGear(state: TycoonState, depotId: string, productId: string,
   if (!depot.gear[productId]) delete depot.gear[productId];
   book(s, 'sales', resaleValue(state, productId) * qty);
   if (!ownedStock(s)[productId]) delete s.gearCondition[productId];
-  return ok(s);
+  return ok(s, `Sold ${qty > 1 ? `${qty} × ` : ''}${getProduct(productId).brand} ${getProduct(productId).name} for ${formatMoney(s, resaleValue(state, productId) * qty)}.`);
 }
 
 /** Restores a whole product line to as-new condition. */
