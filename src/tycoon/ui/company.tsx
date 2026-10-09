@@ -630,7 +630,7 @@ export function NewGameForm({
       </label>
       <div style={{ display: 'flex', gap: 6, justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <button className="tt-btn sm" onClick={() => setSeed(createRandomSeed())}>
-          ↻ New map
+          ↻ Reroll terrain
         </button>
         <div style={{ display: 'flex', gap: 6 }}>
           {onCancel && (

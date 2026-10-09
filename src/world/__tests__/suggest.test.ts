@@ -44,7 +44,7 @@ describe('suggested next jobs', () => {
     const s = game();
     const v = s.vehicles.find(x => x.owner === 'player')!;
     const pick = suggestJobs(s, v, 1)[0];
-    s.company.reputation = 0;
+    s.gigs = s.gigs.map(g => (g.id === pick.gig.id ? { ...g, acceptByDay: -1 } : g));
     const out = bookAndAssign(s, v.id, pick.gig.id);
     expect(out.result.ok).toBe(false);
     expect(out.state.gigs.find(g => g.id === pick.gig.id)!.status).toBe('offer');

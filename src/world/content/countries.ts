@@ -1,9 +1,10 @@
 /**
- * Playable home countries. The map's geography is procedural; the country
- * decides what it's *called* — real towns (largest first, so the biggest
- * becomes the metropolis, with real metro-area populations), how venues are named, famous venues in the big
- * cities, the currency, and (see companies.ts / artists.ts) who you compete
- * with and which local acts tour. Edit freely.
+ * Playable home countries. Each map is a miniature of the real country (coast,
+ * mountains and town positions live in geoParams.json / landmasks.ts); this file
+ * says what things are *called* — real towns (largest first, so the biggest
+ * becomes the metropolis, with real metro-area populations), how venues are named,
+ * famous venues in the big cities, the currency, and (see companies.ts / artists.ts)
+ * who you compete with and which local acts tour. Edit freely.
  */
 import type { Rng } from '@/lib/rng';
 import type { VenueKind } from '../types';

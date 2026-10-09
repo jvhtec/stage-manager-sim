@@ -78,6 +78,8 @@ export interface WorldMap {
   height: number;
   terrain: Uint8Array;
   road: Uint8Array;
+  /** 1 on land that belongs to a neighbouring country (drawn muted, no towns, roads avoid it). */
+  foreign: Uint8Array;
   /** Integer height per tile *corner*, (width+1) x (height+1). Adjacent corners differ by at most 1. */
   heights: Uint8Array;
   cities: City[];

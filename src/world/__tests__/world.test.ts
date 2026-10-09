@@ -64,6 +64,24 @@ describe('world generation', () => {
     });
   });
 
+  it.each(['ES', 'GB', 'US', 'DE', 'FR', 'IT'])('%s is a connected miniature with every town on dry land', code => {
+    const map = generateWorld(SEED, code);
+    expect(map.cities).toHaveLength(16);
+    const land = map.terrain.reduce((n, t) => n + (t === Terrain.Water ? 0 : 1), 0);
+    expect(land).toBeGreaterThan(map.width * map.height * 0.25);
+    expect(land).toBeLessThan(map.width * map.height * 0.97); // there is a coast
+    map.cities.forEach(c => {
+      expect(map.terrain[c.y * map.width + c.x]).not.toBe(Terrain.Water);
+      expect(Number.isFinite(roadDistance(map, map.cities[0].id, c.id))).toBe(true);
+      expect(c.venues.length).toBeGreaterThan(0);
+      // Oversized towns may sprawl into each other, but never sit on top of one another.
+      map.cities.forEach(o => {
+        if (o !== c) expect(Math.hypot(o.x - c.x, o.y - c.y)).toBeGreaterThanOrEqual(0.4 * (c.radius + o.radius + 1) - 0.01);
+      });
+    });
+    expect(map.cities.find(c => c.size === 'metropolis')!.venues.some(v => v.kind === 'stadium')).toBe(true);
+  });
+
   it('gives bigger places bigger venues, on flat dry lots', () => {
     const map = generateWorld(SEED);
     const metro = map.cities.find(c => c.size === 'metropolis')!;
@@ -123,7 +141,8 @@ describe('simulation', () => {
   });
 
   it('a truck that cannot make load-in arrives late and earns less', () => {
-    const base = newGame();
+    // Start late in the evening so the far show's load-in is only hours away.
+    const base = advanceHours(newGame(), 14);
     const world = getWorld(base.mapSeed);
     const hq = world.cityById.get(base.company.hqCityId)!;
     const far = [...world.cities].sort((a, b) => roadDistance(world, hq.id, b.id) - roadDistance(world, hq.id, a.id))[0];

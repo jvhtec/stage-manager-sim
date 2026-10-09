@@ -8,7 +8,7 @@ import type { TycoonState } from '../types';
 const game = (): TycoonState => {
   let s = createTycoonGame({ companyName: 'R', color: '#f00', seed: 31, country: 'GB', startYear: 1995 });
   s = { ...s, company: { ...s.company, cash: 2_000_000, reputation: 45 } };
-  return advanceHours(s, 24 * 14);
+  return advanceHours(s, 24 * 21);
 };
 /** Up to n compatible candidate shows (different days, a plan that works). */
 function pickRun(s: TycoonState, n: number) {
@@ -67,7 +67,9 @@ describe('road runs', () => {
     expect(out.state.vehicles.find(x => x.id === v.id)!.orders).toEqual(expect.arrayContaining(ids));
     expect(out.state.runs).toHaveLength(ids.length > 1 ? 1 : 0);
 
-    const broken = { ...s, company: { ...s.company, reputation: 0 } };
+    // One of the offers lapses: the whole run must be refused.
+    const lapsed = ids[ids.length - 1];
+    const broken = { ...s, gigs: s.gigs.map(g => (g.id === lapsed ? { ...g, acceptByDay: -1 } : g)) };
     const fail = bookRun(broken, v.id, ids);
     expect(fail.result.ok).toBe(false);
     ids.forEach(id => expect(fail.state.gigs.find(g => g.id === id)!.status).toBe('offer'));

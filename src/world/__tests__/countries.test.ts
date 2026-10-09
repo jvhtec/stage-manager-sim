@@ -15,7 +15,7 @@ const game = (country: 'ES' | 'GB' | 'US' | 'DE' | 'FR' | 'IT', seed = 2024) =>
   createTycoonGame({ companyName: 'Test', color: '#ff0066', seed, country });
 
 describe('countries', () => {
-  it('names towns after real cities, biggest first, on the same geography', () => {
+  it('names towns after real cities, biggest first, where they really are', () => {
     const es = getWorld(77, 'ES');
     const gb = getWorld(77, 'GB');
     const metroEs = es.cities.find(c => c.size === 'metropolis')!;
@@ -26,9 +26,15 @@ describe('countries', () => {
     const sorted = [...es.cities].sort((a, b) => b.population - a.population);
     expect(sorted[0].size).toBe('metropolis');
     expect(sorted.every((c, i) => i === 0 || c.population <= sorted[i - 1].population)).toBe(true);
-    // Same roads and positions, different names.
-    expect(es.cities.map(c => [c.x, c.y])).toEqual(gb.cities.map(c => [c.x, c.y]));
-    expect(Array.from(es.road)).toEqual(Array.from(gb.road));
+    // A miniature of the real country: the towns sit in their true relative positions.
+    const at = (w: typeof es, name: string) => w.cities.find(c => c.name === name)!;
+    expect(at(es, 'Barcelona').x).toBeGreaterThan(at(es, 'Madrid').x);
+    expect(at(es, 'Barcelona').y).toBeLessThan(at(es, 'Madrid').y);
+    expect(at(es, 'Sevilla').y).toBeGreaterThan(at(es, 'Madrid').y);
+    expect(at(es, 'Sevilla').x).toBeLessThan(at(es, 'Madrid').x);
+    expect(at(gb, 'Glasgow').y).toBeLessThan(at(gb, 'London').y);
+    expect(at(gb, 'Brighton').y).toBeGreaterThan(at(gb, 'London').y);
+    expect(es.cities.map(c => [c.x, c.y])).not.toEqual(gb.cities.map(c => [c.x, c.y]));
     const stadium = metroEs.venues.find(v => v.kind === 'stadium')!;
     expect(stadium.name).toBe('Estadio Santiago Bernabéu');
   });

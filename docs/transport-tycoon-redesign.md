@@ -26,7 +26,7 @@ changed. Side by side with Transport Tycoon:
 
 | TT concept | Stage Manager Sim | Where |
 |---|---|---|
-| Isometric tile map with heights, water, forests | Procedurally generated island (72×56 tiles), integer corner heights, coast, lakes, bridges | `src/world/mapgen.ts`, `src/tycoon/render/*` |
+| Isometric tile map with heights, water, forests | A miniature of the chosen country (72×56 tiles): real coastline, mountains where the real ranges are, the real towns at their real relative positions (drawn oversized), integer corner heights, bridges over straits | `src/world/mapgen.ts`, `src/tycoon/render/*` |
 | Towns that grow | Villages → towns → cities → one metropolis; **town size decides which venues exist** (pub → hall → club → theatre → arena → stadium), so geography *is* the progression ladder | `mapgen.ts` (`SIZE_VENUES`) |
 | Cargo | Gear units per department (audio / lighting / video / staging) + crew as passengers | `catalog.ts`, `sim.ts` (`loadVehicle`) |
 | Delivery deadline / cargo payment | A show's **load-in at 10:00**. Late, short on gear or crew → lower quality → lower fee. Nothing arrives → no-show penalty | `sim.ts` (`playShow`) |
@@ -60,7 +60,9 @@ tile diagonal — rather than three.js. That keeps it crisp at any zoom, tiny (t
 ~106KB lazy chunk with no new dependencies), and fast enough for phones.
 
 - **Terrain**: heightmapped tiles with slope shading, sand coasts, animated water glints,
-  forests, rough ground, and a dirt "slab" edge so the island reads as a diorama.
+  forests, rough ground, and a dirt "slab" edge so the map reads as a diorama. Everything casts a
+  soft shadow (one convex hull per object, drawn in a ground pass before the object pass), water
+  deepens away from the shore with foam along it, and roads have kerbs and lane marks when zoomed in.
 - **Roads** follow the terrain, with lane markings when zoomed in and timber bridges over water.
 - **Buildings** are procedural extruded boxes: pitched-roof houses, brick and concrete blocks,
   glass towers with rooftop plant, windows that light up at night.
@@ -140,8 +142,8 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
   Skyliner, Mercedes Sprinter, Scania R.
 
 - **Countries** (`content/countries.ts`) — pick España, UK, USA, Deutschland, France or Italia
-  at new game. Same procedural geography, but towns take real city names (biggest town = the
-  capital/largest city), venues are named the local way (Sala…, Zénith de…, PalaSport di…) and
+  at new game. Each is a **miniature of the real country** (see below); towns are the real
+  cities (biggest = the capital/largest city, with real populations), venues are named the local way (Sala…, Zénith de…, PalaSport di…) and
   famous rooms appear where the map puts them (Bernabéu, WiZink, Wembley, MSG, Bercy, San
   Siro…). Prices show in €, £ or $. Rivals are the local firms of that country plus the
   international giants (Clair, PRG, Solotech); local acts (Héroes del Silencio, Estopa, Rosalía…;
@@ -156,6 +158,22 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
   its brand colour, and brands/companies show as typographic badges in their colours. For a
   personal build, official logo files can be dropped into `public/brands/` and listed in
   `public/brands/index.json` — they then replace the badges (see the README there).
+
+- **Real geography** (`content/geo.ts`, `geoParams.json`, `landmasks.ts`, `scripts/gen-landmask.mjs`) —
+  each country's map is its real shape. The coastline is rasterised offline from Natural Earth
+  (public domain) onto the 73×57 corner grid (neighbouring countries count as land, so Spain
+  touches France and Portugal) and shipped as a few hundred base64 bytes per country; re-run
+  `node scripts/gen-landmask.mjs` after editing a bounding box. A shared projection puts each
+  real city at its true latitude/longitude, then towns are placed biggest-first on the dry ground
+  nearest their real spot that leaves earlier towns their elbow room — cities are *oversized* (radius
+  2 to 6 tiles), so crowded regions (northern England, the US north-east) fan out a little. Mountain
+  ranges (Pyrenees, Alps, Highlands, Rockies…) are polylines that lift the ground around them; the
+  coast is flat beach. Towns near the sea sit at beach level, inland ones may stand on a low
+  plateau; roads cross narrow straits on bridges. The seed only varies the rolling hills, the
+  woods, venue sizes and each town's street layout — "Reroll terrain" in the setup screen.
+  Every map is the same 72×56 tiles, so a tile is ~17 km in Spain, ~19 km in Britain and ~74 km
+  in the US: game distances are compressed by country, which keeps trips playable everywhere.
+  Saves from before this change are discarded (save v7).
 
 - **Start years** (1975, 1980, 1985, 1990, 2000, 2010) — the era sets which trucks, gear and
   desks exist (Bedford TK, Altec A4s, Yamaha PM1000 and Strand lanterns in 1975; no video kit
