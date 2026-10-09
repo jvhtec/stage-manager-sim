@@ -302,7 +302,7 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
       const i = idx(x, y, cw);
       if (!land[i]) continue;
       // Gentle rolling country, mountains where the real ranges are, flat by the sea.
-      const rolling = Math.max(0, n1(x, y) * 0.7 + n2(x, y) * 0.3 - 0.52) * 3.2;
+      const rolling = Math.max(0, n1(x, y) * 0.7 + n2(x, y) * 0.3 - 0.52) * 2;
       const raw = 1 + rolling + lift(x, y) * 5.6;
       const level = 1 + Math.round((raw - 1) * Math.min(1, toSea[i] / 3));
       heights[i] = Math.max(1, Math.min(MAX_LEVEL, level));
