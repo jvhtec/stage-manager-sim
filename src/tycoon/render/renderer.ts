@@ -97,7 +97,7 @@ function staticIndex(map: WorldMap): StaticIndex {
   for (let y = 0; y < map.height; y++) {
     for (let x = 0; x < map.width; x++) {
       const i = y * map.width + x;
-      if (occupied[i] || map.road[i]) continue;
+      if (occupied[i] || map.road[i] || map.foreign[i]) continue;
       const t = map.terrain[i];
       if (t === Terrain.Forest) {
         const n = 2 + Math.floor(hash2(x, y, 3) * 2);
@@ -154,9 +154,31 @@ function drawTile(rc: RC, idx: StaticIndex, x: number, y: number) {
   const variation = 0.95 + hash2(x, y) * 0.08;
   let base = TERRAIN_COLORS[t];
   if (idx.urban[i] && t !== Terrain.Water) base = [138, 150, 112];
-  poly(rc, pts, paint(base, slopeLight * variation));
+  // Neighbouring countries sit there as a muted backdrop: you can see the shape of home.
+  const abroad = map.foreign[i] === 1;
+  if (abroad) base = [base[0] * 0.45 + 150 * 0.55, base[1] * 0.45 + 156 * 0.55, base[2] * 0.45 + 162 * 0.55];
+  const isWater = (nx: number, ny: number) => nx >= 0 && ny >= 0 && nx < map.width && ny < map.height && map.terrain[ny * map.width + nx] === Terrain.Water;
+  const waterN = [isWater(x, y - 1), isWater(x + 1, y), isWater(x, y + 1), isWater(x - 1, y)];
+  const shore = t === Terrain.Water && waterN.some(w => !w);
+  // Open water is deeper; the shallows by the shore are lighter.
+  const depth = t === Terrain.Water ? (shore ? 1.1 : 0.92 + hash2(x, y, 4) * 0.04) : 1;
+  poly(rc, pts, paint(base, slopeLight * variation * depth));
 
   if (t === Terrain.Water) {
+    // Foam along the edges that meet land.
+    if (shore && rc.cam.zoom >= 0.8) {
+      const edges: [number, number][] = [[0, 1], [1, 2], [2, 3], [3, 0]];
+      rc.ctx.strokeStyle = paint(C.white, 1, 0.55 + 0.15 * Math.sin(rc.time / 600 + x + y));
+      rc.ctx.lineWidth = Math.max(1, rc.cam.zoom * 0.9);
+      rc.ctx.lineCap = 'round';
+      rc.ctx.beginPath();
+      edges.forEach(([a, b], k) => {
+        if (waterN[k]) return;
+        rc.ctx.moveTo(pts[a][0], pts[a][1]);
+        rc.ctx.lineTo(pts[b][0], pts[b][1]);
+      });
+      rc.ctx.stroke();
+    }
     // Drifting glints.
     const phase = (rc.time / 1400 + hash2(x, y, 9)) % 1;
     if (phase < 0.35 && rc.cam.zoom >= 0.9) {
@@ -164,7 +186,28 @@ function drawTile(rc: RC, idx: StaticIndex, x: number, y: number) {
       rc.ctx.fillStyle = paint(C.waterGlint, 1, 0.55);
       rc.ctx.fillRect(gx, gy, 4 * rc.cam.zoom, Math.max(1, rc.cam.zoom * 0.6));
     }
-  } else if (rc.cam.zoom >= 1.5) {
+  } else if (rc.cam.zoom >= 1.3 && !abroad && !map.road[i] && !idx.urban[i] && (t === Terrain.Grass || t === Terrain.Forest || t === Terrain.Rough)) {
+    // Tufts of grass (or scree) so big fields aren't flat colour.
+    const light = t === Terrain.Rough ? 'rgba(170,158,128,0.55)' : 'rgba(150,200,110,0.45)';
+    const dark = t === Terrain.Rough ? 'rgba(80,72,60,0.5)' : 'rgba(46,92,40,0.4)';
+    for (let k = 0; k < 4; k++) {
+      const u = 0.12 + hash2(x, y, 60 + k) * 0.76;
+      const v = 0.12 + hash2(x, y, 70 + k) * 0.76;
+      const [tx, ty] = project(rc.cam, x + u, y + v, groundZ(map, x + u, y + v));
+      const h = (1.4 + hash2(x, y, 80 + k) * 1.4) * rc.cam.zoom;
+      rc.ctx.strokeStyle = k % 2 ? light : dark;
+      rc.ctx.lineWidth = Math.max(0.6, rc.cam.zoom * 0.45);
+      rc.ctx.beginPath();
+      rc.ctx.moveTo(tx - h * 0.4, ty);
+      rc.ctx.lineTo(tx - h * 0.2, ty - h);
+      rc.ctx.moveTo(tx, ty);
+      rc.ctx.lineTo(tx + h * 0.05, ty - h * 1.15);
+      rc.ctx.moveTo(tx + h * 0.4, ty);
+      rc.ctx.lineTo(tx + h * 0.25, ty - h * 0.9);
+      rc.ctx.stroke();
+    }
+  }
+  if (t !== Terrain.Water && rc.cam.zoom >= 1.5) {
     rc.ctx.strokeStyle = 'rgba(0,0,0,0.06)';
     rc.ctx.lineWidth = 1;
     rc.ctx.beginPath();
@@ -220,6 +263,16 @@ function drawRoad(rc: RC, idx: StaticIndex, x: number, y: number) {
   const a = 0.3;
   const b = 0.7;
   const asphalt = paint(bridge ? C.bridge : C.road);
+  // A kerb: a slightly wider darker edge under the asphalt.
+  if (rc.cam.zoom >= 1.1 && !bridge) {
+    const kerb = paint(C.roadEdge, 1.05);
+    const k = 0.045;
+    rect(a - k, a - k, b + k, b + k, kerb);
+    if (n) rect(a - k, 0, b + k, a, kerb);
+    if (s) rect(a - k, b, b + k, 1, kerb);
+    if (w) rect(0, a - k, a, b + k, kerb);
+    if (e) rect(b, a - k, 1, b + k, kerb);
+  }
   rect(a, a, b, b, asphalt);
   if (n) rect(a, 0, b, a, asphalt);
   if (s) rect(a, b, b, 1, asphalt);
@@ -398,13 +451,19 @@ export function renderWorld(ctx: CanvasRenderingContext2D, input: RenderInput): 
   const dMin = Math.max(0, Math.floor((byMin * 2) / TH));
   const dMax = Math.min(map.width + map.height - 2, Math.ceil(((byMax + 60) * 2) / TH));
 
+  // Ground first, so shadows cast over neighbouring tiles aren't painted over by them.
+  for (let d = dMin; d <= dMax; d++) {
+    const xLo = Math.max(0, d - map.height + 1, Math.floor(((bxMin * 2) / TW + d) / 2) - 1);
+    const xHi = Math.min(map.width - 1, d, Math.ceil(((bxMax * 2) / TW + d) / 2) + 1);
+    for (let x = xLo; x <= xHi; x++) drawTile(rc, idx, x, d - x);
+  }
+
   for (let d = dMin; d <= dMax; d++) {
     // bx = (x - y) * TW/2 = (2x - d) * TW/2  →  x range from visible bx range
     const xLo = Math.max(0, d - map.height + 1, Math.floor(((bxMin * 2) / TW + d) / 2) - 1);
     const xHi = Math.min(map.width - 1, d, Math.ceil(((bxMax * 2) / TW + d) / 2) + 1);
     for (let x = xLo; x <= xHi; x++) {
       const y = d - x;
-      drawTile(rc, idx, x, y);
       const ti = y * map.width + x;
 
       idx.objs.get(ti)?.forEach(o => {
