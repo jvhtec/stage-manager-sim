@@ -85,7 +85,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 323 tests):
+(`src/world/__tests__/*.test.ts`, 333 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -341,6 +341,21 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   *Crew lounge* (12k / 35k): techs resting at the base shed 3 / 6 extra fatigue a day (the second
   level adds a little morale). The base diorama grows a soundstage annex with a band, lighting bar
   and (from the production hall up) a video wall. A shutdown zeroes the rent but leaves the upkeep.
+
+- **Disputes, claims and audits** (`disputes.ts`, `audits.ts`, `incidents.ts`) — three ways money
+  and rules push back. *Promoter disputes*: a show under 62% quality at a tier-2+ venue may leave
+  the promoter holding back 25% of the payout (chance 20% + 1.6 per point under 62%, −4% a
+  relationship point); settle (take 40% of it), argue (55% they pay in full, else it's gone and the
+  relationship cools) or send lawyers (16% of the held amount up front, 70% win; a loss costs 1
+  reputation). *Insurer disputes*: a claim over 1,500 is questioned 22% of the time — accept half or
+  fight (8% fees, 60% paid in full). *Premiums*: each claim in the last year loads the premium 8%
+  (max +60%); two clean years earn −10%. *Safety audits*: each September the council scores every
+  base older than four months (60 + prep ratio × 20, −20 over capacity, +10/+15 for first aiders on
+  site, +4 each for a lounge and a bench, ±10 luck): 70+ passes with a little reputation; 45-69
+  is an improvement notice (fix 4% of the base's build cost, appeal 1.5% for 40% to overturn,
+  or pay a 7% fine and mark your insurance record); under 45 a prohibition (fix 8%, or shut for
+  a week: 15% fine, −3 morale, −1 reputation). The Base tab shows the likely score and why.
+  Legal fees and fines land in a new "Legal fees" ledger line.
 
 - **Speciality** (`expertise.ts`) — a moving average of the department mix of the shows you play
   (each show moves it 4-10%, bigger shows more) sets 160 expertise points to share between five

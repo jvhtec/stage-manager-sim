@@ -7,6 +7,8 @@
  * Pure and deterministic: same state in → same state out (the only
  * randomness is the seeded rng carried in `state.rngState`).
  */
+import { monthlyAudits } from './audits';
+import { maybeDisputeShow } from './disputes';
 import { expertiseBonus, learnMix } from './expertise';
 import { collectOrInvoice, dailyReceivables } from './receivables';
 import { certPenalty, certShortfall, dailyCourses, monthlyCerts } from './certs';
@@ -509,7 +511,8 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
 
   const specialist = expertiseBonus(s, gig);
   const payout = Math.round(showPayout(gig, quality) * (1 + specialist));
-  collectOrInvoice(s, gig, payout);
+  const withheld = maybeDisputeShow(s, gig, payout, quality);
+  collectOrInvoice(s, gig, payout - withheld);
   learnMix(s, gig);
   if (gig.overseas) {
     // Air freight for the rig and flights for the crew, there and back.
@@ -642,6 +645,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     monthlyShares(s, p => rng.chance(p));
     monthlyVenues(s, rng);
     monthlyAnnexes(s);
+    monthlyAudits(s, sideRng(s, dayOf(s.hour) + 7007));
     monthlyCerts(s, sideRng(s, dayOf(s.hour) + 7004));
     monthlySponsors(s, sideRng(s, dayOf(s.hour) + 7001));
     monthlyRivalry(s, sideRng(s, dayOf(s.hour) + 7003));

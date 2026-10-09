@@ -16,6 +16,7 @@ import {
   tourRehearsalCost,
 } from '@/world/annexes';
 import { dayOf, formatDay } from '@/world/core';
+import { NOTICE_SCORE, PASS_SCORE, auditScore } from '@/world/audits';
 import { dayRate, levelOf } from '@/world/people';
 import { PersonRow } from './crewWindow';
 import { CREW_HIRE_COST, STAFF_HIRE_COST } from '@/world/catalog';
@@ -123,6 +124,27 @@ export function BaseOverview({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
           {modLevel(depot, 'rehearsal') > 0 && <RehearsalBooking ctx={ctx} />}
         </>
       )}
+
+      <h4>Safety audit</h4>
+      {(() => {
+        const now = auditScore(state, depot);
+        return (
+          <>
+            <Stat label="If the inspector called today">
+              <b className={now.total >= PASS_SCORE ? 'tt-good' : now.total >= NOTICE_SCORE ? 'tt-warn' : 'tt-bad'}>~{now.total}/100</b>
+              <span className="tt-dim"> · pass at {PASS_SCORE}</span>
+            </Stat>
+            {depot.audit && (
+              <Stat label={`Last audit (${depot.audit.year})`}>
+                <span className={depot.audit.score >= PASS_SCORE ? 'tt-good' : 'tt-bad'}>{depot.audit.score}/100</span>
+              </Stat>
+            )}
+            <div className="tt-dim" style={{ whiteSpace: 'normal', fontSize: 11 }}>
+              {now.parts.map(p => `${p.label} ${p.points > 0 ? '+' : ''}${p.points}`).join(' · ')}. The council calls every September.
+            </div>
+          </>
+        );
+      })()}
 
       <h4>Full-time staff</h4>
       {STAFF_ROLES.map(role => (

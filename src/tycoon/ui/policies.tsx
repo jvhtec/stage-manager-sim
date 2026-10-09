@@ -12,7 +12,7 @@ import { CREW_WAGE_PER_DAY } from '@/world/catalog';
 import { FREELANCE_DAY_RATE, PAY, PAY_LEVELS, TRAINING, TRAINING_LEVELS, averageExperience, averageFatigue, moraleTarget } from '@/world/crew';
 import { ConditionChip } from './gear';
 import { SUBHIRE_DAY_RATE, rentOutMonthly } from '@/world/hire';
-import { INSURANCE, INSURANCE_LEVELS, insuredValue, monthlyPremium } from '@/world/incidents';
+import { INSURANCE, INSURANCE_LEVELS, claimsRecord, insuredValue, monthlyPremium, premiumFactor } from '@/world/incidents';
 import { money } from './format';
 import type { WinCtx } from './types';
 
@@ -286,6 +286,12 @@ export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
       <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
         Warehouses get broken into, trucks crash, and outdoor festivals get rained on — British summers most of all.
       </div>
+      {state.policies.insurance !== 'none' && (
+        <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+          Claims in the last year: <b>{claimsRecord(state).lastYear}</b> — premiums are{' '}
+          {premiumFactor(state) > 1 ? `${Math.round((premiumFactor(state) - 1) * 100)}% higher` : premiumFactor(state) < 1 ? `${Math.round((1 - premiumFactor(state)) * 100)}% lower (no-claims discount)` : 'at the standard rate'}. Large claims are sometimes disputed.
+        </div>
+      )}
     </div>
   );
 }

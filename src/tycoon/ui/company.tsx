@@ -419,6 +419,11 @@ export function HelpWindow() {
           money.
         </li>
         <li>
+          <b>Disputes and audits</b>: a promoter unhappy with a poor night may hold back part of your fee, and an insurer may question a
+          big claim — settle, argue or send in the lawyers. Every September the council audits each base (the Base tab shows
+          your likely score); first aiders, a prep crew that keeps up and a tidy rack help.
+        </li>
+        <li>
           <b>Speciality</b>: the kind of work you do shapes your name (Finance). Specialists earn more on shows that lean on their
           department and a little less on others; generalists sit in the middle.
         </li>

@@ -45,6 +45,6 @@ describe('incidents and insurance', () => {
     let storm = null;
     for (let i = 0; i < 50 && !storm; i++) storm = rollWeather(s, fest, rng);
     expect(storm!.penalty).toBeGreaterThan(0);
-    expect(storm!.note).toMatch(/Insurance paid/);
+    expect(storm!.note).toMatch(/Insurance paid|The insurer is disputing/);
   });
 });

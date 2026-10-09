@@ -127,6 +127,7 @@ export type LedgerCategory =
   | 'venues'
   | 'facilities'
   | 'merch'
+  | 'legal'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -165,6 +166,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   venues: 'Owned venues',
   facilities: 'Annexes & stages',
   merch: 'Merchandise',
+  legal: 'Legal fees',
   sales: 'Asset sales',
 };
 
@@ -237,6 +239,8 @@ export interface Depot {
   modules?: Partial<Record<ModuleId, number>>;
   /** Day the rehearsal stage is free again. */
   stageBusyUntil?: number;
+  /** The last council safety audit (audits.ts). */
+  audit?: { year: number; score: number };
 }
 
 export type VehicleStatus =
@@ -545,7 +549,7 @@ export interface Run {
   bonus?: number;
 }
 
-export type DilemmaKind = 'dirty' | 'sponsor' | 'charity' | 'venue' | 'ownfest' | 'shareholders' | 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
+export type DilemmaKind = 'audit' | 'dispute' | 'dirty' | 'sponsor' | 'charity' | 'venue' | 'ownfest' | 'shareholders' | 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
 
 /** A problem that needs your call (dilemmas.ts). */
 export interface Dilemma {
@@ -772,6 +776,8 @@ export interface TycoonState {
   /** 0-100: how well the festival's name sells. */
   festivalBrand?: number;
   festivalHistory: FestivalEdition[];
+  /** Days (since the start) on which you made an insurance claim (incidents.ts). */
+  claims: number[];
   /** Moving average of the departments your recent shows needed (expertise.ts). */
   mix?: Record<Dept, number>;
   /** Invoices waiting to be paid (receivables.ts). */
