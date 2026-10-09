@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 116 tests):
+(`src/world/__tests__/*.test.ts`, 120 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -320,6 +320,13 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   house tenders, and the New Year news announces openings, rebuilds and reopenings (world tours
   need an open home room). **Local fame**: towns you've done proud (rating above 50) post up to
   +20% more offers, towns you've let down −20%.
+
+- **Living rivals** (`rivals.ts`) — monthly: well-run firms (health 60+) build their name slowly and
+  move up a tier when their standing allows (news: "now chasing arena-size work"), struggling ones
+  (<35) lose it; a healthy firm (65+) may swallow a struggling one (<25) — the buyer inherits its
+  reach, the target's base closes and its lot frees up; and in a decent era market (trend ≥ 1,
+  never in a shutdown) a new start-up opens in a town with a free lot — small (tiers 1-2, rep
+  12-24) with a made-up name. Capped at 14 firms.
 
 UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
 (workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the

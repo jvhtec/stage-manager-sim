@@ -6,7 +6,7 @@
  */
 import type { Rng } from '@/lib/rng';
 import { tierInfo } from './catalog';
-import { book, depotInCity, formatMoney, newId, pushNews, yearOf } from './core';
+import { book, depotInCity, formatMoney, freeLot, newId, pushNews, yearOf } from './core';
 import { openAuction } from './auctions';
 import { rentalProduct } from './hire';
 import { marketNow } from './market';
@@ -47,6 +47,83 @@ export function monthlyRivals(s: TycoonState, rng: Rng) {
       pushNews(s, `Word is ${r.name} is struggling. A buyer could pick them up cheap (see the League).`, 'info', { cityId: r.hqCityId });
     }
   });
+  growRivals(s, rng);
+  rivalMergers(s, rng);
+  rivalStartups(s, rng);
+}
+
+const TIER_NAMES = ['', 'club', 'theatre', 'arena', 'stadium'];
+/** The most any firm's standing climbs to. */
+const RIVAL_REPUTATION_CAP = 92;
+/** A merger needs a healthy buyer and a weak target. */
+const MERGER_BUYER_HEALTH = 65;
+const MERGER_CHANCE = 0.12;
+const STARTUP_CHANCE = 0.05;
+const MAX_RIVALS = 14;
+const STARTUP_WORDS = ['Backline', 'Stagecraft', 'Lumen', 'Redline', 'Northern', 'Harbour', 'Apex', 'Fieldhouse', 'Skyline', 'Ironwood', 'Beacon', 'Foxglove'];
+const STARTUP_SUFFIX = ['Productions', 'Sound & Light', 'Live', 'Event Services', 'Stage Hire', 'Staging'];
+const STARTUP_COLORS = ['#475569', '#78716c', '#6b7280', '#57534e', '#64748b'];
+
+/** Monthly: well-run firms build their name (and move up a tier); struggling ones lose theirs. */
+function growRivals(s: TycoonState, rng: Rng) {
+  s.rivals.forEach(r => {
+    const h = rivalHealth(r);
+    // (Winning shows already lifts a rival's name; this is the slow drift from how well it's run.)
+    const drift = h >= 60 ? 0.1 : h < 35 ? -0.25 : 0;
+    r.reputation = Math.max(5, drift > 0 ? Math.min(Math.max(r.reputation, RIVAL_REPUTATION_CAP), r.reputation + drift) : r.reputation + drift);
+    if (r.maxTier < 4 && r.reputation >= tierInfo(r.maxTier + 1).minReputation + 5 && rng.chance(0.4)) {
+      r.maxTier += 1;
+      pushNews(s, `${r.name} has outgrown its old rooms — now chasing ${TIER_NAMES[r.maxTier]}-size work.`, 'info', { cityId: r.hqCityId });
+    }
+  });
+}
+
+/** Monthly: a healthy firm swallows a struggling one — fewer, bigger rivals. */
+function rivalMergers(s: TycoonState, rng: Rng) {
+  const buyers = s.rivals.filter(r => rivalHealth(r) >= MERGER_BUYER_HEALTH);
+  const targets = s.rivals.filter(r => rivalHealth(r) < STRUGGLING);
+  if (!buyers.length || !targets.length || !rng.chance(MERGER_CHANCE)) return;
+  const target = rng.pick(targets);
+  const buyer = rng.pick(buyers.filter(b => b.id !== target.id));
+  if (!buyer) return;
+  const city = worldOf(s).cityById.get(target.hqCityId)?.name;
+  s.rivals = s.rivals.filter(r => r.id !== target.id);
+  s.vehicles = s.vehicles.filter(v => v.owner !== target.id);
+  s.goneRivals.push(target.id);
+  buyer.reputation = Math.min(RIVAL_REPUTATION_CAP, buyer.reputation + 2 + target.reputation * 0.05);
+  buyer.maxTier = Math.max(buyer.maxTier, target.maxTier);
+  buyer.minTier = Math.min(buyer.minTier, target.minTier);
+  buyer.health = Math.min(100, rivalHealth(buyer) + 5);
+  pushNews(s, `${buyer.name} absorbs struggling ${target.name}. Their ${city} base closes — the lot is up for grabs.`, 'big', { cityId: target.hqCityId });
+}
+
+/** Monthly, in a decent market: a new firm opens its doors in a town with room. */
+function rivalStartups(s: TycoonState, rng: Rng) {
+  const { demand: seasonal, season, shutdown } = marketNow(s);
+  const demand = seasonal / season; // the era's trend, not the time of year
+  if (shutdown || demand < 1 || s.rivals.length >= MAX_RIVALS || !rng.chance(STARTUP_CHANCE * demand)) return;
+  const world = worldOf(s);
+  const towns = world.cities.filter(c => c.size !== 'village' && c.id !== s.company.hqCityId && freeLot(s, world, c.id) >= 0);
+  if (!towns.length) return;
+  const town = rng.pick(towns);
+  const taken = new Set(s.rivals.map(r => r.name));
+  let name = '';
+  for (let i = 0; i < 12 && (!name || taken.has(name)); i++) name = `${rng.pick(STARTUP_WORDS)} ${rng.pick(STARTUP_SUFFIX)}`;
+  if (taken.has(name)) return;
+  s.rivals.push({
+    id: newId(s, 'rival'),
+    name,
+    color: rng.pick(STARTUP_COLORS),
+    specialty: rng.pick(DEPTS),
+    minTier: 1,
+    maxTier: 2,
+    hqCityId: town.id,
+    lot: freeLot(s, world, town.id),
+    reputation: 12 + Math.floor(rng.next() * 12),
+    showsPlayed: 0,
+    health: 55,
+  });
+  pushNews(s, `New firm ${name} opens in ${town.name} and starts bidding for small shows.`, 'info', { cityId: town.id });
 }
 
 /** What a rival would sell for: their standing, their size, and how desperate they are. */
