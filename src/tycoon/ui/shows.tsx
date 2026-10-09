@@ -261,6 +261,7 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
                         fuel {money(c.fuel)} · {c.nights} night{c.nights === 1 ? '' : 's'} away {money(c.travel)}
                         {c.freelance ? ` · freelancers ${money(c.freelance)}` : ''}
                         {c.subhire ? ` · sub-hire ${money(c.subhire)}` : ''}
+                        {c.paperwork ? ` · visas & carnet ${money(c.paperwork)}` : ''}
                       </span>
                     </Stat>
                     <Stat label="Margin (est.)">

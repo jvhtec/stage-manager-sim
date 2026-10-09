@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { dayOf, formatDay, lastShowDay } from '@/world/core';
+import { dayOf, formatDay, lastShowDay, yearOf } from '@/world/core';
+import { estimatePaperwork } from '@/world/paperwork';
 import { getRegion } from '@/world/content/world';
 import { CITY_COORDS, HOME_HUB, LAND, type LonLat } from '@/world/content/worldmap';
 import { tourGigs } from '@/world/tours';
@@ -217,6 +218,15 @@ export function WorldMapWindow({ ctx, tourId }: { ctx: WinCtx; tourId?: string }
             <h4 style={{ cursor: 'pointer', color: leg.color }} onClick={() => setFocus(i)}>
               {leg.label} — {formatDay(state, first.day)} → {formatDay(state, lastShowDay(leg.gig))}
             </h4>
+            {(() => {
+              const pw = estimatePaperwork(state, leg.gig, yearOf(state, leg.gig.day * 24));
+              return (
+                <div className="tt-dim" style={{ marginBottom: 4, whiteSpace: 'normal' }}>
+                  Paperwork (est.): {money(pw.total)} — carnet {pw.carnet ? money(pw.carnet) : 'not needed'}, visas {pw.visas ? money(pw.visas) : 'none'}
+                  {pw.lines.some(l => l.visa) ? ` (${pw.lines.filter(l => l.visa).map(l => `${l.code} ${money(l.visa)}/head`).join(', ')})` : ''}
+                </div>
+              );
+            })()}
             <div className="tt-dim" style={{ marginBottom: 4, whiteSpace: 'normal' }}>
               Rig flown out of the home airport: {region.freightDays} days each way · {money(region.freightPerUnit)} a unit and {money(region.flightPerCrew)} a head, round trip · {money(leg.gig.fee)} in fees
             </div>

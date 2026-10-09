@@ -1,4 +1,5 @@
 /** Read-only projections for the UI — nothing here mutates state. */
+import { paperworkFor } from './paperwork';
 import { GEAR_RESALE_RATE, HOTEL_NIGHT, HOURS_PER_DAY, PER_DIEM, fuelPerTile, getModel } from './catalog';
 import { getProduct } from './content/gear';
 import { techBonus } from './content/techs';
@@ -220,6 +221,8 @@ export interface JobCosts {
   travel: number;
   freelance: number;
   subhire: number;
+  /** Visas and carnets on a leg abroad. */
+  paperwork: number;
   total: number;
   nights: number;
 }
@@ -248,5 +251,6 @@ export function estimateJobCosts(state: TycoonState, gig: Gig, projection = proj
   });
   const freelance = projection.freelance.cost;
   const subhire = projection.subhire.cost;
-  return { fuel: Math.round(fuel), travel: Math.round(travel), freelance, subhire, total: Math.round(fuel + travel + freelance + subhire), nights };
+  const paperwork = gig.overseas ? paperworkFor(state, gig, projection.delivered, projection.crew || gig.crewNeeded, dateOfDay(state, gig.day).getUTCFullYear()).total : 0;
+  return { fuel: Math.round(fuel), travel: Math.round(travel), freelance, subhire, paperwork, total: Math.round(fuel + travel + freelance + subhire + paperwork), nights };
 }

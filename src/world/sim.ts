@@ -7,6 +7,7 @@
  * Pure and deterministic: same state in → same state out (the only
  * randomness is the seeded rng carried in `state.rngState`).
  */
+import { paperworkFor } from './paperwork';
 import { recordVenueNight } from './promoters';
 import { dailyAuctions, monthlyAuctions } from './auctions';
 import { annualReport, monthlyMilestones } from './milestones';
@@ -451,6 +452,14 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const tw = TIER_WEIGHT[gig.tier];
   const rating = s.cityRatings[gig.cityId] ?? 50;
 
+  // A rig that crossed a border paid its visas and carnet whether or not the night went well.
+  if (gig.overseas && onSite.length) {
+    const papers = paperworkFor(s, gig, working, crew, yearOf(s, s.hour));
+    if (papers.total) {
+      book(s, 'paperwork', -papers.total);
+      onSite.forEach(v => (v.profitThisYear -= Math.round(papers.total / onSite.length)));
+    }
+  }
   if (!onSite.length || quality < 0.3) {
     const penalty = Math.round(gig.fee * NO_SHOW_PENALTY_RATE);
     book(s, 'penalties', -penalty);

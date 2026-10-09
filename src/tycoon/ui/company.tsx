@@ -275,7 +275,32 @@ export function HelpWindow() {
         <li>
           <b>Crew</b> are people: sound, lighting, video and staging techs rated 1–5★, with traits (crew chief, perfectionist,
           road warrior…). Shows want the right specialists — a light-heavy arena needs LX techs — and everyone levels up by
-          working. Hire from the market each month; keep morale up or rivals poach your stars.
+          working. Hire from the market each month. <b>Pin</b> someone to a truck to make them its regular, or open a booked
+          show and <b>Choose the crew</b> to name exactly who goes. Set a rest rota in Policies so tired people sit jobs out.
+          If morale slips, rivals make offers to your stars — match them within two weeks or lose them.
+        </li>
+        <li>
+          <b>Needs your call</b>: a breakdown with a show waiting, a rig held at customs, undersized power, a union call, an
+          injured tech… The game pauses and asks. Ignore it and the cheap default happens at the deadline.
+        </li>
+        <li>
+          <b>Planning a truck</b>: select it and its route is drawn on the map; its window lists each stop with the hours spare
+          at load-in, and suggests the next jobs that fit, bookable in one tap. Single-show offers can be <b>haggled</b> once
+          for +12% — a refusal may make the promoter walk, so push when you hold the stronger hand.
+        </li>
+        <li>
+          <b>Abroad</b>: the world map (globe button) shows each world tour's flights. Crossing a border costs <b>visas and
+          carnets</b> (EU firms move freely inside the EU; the UK needs carnets for Europe from 2021), and rigs get held at
+          customs now and then.
+        </li>
+        <li>
+          <b>Second-hand</b>: when a rival goes under, its kit and trucks go to auction — the price slides daily, but others may
+          snap lots up first. <b>Maker partnerships</b> (Policies) give a discount and sponsorship for committing a department
+          to one brand. Venue <b>promoters</b> remember your nights: do them proud and they call more and pay more.
+        </li>
+        <li>
+          The world moves: landmark rooms open and close in their real years (the O2 in 2007), towns grow, rivals expand,
+          merge and start up. Your <b>annual report</b> lands every New Year, and the League tracks your career milestones.
         </li>
         <li>
           Buy bigger trucks and more gear, and win reputation to unlock arenas and stadiums. Every January the industry awards

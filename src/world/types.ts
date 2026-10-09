@@ -118,6 +118,7 @@ export type LedgerCategory =
   | 'training'
   | 'onsite'
   | 'sponsorship'
+  | 'paperwork'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -147,6 +148,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   training: 'Crew training',
   onsite: 'On-the-day extras',
   sponsorship: 'Maker sponsorship',
+  paperwork: 'Visas & carnets',
   sales: 'Asset sales',
 };
 

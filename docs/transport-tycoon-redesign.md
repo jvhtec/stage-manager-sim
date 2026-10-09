@@ -86,7 +86,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 153 tests):
+(`src/world/__tests__/*.test.ts`, 163 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -367,6 +367,18 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
 - **Suggested next jobs** — the vehicle window lists up to three open offers that fit on the end of a
   truck's orders (bookable, reachable before load-in, within 36 tiles), best fee for the driving first,
   with a one-tap Book & assign.
+
+- **Choosing the crew** — on a booked show, name exactly who goes (up to the crew it needs): named
+  people board first, even over better-matched techs, and are held back from other booked shows;
+  the gig window shows the crew fit.
+- **Truck itinerary** — each order in a vehicle's list shows the tiles from the previous stop and
+  the hours spare at load-in (green 6h+, amber under 6h, red if late), plus the way back to depot.
+  (Orders stay sorted by show date, so there's nothing to drag into order.)
+- **Visas & carnets** (`paperwork.ts`) — a rig that crosses a border pays an ATA carnet (£400 +
+  0.3% of the kit's value + £120 per extra country) unless it stays inside the EU (the UK needs
+  carnets for Europe from 2021), and a work visa per head for the US, Canada, Japan, Korea,
+  Australia, Singapore, Brazil (rising over the decades). Estimated on the world map and in the road
+  costs, charged when the rig turns up, whatever the show's result.
 
 UI: **Market** window (climate, season, festival calendar, rates), **Company policies** window
 (workshop, pay, insurance), Shows → **Contracts**, condition/fatigue chips, failure risk in the
