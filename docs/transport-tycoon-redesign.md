@@ -411,6 +411,14 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   day when the truck is on site, shown in the job estimate, as fleet-dashboard alerts and in the Market window's
   zone list, and announced when a new scheme starts.
 
+- **Marketing & trade shows** (`marketing.ts`, `content/tradeShows.ts`) — a standing marketing policy (none /
+  local ads / trade press / national campaign: 0 → 0.25 → 0.6 → 1.4 × (400 + 20 × reputation) a month) buys
+  +4% / +9% / +16% offers and a slow reputation climb that fades toward 100. Each year PLASA (London, Sept),
+  Musikmesse then Prolight + Sound (Frankfurt, spring) and LDI (Las Vegas, Nov) ask a question on opening
+  day (not during a shutdown): take a stand (+25% offers for 30 days, 12% off kit for 14, a little
+  reputation), walk the floor (+8% / 14 days, 5% / 7 days) or stay home (the default). Costs scale with your
+  size and the distance (×1 at home, ×1.8 across Europe, ×3 overseas); kit discounts stack with partnerships.
+
 **Balance check** (scripted bot: one local truck per idle van, GB 1979 / 1995, ES 2010, US 1985, 4-24 seeds
 each, vs the merged #19 baseline). Cash and survival are level or better (GB 1979, 12 seeds: mean £1.02M
 baseline vs £0.93M, 11/12 vs 12/12 alive; fresh seeds £924k vs £934k); reputation runs a few points lower

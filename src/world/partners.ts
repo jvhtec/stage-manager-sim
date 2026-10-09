@@ -5,6 +5,7 @@
  * name. Go back to a mixed rack and they walk. A partnership can't be
  * swapped for a year: loyalty cuts both ways.
  */
+import { showDiscount } from './marketing';
 import { book, dayOf, formatMoney, pushNews, yearOf } from './core';
 import { productsAvailableIn, getProduct } from './content/gear';
 import { tierInfo } from './catalog';
@@ -46,7 +47,8 @@ export function brandShare(state: TycoonState, dept: Dept, brand: string): numbe
 export function partnerPrice(state: TycoonState, productId: string): number {
   const p = getProduct(productId);
   const partner = state.partners[p.dept];
-  return Math.round(partner && partner.brand === p.brand ? p.price * (1 - PARTNER_DISCOUNT) : p.price);
+  const base = partner && partner.brand === p.brand ? p.price * (1 - PARTNER_DISCOUNT) : p.price;
+  return Math.round(base * showDiscount(state));
 }
 
 /** What a partnership pays per month at your current share and standing. */

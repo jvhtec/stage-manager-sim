@@ -13,6 +13,7 @@ import { book, depotInCity, formatMoney, gigById, loadInHour, newId, pushNews, s
 import { FREELANCE_DAY_RATE, PAY } from './crew';
 import { aboard, dayRate, moveToDepot, roleOf, syncCrew } from './people';
 import { getRegion } from './content/world';
+import { attendShow } from './marketing';
 import type { Dilemma, DilemmaKind, Gig, ShowMods, TycoonState, Vehicle } from './types';
 
 const money = (s: TycoonState, n: number) => formatMoney(s, n);
@@ -65,7 +66,7 @@ export function breakdownDilemma(s: TycoonState, v: Vehicle) {
 
 type Maker = (s: TycoonState, gig: Gig, rng: Rng) => Omit<Dilemma, 'id' | 'gigId' | 'createdHour' | 'expiresHour'> | null;
 
-const MAKERS: Record<Exclude<DilemmaKind, 'breakdown' | 'raise' | 'burnout'>, Maker> = {
+const MAKERS: Record<Exclude<DilemmaKind, 'breakdown' | 'raise' | 'burnout' | 'tradeshow'>, Maker> = {
   customs: (s, gig) =>
     !gig.overseas
       ? null
@@ -260,7 +261,7 @@ export function resolveDilemma(s: TycoonState, id: string, optionId: string, aut
   const gig = d.gigId ? gigById(s, d.gigId) : undefined;
   const v = d.vehicleId ? s.vehicles.find(x => x.id === d.vehicleId) : undefined;
   if (option.cost) {
-    book(s, d.kind === 'breakdown' ? 'servicing' : 'onsite', -option.cost);
+    book(s, d.kind === 'breakdown' ? 'servicing' : d.kind === 'tradeshow' ? 'marketing' : 'onsite', -option.cost);
     if (v) v.profitThisYear -= option.cost;
   }
   let line = `${d.title}: ${option.label.toLowerCase()}${option.cost ? ` (${money(s, option.cost)})` : ''}.`;
@@ -319,6 +320,12 @@ export function resolveDilemma(s: TycoonState, id: string, optionId: string, aut
       s.crewMorale = Math.max(0, s.crewMorale - 2);
       break;
     }
+    case 'tradeshow:stand':
+      attendShow(s, d.payload ?? '', 'stand');
+      break;
+    case 'tradeshow:visit':
+      attendShow(s, d.payload ?? '', 'visit');
+      break;
     case 'customs:partial':
       if (gig) addMods(gig, { quality: -0.07, failureFactor: 1.15 });
       break;

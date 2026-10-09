@@ -121,6 +121,7 @@ export type LedgerCategory =
   | 'paperwork'
   | 'bonuses'
   | 'zones'
+  | 'marketing'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -153,6 +154,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   paperwork: 'Visas & carnets',
   bonuses: 'Run bonuses',
   zones: 'Low-emission zones',
+  marketing: 'Marketing & trade shows',
   sales: 'Asset sales',
 };
 
@@ -412,7 +414,7 @@ export interface Run {
   bonus?: number;
 }
 
-export type DilemmaKind = 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
+export type DilemmaKind = 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
 
 /** A problem that needs your call (dilemmas.ts). */
 export interface Dilemma {
@@ -426,6 +428,8 @@ export interface Dilemma {
   gigId?: string;
   vehicleId?: string;
   personId?: string;
+  /** Extra reference for the kind (a trade show's id). */
+  payload?: string;
   createdHour: number;
   expiresHour: number;
 }
@@ -506,6 +510,17 @@ export interface Policies {
   training: TrainingLevel;
   /** Rest rota: keep tired people at base instead of sending them out. */
   rest: RestRota;
+  marketing: MarketingLevel;
+}
+
+export type MarketingLevel = 'none' | 'local' | 'trade' | 'national';
+
+/** Show-driven buzz and deals still running (marketing.ts). */
+export interface Promo {
+  offerMult: number;
+  offerUntil: number;
+  gearDiscount: number;
+  gearUntil: number;
 }
 
 export type RestRota = 'off' | 'tired' | 'strict';
@@ -598,6 +613,8 @@ export interface TycoonState {
   /** Manufacturer partnership per department (partners.ts). */
   /** Town size multipliers over the game (towns.ts). */
   townGrowth: Record<string, number>;
+  /** Buzz and deals from trade shows (marketing.ts). */
+  promo?: Promo;
   /** Planned road runs (runs.ts). */
   runs: Run[];
   /** Promoter relationship per venue, 0-8 (venues.ts). */

@@ -295,6 +295,12 @@ export function HelpWindow() {
           customs now and then.
         </li>
         <li>
+          <b>Getting your name about</b>: set a marketing budget in Policies for more offers and a slow climb in reputation, and
+          decide each year whether to exhibit at the trade shows (PLASA, Prolight + Sound, LDI) — a stand brings a month of
+          enquiries and cheaper kit. <b>Low-emission zones</b> (Market) start charging older trucks in big cities from the
+          2000s on: check a vehicle's emission class, and retrofit a filter or replace it.
+        </li>
+        <li>
           <b>Fleet</b>: the Fleet window is a dashboard — how busy each truck is, what needs attention in the next two
           weeks, and who's earning. Rivals plan runs too: a firm already working an area is likelier to take the next date
           there.

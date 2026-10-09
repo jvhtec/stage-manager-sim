@@ -3,6 +3,7 @@
  * population, so the metropolis is busy and villages are quiet — the map's
  * geography *is* the demand curve. Rivals snap up offers they're close to.
  */
+import { offerBuzz } from './marketing';
 import { relationFeeBonus, relationOfferWeight } from './promoters';
 import { townGrowth } from './towns';
 import type { Rng } from '@/lib/rng';
@@ -183,7 +184,7 @@ export function yearlyVenues(state: TycoonState, world: WorldMap, year: number) 
 export function dailyOffers(state: TycoonState, world: WorldMap, rng: Rng) {
   const { demand } = marketNow(state);
   world.cities.forEach(city => {
-    const chance = OFFER_RATE[city.size] * demand * localFame(state, city.id) * townGrowth(state, city.id) * (1 + salesBoost(state, world, city.id));
+    const chance = OFFER_RATE[city.size] * demand * localFame(state, city.id) * townGrowth(state, city.id) * offerBuzz(state) * (1 + salesBoost(state, world, city.id));
     if (rng.chance(chance)) {
       const gig = generateOffer(state, world, city, rng);
       if (gig) state.gigs.push(gig);

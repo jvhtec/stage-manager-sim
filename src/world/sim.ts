@@ -10,6 +10,7 @@
 import { paperworkFor } from './paperwork';
 import { chargeZones, yearlyZones } from './regulation';
 import { settleRuns } from './runs';
+import { dailyTradeShows, monthlyMarketing } from './marketing';
 import { dailyUtilisation } from './fleetReport';
 import { recordVenueNight } from './promoters';
 import { dailyAuctions, monthlyAuctions } from './auctions';
@@ -559,6 +560,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   dailyPoachBids(s);
   dailyAuctions(s, rng);
   settleRuns(s);
+  dailyTradeShows(s);
   dailyUtilisation(s);
   dailyCrewDilemmas(s, rng, s.crewMorale);
   syncCrew(s);
@@ -606,6 +608,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     monthlyMilestones(s);
     monthlyPartners(s);
     monthlyTowns(s, world);
+    monthlyMarketing(s);
     monthlyRnd(s, rng);
     monthlyDeals(s, rng);
   }
