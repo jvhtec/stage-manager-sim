@@ -435,10 +435,11 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   three steps — skippable, with a "skip next time" tick. The clock stays paused through both.
 
 - **Fee or gate** (`gate.ts`) — on single shows of tier 2+ you can take a share of the gate instead of a flat fee:
-  flat pays fee × (0.35 + 0.65·quality); the gate pays fee × (0.12 + 1.3·quality²·hype). `hype` (0.5-1.6) is how
+  flat pays fee × (0.35 + 0.65·quality); the gate pays fee × (0.12 + 1.2·quality²·hype). `hype` (0.5-1.6) is how
   ticket sales go — the economy and season, the town's opinion of you, a real act — plus luck; you get a forecast
-  (the truth ± 0.15) when you book, and the real number on the night. A decent crew averages about 10% better on
-  the gate, a rough night or slow sales leaves you well short.
+  (the truth ± 0.15) when you book, and the real number on the night. Over a year a decent crew comes out a few
+  percent ahead on the gate, but it swings with the season (summer well ahead, mid-winter behind) and a rough
+  night or slow sales leaves you well short.
 
 **Balance check** (scripted bot: one local truck per idle van, GB 1979 / 1995, ES 2010, US 1985, 4-24 seeds
 each, vs the merged #19 baseline). Cash and survival are level or better (GB 1979, 12 seeds: mean £1.02M

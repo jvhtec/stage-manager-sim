@@ -4,7 +4,7 @@
  * pays handsomely; if tickets are slow or the night goes wrong, you eat it.
  *
  * Flat fee:  fee × (0.35 + 0.65 × quality)
- * Gate deal: fee × (0.12 + 1.3 × quality² × hype)
+ * Gate deal: fee × (0.12 + 1.2 × quality² × hype)
  *
  * `hype` is how well tickets sell — the economy and season, the town's
  * opinion of you, whether it's a real act — plus luck. When you book you get
@@ -17,7 +17,7 @@ import { marketNow } from './market';
 import type { Gig, TycoonState } from './types';
 
 export const GATE_BASE = 0.12;
-export const GATE_QUALITY = 1.3;
+export const GATE_QUALITY = 1.2;
 /** Gate deals start at this venue tier. */
 export const GATE_MIN_TIER = 2;
 const HYPE_MIN = 0.5;

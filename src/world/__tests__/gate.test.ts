@@ -57,22 +57,27 @@ describe('fee or gate', () => {
     }
   });
 
-  it('averages out close to a flat fee for a decent crew (so it is a gamble, not a free lunch)', () => {
+  it('averages out close to a flat fee over a year for a decent crew, better in summer, worse in winter', () => {
     const s = game();
     const g = offer(s);
     const rng = createRng(11);
-    let flat = 0;
-    let gate = 0;
-    const n = 600;
-    for (let i = 0; i < n; i++) {
-      const q = 0.72 + rng.next() * 0.16; // a decent night
-      const { hype } = rollGate(s, g, rng);
-      flat += flatPayout(10000, q);
-      gate += gatePayout(10000, q, hype);
-    }
-    const ratio = gate / flat;
-    expect(ratio).toBeGreaterThan(0.85);
-    expect(ratio).toBeLessThan(1.2);
+    const ratioIn = (month: number) => {
+      s.hour = Math.round((Date.UTC(1995, month, 15) - Date.UTC(1995, 0, 1)) / 86400000) * 24;
+      let flat = 0;
+      let gate = 0;
+      for (let i = 0; i < 400; i++) {
+        const q = 0.72 + rng.next() * 0.16; // a decent night
+        const { hype } = rollGate(s, g, rng);
+        flat += flatPayout(10000, q);
+        gate += gatePayout(10000, q, hype);
+      }
+      return gate / flat;
+    };
+    const byMonth = Array.from({ length: 12 }, (_, m) => ratioIn(m));
+    const year = byMonth.reduce((a, b) => a + b, 0) / 12;
+    expect(year).toBeGreaterThan(0.88);
+    expect(year).toBeLessThan(1.15);
+    expect(Math.max(...byMonth)).toBeGreaterThan(Math.min(...byMonth) + 0.15);
   });
 
   it('booking on the gate records the deal and a forecast; the sim pays by it', () => {
