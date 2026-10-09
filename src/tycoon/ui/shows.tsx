@@ -1,6 +1,7 @@
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
 import { assignVehicle, bookGate, bookGig, haggleGig, rehearseShow, unassignVehicle } from '@/world/actions';
+import { certCount, requiredCerts } from '@/world/certs';
 import { MODULES, REHEARSAL_QUALITY, bestStageLevel, gigRehearsalCost, rehearsalBlocker, requiredStageLevel, stageName, tourRehearsalCost } from '@/world/annexes';
 import { expectedPayout, gateBlocker, gatePayout, hypeLabel } from '@/world/gate';
 import { HAGGLE_RAISE, haggleBlocker, haggleChance } from '@/world/negotiate';
@@ -155,6 +156,19 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
         ))}
         <Row label="Crew" color="#e5e7eb" need={gig.crewNeeded} have={projection?.crew} />
       </div>
+      {(requiredCerts(gig).rigging > 0 || requiredCerts(gig).safety > 0) && (
+        <Stat label="Tickets">
+          {requiredCerts(gig).rigging > 0 && (
+            <span className={certCount(state.people, 'rigging') >= requiredCerts(gig).rigging ? '' : 'tt-bad'}>
+              {requiredCerts(gig).rigging} rigger{requiredCerts(gig).rigging > 1 ? 's' : ''} ({certCount(state.people, 'rigging')} on staff)
+            </span>
+          )}
+          {' · '}
+          <span className={certCount(state.people, 'safety') >= requiredCerts(gig).safety ? '' : 'tt-bad'}>
+            {requiredCerts(gig).safety} first aider ({certCount(state.people, 'safety')} on staff)
+          </span>
+        </Stat>
+      )}
       {requiredStageLevel(state, gig) > 0 && (
         <Stat label="Rehearsal">
           {gig.rehearsed && gig.rehearsed >= requiredStageLevel(state, gig) ? (

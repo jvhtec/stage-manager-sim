@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { answerPoach, fireMember, hireCandidate, hireCrew, pinCrew, setCrewPicks } from '@/world/actions';
+import { answerPoach, fireMember, hireCandidate, hireCrew, pinCrew, setCrewPicks, trainCrew } from '@/world/actions';
+import { CERTS, CERT_IDS, courseBlocker, courseCost, courseDays, hasCert } from '@/world/certs';
+import { formatDay } from '@/world/core';
 import { CREW_HIRE_COST } from '@/world/catalog';
 import { PAY } from '@/world/crew';
 import { CREW_DEPTS, CREW_DEPT_LABEL, REST_AT, TRAITS, dayRate, evaluateCrew, hireFee, levelOf, roleOf } from '@/world/people';
 import { worldOf } from '@/world/mapgen';
-import type { CrewMember, Gig, TycoonState } from '@/world/types';
+import type { CertId, CrewMember, Gig, TycoonState } from '@/world/types';
 import { FatigueChip, Stat } from './bits';
 import { money } from './format';
 import type { WinCtx } from './types';
@@ -22,7 +24,7 @@ export function Stars({ n }: { n: number }) {
 }
 
 /** One person: name, role, stars, second string, trait, fatigue. */
-export function PersonRow({ state, m, right }: { state: TycoonState; m: CrewMember; right?: React.ReactNode }) {
+export function PersonRow({ state, m, right, onTrain }: { state: TycoonState; m: CrewMember; right?: React.ReactNode; onTrain?: (cert: CertId) => void }) {
   const second = CREW_DEPTS.filter(d => d !== m.primary && m.skills[d] >= 1).sort((a, b) => m.skills[b] - m.skills[a])[0];
   const pay = PAY[state.policies.pay].wage;
   return (
@@ -48,6 +50,26 @@ export function PersonRow({ state, m, right }: { state: TycoonState; m: CrewMemb
             </span>
           )}
           {(m.payBump ?? 1) > 1 && <span className="tt-dim"> · +{Math.round(((m.payBump ?? 1) - 1) * 100)}% retention</span>}
+        </div>
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 2 }}>
+          {CERT_IDS.filter(c => hasCert(m, c)).map(c => (
+            <span key={c} className="tt-chip" style={{ background: '#14532d' }} title={CERTS[c].label}>
+              {CERTS[c].icon} {CERTS[c].short}
+            </span>
+          ))}
+          {m.course && (
+            <span className="tt-chip" style={{ background: '#78350f' }} title={`Back ${formatDay(state, m.course.untilDay)}`}>
+              🎓 on the {CERTS[m.course.cert].short.toLowerCase()} course
+            </span>
+          )}
+          {onTrain &&
+            !m.course &&
+            m.depotId &&
+            CERT_IDS.filter(c => !hasCert(m, c)).map(c => (
+              <button key={c} className="tt-btn sm" title={`${CERTS[c].label}: ${courseDays(state, c)} days away from work`} disabled={!!courseBlocker(state, m, c)} onClick={() => onTrain(c)}>
+                {CERTS[c].icon} Train {money(courseCost(state, c))}
+              </button>
+            ))}
         </div>
       </div>
       {right}
@@ -179,6 +201,7 @@ export function CrewWindow({ ctx }: { ctx: WinCtx }) {
                       key={m.id}
                       state={state}
                       m={m}
+                      onTrain={c => act(s => trainCrew(s, m.id, c))}
                       right={
                         <>
                           {trucks.length > 0 && (

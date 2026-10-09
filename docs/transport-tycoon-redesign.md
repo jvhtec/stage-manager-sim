@@ -85,7 +85,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 299 tests):
+(`src/world/__tests__/*.test.ts`, 307 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -341,6 +341,17 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   *Crew lounge* (12k / 35k): techs resting at the base shed 3 / 6 extra fatigue a day (the second
   level adds a little morale). The base diorama grows a soundstage annex with a band, lighting bar
   and (from the production hall up) a video wall. A shutdown zeroes the rent but leaves the upkeep.
+
+- **Tickets and the training academy** (`certs.ts`) — shows from tier 3 are inspected: tier 3
+  wants one rigging-ticketed and one first-aid-trained person aboard, tier 4 two riggers and a
+  first aider. A missing rigger costs 4% quality and 12% more kit failures; a missing first aider 6%
+  more failures; each missing ticket is a fine of 5% of the fee. People in the hiring market arrive
+  with tickets by a deterministic hash of their id (stage hands rigger-qualified over half the
+  time) and crew selection favours ticketed people on the big shows. Anyone at base can be sent on
+  a course (rigging £900 / 5 days, first aid £350 / 3 days; they can't be loaded meanwhile). The
+  *training room* annex cuts course fees 30% and days 40%; the *academy* halves fees, cuts days
+  60% and graduates a free apprentice (60% with a ticket) every quarter. Ticket chips show on every
+  crew row and the show window lists what a show needs and what you have.
 
 - **Fuel prices** (`content/economy.ts`, `market.ts`) — diesel has a price index (1.0 = a normal
   year) joined between real-history anchors: the 1979-81 plateau, the early-1986 collapse, the 1990

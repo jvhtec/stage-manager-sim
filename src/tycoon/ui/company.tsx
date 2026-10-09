@@ -384,6 +384,11 @@ export function HelpWindow() {
           money.
         </li>
         <li>
+          <b>Tickets</b>: arena and stadium shows are inspected — you need riggers and a first aider in the crew. Hire people who
+          have them, or send your own on a course from the crew list (a training room or academy at a warehouse makes it
+          cheaper).
+        </li>
+        <li>
           <b>Fuel</b> follows real history (Market): spikes in 1979-81, 2008 and 2022, a collapse in 1986. Lock the price for 6 or
           12 months if you see a spike coming.
         </li>

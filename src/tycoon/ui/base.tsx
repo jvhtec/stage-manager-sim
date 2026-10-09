@@ -1,4 +1,4 @@
-import { buildAnnex, fireStaff, hireCrew, hireStaff, rehearseShow, upgradeDepot } from '@/world/actions';
+import { buildAnnex, fireStaff, hireCrew, hireStaff, rehearseShow, trainCrew, upgradeDepot } from '@/world/actions';
 import {
   MODULES,
   MODULE_IDS,
@@ -157,7 +157,7 @@ export function BaseOverview({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
       <h4>Gig technicians at base ({here.length})</h4>
       <div className="tt-list">
         {here.map(m => (
-          <PersonRow key={m.id} state={state} m={m} />
+          <PersonRow key={m.id} state={state} m={m} onTrain={c => act(s => trainCrew(s, m.id, c))} />
         ))}
         {!here.length && <div className="tt-dim">Nobody at base — they're all out on jobs, or you need to hire.</div>}
       </div>

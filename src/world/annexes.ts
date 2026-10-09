@@ -53,6 +53,14 @@ export const MODULES: Record<ModuleId, ModuleInfo> = {
       { label: 'Repair shop', build: 55000, upkeep: 1300, minSize: 2, blurb: 'A full repair shop with a test bay: kit comes back like new.' },
     ],
   },
+  academy: {
+    label: 'Training room',
+    icon: '🎓',
+    levels: [
+      { label: 'Training room', build: 20000, upkeep: 350, minSize: 1, blurb: 'Rigging frames and a first-aid dummy: courses cost 30% less and take 40% fewer days.' },
+      { label: 'Academy', build: 60000, upkeep: 900, minSize: 2, blurb: 'A proper academy: courses halve in price, and every quarter a fresh apprentice graduates into your crew.' },
+    ],
+  },
   lounge: {
     label: 'Crew lounge',
     icon: '🛋️',

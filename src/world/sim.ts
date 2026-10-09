@@ -7,6 +7,7 @@
  * Pure and deterministic: same state in → same state out (the only
  * randomness is the seeded rng carried in `state.rngState`).
  */
+import { certPenalty, certShortfall, dailyCourses, monthlyCerts } from './certs';
 import { TECH_WAVES } from './content/techWaves';
 import { hypeLabel, showPayout } from './gate';
 import { paperworkFor } from './paperwork';
@@ -411,6 +412,12 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   // Who's working the show, and how well their skills fit its departments.
   const people = onSite.flatMap(v => aboard(s, v.id));
   const crewEval = evaluateCrew(people, gig);
+  // Safety inspectors look for tickets on the big shows.
+  const tickets = certPenalty(certShortfall(people, gig), gig);
+  if (tickets.fine) {
+    book(s, 'penalties', -tickets.fine);
+    pushNews(s, `Inspectors at ${gig.act}: the crew is short of ${tickets.missing} ticket${tickets.missing === 1 ? '' : 's'} — fined ${formatMoney(s, tickets.fine)}.`, 'bad', { cityId: gig.cityId, gigId: gig.id });
+  }
   // Prep: every truck's kit was checked (or not) by its home base's warehouse crew.
   const prep = prepOf(s, onSite);
   const forgotten: string[] = [];
@@ -427,7 +434,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const showDays = gig.overseas ? gig.overseas.stops.length : (gig.days ?? 1);
   const failures: Failure[] = [];
   for (let d = 0; d < Math.min(4, showDays); d++) {
-    const f = rollFailure(s, working, rng, prepFailureFactor(prep) * crewEval.failureFactor * (gig.mods?.failureFactor ?? 1) * (unrehearsed(s, gig) ? UNREHEARSED_FAILURE : 1));
+    const f = rollFailure(s, working, rng, prepFailureFactor(prep) * crewEval.failureFactor * (gig.mods?.failureFactor ?? 1) * (unrehearsed(s, gig) ? UNREHEARSED_FAILURE : 1) * tickets.failureFactor);
     if (f) failures.push(f);
   }
   const gear = evaluateGear(working, gig, yearOf(s, s.hour), s.gearCondition);
@@ -455,7 +462,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     0,
     Math.min(
       1,
-      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) + crewEval.bonus - (weather?.penalty ?? 0) + (gig.mods?.quality ?? 0) - (unrehearsed(s, gig) ? UNREHEARSED_QUALITY : 0) }) +
+      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) + crewEval.bonus - (weather?.penalty ?? 0) + (gig.mods?.quality ?? 0) - (unrehearsed(s, gig) ? UNREHEARSED_QUALITY : 0) - tickets.quality }) +
         (rng.next() - 0.5) * 0.08,
     ),
   );
@@ -568,6 +575,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   updateTechs(s, date.getUTCFullYear());
   dailyWorkshop(s);
   dailyRehearsals(s);
+  dailyCourses(s);
   dailyRentOut(s);
   dailyPeopleFatigue(s);
   dailyPoachBids(s);
@@ -628,6 +636,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     monthlyShares(s, p => rng.chance(p));
     monthlyVenues(s, rng);
     monthlyAnnexes(s);
+    monthlyCerts(s, sideRng(s, dayOf(s.hour) + 7004));
     monthlySponsors(s, sideRng(s, dayOf(s.hour) + 7001));
     monthlyRivalry(s, sideRng(s, dayOf(s.hour) + 7003));
     monthlyRnd(s, rng);

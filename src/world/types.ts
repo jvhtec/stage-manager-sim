@@ -192,6 +192,10 @@ export interface CrewMember {
   payBump?: number;
   /** Won't listen to rivals' offers until this hour. */
   loyalUntil?: number;
+  /** Tickets held (certs.ts). */
+  certs?: CertId[];
+  /** On a course until this day: unavailable for jobs. */
+  course?: { cert: CertId; untilDay: number };
 }
 
 /** A rival trying to hire one of your people away: match it or lose them. */
@@ -434,7 +438,9 @@ export interface SponsorDeal {
   paid: number;
 }
 
-export type ModuleId = 'rehearsal' | 'workshop' | 'lounge';
+export type ModuleId = 'rehearsal' | 'workshop' | 'lounge' | 'academy';
+
+export type CertId = 'rigging' | 'safety';
 
 export type VenueProgramme = 'lease' | 'promote';
 
