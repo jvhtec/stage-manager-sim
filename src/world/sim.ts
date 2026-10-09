@@ -18,7 +18,7 @@ import { monthlyPriceWars } from './pricewars';
 import { monthlyShares } from './shares';
 import { monthlyVenues } from './owned';
 import { monthlySponsors } from './sponsors';
-import { monthlyAnnexes } from './annexes';
+import { UNREHEARSED_FAILURE, UNREHEARSED_QUALITY, dailyRehearsals, monthlyAnnexes, unrehearsed } from './annexes';
 import { monthlyRivalry } from './rivalry';
 import { dailyUtilisation } from './fleetReport';
 import { recordVenueNight } from './promoters';
@@ -427,7 +427,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const showDays = gig.overseas ? gig.overseas.stops.length : (gig.days ?? 1);
   const failures: Failure[] = [];
   for (let d = 0; d < Math.min(4, showDays); d++) {
-    const f = rollFailure(s, working, rng, prepFailureFactor(prep) * crewEval.failureFactor * (gig.mods?.failureFactor ?? 1));
+    const f = rollFailure(s, working, rng, prepFailureFactor(prep) * crewEval.failureFactor * (gig.mods?.failureFactor ?? 1) * (unrehearsed(s, gig) ? UNREHEARSED_FAILURE : 1));
     if (f) failures.push(f);
   }
   const gear = evaluateGear(working, gig, yearOf(s, s.hour), s.gearCondition);
@@ -455,7 +455,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     0,
     Math.min(
       1,
-      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) + crewEval.bonus - (weather?.penalty ?? 0) + (gig.mods?.quality ?? 0) }) +
+      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) + crewEval.bonus - (weather?.penalty ?? 0) + (gig.mods?.quality ?? 0) - (unrehearsed(s, gig) ? UNREHEARSED_QUALITY : 0) }) +
         (rng.next() - 0.5) * 0.08,
     ),
   );
@@ -567,6 +567,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   dailyMarket(s, wages);
   updateTechs(s, date.getUTCFullYear());
   dailyWorkshop(s);
+  dailyRehearsals(s);
   dailyRentOut(s);
   dailyPeopleFatigue(s);
   dailyPoachBids(s);

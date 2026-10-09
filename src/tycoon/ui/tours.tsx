@@ -143,7 +143,8 @@ export function TourWindow({ ctx, tourId }: { ctx: WinCtx; tourId: string }) {
           </button>
         ) : (
           <div className="tt-warn" style={{ marginTop: 8, whiteSpace: 'normal' }}>
-            {tourBookingBar(state, tour, maxTier).reason} You have {Math.round(state.company.reputation)}.
+            {tourBookingBar(state, tour, maxTier).reason}
+            {!tourBookingBar(state, tour, maxTier).stage && ` You have ${Math.round(state.company.reputation)}.`}
           </div>
         ))}
 

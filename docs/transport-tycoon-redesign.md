@@ -85,7 +85,7 @@ pauses, 1–4 set the speed, Esc closes the top window; any vehicle can be **fol
 ## 4. Engine
 
 `src/world/**` is pure TypeScript, deterministic from a seed, and unit-tested
-(`src/world/__tests__/*.test.ts`, 277 tests):
+(`src/world/__tests__/*.test.ts`, 294 tests):
 
 - The **map is never saved** — it's regenerated from `mapSeed` (memoised), so saves are small.
 - `advanceHours(state, n)` is the only clock: vehicles step along cached road paths each game
@@ -341,6 +341,18 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
   *Crew lounge* (12k / 35k): techs resting at the base shed 3 / 6 extra fatigue a day (the second
   level adds a little morale). The base diorama grows a soundstage annex with a band, lighting bar
   and (from the production hall up) a video wall. A shutdown zeroes the rent but leaves the upkeep.
+
+- **Mandatory rehearsals** (`annexes.ts`, `standing.ts`) — bigger jobs can't be booked without a
+  rehearsal stage of the right size, and then must go through it: arena shows (tier 3) need a
+  rehearsal room, stadium shows (tier 4) and broadcast events a soundstage, national tours a room /
+  soundstage / production hall by their biggest date (tier 2 / 3 / 4), world tours and overseas legs a
+  production hall. Festival stages are exempt. The booking bar reports the missing stage (and a
+  show less than three days out is "too late to rehearse"). A required show that reaches its date
+  unrehearsed loses 10% quality and fails 30% more often; reminders arrive a week and three days out,
+  or set the *Rehearsals* policy to automatic and they're booked for you in the fortnight before the
+  first date if the stage is free and you can pay. A rehearsal needs a free stage at least as big as
+  the requirement. Effect on the bot: shut out of arena shows, GB 1995 over 9 years ends ~5% poorer;
+  GB 1979 over 7 years is unchanged.
 
 - **Rivalry** (`rivalry.ts`) — each rival carries heat (0-100) toward you. It rises 12 when you
   headhunt them, 8 when you fight their price war (−5 for a truce), and each month by 4 × their

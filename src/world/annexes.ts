@@ -197,6 +197,8 @@ export function rehearsalBlocker(s: TycoonState, id: string): string | null {
   if (!bestStageLevel(s)) return 'You need a rehearsal stage at one of your warehouses.';
   const stage = bestStage(s);
   if (!stage) return 'Your stage is booked up with another rehearsal.';
+  const need = target.kind === 'gig' ? requiredStageLevel(s, target.gig) : target.legs.length ? requiredStageLevel(s, target.legs[0]) : 0;
+  if (stage.level < need) return `The free stage is too small — this needs a ${stageName(need)}.`;
   if (target.kind === 'gig') {
     if (!rehearsable(s, target.gig)) return target.gig.rehearsed ? 'Already rehearsed.' : `Needs a booked show at least ${REHEARSAL_LEAD_DAYS} days away.`;
     const cost = gigRehearsalCost(target.gig);
@@ -233,4 +235,75 @@ export function rehearse(s: TycoonState, id: string): string {
   target.legs.forEach(g => apply(g, TOUR_BONUS_SHARE));
   stage.depot.stageBusyUntil = today + rehearsalDays(target.legs.length);
   return `${target.tour.name} rehearses for ${rehearsalDays(target.legs.length)} days in your ${moduleLevel('rehearsal', level)!.label.toLowerCase()} (${formatMoney(s, cost)}).`;
+}
+
+// ---------------------------------------------------------------------------
+// Required rehearsals
+// ---------------------------------------------------------------------------
+
+/** Quality and failure penalty for a show that needed a rehearsal and didn't get one. */
+export const UNREHEARSED_QUALITY = 0.1;
+export const UNREHEARSED_FAILURE = 1.3;
+
+/** Stage level (1-4) a tour needs: world tours want a production hall, big national tours a soundstage. */
+export function tourStageLevel(kind: 'national' | 'world', maxTier: number): number {
+  if (kind === 'world') return 3;
+  return maxTier >= 4 ? 3 : maxTier === 3 ? 2 : maxTier === 2 ? 1 : 0;
+}
+
+/** Stage level a single show needs (0 = none). Festival stages bring their own rig. */
+export function requiredStageLevel(s: TycoonState, g: Gig): number {
+  if (g.festival) return 0;
+  if (g.tourId) {
+    const tour = s.tours.find(t => t.id === g.tourId);
+    if (!tour) return 0;
+    const tiers = tour.gigIds.map(id => s.gigs.find(x => x.id === id)?.tier ?? 0);
+    return tourStageLevel(tour.kind, Math.max(0, ...tiers));
+  }
+  if (g.overseas) return 3;
+  if (g.event) return 2;
+  return g.tier >= 4 ? 2 : g.tier === 3 ? 1 : 0;
+}
+
+export const stageName = (level: number) => MODULES.rehearsal.levels[Math.max(1, Math.min(4, level)) - 1].label.toLowerCase();
+
+/** Has this show missed a rehearsal it needed? (Only meaningful on or after the day.) */
+export const unrehearsed = (s: TycoonState, g: Gig) => {
+  const need = requiredStageLevel(s, g);
+  return need > 0 && (g.rehearsed ?? 0) < need;
+};
+
+/** Why you can't take on a show or tour that needs a rehearsal, or null. `firstDay` is its first date. */
+export function stageBlocker(s: TycoonState, level: number, firstDay: number): string | null {
+  if (level <= 0) return null;
+  if (bestStageLevel(s) < level) return `Rehearsal required: you need a ${stageName(level)} (or better) — build one at a warehouse (Base → Annexes).`;
+  if (firstDay - dayOf(s.hour) < REHEARSAL_LEAD_DAYS + 1) return 'Too late to rehearse before it opens.';
+  return null;
+}
+
+/** Daily: auto-rehearse if the policy says so, otherwise nag as the dates close in. */
+export function dailyRehearsals(s: TycoonState) {
+  const today = dayOf(s.hour);
+  const auto = s.policies.rehearsal === 'auto';
+  const ids: { id: string; first: number; label: string }[] = [];
+  s.gigs.forEach(g => {
+    if (g.tourId || g.status !== 'booked' || !requiredStageLevel(s, g) || g.rehearsed) return;
+    ids.push({ id: g.id, first: g.day, label: g.act });
+  });
+  s.tours.forEach(t => {
+    if (t.status !== 'booked') return;
+    const legs = t.gigIds.map(id => s.gigs.find(g => g.id === id)).filter((g): g is Gig => !!g && g.status === 'booked' && !g.rehearsed);
+    if (!legs.length || !requiredStageLevel(s, legs[0])) return;
+    ids.push({ id: t.id, first: Math.min(...legs.map(g => g.day)), label: t.name });
+  });
+  ids.sort((a, b) => a.first - b.first).forEach(({ id, first, label }) => {
+    const away = first - today;
+    if (auto && away <= 14 && away >= REHEARSAL_LEAD_DAYS && !rehearsalBlocker(s, id)) {
+      pushNews(s, rehearse(s, id), 'good');
+      return;
+    }
+    if ((away === 7 || away === REHEARSAL_LEAD_DAYS + 1) && !s.news.some(n => n.hour === s.hour && n.text.includes(label))) {
+      pushNews(s, `${label} still hasn't rehearsed — ${away === 7 ? 'a week' : `${away} days`} to go. Unrehearsed shows suffer.`, 'bad');
+    }
+  });
 }

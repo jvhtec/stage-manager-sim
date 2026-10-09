@@ -1,7 +1,7 @@
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
 import { assignVehicle, bookGate, bookGig, haggleGig, rehearseShow, unassignVehicle } from '@/world/actions';
-import { MODULES, REHEARSAL_QUALITY, bestStageLevel, gigRehearsalCost, rehearsalBlocker, tourRehearsalCost } from '@/world/annexes';
+import { MODULES, REHEARSAL_QUALITY, bestStageLevel, gigRehearsalCost, rehearsalBlocker, requiredStageLevel, stageName, tourRehearsalCost } from '@/world/annexes';
 import { expectedPayout, gateBlocker, gatePayout, hypeLabel } from '@/world/gate';
 import { HAGGLE_RAISE, haggleBlocker, haggleChance } from '@/world/negotiate';
 import { DEPT_COLORS, DEPT_LABELS, LOAD_IN_HOUR, SHOW_END_HOUR, SHOW_START_HOUR, getModel } from '@/world/catalog';
@@ -155,13 +155,24 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
         ))}
         <Row label="Crew" color="#e5e7eb" need={gig.crewNeeded} have={projection?.crew} />
       </div>
+      {requiredStageLevel(state, gig) > 0 && (
+        <Stat label="Rehearsal">
+          {gig.rehearsed && gig.rehearsed >= requiredStageLevel(state, gig) ? (
+            <span className="tt-good">done</span>
+          ) : (
+            <span className={bestStageLevel(state) >= requiredStageLevel(state, gig) ? 'tt-warn' : 'tt-bad'}>
+              required — a {stageName(requiredStageLevel(state, gig))} or better
+            </span>
+          )}
+        </Stat>
+      )}
 
       {gig.status === 'offer' && gig.event && !gig.event.citywide && <EventBid ctx={ctx} gig={gig} />}
       {gig.status === 'offer' && !(gig.event && !gig.event.citywide) && (
         <div style={{ marginTop: 10 }}>
           {locked ? (
             <div className="tt-warn">
-              {lock} You have {Math.round(state.company.reputation)}.
+              {lock}{!gigBookingBar(state, gig).stage && ` You have ${Math.round(state.company.reputation)}.`}
             </div>
           ) : (
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>

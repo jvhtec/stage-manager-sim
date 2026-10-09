@@ -60,7 +60,7 @@ export function Choice<T extends string>({
 
 export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
-  const set = <K extends 'workshop' | 'pay' | 'insurance' | 'freelance' | 'subhire' | 'rentOut' | 'training' | 'rest' | 'marketing'>(key: K, value: (typeof state.policies)[K]) => ctx.dispatch(s => setPolicy(s, key, value));
+  const set = <K extends 'workshop' | 'pay' | 'insurance' | 'freelance' | 'subhire' | 'rentOut' | 'training' | 'rest' | 'marketing' | 'rehearsal'>(key: K, value: (typeof state.policies)[K]) => ctx.dispatch(s => setPolicy(s, key, value));
   const owned = ownedStock(state);
   return (
     <div>
@@ -119,6 +119,20 @@ export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
       <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
         Resting people stay at base when a truck loads — fresher crews and better morale, but more seats filled by freelancers.
         People pinned to a truck always go.
+      </div>
+
+      <h4>Rehearsals</h4>
+      <Choice
+        value={state.policies.rehearsal}
+        options={[
+          { id: 'manual', label: 'Manual', detail: 'You book each rehearsal yourself. A reminder arrives a week out.' },
+          { id: 'auto', label: 'Automatic', detail: 'Required rehearsals are booked for you in the fortnight before the first date, if the stage is free and you can pay.' },
+        ]}
+        onPick={id => set('rehearsal', id)}
+      />
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        Arena and stadium shows, broadcast events and tours need a rehearsal stage (Base → Annexes) to book, and have to go through it
+        before the first date: an unrehearsed show loses 10% quality and fails 30% more often.
       </div>
 
       <h4>Crew training</h4>

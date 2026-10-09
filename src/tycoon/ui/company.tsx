@@ -384,6 +384,11 @@ export function HelpWindow() {
           money.
         </li>
         <li>
+          <b>Rehearsals are mandatory</b> for big jobs: arena shows, stadiums, broadcast events and tours can't be booked
+          without a rehearsal stage of the right size (Base → Annexes), and an unrehearsed show suffers. Policies has an
+          automatic option.
+        </li>
+        <li>
           <b>Upgrading a base</b>: a warehouse grows up to a production campus, and the Base tab adds annexes — a rehearsal
           stage (rehearse a show or tour for better quality, rent it to bands in between), a workshop bench and a crew lounge.
         </li>

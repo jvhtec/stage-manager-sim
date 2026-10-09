@@ -617,6 +617,8 @@ export interface Policies {
   /** Rest rota: keep tired people at base instead of sending them out. */
   rest: RestRota;
   marketing: MarketingLevel;
+  /** Book the rehearsals a show needs for you as the dates come close. */
+  rehearsal: 'manual' | 'auto';
 }
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
