@@ -11,6 +11,7 @@ import { gigBookingBar } from '@/world/standing';
 import { getModel, SHOW_END_HOUR, SHOW_START_HOUR, tierInfo } from '@/world/catalog';
 import { dayOf, loadInHour, loadOutDoneHour, vehicleSpeed } from '@/world/core';
 import { kmoney } from '../ui/format';
+import { townShare } from '@/world/territory';
 import { SHADOW_LAG } from './sprites';
 import { tileCorners } from '@/world/mapgen';
 import { CROSS_FERRY, CROSS_TUNNEL, crossKindAt, getCityPath, positionOnRoute } from '@/world/pathfinding';
@@ -35,6 +36,74 @@ export interface RenderInput {
   alpha: number;
   hover: { x: number; y: number } | null;
   selection: Selection;
+  /** A Transport Tycoon-style data view over the towns. */
+  overlay?: MapOverlay;
+}
+
+export type MapOverlay = 'none' | 'rating' | 'share' | 'rivals';
+export const OVERLAYS: MapOverlay[] = ['none', 'rating', 'share', 'rivals'];
+
+interface TownOverlay {
+  color: RGB;
+  /** Short text added to the town's tag. */
+  text: string;
+  /** 0-1: how strongly to tint the town. */
+  strength: number;
+}
+
+/** Red → amber → green for 0 → 1. */
+function ramp(t: number): RGB {
+  const u = Math.max(0, Math.min(1, t));
+  return u < 0.5 ? [220, 70 + u * 2 * 130, 60] : [220 - (u - 0.5) * 2 * 150, 200, 60 + (u - 0.5) * 2 * 40];
+}
+
+function townOverlays(map: WorldMap, state: TycoonState, overlay: MapOverlay, colorFor: (o: string) => RGB): Map<string, TownOverlay> {
+  const out = new Map<string, TownOverlay>();
+  if (overlay === 'none') return out;
+  const towns = overlay === 'rating' ? map.cities : [...map.cities, ...map.abroad];
+  towns.forEach(c => {
+    if (overlay === 'rating') {
+      const r = state.cityRatings[c.id] ?? 50;
+      out.set(c.id, { color: ramp(r / 100), text: `${Math.round(r)}`, strength: 0.75 });
+      return;
+    }
+    const share = townShare(state, c.id);
+    if (overlay === 'share') {
+      if (share.yours === undefined) out.set(c.id, { color: [120, 130, 150], text: '–', strength: 0.25 });
+      else out.set(c.id, { color: ramp(share.yours * 1.6), text: `${Math.round(share.yours * 100)}%`, strength: 0.35 + share.yours * 0.6 });
+      return;
+    }
+    // Rivals: whose patch is it?
+    if (!share.leader) {
+      out.set(c.id, { color: [120, 130, 150], text: 'open', strength: 0.2 });
+      return;
+    }
+    const who = share.leader.owner === 'player' ? 'you' : state.rivals.find(r => r.id === share.leader!.owner)?.name ?? '?';
+    out.set(c.id, { color: colorFor(share.leader.owner), text: `${who.length > 12 ? `${who.slice(0, 11)}…` : who} ${Math.round(share.leader.share * 100)}%`, strength: 0.35 + share.leader.share * 0.55 });
+  });
+  return out;
+}
+
+/** A tinted disc over each town on the ground, under the tags. */
+function drawTownOverlays(rc: RC, overlays: Map<string, TownOverlay>) {
+  const { ctx, cam, map } = rc;
+  overlays.forEach((o, id) => {
+    const c = map.cityById.get(id);
+    if (!c) return;
+    const r = c.radius + 1.6;
+    const [sx, sy] = project(cam, c.x + 0.5, c.y + 0.5, groundZ(map, c.x, c.y));
+    const rx = (r * TW * cam.zoom) / Math.SQRT2;
+    const ry = (r * TH * cam.zoom) / Math.SQRT2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${o.color[0]},${o.color[1]},${o.color[2]},${0.18 + o.strength * 0.32})`;
+    ctx.fill();
+    ctx.lineWidth = Math.max(1.5, cam.zoom * 1.2);
+    ctx.strokeStyle = `rgba(${o.color[0]},${o.color[1]},${o.color[2]},0.9)`;
+    ctx.stroke();
+    ctx.restore();
+  });
 }
 
 export interface HitTargets {
@@ -684,8 +753,11 @@ export function renderWorld(ctx: CanvasRenderingContext2D, input: RenderInput): 
 
   const planned = selectedVehicle ? state.vehicles.find(v => v.id === selectedVehicle) : undefined;
   if (planned && planned.owner === 'player') drawRoutePlan(rc, state, planned);
-  const markers = layoutGigMarkers(rc, state, venueTop, colorFor);
-  drawCityLabels(rc, state, hits, markers.map(m => m.rect));
+  const overlays = townOverlays(map, state, input.overlay ?? 'none', colorFor);
+  drawTownOverlays(rc, overlays);
+  // A data view replaces the show markers, so every town's figure can be read.
+  const markers = overlays.size ? [] : layoutGigMarkers(rc, state, venueTop, colorFor);
+  drawCityLabels(rc, state, hits, markers.map(m => m.rect), overlays);
   drawGigMarkers(rc, markers, hits);
   return hits;
 }
@@ -775,7 +847,7 @@ const overlaps = (a: Rect, b: Rect, pad = 2) =>
  * Town name tags, most important first (your bases, then the biggest towns): a tag that would
  * overlap one already placed — or a show marker — is left out rather than piled on top.
  */
-function drawCityLabels(rc: RC, state: TycoonState, hits: HitTargets, taken: Rect[]) {
+function drawCityLabels(rc: RC, state: TycoonState, hits: HitTargets, taken: Rect[], overlays: Map<string, TownOverlay>) {
   const { ctx, cam, map } = rc;
   const scale = Math.max(0.85, Math.min(1.25, cam.zoom * 0.6));
   const hasDepot = (id: string) => state.depots.some(d => d.cityId === id);
@@ -783,7 +855,7 @@ function drawCityLabels(rc: RC, state: TycoonState, hits: HitTargets, taken: Rec
     (a, b) => Number(hasDepot(b.id)) - Number(hasDepot(a.id)) || b.population - a.population,
   );
   towns.forEach(city => {
-    if (cam.zoom < 0.7 && city.size === 'village' && !hasDepot(city.id)) return;
+    if (cam.zoom < 0.7 && city.size === 'village' && !hasDepot(city.id) && !overlays.has(city.id)) return;
     // Anchor at the town's front edge (straight down-screen from the centre)
     // so the label never sits on top of the venues.
     const edge = city.radius * 0.75 + 1;
@@ -791,9 +863,11 @@ function drawCityLabels(rc: RC, state: TycoonState, hits: HitTargets, taken: Rec
     const sy = sy0 + 12;
     if (sx < -100 || sx > cam.w + 100 || sy < -40 || sy > cam.h + 40) return;
     const name = city.abroad ? `${city.abroad.flag} ${city.name}` : city.name;
+    const extra = overlays.get(city.id);
     const pop = city.population >= 1_000_000 ? `${(city.population / 1e6).toFixed(city.population >= 1e7 ? 0 : 1)}M` : `${Math.round(city.population / 1000)}k`;
     ctx.font = `700 ${Math.round(12 * scale)}px ui-rounded, system-ui, sans-serif`;
-    const w = ctx.measureText(name).width + 34 * scale;
+    const extraW = extra ? (ctx.measureText(extra.text).width + 10) * 0.85 : 0;
+    const w = ctx.measureText(name).width + 34 * scale + extraW;
     const h = 18 * scale;
     const rect = { x: sx - w / 2, y: sy - h / 2, w, h };
     const mine = hasDepot(city.id);
@@ -802,7 +876,23 @@ function drawCityLabels(rc: RC, state: TycoonState, hits: HitTargets, taken: Rec
     for (let k = 0; k < (big ? 3 : 1) && !mine && taken.some(t => overlaps(t, rect)); k++) {
       if (k > 0 || big) rect.y += h + 3;
     }
-    if (!mine && !big && taken.some(t => overlaps(t, rect))) return;
+    if (!mine && !big && taken.some(t => overlaps(t, rect))) {
+      // In a data view a crowded-out town still shows its figure, as a chip on the town itself.
+      if (extra) {
+        const [cx, cy] = project(cam, city.x + 0.5, city.y + 0.5, groundZ(map, city.x, city.y));
+        ctx.font = `800 ${Math.round(10 * scale)}px ui-rounded, system-ui, sans-serif`;
+        const cw = ctx.measureText(extra.text).width + 8;
+        ctx.fillStyle = `rgb(${extra.color[0]},${extra.color[1]},${extra.color[2]})`;
+        roundRect(ctx, cx - cw / 2, cy - 8, cw, 15, 3);
+        ctx.fill();
+        ctx.fillStyle = '#0b0d12';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(extra.text, cx, cy);
+        hits.labels.push({ cityId: city.id, x: cx - cw / 2, y: cy - 8, w: cw, h: 15 });
+      }
+      return;
+    }
     taken.push(rect);
     ctx.fillStyle = city.abroad ? 'rgba(52,44,70,0.78)' : 'rgba(16,18,26,0.78)';
     roundRect(ctx, rect.x, rect.y, w, h, 4 * scale);
@@ -820,7 +910,18 @@ function drawCityLabels(rc: RC, state: TycoonState, hits: HitTargets, taken: Rec
     ctx.font = `500 ${Math.round(9 * scale)}px ui-rounded, system-ui, sans-serif`;
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.textAlign = 'right';
-    ctx.fillText(pop, sx + w / 2 - 5 * scale, ty + 1);
+    ctx.fillText(pop, sx + w / 2 - 5 * scale - extraW, ty + 1);
+    if (extra) {
+      // The overlay's figure in a coloured chip at the end of the tag.
+      const cw = extraW - 4;
+      ctx.fillStyle = `rgb(${extra.color[0]},${extra.color[1]},${extra.color[2]})`;
+      roundRect(ctx, sx + w / 2 - cw - 3, rect.y + 2, cw, h - 4, 3);
+      ctx.fill();
+      ctx.fillStyle = '#0b0d12';
+      ctx.textAlign = 'center';
+      ctx.font = `800 ${Math.round(10 * scale)}px ui-rounded, system-ui, sans-serif`;
+      ctx.fillText(extra.text, sx + w / 2 - cw / 2 - 3, ty + 1);
+    }
     hits.labels.push({ cityId: city.id, ...rect });
   });
 }

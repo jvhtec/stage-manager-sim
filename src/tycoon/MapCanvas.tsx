@@ -3,7 +3,7 @@ import { worldOf } from '@/world/mapgen';
 import { positionOnRoute } from '@/world/pathfinding';
 import type { TycoonState } from '@/world/types';
 import { centreOn, pickTile, type Camera } from './render/iso';
-import { renderWorld, type HitTargets, type Selection } from './render/renderer';
+import { type MapOverlay, renderWorld, type HitTargets, type Selection } from './render/renderer';
 
 export type Pick =
   | { kind: 'vehicle'; id: string }
@@ -19,6 +19,7 @@ export interface MapHandle {
 }
 
 interface Props {
+  overlay?: MapOverlay;
   stateRef: React.MutableRefObject<TycoonState | null>;
   alphaRef: React.MutableRefObject<number>;
   selection: Selection;
@@ -31,7 +32,7 @@ const MIN_ZOOM = 0.5;
 const MAX_ZOOM = 4;
 
 export const MapCanvas = forwardRef<MapHandle, Props>(function MapCanvas(
-  { stateRef, alphaRef, selection, followVehicleId, onPick, onUserPan },
+  { stateRef, alphaRef, selection, followVehicleId, onPick, onUserPan, overlay = 'none' },
   ref,
 ) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -39,8 +40,8 @@ export const MapCanvas = forwardRef<MapHandle, Props>(function MapCanvas(
   const hitsRef = useRef<HitTargets>({ vehicles: [], markers: [], labels: [] });
   const hoverRef = useRef<{ x: number; y: number } | null>(null);
   const centredOn = useRef<string | null>(null);
-  const propsRef = useRef({ selection, followVehicleId, onPick, onUserPan });
-  propsRef.current = { selection, followVehicleId, onPick, onUserPan };
+  const propsRef = useRef({ selection, followVehicleId, onPick, onUserPan, overlay });
+  propsRef.current = { selection, followVehicleId, onPick, onUserPan, overlay };
 
   useImperativeHandle(ref, () => ({
     centreOnTile: (x, y, offset) => {
@@ -72,7 +73,7 @@ export const MapCanvas = forwardRef<MapHandle, Props>(function MapCanvas(
       // Battery: when nothing is moving (paused, no panning), redraw only
       // ~12 times a second for the ambient animation (water, flags, beams).
       const cam0 = camRef.current;
-      const sig = `${s?.hour}|${alphaRef.current.toFixed(3)}|${cam0.x.toFixed(1)}|${cam0.y.toFixed(1)}|${cam0.zoom}|${canvas.clientWidth}x${canvas.clientHeight}|${hoverRef.current?.x},${hoverRef.current?.y}|${JSON.stringify(propsRef.current.selection)}|${propsRef.current.followVehicleId}|${s?.vehicles.length}|${s?.gigs.length}|${s?.company.cash}`;
+      const sig = `${s?.hour}|${alphaRef.current.toFixed(3)}|${cam0.x.toFixed(1)}|${cam0.y.toFixed(1)}|${cam0.zoom}|${canvas.clientWidth}x${canvas.clientHeight}|${hoverRef.current?.x},${hoverRef.current?.y}|${JSON.stringify(propsRef.current.selection)}|${propsRef.current.followVehicleId}|${propsRef.current.overlay}|${s?.vehicles.length}|${s?.gigs.length}|${s?.company.cash}`;
       if (sig === lastSig && time - lastDraw < 80) return;
       lastSig = sig;
       lastDraw = time;
@@ -124,6 +125,7 @@ export const MapCanvas = forwardRef<MapHandle, Props>(function MapCanvas(
           alpha: alphaRef.current,
           hover: hoverRef.current,
           selection: propsRef.current.selection,
+          overlay: propsRef.current.overlay,
         });
       } else {
         ctx.fillStyle = '#10131a';

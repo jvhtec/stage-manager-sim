@@ -99,6 +99,7 @@ import { dailyMarket, fuelMultiplier, marketNow, monthlyInterest } from './marke
 import { getRegion } from './content/world';
 import { getCityPath, roadDistance } from './pathfinding';
 import { monthlyWinter, tripCharges } from './infra';
+import { countTownShow, fadeTownShows } from './territory';
 import { DEPTS, type GearStock, type Gig, type TycoonState, type Vehicle, type WorldMap } from './types';
 import { findArtist } from './content/artists';
 
@@ -390,6 +391,7 @@ function resolveShows(s: TycoonState, world: WorldMap, rng: Rng) {
     if (gig.status === 'rival' && !gig.result) {
       const rival = s.rivals.find(r => r.id === gig.rivalId);
       if (rival) {
+        countTownShow(s, gig.cityId, rival.id);
         rival.showsPlayed += 1;
         rival.reputation = Math.min(100, rival.reputation + 0.3 * TIER_WEIGHT[gig.tier]);
       }
@@ -552,6 +554,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   }
   gig.status = 'done';
   gig.result = { quality, payout, lateHours, gearCoverage, crewCoverage, ...resultExtras };
+  countTownShow(s, gig.cityId, 'player');
   s.company.reputation = Math.max(0, Math.min(100, reputationAfterShow(s.company.reputation, gig.tier, quality) + stakes.reputation));
   if (gig.event && !gig.event.citywide) recordEvent(s, yearOf(s, s.hour), quality);
   if (quality < BAD_NIGHT) strike(s, gig.act, `a bad night at ${where}`);
@@ -663,6 +666,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     monthlyMarketing(s);
     monthlyGoal(s);
     monthlyWinter(s, world);
+    if (date.getUTCMonth() === 0) fadeTownShows(s);
     monthlyPriceWars(s, sideRng(s, dayOf(s.hour) + 7002));
     monthlyShares(s, p => rng.chance(p));
     monthlyVenues(s, rng);

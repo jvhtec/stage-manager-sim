@@ -834,6 +834,8 @@ export interface TycoonState {
   /** Manufacturer partnership per department (partners.ts). */
   /** Town size multipliers over the game (towns.ts). */
   townGrowth: Record<string, number>;
+  /** Recent shows per town by who played them ('player' or a rival id), fading each year: market share. */
+  townShows: Record<string, Record<string, number>>;
   /** Buzz and deals from trade shows (marketing.ts). */
   promo?: Promo;
   /** Day each rival was last raided for crew (headhunt.ts). */

@@ -26,6 +26,7 @@ import {
   Globe,
   Route,
   Wallet,
+  Layers,
   ZoomIn,
   ZoomOut,
 } from 'lucide-react';
@@ -34,6 +35,8 @@ import { formatDay, formatHour, yearOf } from '@/world/core';
 import { worldOf } from '@/world/mapgen';
 import type { NewsItem } from '@/world/types';
 import { MapCanvas, type MapHandle, type Pick } from './MapCanvas';
+import { OVERLAYS, type MapOverlay } from './render/renderer';
+import { OverlayLegend } from './ui/overlayLegend';
 import type { Selection } from './render/renderer';
 import { useTycoon, SPEEDS } from './useTycoon';
 import { useInstallPrompt, useLayout } from './useLayout';
@@ -84,6 +87,8 @@ export default function TycoonGame() {
   const [windows, setWindows] = useState<OpenWindow[]>([]);
   const zCounter = useRef(1);
   const [follow, setFollow] = useState<string | null>(null);
+  const [overlay, setOverlay] = useState<MapOverlay>('none');
+  const nextOverlay = () => setOverlay(o => OVERLAYS[(OVERLAYS.indexOf(o) + 1) % OVERLAYS.length]);
   const [toasts, setToasts] = useState<{ id: number; text: string; ok: boolean }[]>([]);
   const [confirmQuit, setConfirmQuit] = useState(false);
 
@@ -198,6 +203,8 @@ export default function TycoonGame() {
           lastSpeed.current = game.speed;
           game.setSpeed(0);
         } else game.setSpeed(lastSpeed.current || 1);
+      } else if (e.key === 'o' || e.key === 'O') {
+        setOverlay(o => OVERLAYS[(OVERLAYS.indexOf(o) + 1) % OVERLAYS.length]);
       } else if (['1', '2', '3', '4'].includes(e.key)) {
         game.setSpeed(Number(e.key));
       } else if (e.key === 'Escape') {
@@ -427,6 +434,7 @@ export default function TycoonGame() {
         followVehicleId={follow}
         onPick={inGame ? onPick : () => undefined}
         onUserPan={() => setFollow(null)}
+        overlay={inGame ? overlay : 'none'}
       />
 
       {state && inGame && (
@@ -481,6 +489,9 @@ export default function TycoonGame() {
                 </button>
                 <button className="tt-btn" onClick={() => hq && goTo(hq.x, hq.y)} aria-label="Go to HQ">
                   <Home />
+                </button>
+                <button className="tt-btn" data-on={overlay !== 'none'} onClick={nextOverlay} aria-label="Map view: reputation, market share, rivals">
+                  <Layers />
                 </button>
               </div>
 
@@ -591,6 +602,9 @@ export default function TycoonGame() {
               <button className="tt-btn" onClick={() => hq && goTo(hq.x, hq.y)} title="Go to HQ">
                 <Home />
               </button>
+              <button className="tt-btn" data-on={overlay !== 'none'} onClick={nextOverlay} title="Map view (O): reputation → market share → rivals">
+                <Layers />
+              </button>
               {follow && (
                 <button className="tt-btn" data-on onClick={() => setFollow(null)} title="Stop following">
                   <Crosshair />
@@ -613,6 +627,8 @@ export default function TycoonGame() {
             </div>
           </div>
           )}
+
+          {overlay !== 'none' && <OverlayLegend overlay={overlay} state={state} onClose={() => setOverlay('none')} />}
 
           {!compact && game.speed !== 1 && (
             <div className="tt-speed-badge tt-bevel" style={{ color: game.speed === 0 ? '#fbbf24' : '#fff' }}>
