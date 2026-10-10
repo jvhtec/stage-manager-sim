@@ -837,3 +837,17 @@ Standardising a department on one brand makes the workshop cheaper — up to 25%
 - **Finance director** (3,000/month): chases invoices so 40% fewer run late, and narrows the cash forecast by 8 points (to as little as ±5%).
 
 What they do is announced in the news, so you can see the system working; you can still do any of it by hand.
+
+## Rivals play by the same rules
+
+`rivalOps.ts`. Rivals used to win a show by a dice roll and always deliver it at 80%. Now each firm runs an operation: kit units per department at a rated quality, a desk family and its input count, the PA brands it owns, crew, trucks, cash and kit condition.
+
+- **Availability**: a rival can't take a show if its kit, crew or trucks are already committed on overlapping days.
+- **Riders**: it checks the technical rider against its desk and PA, and cross-hires what it lacks at the same rental prices you pay.
+- **The room**: it checks the venue against the rig it would bring and the truck it would send, and pays for the generator, ground support or shuttle.
+- **It passes** when the rider and room fixes would cost more than 20% of the fee, and records why.
+- This applies to standalone offers, tours (every date must stand up), festival stages and special-event tenders (only firms that could deliver the lot bid).
+- **The night**: shows are judged on its kit quality against the era's expectations and on its condition, so dated, worn kit plays worse and can fail. Its reputation moves with the result.
+- **Books**: it earns the payout, pays about a quarter of the fee to deliver each show, pays monthly overheads (crew retainer, trucks, kit upkeep), and a workshop restores condition while cash allows. Profit, losses and an overdraft feed its health, so badly run firms go under.
+- **Learning**: with a cash cushion it reinvests in whatever has turned the most work away — more kit, crew, a truck, a desk with more inputs, another PA brand — or brings its kit up to date when it has fallen behind.
+- **Contracts**: clients cancel rivals' shows on the same terms, and the rival keeps what the clause pays.

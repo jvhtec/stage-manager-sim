@@ -6,6 +6,7 @@
 import { rollTechSpec } from './techRider';
 import { defaultTerms } from './terms';
 import { offerBlocked } from './blacklist';
+import { rivalTryTake } from './rivalOps';
 import { worldOf } from './mapgen';
 import { RIVAL_COMPANIES } from './content/companies';
 import { traitsOf } from './venueTraits';
@@ -325,6 +326,8 @@ export function rivalsTakeOffers(state: TycoonState, world: WorldMap, rng: Rng) 
       const onARun = nearby.length ? RIVAL_RUN_BONUS * (nearby.length > 1 ? 1.15 : 1) : 1;
       const chance = 0.05 * difficultyOf(state).rivals * warWinBonus(state, gig.cityId, rival.id) * intelFactor(state, rival.id) * crowding * proximity * fit * specialty * loyalty * onARun * abroadFactor * (1.15 - (rating / 100) * 0.6);
       if (!rng.chance(chance)) continue;
+      // Same rules as you: kit, crew and a truck free; the rider and the room met (or paid for).
+      if (!rivalTryTake(state, world, rival, gig)) continue;
 
       gig.status = 'rival';
       gig.rivalId = rival.id;

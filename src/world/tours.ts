@@ -10,6 +10,7 @@
  * Book the whole tour or none of it; play every date for the completion bonus.
  */
 import { actBanned, venueBanned } from './blacklist';
+import { opsOf, recordDecline, rivalQuote } from './rivalOps';
 import { sideRng } from './people';
 import { settleMerch } from './merch';
 import type { Rng } from '@/lib/rng';
@@ -254,6 +255,17 @@ export function dailyTours(state: TycoonState, world: WorldMap, rng: Rng) {
         if (maxTier > rival.maxTier || maxTier < rival.minTier) continue; // only tours in their league
         if (rival.reputation < actBar - 5) continue;
         if (!rng.chance(0.07 * crowding * (asked ? 0.25 : 1))) continue;
+        // Every date has to stand up: kit, crew and trucks free, riders and rooms met.
+        const quotes = gigs.map(g => rivalQuote(state, world, rival, g));
+        const no = quotes.find(q => !q.ok);
+        if (no) {
+          recordDecline(state, rival, no.reason!);
+          continue;
+        }
+        const ops = opsOf(state, rival);
+        const cost = quotes.reduce((n, q) => n + q.cost, 0);
+        ops.cash -= cost;
+        ops.month.costs += cost;
         tour.status = 'rival';
         tour.rivalId = rival.id;
         gigs.forEach(g => {

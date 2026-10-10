@@ -726,6 +726,26 @@ export interface VenueContract {
   rivalId?: string;
 }
 
+/** A rival's operation (rivalOps.ts): what it owns, what it's doing, and its books. */
+export interface RivalOps {
+  cash: number;
+  /** Units per department. */
+  kit: DeptCounts;
+  /** Rated quality of its kit. */
+  quality: number;
+  /** Console family of its desks, and the most inputs any of them takes. */
+  desk?: string;
+  inputs: number;
+  /** PA brands it owns. */
+  pa: string[];
+  crew: number;
+  trucks: number;
+  /** Kit condition, 0-100. */
+  condition: number;
+  month: { income: number; costs: number };
+  record: { shows: number; failed: number; crossHires: number; fixes: number; cancelled: number; declined: Partial<Record<'kit' | 'crew' | 'trucks' | 'rider' | 'room', number>> };
+}
+
 export interface Rival {
   id: string;
   name: string;
@@ -742,6 +762,8 @@ export interface Rival {
   health?: number;
   /** showsPlayed at the last monthly check. */
   lastShows?: number;
+  /** Its operation: kit, crew, trucks, books (rivalOps.ts). */
+  ops?: RivalOps;
 }
 
 export type NewsTone = 'info' | 'good' | 'bad' | 'big';

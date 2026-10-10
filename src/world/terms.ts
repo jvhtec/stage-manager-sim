@@ -10,6 +10,7 @@ import { book, dayOf, formatMoney, pushNews } from './core';
 import { clientTemper, memoryOf } from './changes';
 import { logIncident } from './consequences';
 import { marketNow } from './market';
+import { rivalCancelled } from './rivalOps';
 import type { Gig, GigTerms, TycoonState } from './types';
 
 const DEFAULT: Record<ReturnType<typeof clientTemper>, GigTerms> = {
@@ -62,6 +63,17 @@ export function dailyTerms(s: TycoonState, rng: Rng) {
   const today = dayOf(s.hour);
   const slump = marketNow(s).demand < 0.95 ? 1.6 : 1;
   s.gigs.forEach(gig => {
+    // Clients cancel on rivals too, on the same terms.
+    if (gig.status === 'rival' && gig.terms && !gig.result) {
+      const ahead = gig.day - today;
+      const rival = s.rivals.find(r => r.id === gig.rivalId);
+      if (rival && ahead >= 2 && ahead <= 45 && rng.chance(CANCEL_PER_DAY[clientTemper(gig.act)] * slump)) {
+        rivalCancelled(s, rival, gig);
+        gig.status = 'expired';
+        gig.cancelled = true;
+      }
+      return;
+    }
     if (gig.status !== 'booked' || !gig.terms) return;
     if (gig.terms.deposit > 0 && gig.depositPaid === undefined) {
       gig.depositPaid = depositOf(gig);

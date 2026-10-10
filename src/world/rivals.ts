@@ -8,6 +8,7 @@ import type { Rng } from '@/lib/rng';
 import { tierInfo } from './catalog';
 import { book, depotInCity, formatMoney, freeLot, newId, pushNews, yearOf } from './core';
 import { openAuction } from './auctions';
+import { monthlyRivalOps, opsOf } from './rivalOps';
 import { unlock } from './milestones';
 import { rentalProduct } from './hire';
 import { marketNow } from './market';
@@ -32,8 +33,11 @@ export function monthlyRivals(s: TycoonState, rng: Rng) {
     const won = r.showsPlayed - (r.lastShows ?? r.showsPlayed);
     r.lastShows = r.showsPlayed;
     const before = rivalHealth(r);
+    // Its books (rivalOps.ts): a profitable month helps, a loss and an overdraft hurt.
+    const margin = monthlyRivalOps(s, r, rng);
+    const books = Math.max(-8, Math.min(6, margin * 3)) - (opsOf(s, r).cash < 0 ? 6 : 0);
     // Busts hurt, work helps, and firms drift back towards steady health over time.
-    const drift = (demand - 1) * 30 + (r.reputation - 50) / 20 + Math.min(6, won * 0.8) + (60 - before) * 0.05 + (rng.next() - 0.55) * 10;
+    const drift = (demand - 1) * 30 + (r.reputation - 50) / 20 + Math.min(4, won * 0.5) + books + (60 - before) * 0.05 + (rng.next() - 0.55) * 10;
     // The established names always find a bank to carry them through.
     const floor = r.reputation >= 60 ? 20 : 0;
     r.health = Math.max(floor, Math.min(100, before + drift));

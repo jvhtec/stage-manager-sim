@@ -79,6 +79,7 @@ import { GEAR_PRODUCTS, getProduct } from './content/gear';
 import { leftBehindChance, monthlyRent, monthlySalaries, prepFailureFactor, prepOf, prepRatio } from './facilities';
 import { breachPenalty, checkSpec } from './techRider';
 import { bondAfterShow } from './bonds';
+import { playRivalShow } from './rivalOps';
 import { monthlyBrandFaults } from './ecosystem';
 import { dailyProduction, hasManager, monthlyManagers } from './management';
 import { FEUD, REFUSE } from './bonds';
@@ -416,9 +417,9 @@ function resolveShows(s: TycoonState, world: WorldMap, rng: Rng) {
       if (rival) {
         countTownShow(s, gig.cityId, rival.id);
         rival.showsPlayed += 1;
-        rival.reputation = Math.min(100, rival.reputation + 0.3 * TIER_WEIGHT[gig.tier]);
-      }
-      gig.result = { quality: 0.8, payout: gig.fee, lateHours: 0, gearCoverage: 1, crewCoverage: 1 };
+        // Judged on its kit, like yours (rivalOps.ts).
+        playRivalShow(s, rival, gig, rng);
+      } else gig.result = { quality: 0.8, payout: gig.fee, lateHours: 0, gearCoverage: 1, crewCoverage: 1 };
       return;
     }
     if (gig.status !== 'booked') return;

@@ -11,6 +11,8 @@
  * Citywide events (Fête de la Musique, the Love Parade) instead flood the
  * calendar with small shows on the day.
  */
+import { ableRivals, rivalTryTake } from './rivalOps';
+import { worldOf } from './mapgen';
 import type { Rng } from '@/lib/rng';
 import { DEPT_LABELS, tierInfo } from './catalog';
 import { dateOfDay, dayOf, formatDay, formatMoney, newId, pushNews } from './core';
@@ -144,7 +146,9 @@ const bidScore = (reputation: number, price: number, bonus: number, noise: numbe
 function closeBidding(s: TycoonState, gig: Gig, rng: Rng) {
   const ev = gig.event!;
   const tier = gig.tier;
-  const contenders = s.rivals.filter(r => r.maxTier >= tier && r.reputation >= EVENT_REPUTATION[ev.scale as 3 | 4 | 5] - 15);
+  const world = worldOf(s);
+  // Only firms that could deliver the lot (kit free on the day, rider and site met) put in a bid.
+  const contenders = ableRivals(s, world, s.rivals.filter(r => r.maxTier >= tier && r.reputation >= EVENT_REPUTATION[ev.scale as 3 | 4 | 5] - 15), gig);
   const rivalBids = contenders.map(r => ({
     r,
     price: 0.88 + rng.next() * 0.3,
@@ -167,6 +171,7 @@ function closeBidding(s: TycoonState, gig: Gig, rng: Rng) {
     gig.status = 'expired';
     return;
   }
+  rivalTryTake(s, world, best.r, gig);
   gig.status = 'rival';
   gig.rivalId = best.r.id;
   const truck: Vehicle = {
