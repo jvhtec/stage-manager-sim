@@ -176,13 +176,13 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
     const remaining = emptyCounts();
     DEPTS.forEach(d => (remaining[d] = Math.max(0, gig.needs[d] - have[d])));
     addStock(delivered, pickGear(depot.gear, remaining, model.gearCapacity, gig.rider, gig.techSpec));
-    const opts = { vehicleId: v.id, restAt: REST_AT[state.policies.rest], ...crewDirectives(state, gig) };
+    const opts = { vehicleId: v.id, restAt: REST_AT[state.policies.rest], bonds: state.bonds, ...crewDirectives(state, gig) };
     const pinned = depot.people.filter(m => m.pinnedVehicleId === v.id || opts.prefer.has(m.id)).length;
     const seats = Math.min(model.crewSeats, Math.max(pinned, gig.crewNeeded - people.length), depot.people.filter(m => mayBoard(m, opts)).length);
     people.push(...pickCrew(depot.people, gig, seats, people, opts));
   });
   const crew = people.length;
-  const crewEval = evaluateCrew(people, gig);
+  const crewEval = evaluateCrew(people, gig, state);
   let effCrew = crewEval.effective;
 
   const subhire = vehicles.length ? subHireFor(state, worldOf(state), gig, delivered) : { stock: {}, units: 0, cost: 0, from: [] };

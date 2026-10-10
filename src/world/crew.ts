@@ -8,7 +8,7 @@ import { INTERMITTENTS, ruleCountry } from './rules';
 import type { Rng } from '@/lib/rng';
 import { CREW_WAGE_PER_DAY } from './catalog';
 import { book, pushNews } from './core';
-import { partyBonus, peopleLeave, trainPeople } from './people';
+import { burnoutLeave, partyBonus, peopleLeave, syncCrew, trainPeople } from './people';
 import type { CitySize, Gig, PayLevel, TrainingLevel, TycoonState, WorldMap } from './types';
 
 export interface PayInfo {
@@ -62,6 +62,7 @@ export const moraleTarget = (state: TycoonState) => Math.max(0, Math.min(100, PA
 /** Monthly: morale drifts towards what you pay (less how tired everyone is); unhappy crews quit, stars get poached. */
 export function monthlyCrew(s: TycoonState, rng: Rng) {
   s.crewMorale += (moraleTarget(s) - s.crewMorale) * 0.5;
+  if (burnoutLeave(s, rng)) syncCrew(s);
   if (s.crewMorale >= 50) return;
   const quit = peopleLeave(s, rng, s.crewMorale);
   if (quit) pushNews(s, `${quit} crew gone this month — morale is at ${Math.round(s.crewMorale)}. Pay more or give them time off.`, 'bad');

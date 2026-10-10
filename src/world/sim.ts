@@ -78,6 +78,7 @@ import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSiz
 import { GEAR_PRODUCTS, getProduct } from './content/gear';
 import { leftBehindChance, monthlyRent, monthlySalaries, prepFailureFactor, prepOf, prepRatio } from './facilities';
 import { breachPenalty, checkSpec } from './techRider';
+import { bondAfterShow } from './bonds';
 import { FIX_TEXT, problemEffects, productionProblems } from './production';
 import { canAfford, deferService, lastingConsequences, nightCauses, OVERDUE_DECAY, overdueDays, postMortem, recordBreakdown, serviceCleared } from './consequences';
 import { monthlyTraining, PAY, freelancersFor, monthlyCrew, moraleBonus } from './crew';
@@ -227,7 +228,7 @@ function loadVehicle(s: TycoonState, v: Vehicle, gig: Gig) {
   const seats = Math.min(model.crewSeats - v.crew, Math.max(crewRemaining, pinned), depot.crew);
   if (seats > 0) {
     // Pinned and named people first, then the freshest, best-matched people for the job ahead get on board.
-    const opts = { vehicleId: v.id, restAt: REST_AT[s.policies.rest], ...directives };
+    const opts = { vehicleId: v.id, restAt: REST_AT[s.policies.rest], bonds: s.bonds, ...directives };
     pickCrew(atDepot(s, depot.id), gig, seats, aboard(s, v.id), opts).forEach(m => moveToVehicle(m, v.id));
     syncCrew(s);
   }
@@ -466,7 +467,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const fx = problemEffects(problems);
   // Who's working the show, and how well their skills fit its departments.
   const people = onSite.flatMap(v => aboard(s, v.id));
-  const crewEval = evaluateCrew(people, gig);
+  const crewEval = evaluateCrew(people, gig, s);
   // Safety inspectors look for tickets on the big shows.
   const tickets = certPenalty(certShortfall(people, gig), gig);
   if (tickets.fine) {
@@ -571,6 +572,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     venueNotes: venueNotes.slice(problems.length),
     breaches: breaches.map(b => `${b.label}: ${b.detail}`),
     production: problems.map(p => `${p.label}: ${p.detail}`),
+    feuds: crewEval.feuds,
     present,
     workshop: s.policies.workshop,
     noKit: !stockSize(delivered),
@@ -586,6 +588,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     strike(s, gig.act, `the show at ${where} fell apart`);
     recordVenueNight(s, gig.venueId, quality, true);
     recordShow(s, yearOf(s, s.hour), quality, true, !!gig.festival);
+    bondAfterShow(s, people, quality);
     const why = postMortem(s, gig, where, quality, true, causes);
     lastingConsequences(s, gig, quality, causes);
     pushNews(
@@ -634,6 +637,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   s.cityRatings[gig.cityId] = Math.max(0, Math.min(100, rating + (quality - 0.5) * 30));
   s.stats.showsPlayed += 1;
   learnFromShow(s, people, crewEval.assigned, gig.tier >= 3 || !!gig.festival || !!gig.event);
+  bondAfterShow(s, people, quality);
   recordShow(s, yearOf(s, s.hour), quality, false, !!gig.festival);
   const why = postMortem(s, gig, where, quality, false, causes);
   lastingConsequences(s, gig, quality, causes);

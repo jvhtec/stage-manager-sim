@@ -790,3 +790,13 @@ From clubs and theatres up (`production.ts`), every venue has a house power supp
 - **A booked show** checks the actual kit and trucks going out, with a button per problem: hire a generator, hire ground-support towers, or book local vans to shuttle the kit from where the artic can park.
 - **Left unfixed**: the house supply trips (twice the chance of kit failing, −4% quality), half the rig stays on the floor (−8%), or the artics are hand-balled in (+2 h on the load-in). Each goes into the post-mortem as "The production didn't fit the room".
 - The venue window lists each room's power, roof load and access. The old random "undersized power" crisis is gone: power is now something you can see coming.
+
+## Crew are people
+
+`bonds.ts`. Every pair of crew has a hidden chemistry. Each show they work together moves their rapport: a good night (+2), a bad one (−2), plus their chemistry — natural fits grow close fast, and pairs who clash grate, worse when both are exhausted.
+
+- **Trusted team** (rapport 40+): each trusted pair on a crew adds 5% effective crew (up to 15%) and cuts the chance of kit failing (to 0.85×). The loader prefers putting friends together. The crew window shows 🤝 for them.
+- **Feud** (−40): −3% show quality per feuding pair on a crew (up to −8%), and it goes into the post-mortem. Shown as ⚡.
+- **Won't work together** (−60): the loader won't put them on the same truck — one stays at base — unless you name them both for the show, which you can do and pay for in quality.
+- **Burnout**: each day on the road at 70%+ fatigue adds lasting burnout (it fades slowly with rest at base). From 40% they work below their level; from 70% they may leave the business, whatever the morale.
+- **Loyalty**: years with you make people harder for rivals to poach.

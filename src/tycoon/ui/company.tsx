@@ -567,6 +567,11 @@ export function HelpWindow() {
           artic. The offer warns you, and a booked show offers a generator, ground support or a van shuttle.
         </li>
         <li>
+          <b>Crew are people</b>: pairs who work well together become trusted teams (🤝) and deliver more; pairs who clash feud
+          (⚡) and cost the show, and past a point refuse to share a truck unless you name them both. Keep people exhausted on
+          the road for too long and they burn out for good.
+        </li>
+        <li>
           Buy bigger trucks and more gear, and win reputation to unlock arenas and stadiums. Every January the industry awards
           judge your year and the trade press prints its supplier table, the biggest tours and reviews of your best and worst
           shows. Or start from a <b>historic scenario</b> — Live Aid, Italia ’90, Barcelona ’92 — and win a lot of the night.

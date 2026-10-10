@@ -283,6 +283,8 @@ export interface CrewMember {
   certs?: CertId[];
   /** On a course until this day: unavailable for jobs. */
   course?: { cert: CertId; untilDay: number };
+  /** Lasting burnout from long stretches of exhaustion, 0-100 (bonds.ts). */
+  burnout?: number;
 }
 
 /** A rival trying to hire one of your people away: match it or lose them. */
@@ -955,6 +957,8 @@ export interface TycoonState {
   charts?: YearChart[];
   /** Why things went wrong: the recent incident log (consequences.ts). */
   incidents?: Incident[];
+  /** Rapport between pairs of crew, −100..100, keyed by sorted id pair (bonds.ts). */
+  bonds?: Record<string, number>;
   /** What you've taught each client about extras (changes.ts). */
   clients?: Record<string, { paid: number; absorbed: number; refused: number; declined: number }>;
   /** Maintenance you've put off because cash was short. */
