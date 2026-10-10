@@ -25,6 +25,28 @@ const USED_KIT_CONDITION = 70;
 
 export const rivalHealth = (r: Rival) => r.health ?? 60;
 
+/**
+ * A firm is gone: its shows still to play don't vanish with it. A buyer takes them over; otherwise
+ * they go back on the market if there's still time to book them, and lapse if not.
+ */
+export function releaseRivalWork(s: TycoonState, rivalId: string, toId?: string) {
+  const today = Math.floor(s.hour / 24);
+  s.gigs.forEach(g => {
+    if (g.rivalId !== rivalId || g.status !== 'rival' || g.result) return;
+    if (toId) {
+      g.rivalId = toId;
+      return;
+    }
+    g.rivalId = undefined;
+    g.status = !g.tourId && !g.festival && !g.event && g.acceptByDay >= today ? 'offer' : 'expired';
+  });
+  s.tours.forEach(t => {
+    if (t.rivalId !== rivalId || t.status !== 'rival') return;
+    if (toId) t.rivalId = toId;
+    else t.status = 'expired';
+  });
+}
+
 /** Monthly: rivals' fortunes rise and fall; the weakest go under. */
 export function monthlyRivals(s: TycoonState, rng: Rng) {
   const { demand } = marketNow(s);
@@ -45,6 +67,8 @@ export function monthlyRivals(s: TycoonState, rng: Rng) {
     if (r.health <= 0) {
       s.rivals = s.rivals.filter(x => x.id !== r.id);
       s.vehicles = s.vehicles.filter(v => v.owner !== r.id);
+  releaseRivalWork(s, r.id);
+      releaseRivalWork(s, r.id);
       s.goneRivals.push(r.id);
       pushNews(s, `${r.name} goes into administration — their ${city} lot is up for grabs.`, 'big', { cityId: r.hqCityId });
       openAuction(s, rng, r.name, r.hqCityId, r.maxTier, 'bust');
@@ -94,6 +118,7 @@ function rivalMergers(s: TycoonState, rng: Rng) {
   const city = worldOf(s).cityById.get(target.hqCityId)?.name;
   s.rivals = s.rivals.filter(r => r.id !== target.id);
   s.vehicles = s.vehicles.filter(v => v.owner !== target.id);
+  releaseRivalWork(s, target.id, buyer.id);
   s.goneRivals.push(target.id);
   buyer.reputation = Math.min(RIVAL_REPUTATION_CAP, buyer.reputation + 2 + target.reputation * 0.05);
   buyer.maxTier = Math.max(buyer.maxTier, target.maxTier);

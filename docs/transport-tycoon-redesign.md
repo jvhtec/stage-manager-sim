@@ -851,3 +851,15 @@ What they do is announced in the news, so you can see the system working; you ca
 - **Books**: it earns the payout, pays about a quarter of the fee to deliver each show, pays monthly overheads (crew retainer, trucks, kit upkeep), and a workshop restores condition while cash allows. Profit, losses and an overdraft feed its health, so badly run firms go under.
 - **Learning**: with a cash cushion it reinvests in whatever has turned the most work away — more kit, crew, a truck, a desk with more inputs, another PA brand — or brings its kit up to date when it has fallen behind.
 - **Contracts**: clients cancel rivals' shows on the same terms, and the rival keeps what the clause pays.
+
+## Invariants
+
+`invariants.ts` checks what must always hold in a running game; a violation is a simulation bug, not bad luck:
+
+- **Money**: cash − loan always equals the starting cash plus everything on the books (`book()`), so no money appears or vanishes outside the ledger; cash is finite, the loan isn't negative, invoices are positive.
+- **Equipment**: every stock (bases, trucks, house rigs, freight, cross-hire) is a whole, non-negative count of a real product; condition stays 0–100; a truck carries no more than it has room for.
+- **Vehicles**: a driving truck has a route and isn't parked in a town; a parked, on-site or servicing one is in a town; a broken one has a repair time; a bus out on hire has exactly one contract; every order points at a show that exists; rival trucks belong to firms that exist.
+- **Contracts**: terms are valid shares; no deposit exceeds the fee; a cancelled show is closed; no show that has been and gone was left unplayed — by you or by the rival that held it; no show is held by a firm that no longer exists; a booked tour's dates are all booked or played.
+- **Personnel**: everyone is in exactly one place (a base or a truck) that exists; base and truck headcounts match the people there; fatigue and burnout stay 0–100; nobody named for a show or chased by a poacher has already left.
+
+`invariants.test.ts` runs games in four countries and eras with a simple operator and checks every month; the balance bot checks every month of its nine-year runs and reports any violations. The check found one real hole: a firm that went bust or was bought left its booked shows held by nobody. Now a buyer takes them over, and otherwise they go back on the market (or lapse if it's too late to book them).

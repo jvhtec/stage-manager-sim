@@ -1,4 +1,5 @@
 import { getScenario } from './scenarios';
+import { ledgerTotal } from './invariants';
 import { TECH_WAVES } from './content/techWaves';
 import { DIFFICULTIES } from './scenario';
 import { createRandomSeed, createRng } from '@/lib/rng';
@@ -243,6 +244,8 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     tone: 'big',
     cityId: hq.id,
   });
+  // The money invariant (invariants.ts) holds from here: cash − loan = startCash + everything on the books.
+  state.stats.startCash = state.company.cash - state.company.loan - ledgerTotal(state);
   return state;
 }
 

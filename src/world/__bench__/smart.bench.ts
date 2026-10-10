@@ -12,6 +12,7 @@ import { deptTotals } from '../loading';
 import { productsAvailableIn, expectedQuality } from '../content/gear';
 import { VEHICLE_MODELS, getModel } from '../catalog';
 import { tourMaxTier } from '../tours';
+import { checkInvariants } from '../invariants';
 import { nextUpgrade, facilitySpec } from '../facilities';
 import { DEPTS } from '../types';
 import type { CountryCode } from '../content/countries';
@@ -77,8 +78,10 @@ it('smart bot', () => {
     s = ok(s, setPolicy(s, 'insurance', 'basic'));
     s = ok(s, setPolicy(s, 'rehearsal', 'auto'));
     s = ok(s, setPolicy(s, 'training', 'courses'));
+    const violations: string[] = [];
     for (let day = 0; day < 365 * years && !s.gameOver; day++) {
       s = advanceHours(s, 24);
+      if (day % 30 === 0) checkInvariants(s).forEach(v => violations.length < 400 && violations.push(`${v.kind}: ${v.message}`));
       s = answer(s);
       const today = dayOf(s.hour);
       if (FEATURES.has('team')) s.vehicles.forEach((v: S) => { if (v.owner === 'player' && getModel(v.modelId).kind !== 'van') v.teamDrivers = true; });
@@ -161,6 +164,7 @@ it('smart bot', () => {
     }
     if (process.env.LEDGER) { const y = s.ledger[yearOf(s, s.hour) - 1] ?? {}; console.log('LEDGER', JSON.stringify(Object.fromEntries(Object.entries(y).map(([k, v]) => [k, Math.round((v as number) / 1000)])))); }
     console.log('RES', JSON.stringify({ country, startYear, seed: SEED, alive: !s.gameOver, year: yearOf(s, s.hour), cash: Math.round(s.company.cash / 1000), value: Math.round(companyValue(s) / 1000), rep: Math.round(s.company.reputation), shows: s.stats.showsPlayed, failed: s.stats.showsFailed, vehicles: s.vehicles.filter((v: S) => v.owner === 'player').length, wh: facilitySpec(s.depots[0]).label, stage: s.depots[0].modules?.rehearsal ?? 0, sponsors: s.sponsors.filter((d: S) => d.status === 'active').length, crew: s.people.length, burnout: Math.round(s.people.reduce((a: number, m: S) => a + (m.burnout ?? 0), 0) / Math.max(1, s.people.length)), trusted: Object.values(s.bonds ?? {}).filter((v: S) => v >= 40).length, feuds: Object.values(s.bonds ?? {}).filter((v: S) => v <= -40).length, morale: Math.round(s.crewMorale) }));
+    console.log('INVARIANTS', JSON.stringify({ count: violations.length, byKind: violations.reduce((m: Record<string, number>, v) => ((m[v.split(':')[0]] = (m[v.split(':')[0]] ?? 0) + 1), m), {}), first: [...new Set(violations.map(v => v.replace(/[0-9.]+/g, '#')))].slice(0, 12) }));
     if (process.env.RIVALS) console.log('RIVALS', JSON.stringify({ alive: s.rivals.length, gone: s.goneRivals.length, rivals: s.rivals.map((r: S) => ({ n: r.name, rep: Math.round(r.reputation), h: Math.round(r.health ?? 0), cash: Math.round((r.ops?.cash ?? 0) / 1000), shows: r.ops?.record.shows, failed: r.ops?.record.failed, x: r.ops?.record.crossHires, fix: r.ops?.record.fixes, dec: r.ops?.record.declined })) }));
   }
 });
