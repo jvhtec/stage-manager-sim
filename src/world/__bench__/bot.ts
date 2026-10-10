@@ -68,7 +68,8 @@ export type Feature =
   | 'heads' // hire department heads
   | 'cash' // act on the cash forecast
   | 'standardise' // buy one brand per department
-  | 'haggle';
+  | 'haggle'
+  | 'learn'; // read its own post-mortems and fix the biggest recurring cause
 
 export interface Strategy {
   id: string;
@@ -97,8 +98,8 @@ export const STRATEGIES: Record<string, Strategy> = {
   managed: {
     id: 'managed',
     label: 'Managed company',
-    blurb: 'The baseline, run properly: pushes for deposits and cancellation clauses, keeps feuding crew apart, hires department heads as it grows, and acts on the cash forecast.',
-    features: [...CORE, 'riders', 'terms', 'crew', 'heads', 'cash'],
+    blurb: 'The baseline, run properly: pushes for deposits and cancellation clauses on big shows (or any show when cash is at risk), keeps feuding crew apart, hires department heads as it grows, acts on the cash forecast, and reads its own post-mortems to fix what keeps going wrong.',
+    features: [...CORE, 'riders', 'terms', 'crew', 'heads', 'cash', 'learn'],
     fixLimit: 0.2,
     minFee: 800,
     policies: { insurance: 'basic', training: 'courses' },
@@ -107,7 +108,7 @@ export const STRATEGIES: Record<string, Strategy> = {
     id: 'premium',
     label: 'Premium house',
     blurb: 'Managed, plus a full workshop, top pay, one brand per department, and only shows worth having.',
-    features: [...CORE, 'riders', 'terms', 'crew', 'heads', 'cash', 'standardise'],
+    features: [...CORE, 'riders', 'terms', 'crew', 'heads', 'cash', 'standardise', 'learn'],
     fixLimit: 0.3,
     minFee: 2500,
     policies: { insurance: 'full', training: 'courses', workshop: 'full', pay: 'high' },
@@ -173,7 +174,7 @@ export interface BotReport {
   monthsOverdrawn: number;
   lowestCash: number;
   forecastWarnings: number;
-  bot: { termsAsked: number; termsWon: number; crossHires: number; fixes: number; crewSplits: number; heads: string[]; borrowed: number; factoredMonths: number; frozenMonths: number };
+  bot: { termsAsked: number; termsWon: number; crossHires: number; fixes: number; crewSplits: number; heads: string[]; lessons: string[]; borrowed: number; factoredMonths: number; frozenMonths: number };
   rivals: { alive: number; gone: number; shows: number; failed: number; avgQuality: number; crossHires: number; fixes: number; declined: Record<string, number>; cashNegative: number };
   invariantViolations: string[];
 }
@@ -213,12 +214,13 @@ export function runBot(run: BotRun): BotReport {
   const world = worldOf(s);
   for (const [k, v] of Object.entries(strategy.policies)) s = ok(s, setPolicy(s, k as S, v as S));
   s = ok(s, setPolicy(s, 'rehearsal', 'auto'));
-  const bot = { termsAsked: 0, termsWon: 0, crossHires: 0, fixes: 0, crewSplits: 0, heads: [] as string[], borrowed: 0, factoredMonths: 0, frozenMonths: 0 };
+  const bot = { termsAsked: 0, termsWon: 0, crossHires: 0, fixes: 0, crewSplits: 0, heads: [] as string[], lessons: [] as string[], borrowed: 0, factoredMonths: 0, frozenMonths: 0 };
   const violations: string[] = [];
   let monthsOverdrawn = 0;
   let lowestCash = Infinity;
   let forecastWarnings = 0;
   let frozenUntil = -1;
+  let learned = { kit: 0, shows: 0 };
 
   for (let day = 0; day < 365 * years && !s.gameOver; day++) {
     s = advanceHours(s, 24);
@@ -248,7 +250,8 @@ export function runBot(run: BotRun): BotReport {
       const home = s.depots.find((d: S) => d.cityId === v.homeCityId);
       if (!home) continue;
       // Terms first: a deposit and a clause on anything worth having.
-      if (on('terms') && g.terms && !g.termsAsked && g.fee >= 5000 && (g.terms.deposit < 0.3 || g.terms.cancel < 0.75)) {
+      // Pushing for terms can lose the show: worth it on big fees, or on anything when cash is at risk.
+      if (on('terms') && g.terms && !g.termsAsked && (g.fee >= 15000 || (frozen && g.fee >= 3000)) && (g.terms.deposit < 0.3 || g.terms.cancel < 0.75)) {
         bot.termsAsked++;
         const t = negotiateTerms(s, g.id);
         s = t.state;
@@ -354,6 +357,18 @@ export function runBot(run: BotRun): BotReport {
         for (const cert of ['rigging', 'safety'] as const) {
           const m = s.people.find((p: S) => p.depotId && !p.certs?.includes(cert) && !p.course);
           if (m && rep >= 40 && s.company.cash > 30000) s = ok(s, trainCrew(s, m.id, cert));
+        }
+      }
+      // Read the month's post-mortems: if kit dying on stage keeps coming up, buy a better workshop.
+      if (on('learn')) {
+        const main = s.incidentTally?.main ?? {};
+        const kitNow = (main['kit-failed'] ?? 0) + (main['kit-worn'] ?? 0);
+        const showsNow = s.stats.showsPlayed;
+        const kitRate = (kitNow - learned.kit) / Math.max(1, showsNow - learned.shows);
+        learned = { kit: kitNow, shows: showsNow };
+        if (kitRate > 0.08 && s.policies.workshop !== 'full' && !frozen) {
+          s = ok(s, setPolicy(s, 'workshop', s.policies.workshop === 'none' ? 'basic' : 'full'));
+          bot.lessons.push(`workshop→${s.policies.workshop}@${yearOf(s, s.hour)}`);
         }
       }
       if (on('invoice') && !on('cash')) s = ok(s, setPolicy(s, 'invoicing', s.company.cash < 60000 ? 'factor' : 'hold'));

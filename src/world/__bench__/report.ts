@@ -92,6 +92,7 @@ export function explain(r: BotReport): string[] {
   // Rivals, under the same rules.
   const dec = Object.entries(r.rivals.declined).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
   out.push(`Rivals (same rules): ${r.rivals.alive} trading, ${r.rivals.gone} gone; ${r.rivals.shows} shows at ${pct(r.rivals.avgQuality)} average, ${r.rivals.failed} failed; ${r.rivals.crossHires} cross-hires and ${r.rivals.fixes} room fixes paid${dec.length ? `; turned work down for ${dec.map(([c, n]) => `${c} ×${n}`).join(', ')}` : ''}${r.rivals.cashNegative ? `; ${r.rivals.cashNegative} overdrawn` : ''}.`);
+  if (r.bot.lessons.length) out.push(`Learned from its post-mortems: ${r.bot.lessons.join(', ')}.`);
   if (r.invariantViolations.length) out.push(`⚠️ ${r.invariantViolations.length} invariant violations, first: ${r.invariantViolations[0]}`);
   return out;
 }

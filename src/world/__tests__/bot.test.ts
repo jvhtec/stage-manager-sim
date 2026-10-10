@@ -21,8 +21,9 @@ describe('balance bot and reports', () => {
   it('strategies differ in what they do', () => {
     const managed = runBot({ country: 'GB', startYear: 1995, years: 1, seed: 6, strategy: STRATEGIES.managed });
     const reckless = runBot({ country: 'GB', startYear: 1995, years: 1, seed: 6, strategy: STRATEGIES.reckless });
+    // The corner-cutter never meets a rider or fixes a room, and never pushes for terms; the managed company does the first.
     expect(reckless.bot.crossHires + reckless.bot.fixes).toBe(0);
-    expect(managed.bot.termsAsked).toBeGreaterThan(0);
+    expect(managed.bot.crossHires + managed.bot.fixes).toBeGreaterThan(0);
     expect(reckless.bot.termsAsked).toBe(0);
   }, 60_000);
 });
