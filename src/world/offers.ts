@@ -3,6 +3,7 @@
  * population, so the metropolis is busy and villages are quiet — the map's
  * geography *is* the demand curve. Rivals snap up offers they're close to.
  */
+import { traitsOf } from './venueTraits';
 import { priceWarFactor, warWinBonus } from './pricewars';
 import { intelFactor } from './rivalry';
 import { difficultyOf } from './scenario';
@@ -64,6 +65,7 @@ export function generateOffer(
   const gig = buildGig(state, rng, { venue, day, act, real });
   gig.acceptByDay = Math.min(day - 3, today + rng.nextRange(3, 7));
   gig.fee = Math.round((gig.fee * relationFeeBonus(state, venue.id) * priceWarFactor(state, city.id)) / 10) * 10;
+  if (traitsOf(world, venue).loadIn === 'stairs') gig.crewNeeded += 1;
   return gig;
 }
 

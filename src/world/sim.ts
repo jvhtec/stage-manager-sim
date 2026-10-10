@@ -100,6 +100,7 @@ import { getRegion } from './content/world';
 import { getCityPath, roadDistance } from './pathfinding';
 import { dailyDisruptions, monthlyWinter, tripCharges, yearlyDriversRules } from './infra';
 import { countTownShow, fadeTownShows } from './territory';
+import { CURFEW_FINE, CURFEW_QUALITY, NOISE_HEADROOM, NOISE_QUALITY, UNION_CALL, traitsOf } from './venueTraits';
 import { DEPTS, type GearStock, type Gig, type TycoonState, type Vehicle, type WorldMap } from './types';
 import { findArtist } from './content/artists';
 
@@ -484,11 +485,32 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const freelanceNote = freelance.count ? ` ${freelance.count} local freelancer${freelance.count > 1 ? 's' : ''} filled in.` : '';
   const lastArrival = Math.max(...onSite.map(v => v.arrivedHour ?? 0), 0);
   const lateHours = onSite.length ? Math.max(0, lastArrival - loadInHour(gig)) : 0;
+  // The room's quirks: a union call to pay, a curfew to run into, a noise limiter to trip.
+  const traits = venue && !gig.overseas && !gig.festival ? traitsOf(world, venue) : undefined;
+  let venueHit = 0;
+  const venueNotes: string[] = [];
+  if (traits && onSite.length) {
+    if (traits.union) {
+      const call = UNION_CALL * gig.crewNeeded;
+      book(s, 'freelance', -call);
+      venueNotes.push(`the union house call cost ${formatMoney(s, call)}`);
+    }
+    if (traits.curfew !== undefined && lateHours > 0) {
+      const fine = CURFEW_FINE * gig.tier;
+      book(s, 'penalties', -fine);
+      venueHit += CURFEW_QUALITY;
+      venueNotes.push(`running late into the ${traits.curfew}:00 curfew cost ${formatMoney(s, fine)} and the encore`);
+    }
+    if (traits.noiseDb !== undefined && gig.needs.audio > 0 && deptTotals(delivered).audio > gig.needs.audio * NOISE_HEADROOM) {
+      venueHit += NOISE_QUALITY;
+      venueNotes.push(`the ${traits.noiseDb} dB limiter kept cutting in on the oversized PA`);
+    }
+  }
   const rawQuality = Math.max(
     0,
     Math.min(
       1,
-      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) + crewEval.bonus - (weather?.penalty ?? 0) + (gig.mods?.quality ?? 0) - (unrehearsed(s, gig) ? UNREHEARSED_QUALITY : 0) - tickets.quality }) +
+      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) + crewEval.bonus - (weather?.penalty ?? 0) + (gig.mods?.quality ?? 0) - (unrehearsed(s, gig) ? UNREHEARSED_QUALITY : 0) - tickets.quality - venueHit }) +
         (rng.next() - 0.5) * 0.08,
     ),
   );
@@ -569,7 +591,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const techNote = techIds.length ? ` ${techIds.map(id => getTech(id).name).join(' & ')} on the crew.` : '';
   const specialistNote = Math.abs(specialist) >= 0.015 ? ` (${specialist > 0 ? '+' : ''}${Math.round(specialist * 100)}% ${specialist > 0 ? 'specialist' : 'off-speciality'})` : '';
   const gateNote = gig.gate ? ` Tickets: ${hypeLabel(gig.gate.hype)} (gate deal).` : '';
-  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}${specialistNote}.${gateNote}${weather?.note ?? ''}${failureNote}${freelanceNote}${hire.units ? ` Sub-hired ${hire.units} unit${hire.units > 1 ? 's' : ''} from ${hire.from.join(' & ')}.` : ''}${stakes.note}${riderNote}${kitNote}${techNote}`, quality >= 0.7 ? 'good' : 'info', {
+  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}${specialistNote}.${gateNote}${weather?.note ?? ''}${failureNote}${freelanceNote}${hire.units ? ` Sub-hired ${hire.units} unit${hire.units > 1 ? 's' : ''} from ${hire.from.join(' & ')}.` : ''}${stakes.note}${riderNote}${kitNote}${techNote}${venueNotes.length ? ` At the venue, ${venueNotes.join('; ')}.` : ''}`, quality >= 0.7 ? 'good' : 'info', {
     cityId: gig.cityId,
     gigId: gig.id,
   });

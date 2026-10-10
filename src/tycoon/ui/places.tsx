@@ -1,3 +1,4 @@
+import { describeTraits, traitsOf } from '@/world/venueTraits';
 import { routeNotes, tripCharges } from '@/world/infra';
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
@@ -226,6 +227,11 @@ export function VenueWindow({ ctx, venueId }: { ctx: WinCtx; venueId: string }) 
       </div>
       <VenueDiorama state={state} venue={venue} />
       <Stat label="Capacity">{venue.capacity.toLocaleString()}</Stat>
+      {venue.kind !== 'airport' && (
+        <Stat label="The room">
+          <span style={{ whiteSpace: 'normal' }}>{describeTraits(traitsOf(world, venue)).join(' · ')}</span>
+        </Stat>
+      )}
       <Stat label="Promoter">
         <b>{relationLabel(venueRelation(state, venueId))}</b>
         {venueRelation(state, venueId) > 0 && (
