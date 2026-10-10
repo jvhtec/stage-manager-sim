@@ -76,7 +76,7 @@ import {
 import { worldOf } from './mapgen';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize } from './loading';
 import { GEAR_PRODUCTS, getProduct } from './content/gear';
-import { leftBehindChance, monthlyRent, monthlySalaries, prepFailureFactor, prepOf, prepRatio } from './facilities';
+import { leftBehindChance, monthlyOverheads, monthlyRent, monthlySalaries, prepFailureFactor, prepOf, prepRatio } from './facilities';
 import { breachPenalty, checkSpec } from './techRider';
 import { bondAfterShow } from './bonds';
 import { playRivalShow } from './rivalOps';
@@ -742,7 +742,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
       v.profitThisYear -= night;
     }
     // Tax, insurance and maintenance (fuel is paid by the mile).
-    const cost = Math.round((model.runningCostPerYear * 0.7) / 365);
+    const cost = Math.round(model.runningCostPerYear / 365);
     book(s, 'running', -cost);
     v.profitThisYear -= cost;
     const decay = vehicleAgeYears(v, s.hour) > model.lifespanYears ? 0.3 : 0.12;
@@ -805,6 +805,7 @@ function monthlyTick(s: TycoonState, rng: Rng) {
   const world = worldOf(s);
   book(s, 'property', -s.depots.reduce((sum, d) => sum + monthlyRent(world, d), 0));
   book(s, 'salaries', -monthlySalaries(s, PAY[s.policies.pay].wage));
+  book(s, 'overheads', -monthlyOverheads(s));
   // Sales staff keep the local scene sweet.
   s.depots.forEach(d => {
     if (d.staff.office) s.cityRatings[d.cityId] = Math.min(100, (s.cityRatings[d.cityId] ?? 50) + 0.6 * d.staff.office);

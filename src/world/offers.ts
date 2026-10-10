@@ -97,6 +97,8 @@ export interface GigSpec {
  * the price), so a US company isn't sunk by its distances.
  */
 export const COUNTRY_FEES: Record<string, number> = { US: 1.45 };
+/** Where fees sit overall: set so a well-run company clears a thin margin, not a fortune. */
+export const FEE_LEVEL = 0.88;
 
 export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
   const tier = spec.tier ?? spec.venue.tier;
@@ -125,7 +127,7 @@ export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
   const star = spec.real ? 1.15 : 1;
   const loyalty = asksForYou ? 1.1 : 1;
   const fee =
-    Math.round((info.baseFee * marketOnDay(state, spec.day).fees * (0.85 + rng.next() * 0.4) * (0.9 + rating / 500) * star * loyalty * (spec.feeMultiplier ?? 1) * (COUNTRY_FEES[state.country ?? ''] ?? 1)) / 50) * 50;
+    Math.round((info.baseFee * marketOnDay(state, spec.day).fees * (0.85 + rng.next() * 0.4) * (0.9 + rating / 500) * star * loyalty * (spec.feeMultiplier ?? 1) * FEE_LEVEL * (COUNTRY_FEES[state.country ?? ''] ?? 1)) / 50) * 50;
 
   // National rules (rules.ts): who books, who must be aboard, how many hands.
   const world = worldOf(state);

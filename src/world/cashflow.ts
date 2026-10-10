@@ -6,7 +6,7 @@
  */
 import { dateOfDay, dayOf } from './core';
 import { getModel } from './catalog';
-import { monthlyRent, monthlySalaries } from './facilities';
+import { monthlyOverheads, monthlyRent, monthlySalaries } from './facilities';
 import { monthlyLeasesTotal } from './finance';
 import { monthlyPremium } from './incidents';
 import { monthlyInterest } from './market';
@@ -21,7 +21,7 @@ import type { TycoonState, WorldMap } from './types';
 
 export const FORECAST_WEEKS = 8;
 /** How long a late payer keeps you waiting, on average. */
-const LATE_DAYS = 25;
+const LATE_DAYS = 37;
 
 export interface ForecastWeek {
   week: number;
@@ -92,6 +92,7 @@ export function forecastCash(s: TycoonState, world: WorldMap, weeks = FORECAST_W
   const monthly = [
     { label: 'Rent', amount: s.depots.reduce((n, d) => n + monthlyRent(world, d), 0) },
     { label: 'Salaries', amount: monthlySalaries(s, PAY[s.policies.pay].wage) },
+    { label: 'Office & admin', amount: monthlyOverheads(s) },
     { label: 'Workshop', amount: monthlyWorkshopCost(s) },
     { label: 'Insurance', amount: monthlyPremium(s) },
     { label: 'Leases', amount: monthlyLeasesTotal(s) },
@@ -107,7 +108,7 @@ export function forecastCash(s: TycoonState, world: WorldMap, weeks = FORECAST_W
   // Running costs: tax, upkeep, fuel and a night's allowance for every truck, each day.
   // Crew and star-tech wages land every day, working or not (sim.ts dailyTick).
   const payroll = Math.round(s.people.reduce((n, m) => n + dayRate(m), 0) * PAY[s.policies.pay].wage) + s.techs.reduce((n, t) => n + getTech(t.techId).wagePerDay, 0);
-  const running = s.vehicles.filter(v => v.owner === 'player').reduce((n, v) => n + (getModel(v.modelId).runningCostPerYear * 0.7) / 365, 0);
+  const running = s.vehicles.filter(v => v.owner === 'player').reduce((n, v) => n + getModel(v.modelId).runningCostPerYear / 365, 0);
   for (let d = 1; d <= horizon; d++) {
     exp[d] -= payroll + running * 1.4;
     low[d] -= payroll + running * 1.8;

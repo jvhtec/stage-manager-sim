@@ -12,7 +12,9 @@ import { createRng } from '@/lib/rng';
 import { getModel, tierInfo } from './catalog';
 import { consoleInputs } from './content/consoles';
 import { expectedQuality, productsAvailableIn } from './content/gear';
-import { dateOfDay, yearOf } from './core';
+import { dateOfDay, dayOf, yearOf } from './core';
+import { OVERHEAD } from './facilities';
+import { DEFAULT_RISK, LATE_RISK, LATE_SLIP_MIN, LATE_SLIP_SPREAD, paymentDays } from './receivables';
 import { showPayout } from './gate';
 import { productionProblems, typicalKit } from './production';
 import { crossHireCost, crossHireOptions } from './techRider';
@@ -162,7 +164,14 @@ export function playRivalShow(s: TycoonState, r: Rival, gig: Gig, rng: Rng): num
   const failed = q < 0.3;
   const payout = failed ? -Math.round(gig.fee * 0.3) : showPayout(gig, q);
   const cost = Math.round(gig.fee * RIVAL_SHOW_COST);
-  ops.cash += payout - cost;
+  // Promoters pay rivals on the same terms they pay you: big shows weeks later, some late, a few never.
+  const wait = paymentDays(gig);
+  if (payout > 0 && wait > 0) {
+    const tier = Math.max(0, Math.min(4, gig.tier));
+    const slip = rng.chance(LATE_RISK[tier]) ? LATE_SLIP_MIN + rng.nextInt(LATE_SLIP_SPREAD + 1) : 0;
+    if (!rng.chance(DEFAULT_RISK[tier])) (ops.owed ??= []).push({ day: gig.day + wait + slip, amount: payout });
+    ops.cash -= cost;
+  } else ops.cash += payout - cost;
   ops.month.income += Math.max(0, payout);
   ops.month.costs += cost + Math.max(0, -payout);
   ops.condition = Math.max(20, ops.condition - 1 * (gig.days ?? 1));
@@ -183,8 +192,16 @@ export function rivalCancelled(s: TycoonState, r: Rival, gig: Gig) {
   ops.record.cancelled += 1;
 }
 
-/** Monthly: a retainer for the crew (most are freelance, paid per show), the trucks and kit upkeep. */
-export const rivalOverhead = (ops: RivalOps) => ops.crew * 350 + ops.trucks * 600 + DEPTS.reduce((n, d) => n + ops.kit[d], 0) * 15;
+/**
+ * Monthly: a retainer for the crew (most are freelance, paid per show), the trucks and kit upkeep,
+ * and the same office overheads you pay (facilities.ts OVERHEAD), turnover share included.
+ */
+export const rivalOverhead = (ops: RivalOps) =>
+  ops.crew * (350 + OVERHEAD.perPerson) +
+  ops.trucks * (600 + OVERHEAD.perVehicle) +
+  DEPTS.reduce((n, d) => n + ops.kit[d], 0) * 15 +
+  OVERHEAD.base +
+  Math.round(ops.month.income * OVERHEAD.turnover);
 
 /**
  * Monthly: overheads, the workshop, and reinvesting in whatever keeps costing them work. Returns
@@ -194,6 +211,13 @@ export function monthlyRivalOps(s: TycoonState, r: Rival, rng: Rng): number {
   const ops = opsOf(s, r);
   const year = yearOf(s, s.hour);
   const overhead = rivalOverhead(ops);
+  // Invoices that have come in.
+  const today = dayOf(s.hour);
+  const due = (ops.owed ?? []).filter(o => o.day <= today);
+  if (due.length) {
+    ops.cash += due.reduce((n, o) => n + o.amount, 0);
+    ops.owed = ops.owed!.filter(o => o.day > today);
+  }
   ops.cash -= overhead;
   ops.month.costs += overhead;
   if (ops.cash > 0) ops.condition = Math.min(100, ops.condition + 6);

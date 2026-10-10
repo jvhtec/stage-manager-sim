@@ -208,6 +208,7 @@ export type LedgerCategory =
   | 'merch'
   | 'legal'
   | 'tax'
+  | 'overheads'
   | 'sales';
 
 export const LEDGER_LABELS: Record<LedgerCategory, string> = {
@@ -250,6 +251,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   merch: 'Merchandise',
   legal: 'Legal fees',
   tax: 'Corporation tax',
+  overheads: 'Office, admin & cover',
   sales: 'Asset sales',
 };
 
@@ -745,6 +747,8 @@ export interface RivalOps {
   /** Kit condition, 0-100. */
   condition: number;
   month: { income: number; costs: number };
+  /** Invoices promoters haven't paid yet. */
+  owed?: { day: number; amount: number }[];
   record: { shows: number; failed: number; late?: number; kitFailures?: number; crossHires: number; fixes: number; cancelled: number; declined: Partial<Record<'kit' | 'crew' | 'trucks' | 'rider' | 'room', number>> };
 }
 
