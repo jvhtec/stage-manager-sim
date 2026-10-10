@@ -79,6 +79,7 @@ import { GEAR_PRODUCTS, getProduct } from './content/gear';
 import { leftBehindChance, monthlyRent, monthlySalaries, prepFailureFactor, prepOf, prepRatio } from './facilities';
 import { breachPenalty, checkSpec } from './techRider';
 import { bondAfterShow } from './bonds';
+import { HANDLING_WINDOW, LOADERS, handlingHours, handlingOverrun, loadWeight, payloadOf } from './cargo';
 import { FIX_TEXT, problemEffects, productionProblems } from './production';
 import { canAfford, deferService, lastingConsequences, nightCauses, OVERDUE_DECAY, overdueDays, postMortem, recordBreakdown, serviceCleared } from './consequences';
 import { monthlyTraining, PAY, freelancersFor, monthlyCrew, moraleBonus } from './crew';
@@ -220,7 +221,7 @@ function loadVehicle(s: TycoonState, v: Vehicle, gig: Gig) {
     crewRemaining = Math.max(crewRemaining, g.crewNeeded - crewBrought);
   });
 
-  const picked = pickGear(depot.gear, remaining, model.gearCapacity - stockSize(v.cargo), gig.rider, gig.techSpec);
+  const picked = pickGear(depot.gear, remaining, model.gearCapacity - stockSize(v.cargo), gig.rider, gig.techSpec, payloadOf(v.modelId, model.gearCapacity) - loadWeight(v.cargo));
   addStock(v.cargo, picked);
   const directives = crewDirectives(s, gig);
   const here = atDepot(s, depot.id);
@@ -513,7 +514,15 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   }
   const freelanceNote = freelance.count ? ` ${freelance.count} local freelancer${freelance.count > 1 ? 's' : ''} filled in.` : '';
   const lastArrival = Math.max(...onSite.map(v => v.arrivedHour ?? 0), 0);
-  const lateHours = onSite.length ? Math.max(0, lastArrival + fx.delay - loadInHour(gig)) : 0;
+  // Getting it all in: man-hours over hands, slower from the street or up stairs.
+  const access = venue && !gig.overseas && !gig.festival ? traitsOf(world, venue).loadIn : 'dock';
+  const ownKit: GearStock = {};
+  onSite.forEach(v => addStock(ownKit, v.cargo));
+  if (freighted) addStock(ownKit, freighted.gear);
+  const hands = crew + freelance.count + (gig.fixes?.loaders ? LOADERS : 0);
+  const handling = present && !gig.overseas ? handlingHours(ownKit, hands, access) : 0;
+  const overrun = handlingOverrun(handling);
+  const lateHours = onSite.length ? Math.max(0, lastArrival + fx.delay - loadInHour(gig)) + overrun : 0;
   // The room's quirks: a union call to pay, a curfew to run into, a noise limiter to trip.
   const traits = venue && !gig.overseas && !gig.festival ? traitsOf(world, venue) : undefined;
   let venueHit = 0;
@@ -573,6 +582,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     breaches: breaches.map(b => `${b.label}: ${b.detail}`),
     production: problems.map(p => `${p.label}: ${p.detail}`),
     feuds: crewEval.feuds,
+    slowLoad: overrun > 0 ? `About ${handling} h to get the rig in with ${hands} hands${access === 'dock' ? '' : access === 'stairs' ? ' up stairs' : ' from the street'}, against a ${HANDLING_WINDOW} h window.` : undefined,
     present,
     workshop: s.policies.workshop,
     noKit: !stockSize(delivered),

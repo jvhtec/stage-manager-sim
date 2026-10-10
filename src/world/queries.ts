@@ -1,6 +1,8 @@
 /** Read-only projections for the UI — nothing here mutates state. */
 import { breachPenalty, checkSpec, type Breach } from './techRider';
-import { problemEffects, productionProblems, type ProductionProblem } from './production';
+import { loadInProblem, problemEffects, productionProblems, type ProductionProblem } from './production';
+import { LOADERS, handlingHours, handlingOverrun, payloadOf } from './cargo';
+import { traitsOf } from './venueTraits';
 import { fuelMultiplier } from './market';
 import { techResaleFactor } from './content/techWaves';
 import { zoneBill } from './regulation';
@@ -126,6 +128,8 @@ export interface CoverageProjection {
   breaches: Breach[];
   /** Ways the production doesn't fit the room (production.ts). */
   production: ProductionProblem[];
+  /** Hours the load-in would take (cargo.ts). */
+  handling: number;
   gear: DeptCounts;
   crew: number;
   latestArrival: number;
@@ -175,7 +179,7 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
     const have = deptTotals(delivered);
     const remaining = emptyCounts();
     DEPTS.forEach(d => (remaining[d] = Math.max(0, gig.needs[d] - have[d])));
-    addStock(delivered, pickGear(depot.gear, remaining, model.gearCapacity, gig.rider, gig.techSpec));
+    addStock(delivered, pickGear(depot.gear, remaining, model.gearCapacity, gig.rider, gig.techSpec, payloadOf(v.modelId, model.gearCapacity)));
     const opts = { vehicleId: v.id, restAt: REST_AT[state.policies.rest], bonds: state.bonds, ...crewDirectives(state, gig) };
     const pinned = depot.people.filter(m => m.pinnedVehicleId === v.id || opts.prefer.has(m.id)).length;
     const seats = Math.min(model.crewSeats, Math.max(pinned, gig.crewNeeded - people.length), depot.people.filter(m => mayBoard(m, opts)).length);
@@ -195,6 +199,17 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
   const evaluation = evaluateGear(withHire, gig, dateOfDay(state, gig.day).getUTCFullYear(), state.gearCondition);
   const freelance = vehicles.length ? freelancersFor(state, worldOf(state), gig, crew) : { count: 0, cost: 0, effectiveness: 0, local: false };
   effCrew += freelance.count * freelance.effectiveness;
+  // The load-in: what our trucks bring, over the hands on site.
+  const venue = worldOf(state).venueById.get(gig.venueId);
+  const access = venue && !gig.overseas && !gig.festival ? traitsOf(worldOf(state), venue).loadIn : 'dock';
+  // Everything going in except a house rig that's already in the room.
+  const ownKit: GearStock = { ...delivered };
+  const house = houseRigAt(state, gig.venueId) ?? {};
+  for (const id in house) if (ownKit[id]) ownKit[id] = Math.max(0, ownKit[id] - house[id]);
+  const hands = people.length + freelance.count + (gig.fixes?.loaders ? LOADERS : 0);
+  const handling = vehicles.length && !gig.overseas ? handlingHours(ownKit, hands, access) : 0;
+  const slow = loadInProblem(gig, handling, hands, access);
+  if (slow) production.push(slow);
   // Prep is judged on the bases the trucks come from (loaded or not).
   const prep = vehicles.length
     ? vehicles.reduce((sum, v) => {
@@ -210,13 +225,13 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
     ? baseShowQuality({
         gearCoverage: evaluation.coverage,
         crewCoverage: Math.min(1, effCrew / Math.max(1, gig.crewNeeded)),
-        lateHours: Math.max(0, latestArrival + fx.delay - loadInHour(gig)),
+        lateHours: Math.max(0, latestArrival + fx.delay - loadInHour(gig)) + handlingOverrun(handling),
         gearQuality: evaluation.quality,
         riderMet: evaluation.riderMet,
         bonus: techBonus(techIds, gig.act) + moraleBonus(state.crewMorale) + crewEval.bonus - breachPenalty(breaches).quality - fx.quality,
       })
     : 0;
-  return { breaches, production, gear: evaluation.delivered, crew, latestArrival, onTime, vehicles, evaluation, expectedQuality, techIds, delivered, freelance, prep, subhire, people, crewEval };
+  return { handling, breaches, production, gear: evaluation.delivered, crew, latestArrival, onTime, vehicles, evaluation, expectedQuality, techIds, delivered, freelance, prep, subhire, people, crewEval };
 }
 
 /** What a pile of kit would fetch, given its condition. */

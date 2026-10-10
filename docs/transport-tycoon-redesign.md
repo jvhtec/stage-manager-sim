@@ -800,3 +800,11 @@ From clubs and theatres up (`production.ts`), every venue has a house power supp
 - **Won't work together** (−60): the loader won't put them on the same truck — one stays at base — unless you name them both for the show, which you can do and pay for in quality.
 - **Burnout**: each day on the road at 70%+ fatigue adds lasting burnout (it fades slowly with rest at base). From 40% they work below their level; from 70% they may leave the business, whatever the morale.
 - **Loyalty**: years with you make people harder for rivals to poach.
+
+## Kit is physical
+
+`cargo.ts`. Every gear unit has a weight and the man-hours it takes to get in: a line-array hang or an LED wall is heavy and slow, a desk is light and quick. Every vehicle has a payload (a splitter van 1.6 t, a 7.5-tonner 7 t, an artic 20 t, a Megaliner 24 t).
+
+- **Payload**: a truck stops loading when it can't carry the next case, even with room to spare. A 1985 stadium rig weighs about 54 t: three artics, though two would hold it by count. The vehicle window shows weight against payload.
+- **Load-in time**: man-hours over the hands on site (your crew, freelancers and any local loaders), ×1.25 from the street and ×1.6 up stairs. It has to fit in the 6 hours between the doors opening for the crew and soundcheck; anything over is late, with the usual penalties, and goes into the post-mortem as a slow load-in.
+- **The fix** is more hands: crew the truck fully, or book six local loaders for the load-in from the show window. Or send a lighter rig.

@@ -489,7 +489,7 @@ export interface Gig {
   /** Hard technical requirements (techRider.ts). */
   techSpec?: TechSpec;
   /** Production fixes booked for the room (production.ts). */
-  fixes?: { generator?: boolean; groundSupport?: boolean; shuttle?: boolean };
+  fixes?: { generator?: boolean; groundSupport?: boolean; shuttle?: boolean; loaders?: boolean };
   /** Kit cross-hired from a rental house straight to the venue: product id → units. */
   crossHire?: GearStock;
   /** The act has worked with you before and asked for you by name. */

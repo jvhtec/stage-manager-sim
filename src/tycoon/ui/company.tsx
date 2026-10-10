@@ -572,6 +572,10 @@ export function HelpWindow() {
           the road for too long and they burn out for good.
         </li>
         <li>
+          <b>Kit is physical</b>: trucks have a payload as well as space, and a load-in has six hours before soundcheck — short
+          crews, street load-ins and stairs make it slow. The show window estimates it and offers local loaders.
+        </li>
+        <li>
           Buy bigger trucks and more gear, and win reputation to unlock arenas and stadiums. Every January the industry awards
           judge your year and the trade press prints its supplier table, the biggest tours and reviews of your best and worst
           shows. Or start from a <b>historic scenario</b> — Live Aid, Italia ’90, Barcelona ’92 — and win a lot of the night.

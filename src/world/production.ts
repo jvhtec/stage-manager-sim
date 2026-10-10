@@ -11,6 +11,7 @@ import { getProduct, productsAvailableIn, expectedQuality, type GearKind } from 
 import { getModel } from './catalog';
 import { book, formatMoney } from './core';
 import { traitsOf } from './venueTraits';
+import { HANDLING_WINDOW, LOADERS, handlingOverrun, loadersCost } from './cargo';
 import type { Gig, GearStock, TycoonState, Vehicle, Venue, VenueKind, WorldMap } from './types';
 import { DEPTS } from './types';
 
@@ -100,7 +101,7 @@ export function typicalKit(gig: Pick<Gig, 'needs' | 'tier'>, year: number): Gear
   return kit;
 }
 
-export type FixId = 'generator' | 'groundSupport' | 'shuttle';
+export type FixId = 'generator' | 'groundSupport' | 'shuttle' | 'loaders';
 
 export interface ProductionProblem {
   id: FixId;
@@ -163,7 +164,20 @@ export const FIX_TEXT: Record<FixId, string> = {
   generator: 'the house supply kept tripping',
   groundSupport: 'half the rig stayed on the floor — the venue wouldn’t let it fly',
   shuttle: 'the artics were unloaded by hand from the street',
+  loaders: 'the load-in ran over and the soundcheck was squeezed',
 };
+
+/** A load-in that won't fit the window is a problem too: local loaders are the fix. */
+export function loadInProblem(gig: Gig, hours: number, hands: number, access: string): ProductionProblem | undefined {
+  if (gig.fixes?.loaders || handlingOverrun(hours) <= 0) return undefined;
+  return {
+    id: 'loaders',
+    label: 'Load-in too slow',
+    detail: `About ${hours} h to get the rig in with ${hands} hands${access === 'dock' ? '' : ` (${access === 'stairs' ? 'up stairs' : 'from the street'})`}; the window before soundcheck is ${HANDLING_WINDOW} h.`,
+    fixLabel: `Book ${LOADERS} local loaders`,
+    fixCost: loadersCost(gig.days ?? 1),
+  };
+}
 
 /** Book a fix for a show. */
 export function bookFix(s: TycoonState, gig: Gig, problem: ProductionProblem): string {

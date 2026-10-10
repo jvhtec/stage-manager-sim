@@ -6,6 +6,7 @@
 import { techQualityFactor } from './content/techWaves';
 import { expectedQuality, getProduct, type GearProduct } from './content/gear';
 import { consoleInputs } from './content/consoles';
+import { unitWeight } from './cargo';
 import { DEPTS, type DeptCounts, type Gig, type GearStock, type Rider, type TechSpec } from './types';
 
 export function stockSize(stock: GearStock): number {
@@ -40,14 +41,17 @@ const fitsSpec = (p: GearProduct, spec?: TechSpec) => {
   return false;
 };
 
-export function pickGear(stock: GearStock, remaining: DeptCounts, space: number, rider?: Rider, spec?: TechSpec): GearStock {
+export function pickGear(stock: GearStock, remaining: DeptCounts, space: number, rider?: Rider, spec?: TechSpec, payloadT = Infinity): GearStock {
   const picked: GearStock = {};
+  let payload = payloadT;
+  // A unit fits if there's room and the truck can still carry its weight.
+  const fits = (id: string) => stock[id] > 0 && unitWeight(id) <= payload + 1e-9;
   while (space > 0) {
-    const options = DEPTS.filter(d => remaining[d] > 0 && Object.keys(stock).some(id => stock[id] > 0 && getProduct(id).dept === d));
+    const options = DEPTS.filter(d => remaining[d] > 0 && Object.keys(stock).some(id => fits(id) && getProduct(id).dept === d));
     if (!options.length) break;
     const dept = options.sort((a, b) => remaining[b] - remaining[a])[0];
     const candidates = Object.keys(stock)
-      .filter(id => stock[id] > 0 && getProduct(id).dept === dept)
+      .filter(id => fits(id) && getProduct(id).dept === dept)
       .sort((a, b) => {
         const pa = getProduct(a);
         const pb = getProduct(b);
@@ -64,6 +68,7 @@ export function pickGear(stock: GearStock, remaining: DeptCounts, space: number,
     picked[id] = (picked[id] ?? 0) + 1;
     remaining[dept] -= 1;
     space -= 1;
+    payload -= unitWeight(id);
   }
   return picked;
 }

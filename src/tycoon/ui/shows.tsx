@@ -31,6 +31,7 @@ import { Bar, Stat, TierChip } from './bits';
 import { clientNote } from '@/world/changes';
 import { crossHireCost, crossHireOptions } from '@/world/techRider';
 import { productionProblems, typicalKit } from '@/world/production';
+import { HANDLING_WINDOW } from '@/world/cargo';
 import { BrandBadge } from './brands';
 import { distance, kmoney, money } from './format';
 import type { WinCtx } from './types';
@@ -467,6 +468,12 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
                 <Stat label="Star techs">
                   {projection.techIds.map(id => getTech(id).name).join(', ')}
                   {projection.techIds.some(id => getTech(id).knownFor.includes(gig.act)) ? ' ♥' : ''}
+                </Stat>
+              )}
+              {projection.handling > 0 && (
+                <Stat label="Load-in (est.)">
+                  <span className={projection.handling > HANDLING_WINDOW ? 'tt-bad' : ''}>{projection.handling} h</span>{' '}
+                  <span className="tt-dim">of a {HANDLING_WINDOW} h window before soundcheck</span>
                 </Stat>
               )}
               <Stat label="Expected show">

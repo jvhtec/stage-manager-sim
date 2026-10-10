@@ -1,3 +1,4 @@
+import { loadWeight, payloadOf } from '@/world/cargo';
 import { useState } from 'react';
 import { freeBuses, busHireTier, busHireBlocker, hireNet, isBus } from '@/world/buses';
 import { hireOutBus, bookAndAssign, retrofitVehicle, rehomeVehicle, sellVehicle, sendHome, serviceVehicle, setTeamDrivers, unassignVehicle } from '@/world/actions';
@@ -107,7 +108,7 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
       {v.lease && <Stat label="Leased">{money(v.lease.monthly)}/month</Stat>}
 
       <h4>
-        Load ({stockSize(v.cargo)}/{model.gearCapacity} gear · {v.crew}/{model.crewSeats} crew)
+        Load ({stockSize(v.cargo)}/{model.gearCapacity} gear · {loadWeight(v.cargo)}/{payloadOf(v.modelId, model.gearCapacity)} t · {v.crew}/{model.crewSeats} crew)
       </h4>
       {v.crew > 0 && (
         <div className="tt-list" style={{ marginBottom: 6 }}>
