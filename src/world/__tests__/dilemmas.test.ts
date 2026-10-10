@@ -50,6 +50,7 @@ describe('on-the-day decisions', () => {
     const { s, gig } = scenario();
     s.hour = loadInHour(gig);
     hourlyCrises(s, yes);
+    s.dilemmas = s.dilemmas.filter(x => x.kind !== 'change'); // client change requests have their own test
     expect(s.dilemmas.length).toBe(1);
     const d = s.dilemmas[0];
     s.hour = d.expiresHour;

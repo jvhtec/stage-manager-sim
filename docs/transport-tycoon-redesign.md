@@ -760,3 +760,14 @@ The new-company form offers seven one-year scenarios (`scenarios.ts`): Live Aid 
 ## The trade press
 
 Every New Year (`charts.ts`) the press prints the supplier league table for the year just gone (your company rating against the rivals'), the year's biggest tours in your market (the acts at the top venue tier, with a ★ on any you carried) and reviews of your best and worst nights. A rave (quality 90%+) or a panning (a failed show, or under 55%) moves your reputation by 0.4, and each big tour you carried adds 0.3 (up to three). The latest charts sit in the League window under *Trade press*.
+
+## Consequences you can read back
+
+A set of systems that chain into each other, with the causes recorded so a failure can explain itself rather than read as random punishment.
+
+- **Late payers** (`receivables.ts`): some promoters (8–16% by tier) pay 10–35 days after the due date, with a news warning. Credit-insured invoices never slip.
+- **Deferred maintenance** (`consequences.ts`): a truck's service or the monthly workshop bill is put off when cash is under four times the bill. A truck past its service interval loses reliability twice as fast; a lapsed workshop stops repairing the kit. Each deferral is logged with *why* cash was short (invoices owed, how many are late, debt).
+- **Explained breakdowns**: a breakdown lists its causes by weight (service overdue, age, wear, winter — or "just unlucky" if the truck was sound) and links back to the deferral that set it up. The truck's shows are tagged with the breakdown.
+- **Post-mortems**: a failed or rough night gets an incident record naming its causes — late load-in, dead kit and the workshop lapse behind it, short or exhausted crew, left-behind cases, unpaid extras, venue limits — and the news line ends "Why: … It traces back: service deferred → …". The last eight are in the League window under *Post-mortems*. A failed or tired-crew night also dents crew morale, and a collapse costs goodwill with the act.
+- **Change orders** (`changes.ts`): at load-in a client may ask for an extra hour, extra kit or an earlier soundcheck. Each client has a hidden temper (easy-going, reasonable, always pushing) that you only learn from history. You can do it free (goodwill now, but they ask more often), quote for it (they pay or refuse, by temper and what you have taught them) or hold to the contract (goodwill lost; this is what happens if you don't answer). Overtime tires the crew and unpaid extras go into the post-mortem if the night goes badly. The offer window shows your history with the client.
+- **Cash forecast** (`cashflow.ts`): the Money window projects the next eight weeks from invoices (with default and late-payment risk), booked shows and the monthly bills, as an expected line with a range. The range is ±30% with no back office and narrows to ±8% with office staff. It warns when late invoices could leave you overdrawn, or too thin to pay for services.

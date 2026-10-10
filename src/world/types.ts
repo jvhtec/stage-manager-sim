@@ -652,7 +652,7 @@ export interface Run {
   bonus?: number;
 }
 
-export type DilemmaKind = 'audit' | 'dispute' | 'dirty' | 'sponsor' | 'charity' | 'venue' | 'ownfest' | 'shareholders' | 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
+export type DilemmaKind = 'change' | 'audit' | 'dispute' | 'dirty' | 'sponsor' | 'charity' | 'venue' | 'ownfest' | 'shareholders' | 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
 
 /** A problem that needs your call (dilemmas.ts). */
 export interface Dilemma {
@@ -939,6 +939,8 @@ export interface TycoonState {
   charts?: YearChart[];
   /** Why things went wrong: the recent incident log (consequences.ts). */
   incidents?: Incident[];
+  /** What you've taught each client about extras (changes.ts). */
+  clients?: Record<string, { paid: number; absorbed: number; refused: number; declined: number }>;
   /** Maintenance you've put off because cash was short. */
   lapses?: { workshop?: { hour: number; incidentId: string } };
   /** Exclusive production deals with acts (deals.ts). */

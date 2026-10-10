@@ -28,6 +28,7 @@ import { ruleCountry, showRules } from '@/world/rules';
 import { estimateArrival, estimateJobCosts, projectCoverage } from '@/world/queries';
 import { DEPTS, type Gig, type TycoonState } from '@/world/types';
 import { Bar, Stat, TierChip } from './bits';
+import { clientNote } from '@/world/changes';
 import { BrandBadge } from './brands';
 import { distance, kmoney, money } from './format';
 import type { WinCtx } from './types';
@@ -165,6 +166,7 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
           </span>
         </Stat>
       )}
+      {gig.status === 'offer' && !gig.event && !gig.festival && <Stat label="Client">{clientNote(state, gig.act)}</Stat>}
       {gig.status === 'offer' && (
         <Stat label="Book by">
           {formatDay(state, gig.acceptByDay)}{' '}

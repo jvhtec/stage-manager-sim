@@ -20,6 +20,7 @@ import {
 } from '@/world/catalog';
 import { formatDay, formatHour, yearOf } from '@/world/core';
 import { MILESTONES } from '@/world/milestones';
+import { forecastCash } from '@/world/cashflow';
 import { chainText, incidentsOf } from '@/world/consequences';
 import { SCENARIOS, getScenario } from '@/world/scenarios';
 import { DIFFICULTIES, DIFFICULTY_IDS, GOALS, GOAL_IDS, goalDeadlineYear, legacyScore } from '@/world/scenario';
@@ -117,6 +118,7 @@ export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
           </div>
         </>
       )}
+      <CashForecast state={state} />
       <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
         <button className="tt-btn sm" disabled={state.company.loan >= creditLimit(state)} onClick={() => act(borrow)}>
           Borrow {money(Math.min(borrowStep(state), Math.max(0, creditLimit(state) - state.company.loan)))}
@@ -548,6 +550,12 @@ export function HelpWindow() {
         <li>
           <b>Your goal</b>: you choose one (and a difficulty) when you start a company — see how you're doing in the League,
           along with your legacy score. Reach it and the game keeps going; the score is what you leave behind.
+        </li>
+        <li>
+          <b>Cause and effect</b>: promoters sometimes pay late, so keep a cash cushion — when it runs thin, services and the
+          workshop get put off, worn trucks and kit fail, and the next bad night is written up in the League (<i>Post-mortems</i>)
+          with the chain that led to it. Clients ask for extras at load-in; give too many away and they expect them. The Money
+          window forecasts the next eight weeks.
         </li>
         <li>
           Buy bigger trucks and more gear, and win reputation to unlock arenas and stadiums. Every January the industry awards
@@ -1070,6 +1078,49 @@ function PostMortems({ state }: { state: TycoonState }) {
       ) : (
         <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
           When something goes wrong — a breakdown, a rough night, a bill you couldn't pay — the cause is written up here, including what set it up.
+        </div>
+      )}
+    </>
+  );
+}
+
+/** The next eight weeks of cash, as an estimate with a range. */
+function CashForecast({ state }: { state: TycoonState }) {
+  const world = worldOf(state);
+  const f = useMemo(() => forecastCash(state, world), [state, world]);
+  const hi = Math.max(1, ...f.weeks.map(w => w.high));
+  const lo = Math.min(...f.weeks.map(w => w.low));
+  const pad = (hi - lo) * 0.1 || 1;
+  const top = hi + pad;
+  const bottom = lo - pad;
+  const span = top - bottom || 1;
+  const pct = (v: number) => `${Math.round(((v - bottom) / span) * 100)}%`;
+  const nextBills = f.bills.filter(b => b.day <= f.bills[0]?.day).map(b => `${b.label} ${money(b.amount)}`).join(' · ');
+  return (
+    <>
+      <h4>Cash forecast, next {f.weeks.length} weeks</h4>
+      <div style={{ display: 'flex', gap: 3, alignItems: 'stretch', height: 54 }}>
+        {f.weeks.map(w => (
+          <div key={w.week} style={{ flex: 1, position: 'relative', background: 'rgba(255,255,255,0.05)' }} title={`Week ${w.week}: about ${money(w.expected)} (${money(w.low)} to ${money(w.high)})`}>
+            <div style={{ position: 'absolute', left: 0, right: 0, bottom: pct(w.low), top: `calc(100% - ${pct(w.high)})`, background: w.low < 0 ? 'rgba(220,60,60,0.45)' : 'rgba(120,170,255,0.35)' }} />
+            <div style={{ position: 'absolute', left: 0, right: 0, height: 2, bottom: pct(w.expected), background: w.expected < 0 ? '#ff6b6b' : '#e8eefc' }} />
+            {bottom < 0 && top > 0 && <div style={{ position: 'absolute', left: 0, right: 0, height: 1, bottom: pct(0), background: 'rgba(255,255,255,0.35)' }} />}
+          </div>
+        ))}
+      </div>
+      <div className="tt-dim" style={{ whiteSpace: 'normal', marginTop: 4, fontSize: 11 }}>
+        Expected low point: <b>{money(f.lowest.expected)}</b> in week {f.lowest.week}. Estimates are good to about ±{Math.round(f.accuracy * 100)}%
+        {f.accuracy > 0.12 ? ' — office staff at your bases sharpen it.' : '.'}
+        {nextBills ? ` Next bills: ${nextBills}.` : ''}
+      </div>
+      {f.riskWeek && (
+        <div className="tt-bad" style={{ whiteSpace: 'normal', marginTop: 3 }}>
+          If invoices run late you could be overdrawn by week {f.riskWeek}.
+        </div>
+      )}
+      {!f.riskWeek && f.squeezeWeek && (
+        <div className="tt-dim" style={{ whiteSpace: 'normal', marginTop: 3 }}>
+          By week {f.squeezeWeek} cash could be too thin to pay for services, and maintenance would be put off.
         </div>
       )}
     </>

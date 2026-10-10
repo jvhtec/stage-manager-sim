@@ -7,6 +7,7 @@
  * Venue choices don't play out until the show: they're kept on the gig as
  * `mods` and folded into the night's quality, failure risk and weather.
  */
+import { changeChance, makeChange, resolveChange, type ChangeKind } from './changes';
 import { worldOf } from './mapgen';
 import { ruleCountry } from './rules';
 import { hasStagehandUnions } from './venueTraits';
@@ -74,7 +75,7 @@ export function breakdownDilemma(s: TycoonState, v: Vehicle) {
 
 type Maker = (s: TycoonState, gig: Gig, rng: Rng) => Omit<Dilemma, 'id' | 'gigId' | 'createdHour' | 'expiresHour'> | null;
 
-export const MAKERS: Record<Exclude<DilemmaKind, 'breakdown' | 'raise' | 'burnout' | 'tradeshow' | 'pricewar' | 'shareholders' | 'ownfest' | 'venue' | 'sponsor' | 'charity' | 'dirty' | 'dispute' | 'audit'>, Maker> = {
+export const MAKERS: Record<Exclude<DilemmaKind, 'change' | 'breakdown' | 'raise' | 'burnout' | 'tradeshow' | 'pricewar' | 'shareholders' | 'ownfest' | 'venue' | 'sponsor' | 'charity' | 'dirty' | 'dispute' | 'audit'>, Maker> = {
   customs: (s, gig) =>
     !gig.overseas
       ? null
@@ -178,6 +179,11 @@ export function hourlyCrises(s: TycoonState, rng: Rng) {
   s.gigs.forEach(gig => {
     if (gig.status !== 'booked' || s.hour !== loadInHour(gig)) return;
     if (!s.vehicles.some(v => v.owner === 'player' && v.orders.includes(gig.id))) return;
+    // Clients ask for extras — more so the more they've been given for free.
+    const own = dealRng(s, `change-${gig.id}`);
+    if (!gig.event && own.chance(changeChance(s, gig))) {
+      s.dilemmas.push({ ...makeChange(s, gig, own), id: newId(s, 'dl'), gigId: gig.id, createdHour: s.hour, expiresHour: Math.max(s.hour + 1, showStartHour(gig) - 1) });
+    }
     if (!rng.chance((gig.overseas ? OVERSEAS_CRISIS_CHANCE : CRISIS_CHANCE(gig.tier)) * difficultyOf(s).crises)) return;
     // Abroad, the rig crossing a border is the likeliest thing to go wrong.
     const kinds = gig.overseas ? (['customs', 'customs', 'manager', 'injury'] as (keyof typeof MAKERS)[]) : VENUE_KINDS.filter(k => k !== 'storm' && k !== 'customs' || (k === 'storm' && !!gig.festival));
@@ -396,6 +402,11 @@ export function resolveDilemma(s: TycoonState, id: string, optionId: string, aut
       break;
     case 'tradeshow:visit':
       attendShow(s, d.payload ?? '', 'visit');
+      break;
+    case 'change:absorb':
+    case 'change:charge':
+    case 'change:decline':
+      line = `${d.title}: ${option.label.toLowerCase()}. ${resolveChange(s, gig, (d.payload ?? 'hour') as ChangeKind, option.id, dealRng(s, d.id))}`;
       break;
     case 'customs:partial':
       if (gig) addMods(gig, { quality: -0.07, failureFactor: 1.15 });
