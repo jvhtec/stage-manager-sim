@@ -368,6 +368,8 @@ function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
     }
     case 'parked':
     case 'scheduled':
+      // Called in by the maker (shocks.ts): stays in the yard until the fix is done.
+      if ((v.recalledUntil ?? 0) > s.hour) return;
       decide(s, world, v);
       return;
     case 'broken':

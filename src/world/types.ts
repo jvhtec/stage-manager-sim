@@ -349,11 +349,25 @@ export interface VehicleRoute {
   total?: number;
 }
 
+/** A shock that runs for a while and bends the market or the payers (shocks.ts). */
+export interface Shock {
+  kind: 'lose-client' | 'recall' | 'downturn' | 'late-payers';
+  fromDay: number;
+  toDay: number;
+  /** Multipliers on the amount of work offered and the fees it pays. */
+  demand?: number;
+  fees?: number;
+  /** Multiplier on the chance an invoice is paid late (and how late). */
+  late?: number;
+}
+
 export interface Vehicle {
   id: string;
   /** 'player' or a rival id. */
   owner: string;
   /** Two drivers taking turns in a sleeper cab: quicker on long hauls, at a second driver's pay. */
+  /** Called in by the maker: can't set off on a new job until this hour (shocks.ts). */
+  recalledUntil?: number;
   teamDrivers?: boolean;
   modelId: string;
   name: string;
@@ -1009,6 +1023,8 @@ export interface TycoonState {
   managers?: { production?: boolean; crew?: boolean; finance?: boolean; spendLimit?: 0.1 | 0.2 | 0.35 };
   /** Acts and venues that won't book you, until a day (blacklist.ts). Keys `act:Name`, `venue:id`. */
   blacklist?: Record<string, number>;
+  /** Downturns and late-payment waves running now or later (shocks.ts). */
+  shocks?: Shock[];
   /** Days you broke each act's rider. */
   breachLog?: Record<string, number[]>;
   /** What you've taught each client about extras (changes.ts). */

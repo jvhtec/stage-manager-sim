@@ -7,7 +7,7 @@
 import { clientTemper } from './changes';
 import type { Rng } from '@/lib/rng';
 import { book, dayOf, formatMoney, newId, pushNews } from './core';
-import { marketNow } from './market';
+import { marketNow, shockFactors } from './market';
 import { COUNCIL_PAYMENT_DAYS } from './rules';
 import type { Gig, InvoicingPolicy, Invoice, TycoonState } from './types';
 
@@ -81,8 +81,10 @@ export function dailyReceivables(s: TycoonState, rng: Rng) {
   s.receivables.forEach(inv => {
     if (inv.dueDay > today || inv.slipped || inv.insured) return;
     inv.slipped = true;
-    if (!rng.chance(LATE_RISK[Math.max(0, Math.min(4, inv.tier))] * LATE_TEMPER[clientTemper(inv.act)] * (s.managers?.finance ? 0.6 : 1))) return;
-    inv.dueDay = today + LATE_SLIP_MIN + rng.nextInt(LATE_SLIP_SPREAD + 1);
+    // A late-payment wave (shocks.ts) makes it likelier, and later.
+    const wave = shockFactors(s, today).late;
+    if (!rng.chance(Math.min(0.9, LATE_RISK[Math.max(0, Math.min(4, inv.tier))] * LATE_TEMPER[clientTemper(inv.act)] * (s.managers?.finance ? 0.6 : 1) * wave))) return;
+    inv.dueDay = today + LATE_SLIP_MIN + rng.nextInt(Math.round(LATE_SLIP_SPREAD * Math.min(2, wave)) + 1);
     pushNews(s, `${inv.act}'s promoter is late paying your ${formatMoney(s, inv.amount)} invoice — they promise it within ${inv.dueDay - today} days.`, 'bad');
   });
   const due = s.receivables.filter(i => i.dueDay <= today);

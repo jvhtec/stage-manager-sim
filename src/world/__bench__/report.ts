@@ -5,6 +5,7 @@
  * lays out a comparison of strategies as markdown.
  */
 import { LEDGER_LABELS, type LedgerCategory } from '../types';
+import { currencyFor, formatCompact } from '../content/currency';
 import type { BotReport, Strategy } from './bot';
 
 const CAUSES: Record<string, string> = {
@@ -47,13 +48,32 @@ const CAUSES: Record<string, string> = {
 };
 const label = (k: string) => CAUSES[k] ?? k;
 const pct = (n: number) => `${Math.round(n * 100)}%`;
-const k = (n: number) => (Math.abs(n) >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : `${Math.round(n / 1000)}k`);
+
+/**
+ * Money in the run's own currency, as of its last year: pounds for Britain, pesetas for Spain
+ * before 2002 and euros after. Runs in different currencies are never added or compared directly.
+ */
+export const moneyOf = (r: Pick<BotReport, 'country' | 'startYear' | 'yearsRun'>) => {
+  const year = r.startYear + Math.floor(r.yearsRun);
+  const c = currencyFor(r.country, year);
+  return (n: number) => formatCompact(c, n);
+};
+/** A cohort: one country from one start year, so one currency. */
+export const cohortOf = (r: Pick<BotReport, 'country' | 'startYear'>) => `${r.country} ${r.startYear}`;
+export function cohortTitle(r: Pick<BotReport, 'country' | 'startYear' | 'yearsRun'>): string {
+  const name = ({ GB: 'Britain', ES: 'Spain', DE: 'Germany', FR: 'France', IT: 'Italy', US: 'United States' } as Record<string, string>)[r.country] ?? r.country;
+  const end = r.startYear + Math.floor(r.yearsRun);
+  const c = currencyFor(r.country, end);
+  const unit = c.rate !== 1 ? `${c.symbol} (game units ×${c.rate}; the euro arrives in 2002)` : c.symbol;
+  return `${name} from ${r.startYear} — money in ${unit}`;
+}
 
 /** The show-side causes: what went wrong on the night. */
 const NIGHT = ['late', 'kit-failed', 'kit-worn', 'short-crew', 'tired-crew', 'prep', 'unrehearsed', 'tickets', 'venue', 'rider', 'room', 'feud', 'slow-load', 'breakdown', 'no-show', 'change-hour', 'change-kit', 'change-early'];
 
 export function explain(r: BotReport): string[] {
   const out: string[] = [];
+  const k = moneyOf(r);
   const margin = r.revenue ? (r.revenue - r.costs) / r.revenue : 0;
   out.push(r.survived ? `Survived ${r.yearsRun} years, worth ${k(r.value)} (reputation ${r.reputation}).` : `Went under after ${r.yearsRun} years: ${r.gameOver}`);
   // Money.
@@ -97,17 +117,18 @@ export function explain(r: BotReport): string[] {
   return out;
 }
 
-const median = (xs: number[]) => {
+export const median = (xs: number[]) => {
   const a = [...xs].sort((x, y) => x - y);
   return a.length ? (a.length % 2 ? a[(a.length - 1) / 2] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2) : 0;
 };
+export const marginOf = (r: BotReport) => (r.revenue ? (r.revenue - r.costs) / r.revenue : 0);
 
 /**
  * Is a gap between two strategies bigger than the spread within them? The same strategy on another
  * seed can land millions apart (one lost stadium contract changes the next eight years), so a
- * ranking inside that noise isn't a finding.
+ * ranking inside that noise isn't a finding. Only ever within one cohort (one currency).
  */
-function noiseNote(reports: BotReport[], strategies: Strategy[]): string[] {
+function noiseNote(reports: BotReport[], strategies: Strategy[], k: (n: number) => string): string[] {
   const stats = strategies
     .map(st => {
       const vs = reports.filter(r => r.strategy === st.id).map(r => r.value);
@@ -126,35 +147,54 @@ function noiseNote(reports: BotReport[], strategies: Strategy[]): string[] {
   return out.length ? ['**Is the ranking real?**', '', ...out, ''] : [];
 }
 
+/** Runs grouped by cohort (country and start year), in the order they first appear. */
+export function byCohort<T extends Pick<BotReport, 'country' | 'startYear'>>(reports: T[]): T[][] {
+  const groups = new Map<string, T[]>();
+  reports.forEach(r => groups.set(cohortOf(r), [...(groups.get(cohortOf(r)) ?? []), r]));
+  return [...groups.values()];
+}
+
+function strategyTable(reports: BotReport[], strategies: Strategy[], k: (n: number) => string): string[] {
+  const lines = [
+    '| Strategy | Survived | Median value | Range | Margin | Avg quality | Failed | Overdrawn months | Breakdowns /100k km | Crew lost | Cancellations | Bans |',
+    '|---|---|---|---|---|---|---|---|---|---|---|---|',
+  ];
+  strategies.forEach(st => {
+    const rs = reports.filter(r => r.strategy === st.id);
+    if (!rs.length) return;
+    lines.push(
+      `| ${st.label} | ${rs.filter(r => r.survived).length}/${rs.length} | ${k(median(rs.map(r => r.value)))} | ${k(Math.min(...rs.map(r => r.value)))} – ${k(Math.max(...rs.map(r => r.value)))} | ${pct(median(rs.map(marginOf)))} | ${pct(median(rs.map(r => r.avgQuality)))} | ${pct(median(rs.map(r => r.failed / Math.max(1, r.shows + r.failed))))} | ${median(rs.map(r => r.monthsOverdrawn))} | ${median(rs.map(r => r.road.per100k)).toFixed(2)} | ${median(rs.map(r => r.crewLost))} | ${median(rs.map(r => r.incidents.causes['client-cancel'] ?? 0))} | ${median(rs.map(r => r.bans))} |`,
+    );
+  });
+  return [...lines, ''];
+}
+
 export function renderReport(reports: BotReport[], strategies: Strategy[], meta: { years: number; runs: string }): string {
   const lines: string[] = [];
   lines.push('# Balance report');
   lines.push('');
   lines.push(`Generated by \`npm run balance:report\` — ${meta.runs}, ${meta.years} years each. Deterministic: the same code gives the same report.`);
   lines.push('');
-  lines.push('## Strategies compared');
+  lines.push('Each country is reported on its own, in its own money: a British company is valued in pounds and a Spanish one in pesetas (euros from 2002), so no figure here adds or compares the two. Margins, failure rates and breakdown rates are ratios and can be read across countries.');
   lines.push('');
-  lines.push('| Strategy | Survived | Median value | Range | Margin | Avg quality | Failed | Overdrawn months | Crew lost | Cancellations | Bans |');
-  lines.push('|---|---|---|---|---|---|---|---|---|---|---|');
-  strategies.forEach(st => {
-    const rs = reports.filter(r => r.strategy === st.id);
-    if (!rs.length) return;
-    const margin = median(rs.map(r => (r.revenue ? (r.revenue - r.costs) / r.revenue : 0)));
-    lines.push(
-      `| ${st.label} | ${rs.filter(r => r.survived).length}/${rs.length} | ${k(median(rs.map(r => r.value)))} | ${k(Math.min(...rs.map(r => r.value)))}–${k(Math.max(...rs.map(r => r.value)))} | ${pct(margin)} | ${pct(median(rs.map(r => r.avgQuality)))} | ${pct(median(rs.map(r => r.failed / Math.max(1, r.shows + r.failed))))} | ${median(rs.map(r => r.monthsOverdrawn))} | ${median(rs.map(r => r.crewLost))} | ${median(rs.map(r => r.incidents.causes['client-cancel'] ?? 0))} | ${median(rs.map(r => r.bans))} |`,
-    );
+  byCohort(reports).forEach(cohort => {
+    const k = moneyOf(cohort[0]);
+    lines.push(`## ${cohortTitle(cohort[0])}`);
+    lines.push('');
+    lines.push(...strategyTable(cohort, strategies, k));
+    lines.push(...noiseNote(cohort, strategies, k));
   });
+  lines.push('## Why each run went the way it did');
   lines.push('');
-  lines.push(...noiseNote(reports, strategies));
   strategies.forEach(st => {
     const rs = reports.filter(r => r.strategy === st.id);
     if (!rs.length) return;
-    lines.push(`## ${st.label}`);
+    lines.push(`### ${st.label}`);
     lines.push('');
     lines.push(st.blurb);
     lines.push('');
     rs.forEach(r => {
-      lines.push(`### ${r.country} from ${r.startYear}, seed ${r.seed}`);
+      lines.push(`#### ${r.country} from ${r.startYear}, seed ${r.seed}`);
       lines.push('');
       explain(r).forEach(l => lines.push(`- ${l}`));
       lines.push('');

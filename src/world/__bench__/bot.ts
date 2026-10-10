@@ -24,6 +24,7 @@ import {
   refurbishGear,
   rehearseShow,
   repay,
+  unassignVehicle,
   setCrewPicks,
   setManager,
   setPolicy,
@@ -47,6 +48,7 @@ import { averageCondition, ownedStock, refurbishCost } from '../wear';
 import { relationOf, rapport } from '../bonds';
 import { checkInvariants } from '../invariants';
 import { MANAGERS } from '../management';
+import { applyShock, recalled, type ShockKind } from '../shocks';
 import { DEPTS, type LedgerCategory, type TycoonState } from '../types';
 import type { CountryCode } from '../content/countries';
 
@@ -71,6 +73,7 @@ export type Feature =
   | 'standardise' // buy one brand per department
   | 'haggle'
   | 'learn' // read its own post-mortems and fix the biggest recurring cause
+  | 'replan' // move shows off trucks that are off the road for days
   | 'maintain'; // refurbish worn product lines
 
 export interface Strategy {
@@ -85,7 +88,7 @@ export interface Strategy {
   policies: Partial<Record<'workshop' | 'pay' | 'insurance' | 'training' | 'rest', string>>;
 }
 
-const CORE: Feature[] = ['gear', 'invest', 'tours', 'merch', 'annex', 'train', 'invoice', 'sponsor', 'haggle', 'maintain'];
+const CORE: Feature[] = ['gear', 'invest', 'tours', 'merch', 'annex', 'train', 'invoice', 'sponsor', 'haggle', 'maintain', 'replan'];
 
 export const STRATEGIES: Record<string, Strategy> = {
   baseline: {
@@ -119,7 +122,7 @@ export const STRATEGIES: Record<string, Strategy> = {
     id: 'lean',
     label: 'Lean operator',
     blurb: 'Keeps overheads down: low pay, no workshop, no insurance, no training, no heads. Still meets riders and watches the cash.',
-    features: ['gear', 'invest', 'tours', 'invoice', 'riders', 'cash', 'haggle'],
+    features: ['gear', 'invest', 'tours', 'invoice', 'riders', 'cash', 'haggle', 'replan'],
     fixLimit: 0.15,
     minFee: 500,
     policies: { insurance: 'none', training: 'none', workshop: 'none', pay: 'low' },
@@ -141,6 +144,18 @@ export interface BotRun {
   years: number;
   seed: number;
   strategy: Strategy;
+  /** Shocks to throw at the company, by day of the run (shocks.ts). */
+  shocks?: { kind: ShockKind; day: number }[];
+}
+
+/** One month of the run. */
+export interface BotMonth {
+  day: number;
+  year: number;
+  cash: number;
+  value: number;
+  reputation: number;
+  shows: number;
 }
 
 export interface BotReport {
@@ -180,9 +195,13 @@ export interface BotReport {
   monthsOverdrawn: number;
   lowestCash: number;
   forecastWarnings: number;
-  bot: { termsAsked: number; termsWon: number; crossHires: number; fixes: number; crewSplits: number; heads: string[]; lessons: string[]; refurbished: number; borrowed: number; factoredMonths: number; frozenMonths: number };
+  bot: { termsAsked: number; termsWon: number; crossHires: number; fixes: number; crewSplits: number; heads: string[]; lessons: string[]; refurbished: number; borrowed: number; factoredMonths: number; frozenMonths: number; replanned: number };
   rivals: { alive: number; gone: number; shows: number; failed: number; avgQuality: number; crossHires: number; fixes: number; declined: Record<string, number>; cashNegative: number };
   invariantViolations: string[];
+  /** The company month by month. */
+  series: BotMonth[];
+  /** The shocks thrown at it, and what they hit. */
+  shockLog: { kind: ShockKind; day: number; what: string }[];
 }
 
 function ensureGear(s: S, gig: S, depotId: string, strategy: Strategy): S {
@@ -214,13 +233,13 @@ function ensureGear(s: S, gig: S, depotId: string, strategy: Strategy): S {
 }
 
 export function runBot(run: BotRun): BotReport {
-  const { country, startYear, years, seed, strategy } = run;
+  const { country, startYear, years, seed, strategy, shocks = [] } = run;
   const on = (f: Feature) => strategy.features.includes(f);
   let s: S = createTycoonGame({ companyName: 'Bot', color: '#f00', seed, country, startYear });
   const world = worldOf(s);
   for (const [k, v] of Object.entries(strategy.policies)) s = ok(s, setPolicy(s, k as S, v as S));
   s = ok(s, setPolicy(s, 'rehearsal', 'auto'));
-  const bot = { termsAsked: 0, termsWon: 0, crossHires: 0, fixes: 0, crewSplits: 0, heads: [] as string[], lessons: [] as string[], refurbished: 0, borrowed: 0, factoredMonths: 0, frozenMonths: 0 };
+  const bot = { termsAsked: 0, termsWon: 0, crossHires: 0, fixes: 0, crewSplits: 0, heads: [] as string[], lessons: [] as string[], refurbished: 0, borrowed: 0, factoredMonths: 0, frozenMonths: 0, replanned: 0 };
   const violations: string[] = [];
   let monthsOverdrawn = 0;
   let lowestCash = Infinity;
@@ -229,11 +248,15 @@ export function runBot(run: BotRun): BotReport {
   let learned = { kit: 0, shows: 0 };
   const conditions: number[] = [];
   const reliabilities: number[] = [];
+  const series: BotMonth[] = [];
+  const shockLog: BotReport['shockLog'] = [];
 
   for (let day = 0; day < 365 * years && !s.gameOver; day++) {
     s = advanceHours(s, 24);
     const today = dayOf(s.hour);
     lowestCash = Math.min(lowestCash, s.company.cash);
+    for (const sh of shocks) if (sh.day === day) shockLog.push({ kind: sh.kind, day, what: applyShock(s, sh.kind) });
+    if (day % 30 === 0) series.push({ day, year: yearOf(s, s.hour), cash: Math.round(s.company.cash), value: companyValue(s), reputation: Math.round(s.company.reputation * 10) / 10, shows: s.stats.showsPlayed });
     if (day % 30 === 0) conditions.push(averageCondition(s, ownedStock(s)));
     if (day % 30 === 0) s.vehicles.forEach((x: S) => x.owner === 'player' && reliabilities.push(x.reliability));
     if (day % 30 === 0) checkInvariants(s).forEach(v => violations.length < 200 && violations.push(`${v.kind}: ${v.message}`));
@@ -254,7 +277,7 @@ export function runBot(run: BotRun): BotReport {
       let g = g0;
       if (gigBookingBar(s, g).reason) continue;
       if (roadDistance(world, s.company.hqCityId, g.cityId) > maxDist || g.day - today < 4) continue;
-      const v = s.vehicles.find((x: S) => x.owner === 'player' && x.orders.length === 0 && x.status !== 'broken' && getModel(x.modelId).kind !== 'bus');
+      const v = s.vehicles.find((x: S) => x.owner === 'player' && x.orders.length === 0 && x.status !== 'broken' && !recalled(s, x) && getModel(x.modelId).kind !== 'bus');
       if (!v) continue;
       if (g.fee < strategy.minFee && g.tier > 1) continue;
       const home = s.depots.find((d: S) => d.cityId === v.homeCityId);
@@ -281,7 +304,7 @@ export function runBot(run: BotRun): BotReport {
     if (on('tours')) {
       for (const t of s.tours.filter((x: S) => x.status === 'offer' && x.kind === 'national')) {
         if (tourBookingBar(s, t, tourMaxTier(s, t)).reason) continue;
-        const v = s.vehicles.find((x: S) => x.owner === 'player' && x.orders.length === 0 && getModel(x.modelId).kind !== 'bus');
+        const v = s.vehicles.find((x: S) => x.owner === 'player' && x.orders.length === 0 && !recalled(s, x) && getModel(x.modelId).kind !== 'bus');
         if (!v) continue;
         const first = Math.min(...t.gigIds.map((id: string) => s.gigs.find((g: S) => g.id === id)?.day ?? 1e9));
         if (first - today < 5) continue;
@@ -294,6 +317,23 @@ export function runBot(run: BotRun): BotReport {
         } else s = b.state;
       }
     }
+
+    // A truck off the road for days (a recall): put its shows on another truck if one is free.
+    if (on('replan'))
+      for (const v of s.vehicles.filter((x: S) => x.owner === 'player' && recalled(s, x) && x.status !== 'driving' && x.orders.length)) {
+        for (const id of [...v.orders]) {
+          const g = s.gigs.find((x: S) => x.id === id);
+          if (!g || g.day * 24 >= v.recalledUntil) continue;
+          const spare = s.vehicles.find((x: S) => x.owner === 'player' && x.id !== v.id && x.orders.length === 0 && x.status !== 'broken' && !recalled(s, x) && getModel(x.modelId).kind !== 'bus');
+          if (!spare) break;
+          const u = unassignVehicle(s, v.id, id);
+          if (!u.result.ok) continue;
+          const a = assignVehicle(u.state, spare.id, id);
+          if (!a.result.ok) continue;
+          s = a.state;
+          bot.replanned++;
+        }
+      }
 
     // Advancing the next few days' shows: riders, rooms, crew.
     for (const g of s.gigs.filter((x: S) => x.status === 'booked' && x.day - today >= 1 && x.day - today <= 5)) {
@@ -474,6 +514,8 @@ export function runBot(run: BotRun): BotReport {
       cashNegative: rivalOps.filter((o: S) => o.cash < 0).length,
     },
     invariantViolations: violations,
+    series,
+    shockLog,
   };
 }
 

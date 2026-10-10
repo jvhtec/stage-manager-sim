@@ -9,7 +9,7 @@ import { getModel } from './catalog';
 import { monthlyOverheads, monthlyRent, monthlySalaries } from './facilities';
 import { monthlyLeasesTotal } from './finance';
 import { monthlyPremium } from './incidents';
-import { monthlyInterest } from './market';
+import { monthlyInterest, shockFactors } from './market';
 import { defaultRisk, LATE_RISK, paymentDays } from './receivables';
 import { monthlyWorkshopCost } from './wear';
 import { PAY } from './crew';
@@ -73,7 +73,7 @@ export function forecastCash(s: TycoonState, world: WorldMap, weeks = FORECAST_W
   // Invoices: most pay on the day, some pay late, a few never pay.
   s.receivables.forEach(inv => {
     const def = defaultRisk(s, inv.tier);
-    const late = inv.slipped || inv.insured ? 0 : LATE_RISK[Math.max(0, Math.min(4, inv.tier))];
+    const late = inv.slipped || inv.insured ? 0 : Math.min(0.9, LATE_RISK[Math.max(0, Math.min(4, inv.tier))] * shockFactors(s, inv.dueDay).late);
     const net = inv.amount * (1 - def);
     add(inv.dueDay, net * (1 - late), inv.slipped || inv.insured ? net : 0, inv.amount);
     add(inv.dueDay + LATE_DAYS, net * late, inv.slipped || inv.insured ? 0 : net, 0);

@@ -13,6 +13,7 @@ import { getModel, tierInfo } from './catalog';
 import { consoleInputs } from './content/consoles';
 import { expectedQuality, productsAvailableIn } from './content/gear';
 import { dateOfDay, dayOf, yearOf } from './core';
+import { shockFactors } from './market';
 import { OVERHEAD } from './facilities';
 import { DEFAULT_RISK, LATE_RISK, LATE_SLIP_MIN, LATE_SLIP_SPREAD, paymentDays } from './receivables';
 import { showPayout } from './gate';
@@ -168,7 +169,8 @@ export function playRivalShow(s: TycoonState, r: Rival, gig: Gig, rng: Rng): num
   const wait = paymentDays(gig);
   if (payout > 0 && wait > 0) {
     const tier = Math.max(0, Math.min(4, gig.tier));
-    const slip = rng.chance(LATE_RISK[tier]) ? LATE_SLIP_MIN + rng.nextInt(LATE_SLIP_SPREAD + 1) : 0;
+    const wave = shockFactors(s, gig.day).late;
+    const slip = rng.chance(Math.min(0.9, LATE_RISK[tier] * wave)) ? LATE_SLIP_MIN + rng.nextInt(Math.round(LATE_SLIP_SPREAD * Math.min(2, wave)) + 1) : 0;
     if (!rng.chance(DEFAULT_RISK[tier])) (ops.owed ??= []).push({ day: gig.day + wait + slip, amount: payout });
     ops.cash -= cost;
   } else ops.cash += payout - cost;

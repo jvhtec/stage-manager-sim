@@ -206,6 +206,7 @@ export function assignVehicle(state: TycoonState, vehicleId: string, gigId: stri
   if (gig0.status !== 'booked') return fail(state, 'Book the show first.');
   if (v0.orders.includes(gigId)) return fail(state, `${v0.name} is already on that job.`);
   if (state.hour >= showEndHour(gig0)) return fail(state, 'That show is already over.');
+  if ((v0.recalledUntil ?? 0) > gig0.day * 24) return fail(state, `${v0.name} is recalled by the maker until ${formatDay(state, Math.ceil(v0.recalledUntil! / 24))}.`);
   const world = worldOf(state);
   if (!Number.isFinite(roadDistance(world, v0.homeCityId, gig0.cityId))) {
     return fail(state, 'There is no road from this vehicle’s depot to that venue.');

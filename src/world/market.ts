@@ -10,6 +10,13 @@ import { book, dateOfDay, dayOf, formatMoney, pushNews } from './core';
 import { SEASON, WAGE_SCHEMES, baseRate, climateAt, fuelIndexAt, type ClimatePeriod } from './content/economy';
 import type { TycoonState } from './types';
 
+/** What the running shocks (shocks.ts) do to the market and the payers on a day. */
+export function shockFactors(s: Pick<TycoonState, 'shocks'>, day: number): { demand: number; fees: number; late: number } {
+  return (s.shocks ?? [])
+    .filter(x => x.fromDay <= day && day < x.toDay)
+    .reduce((f, x) => ({ demand: f.demand * (x.demand ?? 1), fees: f.fees * (x.fees ?? 1), late: f.late * (x.late ?? 1) }), { demand: 1, fees: 1, late: 1 });
+}
+
 /** What banks add on top of the central-bank rate for a small events firm. */
 export const LOAN_MARGIN = 0.035;
 /** Share of crew wages the state covers during a shutdown. */
@@ -31,15 +38,16 @@ export interface MarketNow {
   fuel: number;
 }
 
-export function marketOnDay(state: Pick<TycoonState, 'startYear' | 'country'>, day: number): MarketNow {
+export function marketOnDay(state: Pick<TycoonState, 'startYear' | 'country'> & Partial<Pick<TycoonState, 'shocks'>>, day: number): MarketNow {
   const date = dateOfDay(state, day);
   const year = date.getUTCFullYear();
   const month = date.getUTCMonth() + 1;
   const periods = climateAt(state.country, year, month);
   const season = SEASON[month - 1];
-  const demand = periods.reduce((m, p) => m * p.demand, 1) * season;
+  const shock = shockFactors(state, day);
+  const demand = periods.reduce((m, p) => m * p.demand, 1) * season * shock.demand;
   // Peak season pays a little better; January pays a little worse.
-  const fees = periods.reduce((m, p) => m * p.fees, 1) * (1 + (season - 1) * 0.3);
+  const fees = periods.reduce((m, p) => m * p.fees, 1) * (1 + (season - 1) * 0.3) * shock.fees;
   return {
     year,
     month,
