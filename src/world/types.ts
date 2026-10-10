@@ -1023,6 +1023,10 @@ export interface TycoonState {
   managers?: { production?: boolean; crew?: boolean; finance?: boolean; spendLimit?: 0.1 | 0.2 | 0.35 };
   /** Acts and venues that won't book you, until a day (blacklist.ts). Keys `act:Name`, `venue:id`. */
   blacklist?: Record<string, number>;
+  /** Fees by client, this year and last (reputation.ts). */
+  clientFees?: Record<number, Record<string, number>>;
+  /** The last day you did good work at each venue tier (reputation.ts). */
+  lastGoodTier?: Record<number, number>;
   /** Downturns and late-payment waves running now or later (shocks.ts). */
   shocks?: Shock[];
   /** Days you broke each act's rider. */

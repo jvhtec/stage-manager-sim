@@ -110,6 +110,7 @@ import { dailyContracts, houseRigAt, monthlyContracts } from './contracts';
 import { dailyMarket, fuelMultiplier, marketNow, monthlyInterest } from './market';
 import { getRegion } from './content/world';
 import { KM_PER_UNIT, getCityPath, roadDistance } from './pathfinding';
+import { TIER_REP_CEILING, monthlyReputation, noteShow } from './reputation';
 import { dailyDisruptions, monthlyWinter, tripCharges, yearlyDriversRules } from './infra';
 import { countTownShow, fadeTownShows } from './territory';
 import { returnFreight } from './freight';
@@ -119,8 +120,6 @@ import { DEPTS, type GearStock, type Gig, type TycoonState, type Vehicle, type W
 import { findArtist } from './content/artists';
 
 const TIER_WEIGHT = [0, 1, 1.3, 1.7, 2.2];
-/** Playing pubs can only get you so far — each venue tier caps the reputation it can earn you. */
-const TIER_REP_CEILING = [0, 38, 68, 92, 100];
 
 /**
  * Chance of a roadside breakdown per kilometre, from the truck's reliability: about one in 150,000 km
@@ -665,6 +664,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   gig.result = { quality, payout, lateHours, gearCoverage, crewCoverage, ...resultExtras };
   countTownShow(s, gig.cityId, 'player');
   s.company.reputation = Math.max(0, Math.min(100, reputationAfterShow(s.company.reputation, gig.tier, quality) + stakes.reputation));
+  noteShow(s, gig, quality);
   if (gig.event && !gig.event.citywide) recordEvent(s, yearOf(s, s.hour), quality);
   if (quality < BAD_NIGHT) strike(s, gig.act, `a bad night at ${where}`);
   recordVenueNight(s, gig.venueId, quality, false);
@@ -813,6 +813,7 @@ function monthlyTick(s: TycoonState, rng: Rng) {
     if (d.staff.office) s.cityRatings[d.cityId] = Math.min(100, (s.cityRatings[d.cityId] ?? 50) + 0.6 * d.staff.office);
   });
   monthlyWorkshop(s);
+  monthlyReputation(s);
   monthlyManagers(s);
   monthlyCrew(s, rng);
   monthlyTraining(s);

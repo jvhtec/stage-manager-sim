@@ -50,8 +50,7 @@ describe('shocks', () => {
   it('losing the biggest client cancels its booked shows and bans it', () => {
     const s = game();
     const today = dayOf(s.hour);
-    fakeGig(s, 'Big Act', today - 20, 50000, 'done');
-    fakeGig(s, 'Small Act', today - 10, 5000, 'done');
+    s.clientFees = { [s.startYear]: { 'Big Act': 50000, 'Small Act': 5000 } };
     const ahead = fakeGig(s, 'Big Act', today + 30, 40000, 'booked');
     const top = topClient(s)!;
     expect(top.act).toBe('Big Act');

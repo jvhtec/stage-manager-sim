@@ -11,6 +11,7 @@ import { book, dayOf, formatDay, formatMoney, pushNews } from './core';
 import { logIncident } from './consequences';
 import { ACT_BAN_DAYS } from './blacklist';
 import { cancelByClient } from './terms';
+import { clientFees } from './reputation';
 import type { Shock, TycoonState } from './types';
 import { shockFactors } from './market';
 
@@ -23,17 +24,15 @@ export const DOWNTURN = { months: 18, demand: 0.7, fees: 0.85 };
 export const LATE_WAVE = { months: 12, late: 3 };
 export const RECALL_DAYS = 12;
 
-/** The client that brought in the most money over the last year and what's booked ahead. */
+/** The client that brought in the most money this year and last, counting what's booked ahead. */
 export function topClient(s: TycoonState): { act: string; share: number } | undefined {
+  // What they've paid you this year and last, and what they've booked ahead.
   const today = dayOf(s.hour);
-  const by: Record<string, number> = {};
-  let total = 0;
+  const by = clientFees(s);
   s.gigs.forEach(g => {
-    if (g.status !== 'done' && g.status !== 'booked') return;
-    if (g.day < today - 365) return;
-    by[g.act] = (by[g.act] ?? 0) + g.fee;
-    total += g.fee;
+    if (g.status === 'booked' && g.day >= today) by[g.act] = (by[g.act] ?? 0) + g.fee;
   });
+  const total = Object.values(by).reduce((a, b) => a + b, 0);
   const top = Object.entries(by).sort((a, b) => b[1] - a[1])[0];
   return top ? { act: top[0], share: total ? top[1] / total : 0 } : undefined;
 }
