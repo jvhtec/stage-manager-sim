@@ -27,6 +27,7 @@ import {
   sellValue,
   travelHours,
   yearOf,
+  vehicleSpeed,
 } from './core';
 import { gigBookingBar } from './standing';
 import { worldOf } from './mapgen';
@@ -64,19 +65,19 @@ export function estimateArrival(state: TycoonState, v: Vehicle, gig: Gig): numbe
     .filter((g): g is Gig => !!g && g.id !== gig.id && g.day <= gig.day);
   const last = earlier[earlier.length - 1];
   if (last) {
-    return loadOutDoneHour(last) + travelHours(world, v.modelId, last.cityId, gig.cityId);
+    return loadOutDoneHour(last) + travelHours(world, v, last.cityId, gig.cityId);
   }
   if (v.status === 'driving' || v.status === 'broken') {
     const to = v.route!.to;
-    const remaining = Math.ceil((roadDistance(world, v.route!.from, to) - v.route!.progress) / getModel(v.modelId).speed);
+    const remaining = Math.ceil((roadDistance(world, v.route!.from, to) - v.route!.progress) / vehicleSpeed(v, world));
     const start = state.hour + Math.max(0, remaining) + Math.max(0, (v.brokenUntil ?? 0) - state.hour);
-    return start + travelHours(world, v.modelId, to, gig.cityId);
+    return start + travelHours(world, v, to, gig.cityId);
   }
   const from = v.cityId ?? v.homeCityId;
   const loaded = stockSize(v.cargo) + v.crew > 0;
   if (from === gig.cityId && (loaded || from !== v.homeCityId)) return state.hour;
   const depart = Math.max(state.hour, plannedDepartureHour(world, v, from, gig));
-  return depart + travelHours(world, v.modelId, from, gig.cityId);
+  return depart + travelHours(world, v, from, gig.cityId);
 }
 
 export interface JobSuggestion {
@@ -143,7 +144,8 @@ export interface CoverageProjection {
 export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjection {
   const vehicles = state.vehicles.filter(v => v.owner === 'player' && v.orders.includes(gig.id));
   const stock = new Map(state.depots.map(d => [d.cityId, { gear: { ...d.gear }, people: atDepot(state, d.id) }]));
-  const delivered: GearStock = { ...(vehicles.length ? houseRigAt(state, gig.venueId) : undefined) };
+  const delivered: GearStock = { ...(vehicles.length || gig.freight ? houseRigAt(state, gig.venueId) : undefined) };
+  if (gig.freight) addStock(delivered, gig.freight.gear);
   const people: CrewMember[] = [];
   let latestArrival = 0;
 
@@ -188,7 +190,8 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
     : 1;
   const vehicleIds = new Set(vehicles.map(v => v.id));
   const techIds = state.techs.filter(t => t.vehicleId && vehicleIds.has(t.vehicleId)).map(t => t.techId);
-  const onTime = !vehicles.length || latestArrival <= loadInHour(gig);
+  if (gig.freight) latestArrival = Math.max(latestArrival, gig.freight.arrives);
+  const onTime = (!vehicles.length && !gig.freight) || latestArrival <= loadInHour(gig);
   const expectedQuality = vehicles.length
     ? baseShowQuality({
         gearCoverage: evaluation.coverage,
@@ -255,7 +258,7 @@ export function estimateJobCosts(state: TycoonState, gig: Gig, projection = proj
     if (!Number.isFinite(dist)) return;
     fuel += dist * 2 * fuelPerTile(model) * fuelMultiplier(state);
     if (v.homeCityId === gig.cityId && !gig.overseas) return;
-    const away = Math.max(1, Math.ceil((loadOutDoneHour(gig) - loadInHour(gig) + (2 * dist) / model.speed) / HOURS_PER_DAY));
+    const away = Math.max(1, Math.ceil((loadOutDoneHour(gig) - loadInHour(gig) + (2 * dist) / vehicleSpeed(v, world)) / HOURS_PER_DAY));
     const crew = Math.min(model.crewSeats, gig.crewNeeded);
     nights += away;
     travel += away * crew * (PER_DIEM + (model.kind === 'bus' ? 0 : HOTEL_NIGHT));

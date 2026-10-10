@@ -7,7 +7,7 @@ import { ARTISTS, findArtist } from '../content/artists';
 import { rivalsFor } from '../content/companies';
 import { generateOffer } from '../offers';
 import { generateWorldTour, tourGigs } from '../tours';
-import { formatMoney } from '../core';
+import { formatMoney, formatMoneyShort } from '../core';
 import { deptTotals } from '../loading';
 import type { Tour } from '../types';
 
@@ -15,7 +15,7 @@ const game = (country: 'ES' | 'GB' | 'US' | 'DE' | 'FR' | 'IT', seed = 2024) =>
   createTycoonGame({ companyName: 'Test', color: '#ff0066', seed, country });
 
 describe('countries', () => {
-  it('names towns after real cities, biggest first, on the same geography', () => {
+  it('names towns after real cities, biggest first, where they really are', () => {
     const es = getWorld(77, 'ES');
     const gb = getWorld(77, 'GB');
     const metroEs = es.cities.find(c => c.size === 'metropolis')!;
@@ -26,9 +26,15 @@ describe('countries', () => {
     const sorted = [...es.cities].sort((a, b) => b.population - a.population);
     expect(sorted[0].size).toBe('metropolis');
     expect(sorted.every((c, i) => i === 0 || c.population <= sorted[i - 1].population)).toBe(true);
-    // Same roads and positions, different names.
-    expect(es.cities.map(c => [c.x, c.y])).toEqual(gb.cities.map(c => [c.x, c.y]));
-    expect(Array.from(es.road)).toEqual(Array.from(gb.road));
+    // A miniature of the real country: the towns sit in their true relative positions.
+    const at = (w: typeof es, name: string) => w.cities.find(c => c.name === name)!;
+    expect(at(es, 'Barcelona').x).toBeGreaterThan(at(es, 'Madrid').x);
+    expect(at(es, 'Barcelona').y).toBeLessThan(at(es, 'Madrid').y);
+    expect(at(es, 'Sevilla').y).toBeGreaterThan(at(es, 'Madrid').y);
+    expect(at(es, 'Sevilla').x).toBeLessThan(at(es, 'Madrid').x);
+    expect(at(gb, 'Glasgow').y).toBeLessThan(at(gb, 'London').y);
+    expect(at(gb, 'Brighton').y).toBeGreaterThan(at(gb, 'London').y);
+    expect(es.cities.map(c => [c.x, c.y])).not.toEqual(gb.cities.map(c => [c.x, c.y]));
     const stadium = metroEs.venues.find(v => v.kind === 'stadium')!;
     expect(stadium.name).toBe('Estadio Santiago Bernabéu');
   });
@@ -88,9 +94,22 @@ describe('countries', () => {
     );
   });
 
-  it('formats money in the home currency', () => {
-    expect(formatMoney(game('ES'), 12500)).toBe('€12,500');
-    expect(formatMoney(game('GB'), -300)).toBe('-£300');
+  it('formats money in the home currency, as it was spelt in the year', () => {
+    const at = (code: 'ES' | 'GB' | 'US' | 'DE' | 'FR' | 'IT', startYear: number) =>
+      createTycoonGame({ companyName: 'T', color: '#f00', seed: 5, country: code, startYear });
+    // The euro only arrives in 2002.
+    expect(formatMoney(at('ES', 2010), 12500)).toBe('€12,500');
+    expect(formatMoney(at('ES', 1990), 3000)).toBe('499,158 pts');
+    expect(formatMoney(at('DE', 1985), 1000)).toBe('1,956 DM');
+    expect(formatMoney(at('FR', 1985), 1000)).toBe('6,560 F');
+    expect(formatMoney(at('IT', 1985), 1000)).toBe('L.1,936,270');
+    expect(formatMoneyShort(at('IT', 1985), 3000)).toBe('L.5.8M');
+    expect(formatMoney(at('GB', 1980), -300)).toBe('-£300');
+    expect(formatMoney(at('US', 2010), 40)).toBe('$40');
+    // ...and it changes over on its own as the years pass.
+    const s = at('ES', 2000);
+    expect(formatMoney(s, 1000)).toBe('166,386 pts');
+    expect(formatMoney({ ...s, hour: s.hour + 24 * 365 * 3 }, 1000)).toBe('€1,000');
   });
 
   it('starts with a full rig including consoles', () => {

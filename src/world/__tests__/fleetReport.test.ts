@@ -9,8 +9,19 @@ import type { TycoonState } from '../types';
 const game = (): TycoonState => {
   let s = createTycoonGame({ companyName: 'F', color: '#f00', seed: 31, country: 'GB', startYear: 1995 });
   s = { ...s, company: { ...s.company, cash: 2_000_000, reputation: 40 } };
-  return advanceHours(s, 24 * 10);
+  return advanceHours(s, 24 * 16);
 };
+
+/** A plain offer a few days out that a well-known company can book. */
+const bookable = (s: TycoonState) =>
+  s.gigs.find(
+    g =>
+      g.status === 'offer' &&
+      !g.tourId &&
+      g.day - s.hour / 24 > 3 &&
+      g.day - s.hour / 24 < 14 &&
+      bookGig({ ...s, company: { ...s.company, reputation: 90 } }, g.id).result.ok,
+  )!;
 
 describe('fleet dashboard', () => {
   it('starts every vehicle at a neutral utilisation, then tracks how busy it is', () => {
@@ -43,7 +54,7 @@ describe('fleet dashboard', () => {
 
   it('alerts on a booked show with nobody assigned, and on an overdue service', () => {
     const s = game();
-    const gig = s.gigs.find(g => g.status === 'offer' && !g.tourId && g.day - s.hour / 24 > 3 && g.day - s.hour / 24 < 12)!;
+    const gig = bookable(s);
     const booked = bookGig({ ...s, company: { ...s.company, reputation: 90 } }, gig.id).state;
     const v = booked.vehicles.find(x => x.owner === 'player')!;
     v.lastServiceHour = booked.hour - (SERVICE_INTERVAL_DAYS + 10) * 24;
@@ -58,7 +69,7 @@ describe('fleet dashboard', () => {
 
   it('assigning a truck clears the no-vehicle alert', () => {
     const s = game();
-    const gig = s.gigs.find(g => g.status === 'offer' && !g.tourId && g.day - s.hour / 24 > 3 && g.day - s.hour / 24 < 12)!;
+    const gig = bookable(s);
     let b = bookGig({ ...s, company: { ...s.company, reputation: 90 } }, gig.id).state;
     const v = b.vehicles.find(x => x.owner === 'player')!;
     b = assignVehicle(b, v.id, gig.id).state;

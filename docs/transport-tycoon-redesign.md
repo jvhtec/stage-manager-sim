@@ -26,7 +26,7 @@ changed. Side by side with Transport Tycoon:
 
 | TT concept | Stage Manager Sim | Where |
 |---|---|---|
-| Isometric tile map with heights, water, forests | Procedurally generated island (72×56 tiles), integer corner heights, coast, lakes, bridges | `src/world/mapgen.ts`, `src/tycoon/render/*` |
+| Isometric tile map with heights, water, forests | A miniature of the chosen country (72×56 tiles): real coastline, mountains where the real ranges are, the real towns at their real relative positions (drawn oversized), integer corner heights, bridges over straits | `src/world/mapgen.ts`, `src/tycoon/render/*` |
 | Towns that grow | Villages → towns → cities → one metropolis; **town size decides which venues exist** (pub → hall → club → theatre → arena → stadium), so geography *is* the progression ladder | `mapgen.ts` (`SIZE_VENUES`) |
 | Cargo | Gear units per department (audio / lighting / video / staging) + crew as passengers | `catalog.ts`, `sim.ts` (`loadVehicle`) |
 | Delivery deadline / cargo payment | A show's **load-in at 10:00**. Late, short on gear or crew → lower quality → lower fee. Nothing arrives → no-show penalty | `sim.ts` (`playShow`) |
@@ -60,7 +60,9 @@ tile diagonal — rather than three.js. That keeps it crisp at any zoom, tiny (t
 ~106KB lazy chunk with no new dependencies), and fast enough for phones.
 
 - **Terrain**: heightmapped tiles with slope shading, sand coasts, animated water glints,
-  forests, rough ground, and a dirt "slab" edge so the island reads as a diorama.
+  forests, rough ground, and a dirt "slab" edge so the map reads as a diorama. Everything casts a
+  soft shadow (one convex hull per object, drawn in a ground pass before the object pass), water
+  deepens away from the shore with foam along it, and roads have kerbs and lane marks when zoomed in.
 - **Roads** follow the terrain, with lane markings when zoomed in and timber bridges over water.
 - **Buildings** are procedural extruded boxes: pitched-roof houses, brick and concrete blocks,
   glass towers with rooftop plant, windows that light up at night.
@@ -140,10 +142,10 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
   Skyliner, Mercedes Sprinter, Scania R.
 
 - **Countries** (`content/countries.ts`) — pick España, UK, USA, Deutschland, France or Italia
-  at new game. Same procedural geography, but towns take real city names (biggest town = the
-  capital/largest city), venues are named the local way (Sala…, Zénith de…, PalaSport di…) and
+  at new game. Each is a **miniature of the real country** (see below); towns are the real
+  cities (biggest = the capital/largest city, with real populations), venues are named the local way (Sala…, Zénith de…, PalaSport di…) and
   famous rooms appear where the map puts them (Bernabéu, WiZink, Wembley, MSG, Bercy, San
-  Siro…). Prices show in €, £ or $. Rivals are the local firms of that country plus the
+  Siro…). Prices show in the money of the day: £ and $ throughout, but pesetas, marks, francs and lire before the euro arrives in 2002 (`content/currency.ts` — the game's numbers are kept in euro-equivalents and printed at the fixed conversion rates, so a €3,000 fee in 1990 Spain reads 499,158 pts). Rivals are the local firms of that country plus the
   international giants (Clair, PRG, Solotech); local acts (Héroes del Silencio, Estopa, Rosalía…;
   Die Toten Hosen; Indochine; Vasco Rossi…) only tour at home and come up more often there.
   World-tour legs never fly to your own country.
@@ -156,6 +158,86 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
   its brand colour, and brands/companies show as typographic badges in their colours. For a
   personal build, official logo files can be dropped into `public/brands/` and listed in
   `public/brands/index.json` — they then replace the badges (see the README there).
+
+- **Real geography** (`content/geo.ts`, `geoParams.json`, `landmasks.ts`, `scripts/gen-landmask.mjs`) —
+  each country's map is its real shape. The coastline is rasterised offline from Natural Earth
+  (public domain) onto the 73×57 corner grid (neighbouring countries count as land, so Spain
+  touches France and Portugal) and shipped as a few hundred base64 bytes per country; re-run
+  `node scripts/gen-landmask.mjs` after editing a bounding box. A shared projection puts each
+  real city at its true latitude/longitude, then towns are placed biggest-first on the dry ground
+  nearest their real spot that leaves earlier towns their elbow room — cities are *oversized* (radius
+  2 to 6 tiles), so crowded regions (northern England, the US north-east) fan out a little. Mountain
+  ranges (Pyrenees, Alps, Highlands, Rockies…) are polylines that lift the ground around them; the
+  coast is flat beach. Towns near the sea sit at beach level, inland ones may stand on a low
+  plateau; roads cross narrow straits on bridges. The seed only varies the rolling hills, the
+  woods, venue sizes and each town's street layout — "Reroll terrain" in the setup screen.
+  Grid size follows the country: Spain and France use 72×56; Britain (59×91, ~11 km a
+  tile), Italy (80×91, ~13 km), Germany (59×81, ~11 km) and the US (115×62, ~45 km) get grids sized
+  so their oversized towns aren't cramped. Every town is guaranteed its full set of venues and
+  warehouse lots (on a thin peninsula like Florida the last lot may sit on a gentle slope). **Distance is real distance**: a tile knows its kilometres, one game unit
+  is 18 km, and speeds, fuel, ranges and trip times are all in units, so a 300 km run takes the same
+  time in Britain as in the States and the UI speaks km (miles in Britain and the US) rather than
+  tiles. The consequence is that America is huge — its towns are a few thousand km apart — so American
+  promoters pay 45% more (`offers.COUNTRY_FEES`: bigger production budgets, the haulage in the price) and team
+  drivers (below) earn their keep there: a smart-bot test company ends 9 years at ~$12M with one driver per truck and
+  ~$13M with team drivers, against £/€10–14M in Europe. Saves from before the real maps are discarded (save v7).
+
+- **Roads, borders and crossings through the years** (`infra.ts`, `pathfinding.ts`, `geoParams.json`) — the
+  map is generated once per seed and country; each year gets an *era* view of it (cached per distinct era):
+  - **Motorways**: real corridors (M1, AP-7, the Autostrada del Sole, the A24 Hamburg–Berlin in 1982, I-10 finished in
+    1990…) with their opening years. Each gets its own direct road at generation; once open, its tiles cost 65% of an
+    ordinary road's time and are drawn wider with a central reservation. Tolls per km on Spain's autopistas and all
+    French and Italian motorways, and on German autobahns for lorries from 2005.
+  - **Crossings**: a road over water is a bridge if the land on both sides joins up anyway (an estuary, a ria) and a
+    ferry if it doesn't (another island or landmass): two hours to board plus a fare. Fixed links replace ferries in
+    their real year (the Channel Tunnel, 1994). Narrow straits the coarse mask would close (Messina, Dover) are carved
+    back open so islands stay islands; a Liverpool–Dublin lane crosses the Irish Sea. Ferries are drawn as dashed
+    lanes with a boat plying them; the tunnel as a faint line under the sea; borders as dashed lines (red for the
+    inner-German border while it stands).
+  - **Towns just over the border** (Lisboa, Porto, Toulouse; Dublin, Lille; Praha, Zürich, Strasbourg, Salzburg;
+    Bruxelles, Genève, Barcelona, Torino; Ljubljana, Zagreb, Lugano, Nice; Toronto, Montréal, Monterrey) with their
+    famous rooms (Pavilhão Atlântico from 1998, the Point Depot 1988–2008, Hallenstadion…). They offer shows at 45%
+    of a home town's rate and you can't open a base there.
+  - **Borders**: going to a town abroad costs the queue and, where customs apply, an agent's fee and carnet: customs
+    until the EU single market (1993) or always outside it (Switzerland, the North American borders, Britain after
+    Brexit), passport checks until both sides are in Schengen (never between Britain and Ireland), and the GDR's
+    transit checks into the East and Berlin until 1990. A road that merely skirts a neighbour between two home towns
+    doesn't count.
+  - Time costs (motorway speed, boarding, border queues, converted to distance at a lorry's pace) are part of every
+    route's length, so ETAs, planners, fuel and ranges all agree. Money costs (tolls, fares, customs) are charged as a
+    truck sets off and booked as "Tolls, ferries & customs". The show and town windows list what's on the road; the
+    run planner includes the charges.
+  - **Winter** (December to March): road tiles on high ground (average corner height ≥ 2.75 — the passes) take 1.7×
+    as long and a truck crossing one pays for chains. The era key includes the season, so ETAs and planners see it; the
+    map turns snow-capped and the news says when the passes close and clear.
+  - **Team drivers** (per truck, not vans): two drivers in a sleeper cab keep it rolling 35% quicker, at a second
+    driver's pay per hour on the road (booked as wages). The answer to America's distances.
+  - **Readable map**: town tags are placed most-important-first (your bases, then by population) and skipped rather
+    than overlapped; show markers are laid out first (your bookings, then the richest offers), stacked out of each
+    other's way, and zoomed out (below 0.75) a town's shows share one marker ("3 offers · £4.2k") that opens the town.
+  - **Map views** (`render/renderer.ts` overlays, `territory.ts`): a Layers button (or O) cycles reputation by town,
+    your market share, and rival territory. Shows played per town are tallied for you and every rival and fade
+    each January (×0.6); towns get a tinted disc and their figure in a chip; markers step aside; a legend explains.
+  - **Drivers' hours** (`infra.driversRules`): a solo driver's pace follows the era — +8% before the 1986 EU rules,
+    baseline after, −10% with digital tachographs from 2007; in the US the 2004 and 2013 hours-of-service changes
+    and 2017 electronic logs tighten it step by step. Team drivers are unaffected. The news announces each change.
+  - **Historic disruptions** (`content/disruptions.ts`): about 25 real strikes, blockades, storms and the 2010 ash
+    cloud, each with dates, an area or the whole country, and effects: road slow-down, fuel premium (even on a
+    locked contract), extra border hours, or an air-freight rescue charge per booked show abroad. Part of the era
+    key, so routes and ETAs see them; warned a few days ahead in the news.
+  - **Venue character** (`venueTraits.ts`): stable per venue from its name, kind and country — load-in by dock,
+    street or stairs (stairs: +1 crew on offers), curfews (late into one: a fine per tier and −5% quality), noise
+    limits (strict in DE/CH/AT; audio beyond 1.4× the need trips the limiter: −4%), union houses (most US theatres
+    and arenas, some British theatres: a call per head per show).
+  - **Rail and air freight** (`freight.ts`): send a booked show's kit from a base by rail (terminals in towns and up)
+    or air (cities); it counts if it lands before load-in, local freelancers crew it, and it returns after
+    load-out as a transfer.
+  - **National rules** (`rules.ts`): Spain's fiesta season (Jul–Sep: small towns offer ×1.8 as often, council-booked
+    tier 1–2 shows pay 75 days late via the invoicing system, whatever your policy); France's intermittents (freelance
+    rate ×0.75, pool ×1.5); Germany's Meister (from 1995 tier 3+ shows need one more certified rigger); Britain's 1998
+    working-time rules (+1 relief crew on tier 3+ or multi-day shows); US right-to-work towns have no union houses
+    or union crises, and Spain has no stagehand unions at all. Spanish rooms are strict about curfews (50–70%) and noise
+    (30–35%). Rule flags live on the offer (`council`, `meister`, `relief`) and show in its window.
 
 - **Start years** (1975, 1980, 1985, 1990, 2000, 2010) — the era sets which trucks, gear and
   desks exist (Bedford TK, Altec A4s, Yamaha PM1000 and Strand lanterns in 1975; no video kit
@@ -554,7 +636,7 @@ and reads through `marketNow` / `policies` so the UI shows exactly what the sim 
 - **Choosing the crew** — on a booked show, name exactly who goes (up to the crew it needs): named
   people board first, even over better-matched techs, and are held back from other booked shows;
   the gig window shows the crew fit.
-- **Truck itinerary** — each order in a vehicle's list shows the tiles from the previous stop and
+- **Truck itinerary** — each order in a vehicle's list shows the distance (km or miles) from the previous stop and
   the hours spare at load-in (green 6h+, amber under 6h, red if late), plus the way back to depot.
   (Orders stay sorted by show date, so there's nothing to drag into order.)
 - **Visas & carnets** (`paperwork.ts`) — a rig that crosses a border pays an ATA carnet (£400 +

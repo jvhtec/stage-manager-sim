@@ -16,7 +16,7 @@ import {
 } from './catalog';
 import { roadDistance } from './pathfinding';
 import { getRegion } from './content/world';
-import { getCountry } from './content/countries';
+import { currencyFor, formatAmount, formatCompact, type Currency } from './content/currency';
 import type {
   DeptCounts,
   Gig,
@@ -81,15 +81,27 @@ export const loadOutDoneHour = (gig: Gig) => (lastShowDay(gig) + freightDays(gig
 
 // Travel --------------------------------------------------------------------
 
-export function travelHours(world: WorldMap, modelId: string, from: string, to: string): number {
+/** Team drivers (a sleeper cab and two drivers taking turns) keep a truck rolling: this much quicker. */
+export const TEAM_PACE = 1.4;
+/** What the second driver costs per hour on the road. */
+export const TEAM_DRIVER_PER_HOUR = 14;
+
+/**
+ * Distance units per hour for a vehicle as crewed, under the drivers'-hours rules of the day (a
+ * solo driver's pace follows the era — see infra.driversRules; a team is unaffected).
+ */
+export const vehicleSpeed = (v: Pick<Vehicle, 'modelId' | 'teamDrivers'>, world?: Pick<WorldMap, 'era'>) =>
+  getModel(v.modelId).speed * (v.teamDrivers ? TEAM_PACE : (world?.era?.soloPace ?? 1));
+
+export function travelHours(world: WorldMap, v: Pick<Vehicle, 'modelId' | 'teamDrivers'>, from: string, to: string): number {
   const dist = roadDistance(world, from, to);
   if (!Number.isFinite(dist)) return Infinity;
-  return Math.ceil(dist / getModel(modelId).speed);
+  return Math.ceil(dist / vehicleSpeed(v, world));
 }
 
 /** When a vehicle sitting in `from` should leave to make `gig`'s load-in with a safety margin. */
 export function plannedDepartureHour(world: WorldMap, v: Vehicle, from: string, gig: Gig): number {
-  const hours = travelHours(world, v.modelId, from, gig.cityId);
+  const hours = travelHours(world, v, from, gig.cityId);
   const buffer = DEPARTURE_BUFFER_HOURS + Math.ceil(hours * 0.1);
   return loadInHour(gig) - hours - buffer;
 }
@@ -174,8 +186,16 @@ export function freeLot(state: TycoonState, world: WorldMap, cityId: string): nu
   return city.lots.findIndex((_, i) => !used.has(i));
 }
 
-/** Money in the home country's currency, e.g. "€12,500". */
-export function formatMoney(state: Pick<TycoonState, 'country'>, amount: number): string {
-  const symbol = getCountry(state.country).currency;
-  return `${amount < 0 ? '-' : ''}${symbol}${Math.abs(Math.round(amount)).toLocaleString('en-US')}`;
+/** The home country's money as it was spelt this year (pesetas before the euro), e.g. "€12,500". */
+export function currencyOf(state: Pick<TycoonState, 'country' | 'startYear' | 'hour'>): Currency {
+  return currencyFor(state.country, yearOf(state, state.hour));
+}
+
+export function formatMoney(state: Pick<TycoonState, 'country' | 'startYear' | 'hour'>, amount: number): string {
+  return formatAmount(currencyOf(state), amount);
+}
+
+/** "€3.0k" / "500k pts". */
+export function formatMoneyShort(state: Pick<TycoonState, 'country' | 'startYear' | 'hour'>, amount: number): string {
+  return formatCompact(currencyOf(state), amount);
 }

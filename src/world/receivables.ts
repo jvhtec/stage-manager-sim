@@ -7,6 +7,7 @@
 import type { Rng } from '@/lib/rng';
 import { book, dayOf, formatMoney, newId, pushNews } from './core';
 import { marketNow } from './market';
+import { COUNCIL_PAYMENT_DAYS } from './rules';
 import type { Gig, InvoicingPolicy, Invoice, TycoonState } from './types';
 
 /** Days promoters take to pay, by venue tier (festivals and events add more). */
@@ -26,7 +27,8 @@ export const INVOICING: Record<InvoicingPolicy, { label: string; blurb: string }
 };
 export const INVOICING_LEVELS: InvoicingPolicy[] = ['hold', 'factor', 'insure'];
 
-export function paymentDays(gig: Pick<Gig, 'tier' | 'festival' | 'event'>): number {
+export function paymentDays(gig: Pick<Gig, 'tier' | 'festival' | 'event'> & { council?: boolean }): number {
+  if (gig.council) return COUNCIL_PAYMENT_DAYS;
   const base = PAYMENT_DAYS[Math.max(0, Math.min(4, gig.tier))];
   return base > 0 ? base + (gig.festival || gig.event ? FESTIVAL_EXTRA_DAYS : 0) : 0;
 }

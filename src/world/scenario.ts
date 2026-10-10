@@ -4,7 +4,7 @@
  * sums up the whole career when it ends or whenever you want to look.
  */
 import { NEGATIVE_MONTHS_GAME_OVER } from './catalog';
-import { dayOf, pushNews, yearOf } from './core';
+import { dayOf, formatMoneyShort, pushNews, yearOf } from './core';
 import { companyValue } from './queries';
 import type { Difficulty, GoalId, TycoonState } from './types';
 
@@ -50,7 +50,7 @@ const ratio = (value: number, target: number, text: string): GoalProgress => ({ 
 export const GOALS: Record<GoalId, GoalInfo> = {
   sandbox: { label: 'Sandbox', blurb: 'No goal. Build whatever you like.', progress: () => ({ fraction: 0, text: '', done: false }) },
   top: { label: 'Top of the industry', blurb: 'Reach reputation 90 within 25 years.', years: 25, progress: s => ratio(s.company.reputation, 90, `Reputation ${Math.round(s.company.reputation)} / 90`) },
-  empire: { label: 'An empire', blurb: 'Be worth £15 million within 20 years.', years: 20, progress: s => ratio(companyValue(s), 15_000_000, `Worth ${Math.round(companyValue(s) / 1000)}k / 15,000k`) },
+  empire: { label: 'An empire', blurb: 'Be worth fifteen million within 20 years.', years: 20, progress: s => ratio(companyValue(s), 15_000_000, `Worth ${formatMoneyShort(s, companyValue(s))} / ${formatMoneyShort(s, 15_000_000)}`) },
   worlds: { label: 'Around the world', blurb: 'Complete three world tours within 25 years.', years: 25, progress: s => {
     const n = s.tours.filter(t => t.kind === 'world' && t.status === 'done').length;
     return ratio(n, 3, `${n} / 3 world tours`);

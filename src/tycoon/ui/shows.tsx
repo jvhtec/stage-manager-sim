@@ -1,6 +1,7 @@
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
-import { assignVehicle, bookGate, bookGig, haggleGig, rehearseShow, unassignVehicle } from '@/world/actions';
+import { assignVehicle, bookGate, bookGig, haggleGig, rehearseShow, sendFreight, unassignVehicle } from '@/world/actions';
+import { freightQuote } from '@/world/freight';
 import { certCount, requiredCerts } from '@/world/certs';
 import { expertiseBonus } from '@/world/expertise';
 import { MODULES, REHEARSAL_QUALITY, bestStageLevel, gigRehearsalCost, rehearsalBlocker, requiredStageLevel, stageName, tourRehearsalCost } from '@/world/annexes';
@@ -21,11 +22,14 @@ import { EventBid, EventList } from './events';
 import { getTech } from '@/world/content/techs';
 import { worldOf } from '@/world/mapgen';
 import { roadDistance } from '@/world/pathfinding';
+import { routeNotes, tripCharges } from '@/world/infra';
+import { describeTraits, traitsOf } from '@/world/venueTraits';
+import { ruleCountry, showRules } from '@/world/rules';
 import { estimateArrival, estimateJobCosts, projectCoverage } from '@/world/queries';
 import { DEPTS, type Gig, type TycoonState } from '@/world/types';
 import { Bar, Stat, TierChip } from './bits';
 import { BrandBadge } from './brands';
-import { kmoney, money } from './format';
+import { distance, kmoney, money } from './format';
 import type { WinCtx } from './types';
 import { READINESS_CLASS, gigDates, gigReadiness, gigWhere } from './gigInfo';
 import { TourList } from './tours';
@@ -33,6 +37,24 @@ import { TourList } from './tours';
 function nearestDepotDistance(state: TycoonState, gig: Gig): number {
   const world = worldOf(state);
   return Math.min(...state.depots.map(d => roadDistance(world, d.cityId, gig.cityId)));
+}
+
+/** "Dover–Calais ferry · 🛂 FR · ~£666 each way" for the trip from your nearest base. */
+function roadNotes(state: TycoonState, gig: Gig): string | null {
+  const world = worldOf(state);
+  const depot = [...state.depots].sort((a, b) => roadDistance(world, a.cityId, gig.cityId) - roadDistance(world, b.cityId, gig.cityId))[0];
+  if (!depot || depot.cityId === gig.cityId) return null;
+  const n = routeNotes(world, depot.cityId, gig.cityId);
+  const due = tripCharges(world, depot.cityId, gig.cityId, 'truck');
+  const bits = [
+    ...n.disrupted.map(d => `⚠ ${d}`),
+    ...n.ferries.map(f => `⛴ ${f}`),
+    ...n.tunnels.map(t => `🚇 ${t}`),
+    ...n.borders.map(b => `🛂 ${b === 'the GDR' ? 'GDR transit' : `border (${b})`}`),
+    n.motorwayKm > 0 ? `🛣 ${distance(n.motorwayKm / 18)} of motorway` : '',
+    due.total > 0 ? `${money(due.total)} tolls, fares & customs each way (truck)` : '',
+  ].filter(Boolean);
+  return bits.length ? bits.join(' · ') : null;
 }
 
 export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
@@ -146,7 +168,26 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
       {gig.status === 'offer' && (
         <Stat label="Book by">
           {formatDay(state, gig.acceptByDay)}{' '}
-          <span className="tt-dim">· {Math.round(nearestDepotDistance(state, gig))} tiles from your nearest depot</span>
+          <span className="tt-dim">· {distance(nearestDepotDistance(state, gig))} from your nearest depot</span>
+        </Stat>
+      )}
+      {showRules(ruleCountry(state, worldOf(state), gig.cityId), gig).length > 0 && (
+        <Stat label="Local rules">
+          <span className="tt-dim" style={{ whiteSpace: 'normal' }}>
+            {showRules(ruleCountry(state, worldOf(state), gig.cityId), gig).join(' · ')}
+          </span>
+        </Stat>
+      )}
+      {!gig.overseas && !gig.festival && worldOf(state).venueById.get(gig.venueId) && (
+        <Stat label="The room">
+          <span className="tt-dim" style={{ whiteSpace: 'normal' }}>
+            {describeTraits(traitsOf(worldOf(state), worldOf(state).venueById.get(gig.venueId)!)).join(' · ')}
+          </span>
+        </Stat>
+      )}
+      {gig.status === 'offer' && roadNotes(state, gig) && (
+        <Stat label="On the road">
+          <span className="tt-dim">{roadNotes(state, gig)}</span>
         </Stat>
       )}
 
@@ -391,8 +432,46 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
                 </div>
               );
             })}
-            {!projection.vehicles.length && <div className="tt-dim">None yet.</div>}
+            {!projection.vehicles.length && !gig.freight && <div className="tt-dim">None yet.</div>}
+            {gig.freight && (
+              <div className="tt-item">
+                <div className="grow">
+                  <div style={{ fontWeight: 700 }}>
+                    {gig.freight.mode === 'air' ? '✈ Air freight' : '🚆 Rail freight'} · {Object.values(gig.freight.gear).reduce((a, b) => a + b, 0)} units
+                  </div>
+                  <div className="tt-dim">Lands {formatHour(state, gig.freight.arrives)} · crewed by local freelancers</div>
+                </div>
+              </div>
+            )}
           </div>
+          {!gig.freight && !gig.overseas && !gig.festival && (
+            <>
+              <h4>Or send the kit by freight</h4>
+              <div className="tt-list">
+                {state.depots.flatMap(d =>
+                  (['rail', 'air'] as const).map(mode => {
+                    const q = freightQuote(state, gig, d, mode);
+                    if (!q.ok && !q.units) return null;
+                    return (
+                      <div key={`${d.id}-${mode}`} className="tt-item">
+                        <div className="grow">
+                          <div style={{ fontWeight: 700 }}>
+                            {mode === 'air' ? '✈ Air' : '🚆 Rail'} from {worldOf(state).cityById.get(d.cityId)?.name}
+                          </div>
+                          <div className={q.ok ? 'tt-dim' : 'tt-bad'}>
+                            {q.ok ? `${q.units} units · ${q.hours}h · lands ${formatHour(state, q.arrives)} · crew: local freelancers` : q.reason}
+                          </div>
+                        </div>
+                        <button className="tt-btn sm" disabled={!q.ok || state.company.cash < q.cost} onClick={() => act(s => sendFreight(s, gig.id, d.id, mode))}>
+                          {kmoney(q.cost)}
+                        </button>
+                      </div>
+                    );
+                  }),
+                )}
+              </div>
+            </>
+          )}
           <h4>Add a vehicle</h4>
           <div className="tt-list">
             {candidates.map(v => {
@@ -545,7 +624,8 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
                 <div className="tt-dim">
                   {g.tourId ? '🎫 ' : ''}
                   {gigWhere(state, g)} · {gigDates(state, g)}
-                  {tab === 'offers' ? ` · ${Math.round(dist)} tiles` : ''}
+                  {tab === 'offers' ? ` · ${distance(dist)}` : ''}
+                  {tab === 'offers' && worldOf(state).cityById.get(g.cityId)?.abroad ? ' · 🛂 abroad' : ''}
                 </div>
               </div>
               {tab === 'offers' && <TierChip tier={g.tier} locked={!!isLocked(g)} />}

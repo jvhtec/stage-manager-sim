@@ -1,3 +1,4 @@
+import { geoAbroad } from '../content/geo';
 import { describe, expect, it } from 'vitest';
 import { createTycoonGame } from '../state';
 import { advanceHours } from '../sim';
@@ -62,8 +63,11 @@ describe('landmark venues keep their real years', () => {
     expect(out.news.some(n => /The O2 opens in London/.test(n.text))).toBe(true);
   });
 
-  it('every listed landmark is a real landmark in some country', () => {
-    const names = new Set(COUNTRIES.flatMap(c => Object.values(c.landmarks).flatMap(l => Object.values(l))));
+  it('every listed landmark is a real landmark in some country (or just over its border)', () => {
+    const names = new Set([
+      ...COUNTRIES.flatMap(c => Object.values(c.landmarks).flatMap(l => Object.values(l))),
+      ...COUNTRIES.flatMap(c => geoAbroad(c.code).flatMap(t => Object.values(t.venues))),
+    ]);
     Object.keys(VENUE_YEARS).forEach(n => expect(names.has(n)).toBe(true));
   });
 });

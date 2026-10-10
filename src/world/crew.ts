@@ -4,6 +4,7 @@
  * you pay and how hard you work them: good morale lifts every show, bad
  * morale costs you shows and, eventually, people.
  */
+import { INTERMITTENTS, ruleCountry } from './rules';
 import type { Rng } from '@/lib/rng';
 import { CREW_WAGE_PER_DAY } from './catalog';
 import { book, pushNews } from './core';
@@ -93,10 +94,11 @@ export function freelancersFor(state: TycoonState, world: WorldMap, gig: Gig, cr
   if (!short) return none;
   const local = !gig.overseas && state.depots.some(d => d.cityId === gig.cityId);
   const city = world.cityById.get(gig.cityId);
-  const pool = gig.overseas ? OVERSEAS_POOL : FREELANCE_POOL[city?.size ?? 'town'] + (local ? LOCAL_CONTACTS.extra : 0);
+  const fr = ruleCountry(state, world, gig.cityId) === 'FR' && !gig.overseas;
+  const pool = Math.round((gig.overseas ? OVERSEAS_POOL : FREELANCE_POOL[city?.size ?? 'town'] + (local ? LOCAL_CONTACTS.extra : 0)) * (fr ? INTERMITTENTS.pool : 1));
   const count = Math.min(short, pool);
   const days = gig.overseas ? gig.overseas.stops.length : (gig.days ?? 1);
-  const rate = FREELANCE_DAY_RATE * (local ? LOCAL_CONTACTS.discount : 1);
+  const rate = FREELANCE_DAY_RATE * (local ? LOCAL_CONTACTS.discount : 1) * (fr ? INTERMITTENTS.rate : 1);
   return { count, cost: Math.round(count * rate * days), effectiveness: local ? LOCAL_CONTACTS.effectiveness : STRANGERS_EFFECTIVENESS, local };
 }
 

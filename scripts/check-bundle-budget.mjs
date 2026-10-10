@@ -12,8 +12,10 @@ const ASSETS_DIR = join(process.cwd(), 'dist', 'assets');
 // auctions) as lazy chunks. This leaves room to grow before it needs raising.
 const TOTAL_BUDGET_KB = 900;
 // No single chunk should silently balloon past this without a deliberate
-// decision.
-const CHUNK_BUDGET_KB = 500;
+// decision. The game chunk carries every strategy system plus the real-geography
+// data (coastline masks and town coordinates for six countries, ~15KB), plus the
+// road eras, historic disruptions, venue quirks, freight and map views (~10KB).
+const CHUNK_BUDGET_KB = 600;
 
 let files;
 try {

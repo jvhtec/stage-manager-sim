@@ -69,6 +69,8 @@ import {
   vehicleAgeYears,
   withRng,
   yearOf,
+  TEAM_DRIVER_PER_HOUR,
+  vehicleSpeed,
 } from './core';
 import { worldOf } from './mapgen';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize } from './loading';
@@ -95,7 +97,11 @@ import { dailyIncidents, monthlyInsurance, rollWeather } from './incidents';
 import { dailyContracts, houseRigAt, monthlyContracts } from './contracts';
 import { dailyMarket, fuelMultiplier, marketNow, monthlyInterest } from './market';
 import { getRegion } from './content/world';
-import { getCityPath } from './pathfinding';
+import { getCityPath, roadDistance } from './pathfinding';
+import { dailyDisruptions, monthlyWinter, tripCharges, yearlyDriversRules } from './infra';
+import { countTownShow, fadeTownShows } from './territory';
+import { returnFreight } from './freight';
+import { CURFEW_FINE, CURFEW_QUALITY, NOISE_HEADROOM, NOISE_QUALITY, UNION_CALL, traitsOf } from './venueTraits';
 import { DEPTS, type GearStock, type Gig, type TycoonState, type Vehicle, type WorldMap } from './types';
 import { findArtist } from './content/artists';
 
@@ -166,7 +172,14 @@ function startDrive(s: TycoonState, world: WorldMap, v: Vehicle, to: string) {
     return;
   }
   v.status = 'driving';
-  v.route = { from, to, progress: 0 };
+  v.route = { from, to, progress: 0, total: roadDistance(world, from, to) };
+  if (v.owner === 'player') {
+    const due = tripCharges(world, from, to, getModel(v.modelId).kind);
+    if (due.total > 0) {
+      book(s, 'tolls', -due.total);
+      v.profitThisYear -= due.total;
+    }
+  }
   v.cityId = undefined;
   v.arrivedHour = undefined;
 }
@@ -288,8 +301,8 @@ function decide(s: TycoonState, world: WorldMap, v: Vehicle) {
 
   // Out on the road between shows: go straight on if the next show is soon,
   // otherwise pop home first (unload, service, reload for the next leg).
-  const direct = travelHours(world, v.modelId, at, gig.cityId);
-  const viaHome = travelHours(world, v.modelId, at, v.homeCityId) + travelHours(world, v.modelId, v.homeCityId, gig.cityId);
+  const direct = travelHours(world, v, at, gig.cityId);
+  const viaHome = travelHours(world, v, at, v.homeCityId) + travelHours(world, v, v.homeCityId, gig.cityId);
   const window = loadInHour(gig) - s.hour;
   if (v.owner === 'player' && window - direct > 48 && viaHome + 24 < window) {
     startDrive(s, world, v, v.homeCityId);
@@ -352,13 +365,22 @@ function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
   const route = v.route!;
   const path = getCityPath(world, route.from, route.to);
   const model = getModel(v.modelId);
-  route.progress += model.speed;
+  // A motorway or a tunnel opening mid-trip changes the route's length: keep the share already driven.
+  const total = roadDistance(world, route.from, route.to);
+  if (route.total !== undefined && route.total !== total && route.total > 0) route.progress *= total / route.total;
+  route.total = total;
+  const speed = vehicleSpeed(v, world);
+  route.progress += speed;
   if (v.owner === 'player') {
-    const fuel = model.speed * fuelPerTile(model) * fuelMultiplier(s);
+    const fuel = speed * fuelPerTile(model) * fuelMultiplier(s);
     book(s, 'fuel', -fuel);
     v.profitThisYear -= fuel;
+    if (v.teamDrivers) {
+      book(s, 'wages', -TEAM_DRIVER_PER_HOUR);
+      v.profitThisYear -= TEAM_DRIVER_PER_HOUR;
+    }
   }
-  if (route.progress >= path.length - 1) arrive(s, world, v);
+  if (route.progress >= total || path.length < 2) arrive(s, world, v);
 }
 
 // ---------------------------------------------------------------------------
@@ -371,6 +393,7 @@ function resolveShows(s: TycoonState, world: WorldMap, rng: Rng) {
     if (gig.status === 'rival' && !gig.result) {
       const rival = s.rivals.find(r => r.id === gig.rivalId);
       if (rival) {
+        countTownShow(s, gig.cityId, rival.id);
         rival.showsPlayed += 1;
         rival.reputation = Math.min(100, rival.reputation + 0.3 * TIER_WEIGHT[gig.tier]);
       }
@@ -379,6 +402,7 @@ function resolveShows(s: TycoonState, world: WorldMap, rng: Rng) {
     }
     if (gig.status !== 'booked') return;
     playShow(s, world, gig, rng);
+    returnFreight(s, gig);
   });
 }
 
@@ -405,11 +429,15 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     addStock(delivered, v.cargo);
     crew += v.crew;
   });
+  // Kit sent by rail or air is there if it landed before the doors.
+  const freighted = gig.freight && gig.freight.arrives <= showStartHour(gig) ? gig.freight : undefined;
+  if (freighted) addStock(delivered, freighted.gear);
+  const present = onSite.length > 0 || !!freighted;
   // Your house rig is already in the room (it still needs a crew to run it).
-  const houseRig = onSite.length ? houseRigAt(s, gig.venueId) : undefined;
+  const houseRig = present ? houseRigAt(s, gig.venueId) : undefined;
   if (houseRig) addStock(delivered, houseRig);
   // Short of kit? A rival nearby sends the rest straight to the venue, at a day rate.
-  const hire = onSite.length ? subHireFor(s, world, gig, delivered) : { stock: {}, units: 0, cost: 0, from: [] };
+  const hire = present ? subHireFor(s, world, gig, delivered) : { stock: {}, units: 0, cost: 0, from: [] };
   bookSubHire(s, hire);
   if (hire.cost) onSite.forEach(v => (v.profitThisYear -= Math.round(hire.cost / onSite.length)));
   const working: GearStock = { ...delivered };
@@ -443,7 +471,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     if (f) failures.push(f);
   }
   const gear = evaluateGear(working, gig, yearOf(s, s.hour), s.gearCondition);
-  const weather = onSite.length ? rollWeather(s, gig, rng) : null;
+  const weather = present ? rollWeather(s, gig, rng) : null;
   wearFromShow(s, delivered, showDays + (weather?.extraWear ?? 0), !!gig.overseas);
   const failureNote =
     (failures.length ? ` ${failures.map(f => `${getProduct(f.productId).brand} ${getProduct(f.productId).name}`).join(' and ')} died mid-set.` : '') +
@@ -453,7 +481,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const gearCoverage = gear.coverage;
   // Tired crews are worth less on the night.
   // Short-handed? Local freelancers fill the gap, at a day rate.
-  const freelance = onSite.length ? freelancersFor(s, world, gig, crew) : { count: 0, cost: 0, effectiveness: 0, local: false };
+  const freelance = present ? freelancersFor(s, world, gig, crew) : { count: 0, cost: 0, effectiveness: 0, local: false };
   const effCrew = crewEval.effective + freelance.count * freelance.effectiveness;
   const crewCoverage = Math.min(1, effCrew / Math.max(1, gig.crewNeeded));
   if (freelance.cost) {
@@ -463,11 +491,32 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const freelanceNote = freelance.count ? ` ${freelance.count} local freelancer${freelance.count > 1 ? 's' : ''} filled in.` : '';
   const lastArrival = Math.max(...onSite.map(v => v.arrivedHour ?? 0), 0);
   const lateHours = onSite.length ? Math.max(0, lastArrival - loadInHour(gig)) : 0;
+  // The room's quirks: a union call to pay, a curfew to run into, a noise limiter to trip.
+  const traits = venue && !gig.overseas && !gig.festival ? traitsOf(world, venue) : undefined;
+  let venueHit = 0;
+  const venueNotes: string[] = [];
+  if (traits && present) {
+    if (traits.union) {
+      const call = UNION_CALL * gig.crewNeeded;
+      book(s, 'freelance', -call);
+      venueNotes.push(`the union house call cost ${formatMoney(s, call)}`);
+    }
+    if (traits.curfew !== undefined && lateHours > 0) {
+      const fine = CURFEW_FINE * gig.tier;
+      book(s, 'penalties', -fine);
+      venueHit += CURFEW_QUALITY;
+      venueNotes.push(`running late into the ${traits.curfew}:00 curfew cost ${formatMoney(s, fine)} and the encore`);
+    }
+    if (traits.noiseDb !== undefined && gig.needs.audio > 0 && deptTotals(delivered).audio > gig.needs.audio * NOISE_HEADROOM) {
+      venueHit += NOISE_QUALITY;
+      venueNotes.push(`the ${traits.noiseDb} dB limiter kept cutting in on the oversized PA`);
+    }
+  }
   const rawQuality = Math.max(
     0,
     Math.min(
       1,
-      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) + crewEval.bonus - (weather?.penalty ?? 0) + (gig.mods?.quality ?? 0) - (unrehearsed(s, gig) ? UNREHEARSED_QUALITY : 0) - tickets.quality }) +
+      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) + crewEval.bonus - (weather?.penalty ?? 0) + (gig.mods?.quality ?? 0) - (unrehearsed(s, gig) ? UNREHEARSED_QUALITY : 0) - tickets.quality - venueHit }) +
         (rng.next() - 0.5) * 0.08,
     ),
   );
@@ -488,7 +537,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
       onSite.forEach(v => (v.profitThisYear -= Math.round(papers.total / onSite.length)));
     }
   }
-  if (!onSite.length || quality < 0.3) {
+  if (!present || quality < 0.3) {
     const penalty = Math.round(gig.fee * NO_SHOW_PENALTY_RATE);
     book(s, 'penalties', -penalty);
     gig.status = 'failed';
@@ -533,6 +582,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   }
   gig.status = 'done';
   gig.result = { quality, payout, lateHours, gearCoverage, crewCoverage, ...resultExtras };
+  countTownShow(s, gig.cityId, 'player');
   s.company.reputation = Math.max(0, Math.min(100, reputationAfterShow(s.company.reputation, gig.tier, quality) + stakes.reputation));
   if (gig.event && !gig.event.citywide) recordEvent(s, yearOf(s, s.hour), quality);
   if (quality < BAD_NIGHT) strike(s, gig.act, `a bad night at ${where}`);
@@ -547,7 +597,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const techNote = techIds.length ? ` ${techIds.map(id => getTech(id).name).join(' & ')} on the crew.` : '';
   const specialistNote = Math.abs(specialist) >= 0.015 ? ` (${specialist > 0 ? '+' : ''}${Math.round(specialist * 100)}% ${specialist > 0 ? 'specialist' : 'off-speciality'})` : '';
   const gateNote = gig.gate ? ` Tickets: ${hypeLabel(gig.gate.hype)} (gate deal).` : '';
-  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}${specialistNote}.${gateNote}${weather?.note ?? ''}${failureNote}${freelanceNote}${hire.units ? ` Sub-hired ${hire.units} unit${hire.units > 1 ? 's' : ''} from ${hire.from.join(' & ')}.` : ''}${stakes.note}${riderNote}${kitNote}${techNote}`, quality >= 0.7 ? 'good' : 'info', {
+  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}${specialistNote}.${gateNote}${weather?.note ?? ''}${failureNote}${freelanceNote}${hire.units ? ` Sub-hired ${hire.units} unit${hire.units > 1 ? 's' : ''} from ${hire.from.join(' & ')}.` : ''}${stakes.note}${riderNote}${kitNote}${techNote}${venueNotes.length ? ` At the venue, ${venueNotes.join('; ')}.` : ''}`, quality >= 0.7 ? 'good' : 'info', {
     cityId: gig.cityId,
     gigId: gig.id,
   });
@@ -621,13 +671,14 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   dailyFestivals(s, world, rng);
   dailyOwnFestival(s, rng);
   dailyEvents(s, world, rng);
+  dailyDisruptions(s, date);
   dailyContracts(s, world);
   pruneGigs(s);
 
   // Nag about booked shows with nothing assigned two days out.
   s.gigs.forEach(gig => {
     if (gig.status !== 'booked' || gig.day - day !== 2) return;
-    const assigned = s.vehicles.some(v => v.owner === 'player' && v.orders.includes(gig.id));
+    const assigned = s.vehicles.some(v => v.owner === 'player' && v.orders.includes(gig.id)) || !!gig.freight;
     if (!assigned) {
       pushNews(s, `${gig.act} plays in 2 days and no vehicles are assigned!`, 'bad', { cityId: gig.cityId, gigId: gig.id });
     }
@@ -643,6 +694,11 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     monthlyTowns(s, world);
     monthlyMarketing(s);
     monthlyGoal(s);
+    monthlyWinter(s, world);
+    if (date.getUTCMonth() === 0) {
+      fadeTownShows(s);
+      yearlyDriversRules(s, date.getUTCFullYear());
+    }
     monthlyPriceWars(s, sideRng(s, dayOf(s.hour) + 7002));
     monthlyShares(s, p => rng.chance(p));
     monthlyVenues(s, rng);

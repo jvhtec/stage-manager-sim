@@ -1,16 +1,31 @@
-let symbol = '$';
+import { KM_PER_UNIT } from '@/world/pathfinding';
+import { currencyFor, formatAmount, formatCompact, type Currency } from '@/world/content/currency';
 
-/** Set once per render from the save's home country (€, £, $). */
-export function setCurrency(next: string) {
-  symbol = next;
+let currency: Currency = currencyFor('GB', 2000);
+
+/** Set once per render from the save's home country and year (the euro only arrives in 2002). */
+export function setCurrency(country: string | undefined, year: number) {
+  currency = currencyFor(country, year);
 }
 
-export const currencySymbol = () => symbol;
+export const currencySymbol = () => currency.symbol;
 
-export const money = (n: number) => `${n < 0 ? '-' : ''}${symbol}${Math.abs(Math.round(n)).toLocaleString('en-US')}`;
+let miles = false;
 
-export const kmoney = (n: number) =>
-  Math.abs(n) >= 10000 ? `${symbol}${Math.round(n / 1000)}k` : `${symbol}${(n / 1000).toFixed(1)}k`;
+/** Britain and America measure roads in miles. */
+export function setDistanceUnit(country: string | undefined) {
+  miles = country === 'GB' || country === 'US';
+}
+
+/** A game distance (18 km per unit) in the player's own unit: "320 km" / "199 mi". */
+export function distance(units: number): string {
+  const km = units * KM_PER_UNIT;
+  return miles ? `${Math.round(km * 0.621371).toLocaleString('en-US')} mi` : `${Math.round(km).toLocaleString('en-US')} km`;
+}
+
+export const money = (n: number) => formatAmount(currency, n);
+
+export const kmoney = (n: number) => formatCompact(currency, n);
 
 const RATING_LABELS = ['Appalling', 'Very Poor', 'Poor', 'Mediocre', 'Good', 'Very Good', 'Excellent', 'Outstanding'];
 

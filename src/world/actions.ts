@@ -2,6 +2,7 @@
  * Player commands. Each takes the current state and returns
  * `{ state, result }` — a new state on success, the untouched one on failure.
  */
+import { dispatchFreight, freightLabel, freightQuote, type FreightMode } from './freight';
 import { gateBlocker, hypeLabel, rollGate } from './gate';
 import { retrofitBlocker, retrofitCost, vehicleClass } from './regulation';
 import { openRun, planRun } from './runs';
@@ -298,6 +299,31 @@ export function serviceVehicle(state: TycoonState, vehicleId: string): ActionOut
   const s = cloneState(state);
   serviceNow(s, s.vehicles.find(v => v.id === vehicleId)!);
   return ok(s, `${v0.name} is in the workshop.`);
+}
+
+/** Send a booked show's kit from one of your bases by rail or air instead of a truck. */
+export function sendFreight(state: TycoonState, gigId: string, depotId: string, mode: FreightMode): ActionOutcome {
+  const g0 = state.gigs.find(g => g.id === gigId);
+  const d0 = state.depots.find(d => d.id === depotId);
+  if (!g0 || g0.status !== 'booked') return fail(state, 'Book the show first.');
+  if (!d0) return fail(state, 'Unknown base.');
+  if (g0.freight) return fail(state, 'The kit is already on its way by freight.');
+  const q = freightQuote(state, g0, d0, mode);
+  if (!q.ok) return fail(state, q.reason ?? 'Not possible.');
+  if (state.company.cash < q.cost) return fail(state, 'Not enough cash for the freight.');
+  const s = cloneState(state);
+  dispatchFreight(s, s.gigs.find(g => g.id === gigId)!, s.depots.find(d => d.id === depotId)!, mode);
+  return ok(s, `Sent by ${freightLabel(mode)}.`);
+}
+
+/** Put a second driver in the cab (or take them off): quicker long hauls for a driver's pay while rolling. */
+export function setTeamDrivers(state: TycoonState, vehicleId: string, on: boolean): ActionOutcome {
+  const v0 = state.vehicles.find(v => v.id === vehicleId && v.owner === 'player');
+  if (!v0) return fail(state, 'Unknown vehicle.');
+  if (on && getModel(v0.modelId).kind === 'van') return fail(state, 'A van has no sleeper cab — team drivers need a truck, artic or bus.');
+  const s = cloneState(state);
+  s.vehicles.find(v => v.id === vehicleId)!.teamDrivers = on || undefined;
+  return ok(s, on ? `${v0.name} now runs with two drivers taking turns.` : `${v0.name} is back to one driver.`);
 }
 
 export function rehomeVehicle(state: TycoonState, vehicleId: string, depotId: string): ActionOutcome {

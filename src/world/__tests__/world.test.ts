@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { generateWorld, getWorld, isFlat } from '../mapgen';
-import { getCityPath, roadDistance } from '../pathfinding';
+import { KM_PER_UNIT, getCityPath, roadDistance } from '../pathfinding';
 import { createTycoonGame } from '../state';
 import { advanceHours } from '../sim';
 import { assignVehicle, bookGig, buildDepot, buyVehicle, borrow, repay } from '../actions';
@@ -64,6 +64,54 @@ describe('world generation', () => {
     });
   });
 
+  it.each(['ES', 'GB', 'US', 'DE', 'FR', 'IT'])('%s is a connected miniature with every town on dry land', code => {
+    const map = generateWorld(SEED, code);
+    expect(map.cities).toHaveLength(16);
+    const land = map.terrain.reduce((n, t) => n + (t === Terrain.Water ? 0 : 1), 0);
+    expect(land).toBeGreaterThan(map.width * map.height * 0.25);
+    expect(land).toBeLessThan(map.width * map.height * 0.97); // there is a coast
+    map.cities.forEach(c => {
+      expect(map.terrain[c.y * map.width + c.x]).not.toBe(Terrain.Water);
+      expect(Number.isFinite(roadDistance(map, map.cities[0].id, c.id))).toBe(true);
+      expect(c.venues.length).toBeGreaterThan(0);
+      // Oversized towns may sprawl into each other, but never sit on top of one another.
+      map.cities.forEach(o => {
+        if (o !== c) expect(Math.hypot(o.x - c.x, o.y - c.y)).toBeGreaterThanOrEqual(0.3 * (c.radius + o.radius + 1) - 0.01);
+      });
+    });
+    expect(map.cities.find(c => c.size === 'metropolis')!.venues.some(v => v.kind === 'stadium')).toBe(true);
+  });
+
+  it.each(['ES', 'GB', 'US', 'DE', 'FR', 'IT'])('%s gives every town its venues and warehouse lots, even on a thin peninsula', code => {
+    const venues = { village: 1, town: 3, city: 4, metropolis: 6 };
+    const lots = { village: 1, town: 2, city: 3, metropolis: 3 };
+    for (const seed of [0, 5, 10]) {
+      generateWorld(seed, code).cities.forEach(c => {
+        expect(c.venues.length, `${c.name} venues`).toBe(venues[c.size]);
+        expect(c.lots.length, `${c.name} lots`).toBe(lots[c.size]);
+      });
+    }
+  });
+
+  it('measures distance in real kilometres, whatever the size of the tile', () => {
+    const gb = generateWorld(SEED, 'GB');
+    const us = generateWorld(SEED, 'US');
+    // Britain is drawn on a finer grid than the States...
+    expect(gb.kmPerTile).toBeLessThan(us.kmPerTile / 4);
+    [gb, us].forEach(map => {
+      const [a, b] = [map.cities[0], map.cities[1]];
+      const tiles = getCityPath(map, a.id, b.id).length - 1;
+      expect(roadDistance(map, a.id, b.id) * KM_PER_UNIT).toBeCloseTo(tiles * map.kmPerTile, 5);
+    });
+    // ...and the biggest cities are a plausible distance apart (Madrid-Barcelona is ~500 km as the crow flies; grid roads wander).
+    const es = generateWorld(SEED, 'ES');
+    const km = roadDistance(es, 'city-0', 'city-1') * KM_PER_UNIT;
+    expect(km).toBeGreaterThan(500);
+    expect(km).toBeLessThan(1400);
+    // Finer grids give the cramped countries room.
+    expect(gb.width * gb.height).toBeGreaterThan(72 * 56);
+  });
+
   it('gives bigger places bigger venues, on flat dry lots', () => {
     const map = generateWorld(SEED);
     const metro = map.cities.find(c => c.size === 'metropolis')!;
@@ -123,7 +171,8 @@ describe('simulation', () => {
   });
 
   it('a truck that cannot make load-in arrives late and earns less', () => {
-    const base = newGame();
+    // Start late in the evening so the far show's load-in is only hours away.
+    const base = advanceHours(newGame(), 14);
     const world = getWorld(base.mapSeed);
     const hq = world.cityById.get(base.company.hqCityId)!;
     const far = [...world.cities].sort((a, b) => roadDistance(world, hq.id, b.id) - roadDistance(world, hq.id, a.id))[0];

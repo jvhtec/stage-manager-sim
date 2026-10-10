@@ -8,7 +8,10 @@ import type { TycoonState } from '../types';
 const game = (): TycoonState => {
   let s = createTycoonGame({ companyName: 'R', color: '#f00', seed: 31, country: 'GB', startYear: 1995 });
   s = { ...s, company: { ...s.company, cash: 2_000_000, reputation: 45 } };
-  return advanceHours(s, 24 * 14);
+  s = advanceHours(s, 24 * 21);
+  // Let offers pile up until there are a few that string together.
+  for (let i = 0; i < 8 && pickRun(s, 3).ids.length < 3; i++) s = advanceHours(s, 24 * 5);
+  return s;
 };
 /** Up to n compatible candidate shows (different days, a plan that works). */
 function pickRun(s: TycoonState, n: number) {
@@ -40,7 +43,7 @@ describe('road runs', () => {
     expect(plan.fees).toBe(plan.stops.reduce((a, b) => a + b.gig.fee, 0));
     expect(plan.distance).toBeGreaterThan(0);
     expect(plan.bonus).toBe(Math.round(plan.fees * plan.bonusRate));
-    expect(plan.net).toBe(plan.fees + plan.bonus - plan.fuel - plan.travel);
+    expect(plan.net).toBe(plan.fees + plan.bonus - plan.fuel - plan.tolls - plan.travel);
     // Stops are in date order.
     for (let i = 1; i < plan.stops.length; i++) expect(plan.stops[i].gig.day).toBeGreaterThanOrEqual(plan.stops[i - 1].gig.day);
   });
@@ -67,7 +70,9 @@ describe('road runs', () => {
     expect(out.state.vehicles.find(x => x.id === v.id)!.orders).toEqual(expect.arrayContaining(ids));
     expect(out.state.runs).toHaveLength(ids.length > 1 ? 1 : 0);
 
-    const broken = { ...s, company: { ...s.company, reputation: 0 } };
+    // One of the offers lapses: the whole run must be refused.
+    const lapsed = ids[ids.length - 1];
+    const broken = { ...s, gigs: s.gigs.map(g => (g.id === lapsed ? { ...g, acceptByDay: -1 } : g)) };
     const fail = bookRun(broken, v.id, ids);
     expect(fail.result.ok).toBe(false);
     ids.forEach(id => expect(fail.state.gigs.find(g => g.id === id)!.status).toBe('offer'));

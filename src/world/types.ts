@@ -70,21 +70,98 @@ export interface City {
   buildings: Building[];
   /** 2x2 warehouse lots (top-left tiles). You and rivals each take one. */
   lots: { x: number; y: number }[];
+  /** A town just over the border: shows only (no bases), and a border or a ferry on the way. */
+  abroad?: { country: string; flag: string };
+}
+
+/** A stretch of road over water: a bridge, a ferry, or (once it opens) a tunnel. */
+export interface Crossing {
+  id: number;
+  name?: string;
+  /** Water tiles of the crossing. */
+  tiles: number[];
+  km: number;
+  /** What it is when no fixed link has been built: short hops are bridges, the rest ferries. */
+  base: 'bridge' | 'ferry';
+  /** A fixed link that replaces the ferry in a given year. */
+  link?: { kind: 'bridge' | 'tunnel'; opens: number; name: string };
+  /** Index into WorldMap.borderCountries when it lands in another country. */
+  border: number;
+}
+
+/** A real motorway: the road tiles between two towns that it upgrades from the year it opens. */
+export interface Corridor {
+  name: string;
+  from: string;
+  to: string;
+  opens: number;
+  toll: boolean;
+  tiles: number[];
+}
+
+/** What the roads are like in a given year: which motorways and links are open, how long borders take. */
+export interface Era {
+  year: number;
+  key: string;
+  /** Hours lost at each neighbouring country's border (index as borderCountries), and the customs fee. */
+  border: { hours: number; fee: number }[];
+  /** Hours lost at each historic internal border (index as zones). */
+  zone: number[];
+  /** December to March: snow on the high roads. */
+  winter: boolean;
+  /** How fast a solo-driven truck averages under the day's drivers'-hours rules (team drivers are unaffected). */
+  soloPace: number;
+  /** Those rules, in a few words. */
+  driversRules: string;
+  /** Strikes, blockades and storms under way (titles). */
+  disruptions: string[];
 }
 
 export interface WorldMap {
   seed: number;
+  /** Home country code. */
+  country: string;
   width: number;
   height: number;
+  /** Ground distance of one tile — game distances and travel times follow real kilometres. */
+  kmPerTile: number;
   terrain: Uint8Array;
   road: Uint8Array;
+  /** 1 on land that belongs to a neighbouring country (drawn muted, no towns, roads avoid it). */
+  foreign: Uint8Array;
   /** Integer height per tile *corner*, (width+1) x (height+1). Adjacent corners differ by at most 1. */
   heights: Uint8Array;
   cities: City[];
+  /** Real towns just over the border (shows only). */
+  abroad: City[];
   cityById: Map<string, City>;
   venueById: Map<string, Venue>;
   /** Cache of road paths (tile indices) between city centers. */
   pathCache: Map<string, number[]>;
+  /** Cost of each cached path in game distance units (see pathfinding.KM_PER_UNIT). */
+  distCache: Map<string, number>;
+  /** Which neighbouring country each foreign land tile belongs to (index into borderCountries), -1 at home or sea. */
+  landCountry: Int8Array;
+  borderCountries: string[];
+  /** Historic internal borders (index into zones) per tile, -1 outside. */
+  zoneOf: Int8Array;
+  zones: { name: string; until: number }[];
+  crossings: Crossing[];
+  /** Crossing id per water tile carrying a road, -1 elsewhere. */
+  crossingAt: Int16Array;
+  corridors: Corridor[];
+  /** 1 on high road tiles that snow slows in winter (mountain passes). */
+  snowy: Uint8Array;
+  /** The year's road network (set on the world for a particular year, see infra.eraWorld). */
+  era?: Era;
+  /** 1 where an open motorway runs. */
+  motorway?: Uint8Array;
+  /** Per crossing tile: 1 bridge, 2 ferry, 3 tunnel. */
+  crossKind?: Uint8Array;
+  /** Per tile slow-down from a strike, blockade or storm under way (1 = normal). */
+  slow?: Float32Array;
+  /** Era worlds derived from this one, by era key. */
+  eras?: Map<string, WorldMap>;
 }
 
 // ---------------------------------------------------------------------------
@@ -109,6 +186,7 @@ export type LedgerCategory =
   | 'freelance'
   | 'travel'
   | 'fuel'
+  | 'tolls'
   | 'subhire'
   | 'rental'
   | 'leasing'
@@ -149,6 +227,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   freelance: 'Freelance crew',
   travel: 'Per diems & hotels',
   fuel: 'Fuel',
+  tolls: 'Tolls, ferries & customs',
   subhire: 'Sub-hired kit',
   rental: 'Kit rented out',
   leasing: 'Vehicle leases',
@@ -256,14 +335,18 @@ export type VehicleStatus =
 export interface VehicleRoute {
   from: string;
   to: string;
-  /** Tiles travelled along the cached path. */
+  /** Distance units travelled along the route (see pathfinding.KM_PER_UNIT). */
   progress: number;
+  /** The route's length in units when the vehicle set off (motorways or a new tunnel can shorten it mid-trip). */
+  total?: number;
 }
 
 export interface Vehicle {
   id: string;
   /** 'player' or a rival id. */
   owner: string;
+  /** Two drivers taking turns in a sleeper cab: quicker on long hauls, at a second driver's pay. */
+  teamDrivers?: boolean;
   modelId: string;
   name: string;
   homeCityId: string;
@@ -365,6 +448,14 @@ export interface Rider {
 export interface Gig {
   id: string;
   act: string;
+  /** Booked by a Spanish town council in fiesta season: pays late (rules.ts). */
+  council?: boolean;
+  /** Germany: a Meister für Veranstaltungstechnik (extra certified rigger) must be on the crew. */
+  meister?: boolean;
+  /** Britain after 1998: relief crew under the working-time rules (already in crewNeeded). */
+  relief?: boolean;
+  /** Kit sent by rail or air freight instead of (or as well as) a truck (freight.ts). */
+  freight?: { mode: 'rail' | 'air'; fromDepotId: string; gear: GearStock; arrives: number; cost: number; hours: number; returned?: boolean };
   venueId: string;
   cityId: string;
   tier: number;
@@ -759,6 +850,8 @@ export interface TycoonState {
   /** Manufacturer partnership per department (partners.ts). */
   /** Town size multipliers over the game (towns.ts). */
   townGrowth: Record<string, number>;
+  /** Recent shows per town by who played them ('player' or a rival id), fading each year: market share. */
+  townShows: Record<string, Record<string, number>>;
   /** Buzz and deals from trade shows (marketing.ts). */
   promo?: Promo;
   /** Day each rival was last raided for crew (headhunt.ts). */

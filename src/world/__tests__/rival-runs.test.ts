@@ -20,7 +20,8 @@ function setup() {
   // Two towns close together, and one far away.
   let near: [string, string] | null = null;
   for (const a of world.cities) for (const b of world.cities) if (!near && a.id !== b.id && roadDistance(world, a.id, b.id) <= RIVAL_RUN_TILES && roadDistance(world, a.id, b.id) > 12) near = [a.id, b.id];
-  const far = world.cities.find(c => roadDistance(world, near![0], c.id) > RIVAL_RUN_TILES + 20)!;
+  const far = [...world.cities].sort((a, b) => roadDistance(world, near![0], b.id) - roadDistance(world, near![0], a.id))[0];
+  expect(roadDistance(world, near![0], far.id)).toBeGreaterThan(RIVAL_RUN_TILES + 5);
   const template = base.gigs.find(g => g.status === 'offer')!;
   const mk = (id: string, cityId: string, day: number, status: Gig['status'] = 'offer'): Gig => {
     const venue = world.cityById.get(cityId)!.venues.find(v => v.kind !== 'airport')!;

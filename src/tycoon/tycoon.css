@@ -560,3 +560,20 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .tt-splash-beams i, .tt-splash-truck, .tt-splash-card, .tt-open-card { animation: none; }
 }
+
+/* Map data view key. */
+.tt-legend {
+  position: absolute;
+  left: max(10px, env(safe-area-inset-left));
+  bottom: calc(var(--status-h, 40px) + 10px);
+  z-index: 15;
+  max-width: 300px;
+  padding: 8px 10px;
+  font-size: 12px;
+  display: grid;
+  gap: 4px;
+}
+.compact .tt-legend {
+  bottom: calc(var(--tab-h) + env(safe-area-inset-bottom) + 12px);
+  max-width: calc(100% - 80px);
+}

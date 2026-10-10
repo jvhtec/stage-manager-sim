@@ -125,6 +125,75 @@ export function groundQuad(rc: RC, x0: number, y0: number, x1: number, y1: numbe
   poly(rc, [P(rc, x0, y0, z), P(rc, x1, y0, z), P(rc, x1, y1, z), P(rc, x0, y1, z)], color);
 }
 
+/** Which way shadows fall (tiles per tile of height) — the sun is behind and to the left. */
+const SHADOW_DX = 0.62;
+const SHADOW_DY = 0.18;
+/** Shadows never reach further than this many tile diagonals (the renderer draws objects that far behind the ground). */
+export const SHADOW_LAG = 2;
+/** Tallest height a shadow is cast for, so it stays within SHADOW_LAG diagonals. */
+const SHADOW_MAX_H = SHADOW_LAG / (SHADOW_DX + SHADOW_DY);
+
+/**
+ * A soft ground shadow for a box-shaped footprint of the given height: the footprint swept along the
+ * sun's direction, filled once (so overlaps don't double up). Fades with the daylight.
+ */
+export function boxShadow(rc: RC, x0: number, y0: number, x1: number, y1: number, z: number, height: number) {
+  if (rc.cam.zoom < 0.7) return;
+  const strength = 0.17 * (1 - getNight() * 0.9);
+  if (strength < 0.02) return;
+  const { ctx } = rc;
+  const h = Math.min(height, SHADOW_MAX_H);
+  const ox = SHADOW_DX * h;
+  const oy = SHADOW_DY * h;
+  // The footprint and the same footprint slid along the shadow: the hull of the eight corners is the shadow.
+  const pts: Pt[] = [];
+  for (const [dx, dy] of [[0, 0], [ox, oy]]) {
+    pts.push(P(rc, x0 + dx, y0 + dy, z), P(rc, x1 + dx, y0 + dy, z), P(rc, x1 + dx, y1 + dy, z), P(rc, x0 + dx, y1 + dy, z));
+  }
+  const hull = convexHull(pts);
+  ctx.beginPath();
+  hull.forEach((p, i) => (i ? ctx.lineTo(p[0], p[1]) : ctx.moveTo(p[0], p[1])));
+  ctx.closePath();
+  ctx.fillStyle = `rgba(14,20,34,${strength})`;
+  ctx.fill();
+}
+
+/** Andrew's monotone chain. */
+function convexHull(points: Pt[]): Pt[] {
+  const p = [...points].sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const cross = (o: Pt, a: Pt, b: Pt) => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0]);
+  const lower: Pt[] = [];
+  for (const pt of p) {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], pt) <= 0) lower.pop();
+    lower.push(pt);
+  }
+  const upper: Pt[] = [];
+  for (let i = p.length - 1; i >= 0; i--) {
+    const pt = p[i];
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], pt) <= 0) upper.pop();
+    upper.push(pt);
+  }
+  lower.pop();
+  upper.pop();
+  return lower.concat(upper);
+}
+
+/** A round blob shadow (trees, poles), stretched along the sun's direction. */
+export function blobShadow(rc: RC, x: number, y: number, z: number, radius: number, height: number) {
+  if (rc.cam.zoom < 0.7) return;
+  const strength = 0.2 * (1 - getNight() * 0.9);
+  if (strength < 0.03) return;
+  const { ctx } = rc;
+  const sh = Math.min(height, SHADOW_MAX_H);
+  const [sx, sy] = P(rc, x + SHADOW_DX * sh * 0.5, y + SHADOW_DY * sh * 0.5, z);
+  const rx = radius * TW * 0.5 * rc.cam.zoom * (1 + height * 0.25);
+  const ry = radius * TH * 0.5 * rc.cam.zoom;
+  ctx.fillStyle = `rgba(14,20,34,${strength})`;
+  ctx.beginPath();
+  ctx.ellipse(sx, sy, rx, ry, 0, 0, Math.PI * 2);
+  ctx.fill();
+}
+
 // ---------------------------------------------------------------------------
 // Ellipses (arenas, stadiums)
 // ---------------------------------------------------------------------------
@@ -165,28 +234,45 @@ export function tree(rc: RC, x: number, y: number, z: number, size: number, coni
   const [sx, sy] = P(rc, x, y, z);
   const s = size * rc.cam.zoom;
   const { ctx } = rc;
+  const tint = 0.9 + hash2(Math.round(x * 13), Math.round(y * 13), 77) * 0.22;
+  blobShadow(rc, x, y, z, conifer ? 0.5 : 0.55, conifer ? 1.6 : 1.2);
   ctx.fillStyle = paint(C.trunk);
   ctx.fillRect(sx - s * 0.08, sy - s * 0.5, s * 0.16, s * 0.5);
   if (conifer) {
-    for (let i = 0; i < 2; i++) {
-      const base = sy - s * (0.35 + i * 0.45);
-      const w = s * (0.55 - i * 0.12);
+    // Three tiers, each with a lit left half and a shaded right half.
+    for (let i = 0; i < 3; i++) {
+      const base = sy - s * (0.3 + i * 0.36);
+      const w = s * (0.58 - i * 0.14);
+      const tip = base - s * 0.7;
+      const shade = C.pine;
       ctx.beginPath();
       ctx.moveTo(sx - w, base);
-      ctx.lineTo(sx + w, base);
-      ctx.lineTo(sx, base - s * 0.85);
+      ctx.lineTo(sx, tip);
+      ctx.lineTo(sx, base);
       ctx.closePath();
-      ctx.fillStyle = paint(i ? C.pineLight : C.pine);
+      ctx.fillStyle = paint(i % 2 ? C.pineLight : shade, tint * 1.12);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(sx + w, base);
+      ctx.lineTo(sx, tip);
+      ctx.lineTo(sx, base);
+      ctx.closePath();
+      ctx.fillStyle = paint(i % 2 ? C.pineLight : shade, tint * 0.8);
       ctx.fill();
     }
   } else {
+    // A rounded crown: dark body, a lit cap and a highlight.
     ctx.beginPath();
     ctx.arc(sx, sy - s * 0.85, s * 0.5, 0, Math.PI * 2);
-    ctx.fillStyle = paint(C.leaf, 0.9);
+    ctx.fillStyle = paint(C.leaf, 0.8 * tint);
     ctx.fill();
     ctx.beginPath();
-    ctx.arc(sx - s * 0.15, sy - s * 0.98, s * 0.28, 0, Math.PI * 2);
-    ctx.fillStyle = paint(C.leaf, 1.15);
+    ctx.arc(sx - s * 0.08, sy - s * 0.92, s * 0.42, 0, Math.PI * 2);
+    ctx.fillStyle = paint(C.leaf, 1.0 * tint);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(sx - s * 0.18, sy - s * 1.02, s * 0.2, 0, Math.PI * 2);
+    ctx.fillStyle = paint(C.leaf, 1.25 * tint);
     ctx.fill();
   }
 }
@@ -195,10 +281,38 @@ export function house(rc: RC, x: number, y: number, z: number, floors: number, c
   const wall = BUILDING_WALLS[color % BUILDING_WALLS.length];
   const inset = floors >= 4 ? 0.1 : 0.16;
   const b: Box = { x0: x + inset, y0: y + inset, x1: x + 1 - inset, y1: y + 1 - inset, z0: z, z1: z + floors * 1.15 };
+  boxShadow(rc, b.x0, b.y0, b.x1, b.y1, z, floors * 1.15 + (floors <= 2 ? 0.9 : 0));
   prism(rc, b, wall, floors >= 3 ? C.concrete : wall);
+  // Darker footing where the wall meets the ground.
+  if (rc.cam.zoom >= 1.1) {
+    poly(rc, faceQuad(leftFace(rc, b), 0, 1, 0, 0.08), paint(C.black, 1, 0.16));
+    poly(rc, faceQuad(rightFace(rc, b), 0, 1, 0, 0.08), paint(C.black, 1, 0.2));
+  }
   windows(rc, b, floors, seed, floors >= 4 ? 3 : 2);
+  // A front door on low houses.
+  if (floors <= 2 && rc.cam.zoom >= 1.4) {
+    poly(rc, faceQuad(leftFace(rc, b), 0.42, 0.58, 0, 0.5), paint([88, 58, 44]));
+  }
   if (floors <= 2) {
-    pitchedRoof(rc, b, 0.9, color % 2 ? [128, 64, 52] : [86, 88, 98]);
+    const roof: RGB = color % 2 ? [128, 64, 52] : [86, 88, 98];
+    pitchedRoof(rc, b, 0.9, roof);
+    // Ridge highlight and a chimney on some.
+    if (rc.cam.zoom >= 1.1) {
+      const ym = (b.y0 + b.y1) / 2;
+      const r0 = P(rc, b.x0, ym, b.z1 + 0.9);
+      const r1 = P(rc, b.x1, ym, b.z1 + 0.9);
+      rc.ctx.strokeStyle = paint(C.white, 1, 0.5);
+      rc.ctx.lineWidth = Math.max(0.6, rc.cam.zoom * 0.5);
+      rc.ctx.beginPath();
+      rc.ctx.moveTo(r0[0], r0[1]);
+      rc.ctx.lineTo(r1[0], r1[1]);
+      rc.ctx.stroke();
+    }
+    if (hash2(seed, 3, 9) < 0.45) {
+      const cx = b.x0 + (b.x1 - b.x0) * 0.72;
+      const cy = (b.y0 + b.y1) / 2 - 0.05;
+      prism(rc, { x0: cx, y0: cy, x1: cx + 0.1, y1: cy + 0.1, z0: b.z1 + 0.5, z1: b.z1 + 1.25 }, [142, 92, 78], [96, 62, 52], false);
+    }
   } else if (floors >= 5) {
     // Rooftop plant room on towers.
     prism(rc, { x0: b.x0 + 0.25, y0: b.y0 + 0.25, x1: b.x1 - 0.3, y1: b.y1 - 0.3, z0: b.z1, z1: b.z1 + 0.6 }, C.concrete, C.concrete);
@@ -227,6 +341,8 @@ export function venue(rc: RC, v: VenueDraw): Pt {
   const { x, y, w, h, z } = v;
   const night = getNight();
   groundQuad(rc, x + 0.04, y + 0.04, x + w - 0.04, y + h - 0.04, z, paint(C.pavement));
+  const tallness: Record<string, number> = { pub: 2.4, hall: 2.8, club: 1.9, theatre: 3, arena: 3.2, stadium: 3.4, airport: 1.6 };
+  boxShadow(rc, x + 0.1, y + 0.1, x + w - 0.1, y + h - 0.1, z, tallness[v.kind] ?? 2.5);
 
   switch (v.kind) {
     case 'pub': {
@@ -397,6 +513,7 @@ function plane(rc: RC, x: number, y: number, z: number, size: number) {
 /** A branch office: a two-storey glass-fronted block with a sign and a lock-up. */
 export function delegation(rc: RC, x: number, y: number, z: number, brand: RGB, seed: number): Pt {
   groundQuad(rc, x + 0.04, y + 0.04, x + 1.96, y + 1.96, z, paint(C.pavement));
+  boxShadow(rc, x + 0.15, y + 0.15, x + 1.85, y + 1.35, z, 2.4);
   // Lock-up garage at the back.
   const lockup: Box = { x0: x + 0.15, y0: y + 0.15, x1: x + 0.95, y1: y + 0.85, z0: z, z1: z + 1.1 };
   prism(rc, lockup, [176, 178, 182], [150, 152, 156]);
@@ -415,6 +532,7 @@ export function delegation(rc: RC, x: number, y: number, z: number, brand: RGB, 
 
 export function warehouse(rc: RC, x: number, y: number, z: number, brand: RGB, seed: number, isHq: boolean, size = 1): Pt {
   groundQuad(rc, x + 0.04, y + 0.04, x + 1.96, y + 1.96, z, paint(C.yard));
+  boxShadow(rc, x + 0.12, y + 0.12, x + 1.88, y + 1.3 + (size - 1) * 0.08, z, 2.2 + (size - 1) * 0.7);
   // Yard markings for parking bays.
   if (rc.cam.zoom >= 1.4) {
     rc.ctx.strokeStyle = paint(C.marking, 0.9, 0.7);
@@ -520,6 +638,19 @@ export function vehicle(rc: RC, v: VehicleDraw): Pt {
   // Painter's order within the vehicle: the part further from the viewer first.
   parts.sort((a, b) => a.b.x0 + a.b.y0 - (b.b.x0 + b.b.y0));
   parts.forEach(p => prism(rc, p.b, p.wall, p.top));
+  // Wheels on the visible long side, and a darker skirt along the bottom.
+  if (rc.cam.zoom >= 0.9) {
+    parts.forEach((p, idx) => {
+      const face = along ? leftFace(rc, p.b) : rightFace(rc, p.b);
+      poly(rc, faceQuad(face, 0, 1, 0, 0.14), paint(C.black, 1, 0.45));
+      const isCab = cabLen > 0 && p.wall === v.color && idx !== -1 && p.b === parts.find(q => q.top === v.color)?.b;
+      const spots = isCab ? [0.5] : cabLen > 0 || v.kind === 'semi' ? [0.18, 0.82] : [0.2, 0.8];
+      spots.forEach(u => {
+        poly(rc, faceQuad(face, u - 0.09, u + 0.09, 0, 0.3), paint(C.tyre));
+        poly(rc, faceQuad(face, u - 0.035, u + 0.035, 0.07, 0.2), paint([150, 152, 158]));
+      });
+    });
+  }
   if (v.kind === 'semi') {
     const trailer = parts.find(p => p.wall[0] === 228)?.b;
     if (trailer) poly(rc, faceQuad(along ? leftFace(rc, trailer) : rightFace(rc, trailer), 0.1, 0.9, 0.35, 0.65), paint(v.color));
@@ -527,6 +658,13 @@ export function vehicle(rc: RC, v: VehicleDraw): Pt {
   if (v.kind === 'bus' || v.kind === 'van') {
     const b = parts[0].b;
     poly(rc, faceQuad(along ? leftFace(rc, b) : rightFace(rc, b), 0.08, 0.92, 0.55, 0.8), paint([40, 50, 64]));
+  } else if (cabLen > 0) {
+    // Cab windows on the long side and the windscreen.
+    const cab = parts.find(p => p.top === v.color)?.b;
+    if (cab) {
+      poly(rc, faceQuad(along ? leftFace(rc, cab) : rightFace(rc, cab), 0.12, 0.88, 0.5, 0.86), paint([40, 54, 70]));
+      poly(rc, faceQuad(along ? rightFace(rc, cab) : leftFace(rc, cab), 0.1, 0.9, 0.5, 0.86), paint([34, 46, 62]));
+    }
   }
   // Headlights at night.
   if (getNight() > 0.35 && !v.broken) {
@@ -562,3 +700,17 @@ export function vehicle(rc: RC, v: VehicleDraw): Pt {
   return [cx, (cy + sy) / 2];
 }
 
+
+/** A roll-on roll-off ferry: dark hull, white superstructure, a funnel; `along` = 0 sails +x, 1 sails +y. */
+export function ferry(rc: RC, x: number, y: number, along: 0 | 1) {
+  const L = 0.42;
+  const W = 0.16;
+  const [hx, hy] = along === 0 ? [L, W] : [W, L];
+  blobShadow(rc, x, y, 0, 0.3, 0.2);
+  prism(rc, { x0: x - hx, y0: y - hy, x1: x + hx, y1: y + hy, z0: 0, z1: 0.18 }, [38, 52, 84], [70, 84, 110]);
+  const [sx, sy] = along === 0 ? [hx * 0.6, hy * 0.75] : [hx * 0.75, hy * 0.6];
+  prism(rc, { x0: x - sx, y0: y - sy, x1: x + sx, y1: y + sy, z0: 0.18, z1: 0.36 }, [236, 238, 242], [250, 250, 252]);
+  const fx = along === 0 ? x + hx * 0.25 : x;
+  const fy = along === 0 ? y : y + hy * 0.25;
+  prism(rc, { x0: fx - 0.04, y0: fy - 0.04, x1: fx + 0.04, y1: fy + 0.04, z0: 0.36, z1: 0.5 }, [200, 40, 40], [220, 60, 60], false);
+}

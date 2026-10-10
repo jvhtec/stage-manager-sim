@@ -419,7 +419,7 @@ export function HelpWindow() {
           money.
         </li>
         <li>
-          <b>Tax</b>: on 31 December the taxman takes 15% of the first £250k of the year's profit and 30% above it. Losses carry
+          <b>Tax</b>: on 31 December the taxman takes 15% of the first {kmoney(250_000)} of the year's profit and 30% above it. Losses carry
           forward and half of what you spend on trucks and kit is deductible.
         </li>
         <li>
@@ -451,6 +451,54 @@ export function HelpWindow() {
         <li>
           <b>Fuel</b> follows real history (Market): spikes in 1979-81, 2008 and 2022, a collapse in 1986. Lock the price for 6 or
           12 months if you see a spike coming.
+        </li>
+        <li>
+          <b>The roads change with the years.</b> Real motorways open on their real dates (wider roads with a central
+          reservation): quicker, and tolled in Spain, France and Italy (and for lorries in Germany from 2005). Sea crossings
+          are ferries — a couple of hours to board plus the fare — until a fixed link opens (the Channel Tunnel in 1994).
+        </li>
+        <li>
+          <b>Over the border</b> (towns with a flag) there are shows but no bases. Borders cost time and money as they did:
+          customs and a carnet until the EU single market in 1993, passport queues until Schengen, the GDR's transit
+          checks until 1990, Brexit from 2021, and North America's borders always. A show's window lists the ferries,
+          borders and tolls on the way; tolls, fares and customs go in the ledger as their own line.
+        </li>
+        <li>
+          <b>Winter</b> (December to March) puts snow on the high roads: mountain passes are slower and a truck crossing
+          one needs chains. Plan long runs over the Alps, Pyrenees or Rockies with more slack.
+        </li>
+        <li>
+          <b>Team drivers</b> (a truck's window): two drivers taking turns in a sleeper cab keep it rolling, about a third
+          quicker, at a second driver's pay for every hour on the road. Worth it on long hauls — America especially — and
+          a waste on short hops. Vans can't take them.
+        </li>
+        <li>
+          <b>Drivers' hours</b> follow the rules of the day: loosely policed tachographs before 1986, the EU rules after,
+          digital tachographs from 2007 (and in America, tighter hours of service in 2004 and 2013 and electronic logs from
+          2017). Each tightening slows a solo driver; team drivers are unaffected.
+        </li>
+        <li>
+          <b>History happens on the road</b>: strikes, blockades, storms and the 2010 ash cloud slow the roads they cover,
+          push fuel up or ground air freight. The news warns a few days ahead and a show's window flags a disrupted road.
+        </li>
+        <li>
+          <b>Every room has quirks</b> (venue and show windows): stairs to load in (one more crew), a curfew (run late into
+          it and it's a fine and a cut show), a noise limit (an oversized PA gets limited) or a union house crew to pay.
+        </li>
+        <li>
+          <b>Freight</b>: a booked show's kit can go by rail (cheap, slower; towns and up) or air (dear, quick; cities)
+          from any base instead of a truck. Local freelancers crew it, and the kit comes home the same way.
+        </li>
+        <li>
+          <b>Map views</b> (layers button or O): your reputation by town, your market share, and whose patch each town
+          is — the company with the most shows there lately.
+        </li>
+        <li>
+          <b>Each country has its own rules</b> (a show's "Local rules" line): in Spain the summer fiestas fill small towns with
+          council-booked shows that pay 75 days late; France's intermittents keep freelance crew cheap and plentiful; Germany
+          wants a certified Meister für Veranstaltungstechnik (one more rigger) on big shows from 1995; Britain's 1998
+          working-time rules add relief crew to big or multi-day shows; and America's right-to-work states (Texas, Georgia,
+          Florida…) have no union houses while the north-east and west coast do. Spain has no stagehand unions at all.
         </li>
         <li>
           <b>Rehearsals are mandatory</b> for big jobs: arena shows, stadiums, broadcast events and tours can't be booked
@@ -630,7 +678,7 @@ export function NewGameForm({
       </label>
       <div style={{ display: 'flex', gap: 6, justifyContent: 'space-between', flexWrap: 'wrap' }}>
         <button className="tt-btn sm" onClick={() => setSeed(createRandomSeed())}>
-          ↻ New map
+          ↻ Reroll terrain
         </button>
         <div style={{ display: 'flex', gap: 6 }}>
           {onCancel && (

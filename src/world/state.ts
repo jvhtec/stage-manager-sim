@@ -27,8 +27,9 @@ export const TYCOON_SAVE_KEY = 'stage-manager-sim:tycoon';
 // v4: home country, audio consoles. v5: star techs, real populations.
 // v6: market calendar, festivals, gear wear, crew fatigue, contracts, awards —
 // v5 saves are migrated by filling in the new fields.
-export const TYCOON_SAVE_VERSION = 6;
-const OLDEST_MIGRATABLE = 5;
+// v7: every country is a miniature of the real one, so towns moved — older saves are discarded.
+export const TYCOON_SAVE_VERSION = 7;
+const OLDEST_MIGRATABLE = 7;
 
 export const DEFAULT_POLICIES: Policies = { workshop: 'basic', pay: 'standard', insurance: 'none', freelance: 'fill', subhire: 'fill', rentOut: 'off', training: 'none', rest: 'off', marketing: 'none', rehearsal: 'manual', invoicing: 'hold' };
 
@@ -160,6 +161,7 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     milestones: [],
     partners: {},
     townGrowth: {},
+    townShows: {},
     runs: [],
     priceWars: [],
     festivalHistory: [],
@@ -303,6 +305,7 @@ export function migrate(state: Partial<TycoonState>): TycoonState {
   s.milestones ??= [];
   s.partners ??= {};
   s.townGrowth ??= {};
+  s.townShows ??= {};
   s.difficulty ??= 'normal';
   s.goal ??= 'sandbox';
   s.runs ??= [];

@@ -4,6 +4,7 @@
  * book the lot and deliver all of it well — pays a bonus for the efficiency
  * of a tight route (promoters like a supplier who's already in the area).
  */
+import { tripCharges } from './infra';
 import { fuelMultiplier } from './market';
 import { HOTEL_NIGHT, PER_DIEM, fuelPerTile, getModel } from './catalog';
 import { book, dayOf, formatMoney, gigById, loadInHour, newId, pushNews } from './core';
@@ -50,11 +51,13 @@ export interface RunPlan {
   fees: number;
   distance: number;
   fuel: number;
+  /** Tolls, ferry and tunnel fares, customs. */
+  tolls: number;
   nights: number;
   travel: number;
   bonusRate: number;
   bonus: number;
-  /** Fees and bonus less fuel and nights away — before wear, wages and the rest. */
+  /** Fees and bonus less fuel, tolls and nights away — before wear, wages and the rest. */
   net: number;
 }
 
@@ -68,9 +71,11 @@ export function planRun(state: TycoonState, v: Vehicle, gigIds: string[]): RunPl
   const before = v.orders.map(id => gigById(state, id)).filter((g): g is Gig => !!g && g.status === 'booked');
   if (before.length) at = before[before.length - 1].cityId;
   let distance = 0;
+  let tolls = 0;
   const stops: RunStop[] = gigs.map(g => {
     const leg = roadDistance(world, at, g.cityId);
     distance += Number.isFinite(leg) ? leg : 0;
+    tolls += tripCharges(world, at, g.cityId, model.kind).total;
     at = g.cityId;
     return {
       gig: g,
@@ -81,6 +86,7 @@ export function planRun(state: TycoonState, v: Vehicle, gigIds: string[]): RunPl
   });
   const home = roadDistance(world, at, v.homeCityId);
   if (Number.isFinite(home)) distance += home;
+  tolls += tripCharges(world, at, v.homeCityId, model.kind).total;
   const fees = gigs.reduce((sum, g) => sum + g.fee, 0);
   const fuel = Math.round(distance * fuelPerTile(model) * fuelMultiplier(state));
   const days = new Set(gigs.map(g => g.day));
@@ -96,11 +102,12 @@ export function planRun(state: TycoonState, v: Vehicle, gigIds: string[]): RunPl
     fees,
     distance,
     fuel,
+    tolls,
     nights,
     travel,
     bonusRate,
     bonus,
-    net: Math.round(fees + bonus - fuel - travel),
+    net: Math.round(fees + bonus - fuel - tolls - travel),
   };
 }
 

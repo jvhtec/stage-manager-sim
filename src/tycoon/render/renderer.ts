@@ -9,14 +9,16 @@
  */
 import { gigBookingBar } from '@/world/standing';
 import { getModel, SHOW_END_HOUR, SHOW_START_HOUR, tierInfo } from '@/world/catalog';
-import { dayOf, loadInHour, loadOutDoneHour } from '@/world/core';
-import { getCountry } from '@/world/content/countries';
+import { dayOf, loadInHour, loadOutDoneHour, vehicleSpeed } from '@/world/core';
+import { kmoney } from '../ui/format';
+import { townShare } from '@/world/territory';
+import { SHADOW_LAG } from './sprites';
 import { tileCorners } from '@/world/mapgen';
-import { getCityPath, positionOnPath } from '@/world/pathfinding';
+import { CROSS_FERRY, CROSS_TUNNEL, crossKindAt, getCityPath, positionOnRoute } from '@/world/pathfinding';
 import { Terrain, type City, type Gig, type TycoonState, type Venue, type Vehicle, type WorldMap } from '@/world/types';
 import { TH, TW, groundZ, project, type Camera, type Pt } from './iso';
 import { C, glow, hexToRgb, paint, setNight, type RGB } from './palette';
-import { delegation, hash2, house, poly, tree, venue as drawVenue, vehicle as drawVehicle, warehouse, type RC } from './sprites';
+import { delegation, ferry, hash2, house, poly, tree, venue as drawVenue, vehicle as drawVehicle, warehouse, type RC } from './sprites';
 
 export type Selection =
   | { kind: 'vehicle'; id: string }
@@ -34,11 +36,79 @@ export interface RenderInput {
   alpha: number;
   hover: { x: number; y: number } | null;
   selection: Selection;
+  /** A Transport Tycoon-style data view over the towns. */
+  overlay?: MapOverlay;
+}
+
+export type MapOverlay = 'none' | 'rating' | 'share' | 'rivals';
+export const OVERLAYS: MapOverlay[] = ['none', 'rating', 'share', 'rivals'];
+
+interface TownOverlay {
+  color: RGB;
+  /** Short text added to the town's tag. */
+  text: string;
+  /** 0-1: how strongly to tint the town. */
+  strength: number;
+}
+
+/** Red → amber → green for 0 → 1. */
+function ramp(t: number): RGB {
+  const u = Math.max(0, Math.min(1, t));
+  return u < 0.5 ? [220, 70 + u * 2 * 130, 60] : [220 - (u - 0.5) * 2 * 150, 200, 60 + (u - 0.5) * 2 * 40];
+}
+
+function townOverlays(map: WorldMap, state: TycoonState, overlay: MapOverlay, colorFor: (o: string) => RGB): Map<string, TownOverlay> {
+  const out = new Map<string, TownOverlay>();
+  if (overlay === 'none') return out;
+  const towns = overlay === 'rating' ? map.cities : [...map.cities, ...map.abroad];
+  towns.forEach(c => {
+    if (overlay === 'rating') {
+      const r = state.cityRatings[c.id] ?? 50;
+      out.set(c.id, { color: ramp(r / 100), text: `${Math.round(r)}`, strength: 0.75 });
+      return;
+    }
+    const share = townShare(state, c.id);
+    if (overlay === 'share') {
+      if (share.yours === undefined) out.set(c.id, { color: [120, 130, 150], text: '–', strength: 0.25 });
+      else out.set(c.id, { color: ramp(share.yours * 1.6), text: `${Math.round(share.yours * 100)}%`, strength: 0.35 + share.yours * 0.6 });
+      return;
+    }
+    // Rivals: whose patch is it?
+    if (!share.leader) {
+      out.set(c.id, { color: [120, 130, 150], text: 'open', strength: 0.2 });
+      return;
+    }
+    const who = share.leader.owner === 'player' ? 'you' : state.rivals.find(r => r.id === share.leader!.owner)?.name ?? '?';
+    out.set(c.id, { color: colorFor(share.leader.owner), text: `${who.length > 12 ? `${who.slice(0, 11)}…` : who} ${Math.round(share.leader.share * 100)}%`, strength: 0.35 + share.leader.share * 0.55 });
+  });
+  return out;
+}
+
+/** A tinted disc over each town on the ground, under the tags. */
+function drawTownOverlays(rc: RC, overlays: Map<string, TownOverlay>) {
+  const { ctx, cam, map } = rc;
+  overlays.forEach((o, id) => {
+    const c = map.cityById.get(id);
+    if (!c) return;
+    const r = c.radius + 1.6;
+    const [sx, sy] = project(cam, c.x + 0.5, c.y + 0.5, groundZ(map, c.x, c.y));
+    const rx = (r * TW * cam.zoom) / Math.SQRT2;
+    const ry = (r * TH * cam.zoom) / Math.SQRT2;
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${o.color[0]},${o.color[1]},${o.color[2]},${0.18 + o.strength * 0.32})`;
+    ctx.fill();
+    ctx.lineWidth = Math.max(1.5, cam.zoom * 1.2);
+    ctx.strokeStyle = `rgba(${o.color[0]},${o.color[1]},${o.color[2]},0.9)`;
+    ctx.stroke();
+    ctx.restore();
+  });
 }
 
 export interface HitTargets {
   vehicles: { id: string; x: number; y: number }[];
-  markers: { gigIds: string[]; venueId: string; x: number; y: number; w: number; h: number }[];
+  markers: { gigIds: string[]; venueId: string; cityId?: string; x: number; y: number; w: number; h: number }[];
   labels: { cityId: string; x: number; y: number; w: number; h: number }[];
 }
 
@@ -60,6 +130,31 @@ interface StaticIndex {
 
 const staticCache = new WeakMap<WorldMap, StaticIndex>();
 
+/** Each ferry crossing's water tiles in order from one shore to the other. */
+const ferryLanes = new WeakMap<WorldMap, number[][]>();
+function lanesOf(map: WorldMap): number[][] {
+  const hit = ferryLanes.get(map);
+  if (hit) return hit;
+  const lanes: number[][] = [];
+  map.crossings.forEach(cr => {
+    if (!cr.tiles.length || crossKindAt(map, cr.tiles[0]) !== CROSS_FERRY) return;
+    const set = new Set(cr.tiles);
+    const nbs = (k: number) => [k - 1, k + 1, k - map.width, k + map.width];
+    const start = cr.tiles.find(k => nbs(k).some(nb => map.road[nb] && map.crossingAt[nb] < 0)) ?? cr.tiles[0];
+    const order = [start];
+    const seen = new Set([start]);
+    for (let h = 0; h < order.length; h++) nbs(order[h]).forEach(nb => {
+      if (set.has(nb) && !seen.has(nb)) {
+        seen.add(nb);
+        order.push(nb);
+      }
+    });
+    lanes.push(order);
+  });
+  ferryLanes.set(map, lanes);
+  return lanes;
+}
+
 function staticIndex(map: WorldMap): StaticIndex {
   const cached = staticCache.get(map);
   if (cached) return cached;
@@ -73,7 +168,7 @@ function staticIndex(map: WorldMap): StaticIndex {
   const urban = new Uint8Array(map.width * map.height);
   const occupied = new Uint8Array(map.width * map.height);
 
-  map.cities.forEach(city => {
+  [...map.cities, ...map.abroad].forEach(city => {
     const r = city.radius + 1;
     for (let y = city.y - r; y <= city.y + r; y++)
       for (let x = city.x - r; x <= city.x + r; x++)
@@ -97,7 +192,7 @@ function staticIndex(map: WorldMap): StaticIndex {
   for (let y = 0; y < map.height; y++) {
     for (let x = 0; x < map.width; x++) {
       const i = y * map.width + x;
-      if (occupied[i] || map.road[i]) continue;
+      if (occupied[i] || map.road[i] || map.foreign[i]) continue;
       const t = map.terrain[i];
       if (t === Terrain.Forest) {
         const n = 2 + Math.floor(hash2(x, y, 3) * 2);
@@ -154,9 +249,39 @@ function drawTile(rc: RC, idx: StaticIndex, x: number, y: number) {
   const variation = 0.95 + hash2(x, y) * 0.08;
   let base = TERRAIN_COLORS[t];
   if (idx.urban[i] && t !== Terrain.Water) base = [138, 150, 112];
-  poly(rc, pts, paint(base, slopeLight * variation));
+  // Winter: snow on the high ground.
+  if (map.era?.winter && t !== Terrain.Water) {
+    const avg = (hN + hE + hS + hW) / 4;
+    if (avg >= 2.4) {
+      const f = Math.min(0.9, (avg - 2.2) / 1.3);
+      base = [base[0] + (236 - base[0]) * f, base[1] + (241 - base[1]) * f, base[2] + (248 - base[2]) * f];
+    }
+  }
+  // Neighbouring countries sit there as a muted backdrop: you can see the shape of home.
+  const abroad = map.foreign[i] === 1;
+  if (abroad) base = [base[0] * 0.45 + 150 * 0.55, base[1] * 0.45 + 156 * 0.55, base[2] * 0.45 + 162 * 0.55];
+  const isWater = (nx: number, ny: number) => nx >= 0 && ny >= 0 && nx < map.width && ny < map.height && map.terrain[ny * map.width + nx] === Terrain.Water;
+  const waterN = [isWater(x, y - 1), isWater(x + 1, y), isWater(x, y + 1), isWater(x - 1, y)];
+  const shore = t === Terrain.Water && waterN.some(w => !w);
+  // Open water is deeper; the shallows by the shore are lighter.
+  const depth = t === Terrain.Water ? (shore ? 1.1 : 0.92 + hash2(x, y, 4) * 0.04) : 1;
+  poly(rc, pts, paint(base, slopeLight * variation * depth));
 
   if (t === Terrain.Water) {
+    // Foam along the edges that meet land.
+    if (shore && rc.cam.zoom >= 0.8) {
+      const edges: [number, number][] = [[0, 1], [1, 2], [2, 3], [3, 0]];
+      rc.ctx.strokeStyle = paint(C.white, 1, 0.55 + 0.15 * Math.sin(rc.time / 600 + x + y));
+      rc.ctx.lineWidth = Math.max(1, rc.cam.zoom * 0.9);
+      rc.ctx.lineCap = 'round';
+      rc.ctx.beginPath();
+      edges.forEach(([a, b], k) => {
+        if (waterN[k]) return;
+        rc.ctx.moveTo(pts[a][0], pts[a][1]);
+        rc.ctx.lineTo(pts[b][0], pts[b][1]);
+      });
+      rc.ctx.stroke();
+    }
     // Drifting glints.
     const phase = (rc.time / 1400 + hash2(x, y, 9)) % 1;
     if (phase < 0.35 && rc.cam.zoom >= 0.9) {
@@ -164,7 +289,28 @@ function drawTile(rc: RC, idx: StaticIndex, x: number, y: number) {
       rc.ctx.fillStyle = paint(C.waterGlint, 1, 0.55);
       rc.ctx.fillRect(gx, gy, 4 * rc.cam.zoom, Math.max(1, rc.cam.zoom * 0.6));
     }
-  } else if (rc.cam.zoom >= 1.5) {
+  } else if (rc.cam.zoom >= 1.3 && !abroad && !map.road[i] && !idx.urban[i] && (t === Terrain.Grass || t === Terrain.Forest || t === Terrain.Rough)) {
+    // Tufts of grass (or scree) so big fields aren't flat colour.
+    const light = t === Terrain.Rough ? 'rgba(170,158,128,0.55)' : 'rgba(150,200,110,0.45)';
+    const dark = t === Terrain.Rough ? 'rgba(80,72,60,0.5)' : 'rgba(46,92,40,0.4)';
+    for (let k = 0; k < 4; k++) {
+      const u = 0.12 + hash2(x, y, 60 + k) * 0.76;
+      const v = 0.12 + hash2(x, y, 70 + k) * 0.76;
+      const [tx, ty] = project(rc.cam, x + u, y + v, groundZ(map, x + u, y + v));
+      const h = (1.4 + hash2(x, y, 80 + k) * 1.4) * rc.cam.zoom;
+      rc.ctx.strokeStyle = k % 2 ? light : dark;
+      rc.ctx.lineWidth = Math.max(0.6, rc.cam.zoom * 0.45);
+      rc.ctx.beginPath();
+      rc.ctx.moveTo(tx - h * 0.4, ty);
+      rc.ctx.lineTo(tx - h * 0.2, ty - h);
+      rc.ctx.moveTo(tx, ty);
+      rc.ctx.lineTo(tx + h * 0.05, ty - h * 1.15);
+      rc.ctx.moveTo(tx + h * 0.4, ty);
+      rc.ctx.lineTo(tx + h * 0.25, ty - h * 0.9);
+      rc.ctx.stroke();
+    }
+  }
+  if (t !== Terrain.Water && rc.cam.zoom >= 1.5) {
     rc.ctx.strokeStyle = 'rgba(0,0,0,0.06)';
     rc.ctx.lineWidth = 1;
     rc.ctx.beginPath();
@@ -172,6 +318,30 @@ function drawTile(rc: RC, idx: StaticIndex, x: number, y: number) {
     rc.ctx.lineTo(pts[2][0], pts[2][1]);
     rc.ctx.lineTo(pts[3][0], pts[3][1]);
     rc.ctx.stroke();
+  }
+
+  // Borders: a dashed line where home meets a neighbour (and the inner-German border while it stands).
+  if (t !== Terrain.Water && rc.cam.zoom >= 0.5) {
+    const era = map.era;
+    const edge = (nx: number, ny: number, p: Pt, q: Pt) => {
+      if (nx >= map.width || ny >= map.height) return;
+      const j = ny * map.width + nx;
+      if (map.terrain[j] === Terrain.Water) return;
+      const country = map.foreign[i] !== map.foreign[j];
+      const zi = map.zoneOf[i] >= 0 ? map.zoneOf[i] : map.zoneOf[j];
+      const zone = !country && map.zoneOf[i] !== map.zoneOf[j] && !!era && era.zone[zi] > 0;
+      if (!country && !zone) return;
+      rc.ctx.strokeStyle = zone ? 'rgba(200,30,30,0.95)' : 'rgba(110,50,150,0.9)';
+      rc.ctx.lineWidth = Math.max(1.6, rc.cam.zoom * 1.3);
+      rc.ctx.setLineDash([rc.cam.zoom * 3, rc.cam.zoom * 2]);
+      rc.ctx.beginPath();
+      rc.ctx.moveTo(p[0], p[1]);
+      rc.ctx.lineTo(q[0], q[1]);
+      rc.ctx.stroke();
+      rc.ctx.setLineDash([]);
+    };
+    edge(x + 1, y, pts[1], pts[2]);
+    edge(x, y + 1, pts[2], pts[3]);
   }
 
   // Map-edge cliffs give the world a diorama slab.
@@ -205,6 +375,27 @@ function drawRoad(rc: RC, idx: StaticIndex, x: number, y: number) {
   const w = has(-1, 0);
   const e = has(1, 0);
 
+  // Ferries and the tunnel aren't roads on the water: a dashed lane (or a faint line under the sea).
+  const kind = bridge ? crossKindAt(map, i) : 0;
+  if (kind === CROSS_FERRY || kind === CROSS_TUNNEL) {
+    if (rc.cam.zoom < 0.3) return;
+    const c = project(rc.cam, x + 0.5, y + 0.5, 0);
+    rc.ctx.strokeStyle = kind === CROSS_FERRY ? 'rgba(255,255,255,0.55)' : 'rgba(30,36,60,0.45)';
+    rc.ctx.lineWidth = Math.max(1, rc.cam.zoom * (kind === CROSS_FERRY ? 0.7 : 1.1));
+    rc.ctx.setLineDash(kind === CROSS_FERRY ? [rc.cam.zoom * 3, rc.cam.zoom * 3] : [rc.cam.zoom * 1.5, rc.cam.zoom * 2.5]);
+    rc.ctx.beginPath();
+    ([[n, 0.5, 0], [s, 0.5, 1], [w, 0, 0.5], [e, 1, 0.5]] as [boolean, number, number][]).forEach(([on, u, v]) => {
+      if (!on) return;
+      const p = project(rc.cam, x + u, y + v, 0);
+      rc.ctx.moveTo(c[0], c[1]);
+      rc.ctx.lineTo(p[0], p[1]);
+    });
+    rc.ctx.stroke();
+    rc.ctx.setLineDash([]);
+    return;
+  }
+  const motorway = !bridge && !!map.motorway?.[i];
+
   if (bridge) {
     // Piers down to the water.
     [0.25, 0.75].forEach(u => {
@@ -217,16 +408,39 @@ function drawRoad(rc: RC, idx: StaticIndex, x: number, y: number) {
 
   const urban = idx.urban[i];
   if (urban && !bridge) rect(0.08, 0.08, 0.92, 0.92, paint(C.pavement, 0.95));
-  const a = 0.3;
-  const b = 0.7;
-  const asphalt = paint(bridge ? C.bridge : C.road);
+  const a = motorway ? 0.2 : 0.3;
+  const b = motorway ? 0.8 : 0.7;
+  const asphalt = paint(bridge ? C.bridge : C.road, motorway ? 0.86 : 1);
+  // A kerb: a slightly wider darker edge under the asphalt.
+  if (rc.cam.zoom >= 1.1 && !bridge) {
+    const kerb = paint(C.roadEdge, 1.05);
+    const k = 0.045;
+    rect(a - k, a - k, b + k, b + k, kerb);
+    if (n) rect(a - k, 0, b + k, a, kerb);
+    if (s) rect(a - k, b, b + k, 1, kerb);
+    if (w) rect(0, a - k, a, b + k, kerb);
+    if (e) rect(b, a - k, 1, b + k, kerb);
+  }
   rect(a, a, b, b, asphalt);
   if (n) rect(a, 0, b, a, asphalt);
   if (s) rect(a, b, b, 1, asphalt);
   if (w) rect(0, a, a, b, asphalt);
   if (e) rect(b, a, 1, b, asphalt);
 
-  if (rc.cam.zoom >= 1.8) {
+  if (motorway && rc.cam.zoom >= 0.9) {
+    // A central reservation down the middle of the carriageways.
+    rc.ctx.strokeStyle = 'rgba(214,222,206,0.85)';
+    rc.ctx.lineWidth = Math.max(0.8, rc.cam.zoom * 0.55);
+    rc.ctx.beginPath();
+    const c = Q(0.5, 0.5);
+    ([[n, 0.5, 0], [s, 0.5, 1], [w, 0, 0.5], [e, 1, 0.5]] as [boolean, number, number][]).forEach(([on, u, v]) => {
+      if (!on) return;
+      const p = Q(u, v);
+      rc.ctx.moveTo(c[0], c[1]);
+      rc.ctx.lineTo(p[0], p[1]);
+    });
+    rc.ctx.stroke();
+  } else if (rc.cam.zoom >= 1.8) {
     rc.ctx.strokeStyle = paint(C.marking, 1, 0.75);
     rc.ctx.lineWidth = Math.max(0.6, rc.cam.zoom * 0.35);
     rc.ctx.setLineDash([rc.cam.zoom * 2, rc.cam.zoom * 2]);
@@ -287,9 +501,8 @@ function placeVehicles(state: TycoonState, map: WorldMap, alpha: number) {
 
   state.vehicles.forEach(v => {
     if ((v.status === 'driving' || v.status === 'broken') && v.route) {
-      const path = getCityPath(map, v.route.from, v.route.to);
-      const moving = v.status === 'driving' ? getModel(v.modelId).speed * alpha : 0;
-      const pos = positionOnPath(map, path, v.route.progress + moving);
+      const moving = v.status === 'driving' ? vehicleSpeed(v, map) * alpha : 0;
+      const pos = positionOnRoute(map, v.route.from, v.route.to, v.route.progress + moving);
       // Keep to the left, TT-style.
       const off = 0.13;
       const ox = pos.dir === 1 ? off : pos.dir === 3 ? -off : 0;
@@ -398,13 +611,38 @@ export function renderWorld(ctx: CanvasRenderingContext2D, input: RenderInput): 
   const dMin = Math.max(0, Math.floor((byMin * 2) / TH));
   const dMax = Math.min(map.width + map.height - 2, Math.ceil(((byMax + 60) * 2) / TH));
 
-  for (let d = dMin; d <= dMax; d++) {
+  // Ferries ply their lanes back and forth.
+  const boats = new Map<number, { x: number; y: number; along: 0 | 1 }>();
+  lanesOf(map).forEach((lane, li) => {
+    if (lane.length < 2) return;
+    const span = lane.length - 1;
+    const t = (time / 1000 / (span * 1.2) + li * 0.37) % 2;
+    const p = (t < 1 ? t : 2 - t) * span;
+    const k = Math.min(span - 1, Math.floor(p));
+    const a = lane[k];
+    const b = lane[k + 1];
+    const ax = a % map.width;
+    const ay = (a - ax) / map.width;
+    const bx = b % map.width;
+    const by = (b - bx) / map.width;
+    const f = p - k;
+    const x = ax + (bx - ax) * f + 0.5;
+    const y = ay + (by - ay) * f + 0.5;
+    boats.set(Math.floor(y) * map.width + Math.floor(x), { x, y, along: bx !== ax ? 0 : 1 });
+  });
+
+  const drawGround = (d: number) => {
+    const xLo = Math.max(0, d - map.height + 1, Math.floor(((bxMin * 2) / TW + d) / 2) - 1);
+    const xHi = Math.min(map.width - 1, d, Math.ceil(((bxMax * 2) / TW + d) / 2) + 1);
+    for (let x = xLo; x <= xHi; x++) drawTile(rc, idx, x, d - x);
+  };
+
+  const drawObjects = (d: number) => {
     // bx = (x - y) * TW/2 = (2x - d) * TW/2  →  x range from visible bx range
     const xLo = Math.max(0, d - map.height + 1, Math.floor(((bxMin * 2) / TW + d) / 2) - 1);
     const xHi = Math.min(map.width - 1, d, Math.ceil(((bxMax * 2) / TW + d) / 2) + 1);
     for (let x = xLo; x <= xHi; x++) {
       const y = d - x;
-      drawTile(rc, idx, x, y);
       const ti = y * map.width + x;
 
       idx.objs.get(ti)?.forEach(o => {
@@ -459,9 +697,19 @@ export function renderWorld(ctx: CanvasRenderingContext2D, input: RenderInput): 
           }
         }
       });
+      const boat = boats.get(ti);
+      if (boat) ferry(rc, boat.x, boat.y, boat.along);
       placed.loose.get(ti)?.forEach((p, k) => drawPlaced({ ...p, x: p.x + k * 0.15, y: p.y + 0.2 }));
       placed.onRoad.get(ti)?.forEach(drawPlaced);
     }
+  };
+
+  // Painter's order, with objects trailing the ground by SHADOW_LAG diagonals: a shadow (at most
+  // that many diagonals long) lands on ground that's already drawn, while a hill more than that far
+  // in front still hides what's behind it.
+  for (let d = dMin; d <= dMax + SHADOW_LAG; d++) {
+    if (d <= dMax) drawGround(d);
+    if (d - SHADOW_LAG >= dMin) drawObjects(d - SHADOW_LAG);
   }
 
   // Hover cursor.
@@ -505,8 +753,12 @@ export function renderWorld(ctx: CanvasRenderingContext2D, input: RenderInput): 
 
   const planned = selectedVehicle ? state.vehicles.find(v => v.id === selectedVehicle) : undefined;
   if (planned && planned.owner === 'player') drawRoutePlan(rc, state, planned);
-  drawCityLabels(rc, state, hits);
-  drawGigMarkers(rc, state, venueTop, hits, colorFor);
+  const overlays = townOverlays(map, state, input.overlay ?? 'none', colorFor);
+  drawTownOverlays(rc, overlays);
+  // A data view replaces the show markers, so every town's figure can be read.
+  const markers = overlays.size ? [] : layoutGigMarkers(rc, state, venueTop, colorFor);
+  drawCityLabels(rc, state, hits, markers.map(m => m.rect), overlays);
+  drawGigMarkers(rc, markers, hits);
   return hits;
 }
 
@@ -587,27 +839,65 @@ function outlineFootprint(rc: RC, x: number, y: number, w: number, h: number) {
   ctx.setLineDash([]);
 }
 
-function drawCityLabels(rc: RC, state: TycoonState, hits: HitTargets) {
+type Rect = { x: number; y: number; w: number; h: number };
+const overlaps = (a: Rect, b: Rect, pad = 2) =>
+  a.x < b.x + b.w + pad && b.x < a.x + a.w + pad && a.y < b.y + b.h + pad && b.y < a.y + a.h + pad;
+
+/**
+ * Town name tags, most important first (your bases, then the biggest towns): a tag that would
+ * overlap one already placed — or a show marker — is left out rather than piled on top.
+ */
+function drawCityLabels(rc: RC, state: TycoonState, hits: HitTargets, taken: Rect[], overlays: Map<string, TownOverlay>) {
   const { ctx, cam, map } = rc;
   const scale = Math.max(0.85, Math.min(1.25, cam.zoom * 0.6));
-  map.cities.forEach(city => {
-    if (cam.zoom < 0.7 && city.size === 'village') return;
+  const hasDepot = (id: string) => state.depots.some(d => d.cityId === id);
+  const towns = [...map.cities, ...map.abroad].sort(
+    (a, b) => Number(hasDepot(b.id)) - Number(hasDepot(a.id)) || b.population - a.population,
+  );
+  towns.forEach(city => {
+    if (cam.zoom < 0.7 && city.size === 'village' && !hasDepot(city.id) && !overlays.has(city.id)) return;
     // Anchor at the town's front edge (straight down-screen from the centre)
     // so the label never sits on top of the venues.
     const edge = city.radius * 0.75 + 1;
     const [sx, sy0] = project(cam, city.x + 0.5 + edge, city.y + 0.5 + edge, groundZ(map, city.x, city.y));
     const sy = sy0 + 12;
     if (sx < -100 || sx > cam.w + 100 || sy < -40 || sy > cam.h + 40) return;
-    const name = city.name;
+    const name = city.abroad ? `${city.abroad.flag} ${city.name}` : city.name;
+    const extra = overlays.get(city.id);
     const pop = city.population >= 1_000_000 ? `${(city.population / 1e6).toFixed(city.population >= 1e7 ? 0 : 1)}M` : `${Math.round(city.population / 1000)}k`;
     ctx.font = `700 ${Math.round(12 * scale)}px ui-rounded, system-ui, sans-serif`;
-    const w = ctx.measureText(name).width + 34 * scale;
+    const extraW = extra ? (ctx.measureText(extra.text).width + 10) * 0.85 : 0;
+    const w = ctx.measureText(name).width + 34 * scale + extraW;
     const h = 18 * scale;
-    const hasDepot = state.depots.some(d => d.cityId === city.id);
-    ctx.fillStyle = 'rgba(16,18,26,0.78)';
-    roundRect(ctx, sx - w / 2, sy - h / 2, w, h, 4 * scale);
+    const rect = { x: sx - w / 2, y: sy - h / 2, w, h };
+    const mine = hasDepot(city.id);
+    // Slide a big town's tag down past whatever's in the way; small towns just give way.
+    const big = city.size === 'city' || city.size === 'metropolis';
+    for (let k = 0; k < (big ? 3 : 1) && !mine && taken.some(t => overlaps(t, rect)); k++) {
+      if (k > 0 || big) rect.y += h + 3;
+    }
+    if (!mine && !big && taken.some(t => overlaps(t, rect))) {
+      // In a data view a crowded-out town still shows its figure, as a chip on the town itself.
+      if (extra) {
+        const [cx, cy] = project(cam, city.x + 0.5, city.y + 0.5, groundZ(map, city.x, city.y));
+        ctx.font = `800 ${Math.round(10 * scale)}px ui-rounded, system-ui, sans-serif`;
+        const cw = ctx.measureText(extra.text).width + 8;
+        ctx.fillStyle = `rgb(${extra.color[0]},${extra.color[1]},${extra.color[2]})`;
+        roundRect(ctx, cx - cw / 2, cy - 8, cw, 15, 3);
+        ctx.fill();
+        ctx.fillStyle = '#0b0d12';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(extra.text, cx, cy);
+        hits.labels.push({ cityId: city.id, x: cx - cw / 2, y: cy - 8, w: cw, h: 15 });
+      }
+      return;
+    }
+    taken.push(rect);
+    ctx.fillStyle = city.abroad ? 'rgba(52,44,70,0.78)' : 'rgba(16,18,26,0.78)';
+    roundRect(ctx, rect.x, rect.y, w, h, 4 * scale);
     ctx.fill();
-    if (hasDepot) {
+    if (mine) {
       ctx.strokeStyle = state.company.color;
       ctx.lineWidth = 2;
       ctx.stroke();
@@ -615,82 +905,137 @@ function drawCityLabels(rc: RC, state: TycoonState, hits: HitTargets) {
     ctx.fillStyle = '#fff';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(name, sx - w / 2 + 6 * scale, sy + 0.5);
+    const ty = rect.y + h / 2;
+    ctx.fillText(name, sx - w / 2 + 6 * scale, ty + 0.5);
     ctx.font = `500 ${Math.round(9 * scale)}px ui-rounded, system-ui, sans-serif`;
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.textAlign = 'right';
-    ctx.fillText(pop, sx + w / 2 - 5 * scale, sy + 1);
-    hits.labels.push({ cityId: city.id, x: sx - w / 2, y: sy - h / 2, w, h });
+    ctx.fillText(pop, sx + w / 2 - 5 * scale - extraW, ty + 1);
+    if (extra) {
+      // The overlay's figure in a coloured chip at the end of the tag.
+      const cw = extraW - 4;
+      ctx.fillStyle = `rgb(${extra.color[0]},${extra.color[1]},${extra.color[2]})`;
+      roundRect(ctx, sx + w / 2 - cw - 3, rect.y + 2, cw, h - 4, 3);
+      ctx.fill();
+      ctx.fillStyle = '#0b0d12';
+      ctx.textAlign = 'center';
+      ctx.font = `800 ${Math.round(10 * scale)}px ui-rounded, system-ui, sans-serif`;
+      ctx.fillText(extra.text, sx + w / 2 - cw / 2 - 3, ty + 1);
+    }
+    hits.labels.push({ cityId: city.id, ...rect });
   });
 }
 
-function drawGigMarkers(rc: RC, state: TycoonState, venueTop: Map<string, Pt>, hits: HitTargets, colorFor: (o: string) => RGB) {
-  const { ctx, cam, time } = rc;
+interface MarkerLayout {
+  gigs: Gig[];
+  venueId: string;
+  cityId?: string;
+  x: number;
+  y: number;
+  stem: number;
+  rect: Rect;
+  label: string;
+  bg: string;
+  fg: string;
+  font: string;
+}
+
+/** Zoomed out, a town's shows share one marker; closer in, each venue gets its own, stacked if they'd collide. */
+const MARKERS_PER_TOWN_BELOW = 0.75;
+
+function layoutGigMarkers(rc: RC, state: TycoonState, venueTop: Map<string, Pt>, colorFor: (o: string) => RGB): MarkerLayout[] {
+  const { ctx, cam, time, map } = rc;
   const today = dayOf(state.hour);
-  const byVenue = new Map<string, Gig[]>();
+  const perTown = cam.zoom < MARKERS_PER_TOWN_BELOW;
+  const groups = new Map<string, Gig[]>();
   state.gigs.forEach(g => {
-    const relevant =
-      (g.status === 'offer' && g.acceptByDay >= today) ||
-      (g.status === 'booked') ||
-      (g.status === 'rival' && !g.result);
+    const relevant = (g.status === 'offer' && g.acceptByDay >= today) || g.status === 'booked' || (g.status === 'rival' && !g.result);
     if (!relevant) return;
-    const list = byVenue.get(g.venueId);
+    const key = perTown ? g.cityId : g.venueId;
+    const list = groups.get(key);
     if (list) list.push(g);
-    else byVenue.set(g.venueId, [g]);
+    else groups.set(key, [g]);
   });
 
   const scale = Math.max(0.85, Math.min(1.2, cam.zoom * 0.55));
-  const cur = getCountry(state.country).currency;
-  byVenue.forEach((gigs, venueId) => {
-    const top = venueTop.get(venueId);
-    if (!top) return;
-    const rank = (g: Gig) => (g.status === 'booked' ? 0 : g.status === 'offer' ? 1 : 2);
-    gigs.sort((a, b) => rank(a) - rank(b) || a.day - b.day);
-    const g = gigs[0];
-    const bob = Math.sin(time / 380 + top[0]) * 2.5;
-    const x = top[0];
-    const y = top[1] - 14 * scale + bob;
+  const font = `700 ${Math.round(11 * scale)}px ui-rounded, system-ui, sans-serif`;
+  ctx.font = font;
+  const rank = (g: Gig) => (g.status === 'booked' ? 0 : g.status === 'offer' ? 1 : 2);
+  const out: MarkerLayout[] = [];
+  [...groups.entries()]
+    .map(([key, gigs]) => {
+      gigs.sort((a, b) => rank(a) - rank(b) || b.fee - a.fee || a.day - b.day);
+      return { key, gigs };
+    })
+    // Your booked shows get placed first, then the richest offers.
+    .sort((a, b) => rank(a.gigs[0]) - rank(b.gigs[0]) || b.gigs[0].fee - a.gigs[0].fee)
+    .forEach(({ key, gigs }) => {
+      const g = gigs[0];
+      const top = perTown
+        ? (() => {
+            const c = map.cityById.get(key);
+            return c ? project(cam, c.x + 0.5, c.y + 0.5, groundZ(map, c.x, c.y) + 1.5) : undefined;
+          })()
+        : venueTop.get(key);
+      if (!top) return;
+      const bob = Math.sin(time / 380 + top[0]) * 2.5;
+      let label: string;
+      let bg: string;
+      let fg = '#fff';
+      const booked = gigs.filter(x => x.status === 'booked').length;
+      const offers = gigs.filter(x => x.status === 'offer').length;
+      if (g.status === 'booked') {
+        const days = g.day - today;
+        label = g.overseas ? `★ ✈ ${Math.max(0, days)}d` : days <= 0 ? '★ TONIGHT' : `★ ${days}d`;
+        if (perTown && booked > 1) label = `★ ${booked} booked`;
+        bg = state.company.color;
+      } else if (g.status === 'offer') {
+        const locked = !!gigBookingBar(state, g).reason;
+        label = perTown && offers > 1 ? `${offers} offers · ${kmoney(g.fee)}` : `${g.tourId ? 'TOUR ' : ''}${locked ? '🔒 ' : g.asksForYou ? '♥ ' : ''}${kmoney(g.fee)}`;
+        bg = locked ? '#3f3f46' : tierInfo(g.tier).color;
+        fg = locked ? '#a1a1aa' : '#0b0d12';
+      } else {
+        label = '●';
+        const c = colorFor(g.rivalId ?? '');
+        bg = `rgb(${c[0]},${c[1]},${c[2]})`;
+      }
+      if (!perTown && gigs.length > 1) label += ` +${gigs.length - 1}`;
+      const w = ctx.measureText(label).width + 12 * scale;
+      const h = 17 * scale;
+      let y = top[1] - 14 * scale + bob;
+      let rect = { x: top[0] - w / 2, y: y - h, w, h };
+      // Stack upwards out of the way of markers already placed; give up after a few tries.
+      for (let tries = 0; tries < 4 && out.some(m => overlaps(m.rect, rect)); tries++) {
+        y -= h + 3;
+        rect = { x: top[0] - w / 2, y: y - h, w, h };
+      }
+      if (out.some(m => overlaps(m.rect, rect))) return;
+      out.push({ gigs, venueId: perTown ? g.venueId : key, cityId: perTown ? key : undefined, x: top[0], y, stem: top[1], rect, label, bg, fg, font });
+    });
+  return out;
+}
 
-    let label: string;
-    let bg: string;
-    let fg = '#fff';
-    if (g.status === 'booked') {
-      const days = g.day - today;
-      label = g.overseas ? `★ ✈ ${Math.max(0, days)}d` : days <= 0 ? '★ TONIGHT' : `★ ${days}d`;
-      bg = state.company.color;
-    } else if (g.status === 'offer') {
-      const locked = !!gigBookingBar(state, g).reason;
-      label = `${g.tourId ? 'TOUR ' : ''}${locked ? '🔒 ' : g.asksForYou ? '♥ ' : ''}${cur}${g.fee >= 10000 ? `${Math.round(g.fee / 1000)}k` : `${(g.fee / 1000).toFixed(1)}k`}`;
-      bg = locked ? '#3f3f46' : tierInfo(g.tier).color;
-      fg = locked ? '#a1a1aa' : '#0b0d12';
-    } else {
-      label = '●';
-      const c = colorFor(g.rivalId ?? '');
-      bg = `rgb(${c[0]},${c[1]},${c[2]})`;
-    }
-    if (gigs.length > 1) label += ` +${gigs.length - 1}`;
-
-    ctx.font = `700 ${Math.round(11 * scale)}px ui-rounded, system-ui, sans-serif`;
-    const w = ctx.measureText(label).width + 12 * scale;
-    const h = 17 * scale;
-    // Stem + pin.
+function drawGigMarkers(rc: RC, layouts: MarkerLayout[], hits: HitTargets) {
+  const { ctx } = rc;
+  layouts.forEach(m => {
+    ctx.font = m.font;
     ctx.strokeStyle = 'rgba(0,0,0,0.5)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x, top[1]);
+    ctx.moveTo(m.x, m.y);
+    ctx.lineTo(m.x, m.stem);
     ctx.stroke();
-    ctx.fillStyle = bg;
-    roundRect(ctx, x - w / 2, y - h, w, h, 5 * scale);
+    ctx.fillStyle = m.bg;
+    roundRect(ctx, m.rect.x, m.rect.y, m.rect.w, m.rect.h, 5);
     ctx.fill();
     ctx.strokeStyle = 'rgba(0,0,0,0.45)';
     ctx.lineWidth = 1;
     ctx.stroke();
-    ctx.fillStyle = fg;
+    ctx.fillStyle = m.fg;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(label, x, y - h / 2 + 0.5);
-    hits.markers.push({ gigIds: gigs.map(x2 => x2.id), venueId, x: x - w / 2, y: y - h, w, h });
+    ctx.fillText(m.label, m.x, m.rect.y + m.rect.h / 2 + 0.5);
+    hits.markers.push({ gigIds: m.gigs.map(g => g.id), venueId: m.venueId, cityId: m.cityId, ...m.rect });
   });
 }
 

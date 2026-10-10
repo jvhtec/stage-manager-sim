@@ -10,7 +10,7 @@ import type { TycoonState } from '../types';
 const game = (): TycoonState => {
   let s = createTycoonGame({ companyName: 'S', color: '#f00', seed: 31, country: 'GB', startYear: 1995 });
   s = { ...s, company: { ...s.company, cash: 2_000_000, reputation: 40 } };
-  return advanceHours(s, 24 * 12); // let offers pile up
+  return advanceHours(s, 24 * 20); // let offers pile up
 };
 
 describe('suggested next jobs', () => {
@@ -44,7 +44,7 @@ describe('suggested next jobs', () => {
     const s = game();
     const v = s.vehicles.find(x => x.owner === 'player')!;
     const pick = suggestJobs(s, v, 1)[0];
-    s.company.reputation = 0;
+    s.gigs = s.gigs.map(g => (g.id === pick.gig.id ? { ...g, acceptByDay: -1 } : g));
     const out = bookAndAssign(s, v.id, pick.gig.id);
     expect(out.result.ok).toBe(false);
     expect(out.state.gigs.find(g => g.id === pick.gig.id)!.status).toBe('offer');

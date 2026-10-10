@@ -29,16 +29,16 @@ export const CERTS: Record<CertId, CertInfo> = {
 export const CERT_IDS: CertId[] = ['rigging', 'safety'];
 
 /** Certified people a show needs aboard (shows from tier 3 up). */
-export function requiredCerts(gig: Pick<Gig, 'tier'>): Record<CertId, number> {
-  if (gig.tier >= 4) return { rigging: 2, safety: 1 };
-  if (gig.tier >= 3) return { rigging: 1, safety: 1 };
-  return { rigging: 0, safety: 0 };
+export function requiredCerts(gig: Pick<Gig, 'tier'> & { meister?: boolean }): Record<CertId, number> {
+  const base = gig.tier >= 4 ? { rigging: 2, safety: 1 } : gig.tier >= 3 ? { rigging: 1, safety: 1 } : { rigging: 0, safety: 0 };
+  // Germany: a Meister für Veranstaltungstechnik is one more certified rigger.
+  return gig.meister ? { ...base, rigging: base.rigging + 1 } : base;
 }
 
 export const hasCert = (m: Pick<CrewMember, 'certs'>, c: CertId) => !!m.certs?.includes(c);
 export const certCount = (people: Pick<CrewMember, 'certs'>[], c: CertId) => people.filter(m => hasCert(m, c)).length;
 
-export function certShortfall(people: Pick<CrewMember, 'certs'>[], gig: Pick<Gig, 'tier'>): Record<CertId, number> {
+export function certShortfall(people: Pick<CrewMember, 'certs'>[], gig: Pick<Gig, 'tier'> & { meister?: boolean }): Record<CertId, number> {
   const need = requiredCerts(gig);
   return { rigging: Math.max(0, need.rigging - certCount(people, 'rigging')), safety: Math.max(0, need.safety - certCount(people, 'safety')) };
 }

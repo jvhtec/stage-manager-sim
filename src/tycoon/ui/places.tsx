@@ -1,3 +1,5 @@
+import { describeTraits, traitsOf } from '@/world/venueTraits';
+import { routeNotes, tripCharges } from '@/world/infra';
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
 import { buildDepot, buyOwnedVenue, buyVehicle, leaseVehicle, sellOwnedVenue, setVenueProgramme } from '@/world/actions';
@@ -23,7 +25,7 @@ import { VenueDiorama } from './scenes';
 import { DELEGATION, RENT_FACTOR, WAREHOUSES, canBaseVehicle, facilitySpec } from '@/world/facilities';
 import { ContractCard } from './contracts';
 import { Bar, Stat, TierChip } from './bits';
-import { formatPopulation, kmoney, marketLabel, money, ratingLabel } from './format';
+import { distance, formatPopulation, kmoney, marketLabel, money, ratingLabel } from './format';
 import type { WinCtx } from './types';
 
 const VENUE_KIND_LABEL: Record<string, string> = {
@@ -86,6 +88,20 @@ export function CityWindow({ ctx, cityId }: { ctx: WinCtx; cityId: string }) {
           Show on map
         </button>
       </div>
+      {city.abroad && (
+        <Stat label="Abroad">
+          {city.abroad.flag} Over the border — shows only, no bases.{' '}
+          <span className="tt-dim">
+            {(() => {
+              const hq = state.company.hqCityId;
+              const n = routeNotes(world, hq, cityId);
+              const due = tripCharges(world, hq, cityId, 'truck');
+              const bits = [...n.ferries.map(f => `⛴ ${f}`), ...n.tunnels.map(t => `🚇 ${t}`), ...n.borders.map(b => `🛂 border (${b})`)];
+              return `${bits.length ? `${bits.join(' · ')} · ` : 'No border checks this year · '}${money(due.total)} tolls, fares & customs each way for a truck from HQ.`;
+            })()}
+          </span>
+        </Stat>
+      )}
       <Stat label="Population (metro)">
         {populationOf(state, city).toLocaleString('en-US')}
         {townGrowth(state, city.id) >= 1.02 && <span className="tt-good"> · +{Math.round((townGrowth(state, city.id) - 1) * 100)}% since you started</span>}
@@ -124,7 +140,7 @@ export function CityWindow({ ctx, cityId }: { ctx: WinCtx; cityId: string }) {
       ) : (
         <div className="tt-dim">No open offers right now.</div>
       )}
-      <h4>Warehouse lots ({city.lots.length})</h4>
+      {!city.abroad && <h4>Warehouse lots ({city.lots.length})</h4>}
       <div className="tt-list">
         {rivalsHere.map(r => (
           <div key={r.id} className="tt-item">
@@ -142,6 +158,7 @@ export function CityWindow({ ctx, cityId }: { ctx: WinCtx; cityId: string }) {
         )}
       </div>
       {!depot &&
+        !city.abroad &&
         (lotFree ? (
           <div className="tt-list" style={{ marginTop: 6 }}>
             {([
@@ -210,6 +227,11 @@ export function VenueWindow({ ctx, venueId }: { ctx: WinCtx; venueId: string }) 
       </div>
       <VenueDiorama state={state} venue={venue} />
       <Stat label="Capacity">{venue.capacity.toLocaleString()}</Stat>
+      {venue.kind !== 'airport' && (
+        <Stat label="The room">
+          <span style={{ whiteSpace: 'normal' }}>{describeTraits(traitsOf(world, venue)).join(' · ')}</span>
+        </Stat>
+      )}
       <Stat label="Promoter">
         <b>{relationLabel(venueRelation(state, venueId))}</b>
         {venueRelation(state, venueId) > 0 && (
@@ -385,7 +407,7 @@ export function DepotWindow({ ctx, depotId }: { ctx: WinCtx; depotId: string }) 
                 <div className="grow">
                   <div style={{ fontWeight: 700 }}>{m.name}</div>
                   <div className="tt-dim">
-                    {m.gearCapacity} gear · {m.crewSeats} seats · {Math.round(m.speed * 24)} tiles/day · {kmoney(m.runningCostPerYear)}/yr
+                    {m.gearCapacity} gear · {m.crewSeats} seats · {distance(m.speed * 24)}/day · {kmoney(m.runningCostPerYear)}/yr
                   </div>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 2 }}>
                     <span className="tt-dim" style={{ fontSize: 11 }}>

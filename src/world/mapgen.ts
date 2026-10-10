@@ -1,12 +1,17 @@
 /**
- * Deterministic world generation. Same seed → same map, every time, so the
- * map itself is never saved (only `TycoonState.mapSeed` is).
+ * Deterministic world generation. Same seed and country → same map, every time,
+ * so the map itself is never saved (only `TycoonState.mapSeed` and `country` are).
  *
- * Pipeline: value-noise heightmap on tile corners (integer levels, TT-style
- * "adjacent corners differ by at most 1") → terrain classes → cities placed
- * on land with spacing → city areas flattened → venue / depot lots reserved
- * → inter-city roads laid with A* over terrain costs → town streets →
- * cosmetic buildings.
+ * Each country is a miniature of the real thing: the coastline comes from a land
+ * mask rasterised offline from Natural Earth (content/landmasks.ts), mountains
+ * rise where the real ranges run, and the biggest towns sit where they really are
+ * — drawn oversized, then nudged apart until they fit. The seed only varies the
+ * lumps and bumps, the woods and the layout of each town.
+ *
+ * Pipeline: heightmap on tile corners (integer levels, TT-style "adjacent corners
+ * differ by at most 1") → real towns placed on land → town areas flattened →
+ * terrain classes → venue / depot lots reserved → inter-city roads laid with A*
+ * over terrain costs → town streets → cosmetic buildings.
  */
 import { createRng, type Rng } from '@/lib/rng';
 import {
@@ -18,13 +23,16 @@ import {
   type WorldMap,
 } from './types';
 import { MinHeap } from './heap';
-import { DEFAULT_COUNTRY, getCountry, type Country } from './content/countries';
+import { getCityPath } from './pathfinding';
+import { eraWorld } from './infra';
+import { dateOfDay, dayOf, yearOf } from './core';
+import { isWinter } from './infra';
+import { disruptionsOn } from './content/disruptions';
+import { DEFAULT_COUNTRY, getCountry } from './content/countries';
+import { geoAbroad, geoCities, geoExcluded, geoLanes, geoLinks, geoMotorways, geoStraits, geoZones, homeMask, insidePoly, sizeOfGeo, landMask, projectionFor, rangeLift } from './content/geo';
 
-export const MAP_WIDTH = 72;
-export const MAP_HEIGHT = 56;
 const MAX_LEVEL = 5;
 const CITY_COUNT = 16;
-const CITY_SPACING = 10;
 
 const idx = (x: number, y: number, w: number) => y * w + x;
 
@@ -49,56 +57,6 @@ function makeValueNoise(rng: Rng, width: number, height: number, cell: number) {
     const b = v(0, 1) + (v(1, 1) - v(0, 1)) * tx;
     return a + (b - a) * ty;
   };
-}
-
-// ---------------------------------------------------------------------------
-// Names
-// ---------------------------------------------------------------------------
-
-const NAME_PREFIXES = [
-  'Brad', 'Ash', 'Wex', 'Hol', 'Mar', 'Dun', 'Kings', 'Thorn', 'Sil', 'Gal', 'Mill',
-  'Red', 'Os', 'Fen', 'Craw', 'Elm', 'Bur', 'Lang', 'Wick', 'Stan', 'Bel', 'Car',
-  'Ex', 'Gran', 'Hart', 'Lud', 'Nor', 'Pen', 'Rock', 'Tad', 'Wal', 'Whit',
-];
-const NAME_SUFFIXES = [
-  'ford', 'ton', 'bury', 'field', 'wick', 'ham', 'mouth', 'by', 'stead', 'well',
-  'port', 'ley', 'bridge', 'minster', 'dale', 'combe', 'chester', 'haven',
-];
-const PUB_ANIMALS = ['Fox', 'Crown', 'Stag', 'Swan', 'Plough', 'Bell', 'Lion', 'Anchor', 'Badger', 'Kettle'];
-const PUB_OBJECTS = ['Fiddle', 'Hound', 'Lantern', 'Drum', 'Barrel', 'Feather', 'Key', 'Wheel'];
-const CLUB_WORDS = ['Electric', 'Velvet', 'Basement', 'Neon', 'Warehouse', 'Lounge', 'Factory', 'Vault'];
-
-function cityName(rng: Rng, used: Set<string>): string {
-  for (let attempt = 0; attempt < 50; attempt++) {
-    let name = rng.pick(NAME_PREFIXES) + rng.pick(NAME_SUFFIXES);
-    if (rng.chance(0.12)) name = `${rng.pick(['East', 'Port', 'Upper', 'Great'])} ${name}`;
-    if (!used.has(name)) {
-      used.add(name);
-      return name;
-    }
-  }
-  const fallback = `New Town ${used.size}`;
-  used.add(fallback);
-  return fallback;
-}
-
-function venueName(kind: VenueKind, city: string, rng: Rng): string {
-  switch (kind) {
-    case 'pub':
-      return `The ${rng.pick(PUB_ANIMALS)} & ${rng.pick(PUB_OBJECTS)}`;
-    case 'hall':
-      return `${city} Town Hall`;
-    case 'club':
-      return `${rng.pick(CLUB_WORDS)} Club`;
-    case 'theatre':
-      return rng.chance(0.5) ? `${city} Playhouse` : `Royal Theatre ${city}`;
-    case 'arena':
-      return `${city} Arena`;
-    case 'stadium':
-      return `${city} Stadium`;
-    case 'airport':
-      return `${city} International Airport`;
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -131,19 +89,6 @@ function sizeForRank(rank: number): CitySize {
   if (rank <= 2) return 'city';
   if (rank <= 7) return 'town';
   return 'village';
-}
-
-function populationFor(size: CitySize, rng: Rng): number {
-  switch (size) {
-    case 'metropolis':
-      return rng.nextRange(850, 1300) * 1000;
-    case 'city':
-      return rng.nextRange(220, 480) * 1000;
-    case 'town':
-      return rng.nextRange(45, 160) * 1000;
-    case 'village':
-      return rng.nextRange(6, 35) * 1000;
-  }
 }
 
 // ---------------------------------------------------------------------------
@@ -225,6 +170,8 @@ function layRoad(
   map: WorldMap,
   from: { x: number; y: number },
   to: { x: number; y: number },
+  /** A ferry lane: the sea is cheap and existing roads aren't preferred. */
+  lane = false,
 ) {
   const { width, height, terrain, road } = map;
   const n = width * height;
@@ -237,6 +184,7 @@ function layRoad(
   heap.push(start, 0);
 
   const stepCost = (i: number) => {
+    if (lane) return terrain[i] === Terrain.Water ? 0.6 : road[i] ? 0.8 : 1.5;
     if (road[i]) return 0.35;
     const x = i % width;
     const y = (i - x) / width;
@@ -245,6 +193,7 @@ function layRoad(
     if (t === Terrain.Water) c += 14; // bridges are expensive
     if (t === Terrain.Forest) c += 1.2;
     if (t === Terrain.Rough) c += 3;
+    if (map.foreign[i]) c += 2.5; // keep to the home country where there's a choice
     if (!isFlat(map, x, y)) c += 1.5;
     return c;
   };
@@ -287,105 +236,144 @@ function layRoad(
 // Main entry
 // ---------------------------------------------------------------------------
 
-const baseCache = new Map<number, WorldMap>();
 const worldCache = new Map<string, WorldMap>();
 
-/**
- * Memoised — the renderer, the sim and the UI all share one instance per
- * (seed, country). Geometry depends only on the seed; the country renames
- * towns and venues.
- */
+/** Memoised — the renderer, the sim and the UI all share one instance per (seed, country). */
 export function getWorld(seed: number, country: string = DEFAULT_COUNTRY): WorldMap {
   const key = `${seed}:${country}`;
   let world = worldCache.get(key);
   if (!world) {
-    let base = baseCache.get(seed);
-    if (!base) {
-      base = generateWorld(seed);
-      baseCache.set(seed, base);
-    }
-    world = localizeWorld(base, getCountry(country));
+    world = generateWorld(seed, country);
     worldCache.set(key, world);
   }
   return world;
 }
 
-/** The world a saved game is played on. */
-export function worldOf(state: { mapSeed: number; country?: string }): WorldMap {
-  return getWorld(state.mapSeed, state.country);
-}
-
-/** Real town names (biggest first), local venue naming and famous rooms in the big towns. */
-function localizeWorld(base: WorldMap, country: Country): WorldMap {
-  const rng = createRng(base.seed ^ 0xc0de ^ country.code.charCodeAt(0) * 131 ^ country.code.charCodeAt(1));
-  // The procedural populations rank the towns by size class; the biggest
-  // real market takes the biggest town, and its real population with it.
-  const real = [...country.cities].sort((a, b) => b[1] - a[1]);
-  const byPop = [...base.cities].sort((a, b) => b.population - a.population);
-  const assigned = new Map(
-    byPop.map((c, i) => {
-      const [name, population] = real[i % real.length];
-      return [c.id, { name: i < real.length ? name : `${name} ${Math.floor(i / real.length) + 1}`, population }];
-    }),
-  );
-  const cities: City[] = base.cities.map(c => {
-    const { name, population } = assigned.get(c.id)!;
-    const landmarks = country.landmarks[name] ?? {};
-    return {
-      ...c,
-      name,
-      population,
-      venues: c.venues.map(v => ({ ...v, name: landmarks[v.kind] ?? country.venueNames[v.kind](name, rng) })),
-    };
-  });
-  const world: WorldMap = {
-    ...base,
-    cities,
-    cityById: new Map(cities.map(c => [c.id, c])),
-    venueById: new Map(cities.flatMap(c => c.venues).map(v => [v.id, v])),
-    // Same roads, same routes.
-    pathCache: base.pathCache,
-  };
+/**
+ * The world a saved game is played on, with its roads as they were this year
+ * (motorways open, the Channel Tunnel, border queues — see infra.ts).
+ */
+export function worldOf(state: { mapSeed: number; country?: string; startYear?: number; hour?: number }): WorldMap {
+  const base = getWorld(state.mapSeed, state.country);
+  if (state.startYear === undefined) return base;
+  const year = yearOf({ startYear: state.startYear }, state.hour ?? 0);
+  const date = dateOfDay({ startYear: state.startYear }, dayOf(state.hour ?? 0));
+  const winter = isWinter(date);
+  const trouble = disruptionsOn(base.country, date);
+  const key = `${state.mapSeed}:${state.country}:${year}:${winter}:${trouble.map(d => d.id).join(',')}`;
+  let world = byYear.get(key);
+  if (!world) {
+    world = eraWorld(base, year, winter, trouble);
+    if (byYear.size > 200) byYear.clear();
+    byYear.set(key, world);
+  }
   return world;
 }
+const byYear = new Map<string, WorldMap>();
 
-export function generateWorld(seed: number): WorldMap {
-  const width = MAP_WIDTH;
-  const height = MAP_HEIGHT;
-  const rng = createRng(seed ^ 0x5eed);
+interface Seat {
+  name: string;
+  population: number;
+  radius: number;
+  /** Where it really is, in tile coordinates. */
+  ideal: { x: number; y: number };
+  x: number;
+  y: number;
+}
+
+/** Corners → distance (in steps) to the nearest sea corner. */
+function seaDistance(land: Uint8Array, cw: number, ch: number): Uint16Array {
+  const dist = new Uint16Array(cw * ch).fill(0xffff);
+  const queue: number[] = [];
+  land.forEach((l, i) => {
+    if (!l) {
+      dist[i] = 0;
+      queue.push(i);
+    }
+  });
+  for (let head = 0; head < queue.length; head++) {
+    const i = queue[head];
+    const x = i % cw;
+    const y = (i - x) / cw;
+    neighbourCorners(i, x, y, cw, ch).forEach(n => {
+      if (dist[n] === 0xffff) {
+        dist[n] = dist[i] + 1;
+        queue.push(n);
+      }
+    });
+  }
+  return dist;
+}
+
+export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTRY): WorldMap {
+  const country = getCountry(countryCode);
+  const [width, height] = sizeOfGeo(country.code);
+  const rng = createRng(seed ^ 0x5eed ^ (country.code.charCodeAt(0) * 131 + country.code.charCodeAt(1)));
   const cw = width + 1;
   const ch = height + 1;
 
-  // 1. Elevation noise on corners, with an island falloff so the map has a coast.
-  const n1 = makeValueNoise(rng, cw, ch, 14);
-  const n2 = makeValueNoise(rng, cw, ch, 6);
-  const n3 = makeValueNoise(rng, cw, ch, 3);
+  // 1. The real country: coast, mountains.
+  const land = landMask(country.code);
+  const proj0 = projectionFor(country.code);
+  // Re-open straits the mask closed at this scale, so islands stay islands.
+  const straits = geoStraits(country.code).map(st => ({ name: st.name, pts: st.line.map(([la, lo]) => proj0.toTile(la, lo)) }));
+  const segDist = (x: number, y: number, a: { x: number; y: number }, b: { x: number; y: number }) => {
+    const vx = b.x - a.x;
+    const vy = b.y - a.y;
+    const t = Math.max(0, Math.min(1, ((x - a.x) * vx + (y - a.y) * vy) / (vx * vx + vy * vy || 1)));
+    return Math.hypot(x - (a.x + vx * t), y - (a.y + vy * t));
+  };
+  straits.forEach(st => {
+    for (let y = 0; y < ch; y++) {
+      for (let x = 0; x < cw; x++) {
+        for (let i = 0; i < st.pts.length - 1; i++) if (segDist(x, y, st.pts[i], st.pts[i + 1]) < 1.05) land[idx(x, y, cw)] = 0;
+      }
+    }
+  });
+  const home = homeMask(country.code);
+  const lift = rangeLift(country.code);
+  const toSea = seaDistance(land, cw, ch);
+  const n1 = makeValueNoise(rng, cw, ch, 12);
+  const n2 = makeValueNoise(rng, cw, ch, 5);
   const forestNoise = makeValueNoise(rng, width, height, 5);
   const heights = new Uint8Array(cw * ch);
   for (let y = 0; y < ch; y++) {
     for (let x = 0; x < cw; x++) {
-      let e = n1(x, y) * 0.6 + n2(x, y) * 0.3 + n3(x, y) * 0.1;
-      const dx = (x / width - 0.5) * 2;
-      const dy = (y / height - 0.5) * 2;
-      const d = Math.sqrt(dx * dx * 0.9 + dy * dy * 0.9);
-      e += 0.12 - Math.max(0, d - 0.62) * 0.9;
-      const level = e < 0.4 ? 0 : Math.min(MAX_LEVEL, 1 + Math.floor((e - 0.4) / 0.09));
-      heights[idx(x, y, cw)] = level;
+      const i = idx(x, y, cw);
+      if (!land[i]) continue;
+      // Gentle rolling country, mountains where the real ranges are, flat by the sea.
+      const rolling = Math.max(0, n1(x, y) * 0.7 + n2(x, y) * 0.3 - 0.52) * 2;
+      const raw = 1 + rolling + lift(x, y) * 5.6;
+      const level = 1 + Math.round((raw - 1) * Math.min(1, toSea[i] / 3));
+      heights[i] = Math.max(1, Math.min(MAX_LEVEL, level));
     }
   }
   relaxHeights(heights, cw, ch);
 
   const map: WorldMap = {
     seed,
+    country: country.code,
     width,
     height,
+    kmPerTile: proj0.kmPerTile,
     terrain: new Uint8Array(width * height),
     road: new Uint8Array(width * height),
+    foreign: new Uint8Array(width * height),
     heights,
     cities: [],
+    abroad: [],
     cityById: new Map(),
     venueById: new Map(),
     pathCache: new Map(),
+    distCache: new Map(),
+    landCountry: new Int8Array(width * height).fill(-1),
+    borderCountries: [],
+    zoneOf: new Int8Array(width * height).fill(-1),
+    zones: [],
+    crossings: [],
+    crossingAt: new Int16Array(width * height).fill(-1),
+    corridors: [],
+    snowy: new Uint8Array(width * height),
   };
 
   const classifyTerrain = () => {
@@ -397,57 +385,167 @@ export function generateWorld(seed: number): WorldMap {
         let t = Terrain.Grass;
         if (max === 0) t = Terrain.Water;
         else if (min === 0) t = Terrain.Sand;
-        else if (min >= 4) t = Terrain.Rough;
+        else if (min >= 3) t = Terrain.Rough;
         else if (forestNoise(x, y) > 0.62) t = Terrain.Forest;
         map.terrain[idx(x, y, width)] = t;
+        const corners = [idx(x, y, cw), idx(x + 1, y, cw), idx(x + 1, y + 1, cw), idx(x, y + 1, cw)];
+        const mine = corners.filter(k => home[k]).length;
+        // Foreign only if most of the land under it is someone else's (a coastal tile's sea corners don't count).
+        const theirs = corners.filter(k => land[k] && !home[k]).length;
+        map.foreign[idx(x, y, width)] = t !== Terrain.Water && theirs > mine ? 1 : 0;
       }
     }
   };
-  classifyTerrain();
 
-  // 2. Cities: land tiles, spaced apart, preferring flatter mid-height ground.
-  const margin = 6;
-  const centers: { x: number; y: number }[] = [];
-  for (let attempt = 0; attempt < 4000 && centers.length < CITY_COUNT; attempt++) {
-    const x = rng.nextRange(margin, width - margin);
-    const y = rng.nextRange(margin, height - margin);
-    if (map.terrain[idx(x, y, width)] === Terrain.Water || map.terrain[idx(x, y, width)] === Terrain.Sand) continue;
-    const [a] = tileCorners(map, x, y);
-    if (a >= 4 && rng.chance(0.7)) continue;
-    if (centers.some(c => Math.hypot(c.x - x, c.y - y) < CITY_SPACING)) continue;
-    centers.push({ x, y });
-  }
+  // 2. The real towns, biggest first, where they really are — then oversized.
+  const proj = projectionFor(country.code);
+  const where = geoCities(country.code);
+  const skip = new Set(geoExcluded(country.code));
+  const seats: Seat[] = country.cities
+    .filter(([name]) => where[name] && !skip.has(name))
+    .slice(0, CITY_COUNT)
+    .map(([name, population], rank) => {
+      const ideal = proj.toTile(where[name][0], where[name][1]);
+      return { name, population, radius: SIZE_RADIUS[sizeForRank(rank)], ideal, x: ideal.x, y: ideal.y };
+    });
 
-  const usedNames = new Set<string>();
-  const fixed = new Uint8Array(cw * ch);
-  // The most central, lowest-lying city becomes the metropolis.
-  const ranked = centers
-    .map(c => ({ ...c, score: Math.hypot(c.x - width / 2, c.y - height / 2) + rng.next() * 12 }))
-    .sort((a, b) => a.score - b.score);
-
-  ranked.forEach((center, rank) => {
-    const size = sizeForRank(rank);
-    const radius = SIZE_RADIUS[size];
-    const level = Math.max(1, heights[idx(center.x, center.y, cw)]);
-    for (let y = center.y - radius - 1; y <= center.y + radius + 2; y++) {
-      for (let x = center.x - radius - 1; x <= center.x + radius + 2; x++) {
-        if (x < 0 || y < 0 || x >= cw || y >= ch) continue;
-        heights[idx(x, y, cw)] = level;
-        fixed[idx(x, y, cw)] = 1;
+  // A town fits where the centre tile and its neighbours are land with a little room to the sea.
+  const roomy = (x: number, y: number, r: number) => {
+    const tx = Math.floor(x);
+    const ty = Math.floor(y);
+    if (tx < r + 2 || ty < r + 2 || tx > width - r - 3 || ty > height - r - 3) return false;
+    for (let j = 0; j <= 1; j++) for (let i = 0; i <= 1; i++) if (!land[idx(tx + i, ty + j, cw)] || !home[idx(tx + i, ty + j, cw)]) return false;
+    // Enough dry home ground around it for streets, venues and warehouse lots.
+    let ok = 0;
+    let all = 0;
+    for (let j = -r; j <= r + 1; j++) {
+      for (let i = -r; i <= r + 1; i++) {
+        all++;
+        if (land[idx(tx + i, ty + j, cw)] && home[idx(tx + i, ty + j, cw)]) ok++;
       }
     }
-    const name = cityName(rng, usedNames);
+    return ok >= all * 0.4;
+  };
+  // Biggest first: each town takes the roomy ground nearest to where it really is that leaves
+  // the towns already placed their elbow room (real distances are far smaller than oversized
+  // towns need, so crowded regions fan out).
+  const roomyTiles: { x: number; y: number }[] = [];
+  for (let ty = 2; ty < height - 2; ty++) for (let tx = 2; tx < width - 2; tx++) roomyTiles.push({ x: tx + 0.5, y: ty + 0.5 });
+  const placed: Seat[] = [];
+  seats.forEach(seat => {
+    // Keep the full elbow room if a spot within a few tiles of the real one has it; in crowded
+    // regions let neighbouring towns sprawl into each other (a conurbation) rather than be exiled.
+    let chosen: { x: number; y: number } | null = null;
+    for (let slack = 1; slack >= 0.3; slack -= 0.1) {
+      let best: { x: number; y: number } | null = null;
+      let bestD = Infinity;
+      for (const t of roomyTiles) {
+        const d = Math.hypot(t.x - seat.ideal.x, t.y - seat.ideal.y);
+        if (d >= bestD || !roomy(t.x, t.y, seat.radius)) continue;
+        if (placed.some(o => Math.hypot(o.x - t.x, o.y - t.y) < (o.radius + seat.radius + 1) * slack)) continue;
+        bestD = d;
+        best = t;
+      }
+      if (best && (bestD <= Math.max(1.5, 20 / proj.kmPerTile) || slack < 0.35)) {
+        chosen = best;
+        break;
+      }
+      if (best && !chosen) chosen = best;
+    }
+    if (chosen) Object.assign(seat, chosen);
+    placed.push(seat);
+  });
+
+  // 2b. Real towns just over the border, on the neighbours' land, where there's room for them.
+  const foreignRoomy = (x: number, y: number, r: number) => {
+    const tx = Math.floor(x);
+    const ty = Math.floor(y);
+    if (tx < r + 2 || ty < r + 2 || tx > width - r - 3 || ty > height - r - 3) return false;
+    for (let j = 0; j <= 1; j++) for (let i = 0; i <= 1; i++) if (!land[idx(tx + i, ty + j, cw)] || home[idx(tx + i, ty + j, cw)]) return false;
+    let ok = 0;
+    let all = 0;
+    for (let j = -r; j <= r + 1; j++) {
+      for (let i = -r; i <= r + 1; i++) {
+        all++;
+        if (land[idx(tx + i, ty + j, cw)] && !home[idx(tx + i, ty + j, cw)]) ok++;
+      }
+    }
+    return ok >= all * 0.4;
+  };
+  const abroadSeats: (Seat & { def: ReturnType<typeof geoAbroad>[number] })[] = [];
+  geoAbroad(country.code).forEach(def => {
+    const ideal = proj.toTile(def.at[0], def.at[1]);
+    const radius = def.pop >= 1_500_000 ? 3 : 2;
+    let best: { x: number; y: number } | null = null;
+    let bestD = Math.max(3, 60 / proj.kmPerTile);
+    for (const t of roomyTiles) {
+      const d = Math.hypot(t.x - ideal.x, t.y - ideal.y);
+      if (d >= bestD || !foreignRoomy(t.x, t.y, radius)) continue;
+      if ([...placed, ...abroadSeats].some(o => Math.hypot(o.x - t.x, o.y - t.y) < (o.radius + radius + 1) * 0.8)) continue;
+      bestD = d;
+      best = t;
+    }
+    if (best) abroadSeats.push({ name: def.name, population: def.pop, radius, ideal, ...best, def });
+  });
+
+  const fixed = new Uint8Array(cw * ch);
+  land.forEach((l, i) => {
+    if (!l) fixed[i] = 1;
+  });
+  seats.forEach((seat, rank) => {
+    const size = sizeForRank(rank);
+    const radius = seat.radius;
+    const cx = Math.floor(seat.x);
+    const cy = Math.floor(seat.y);
+    // Inland towns may stand on a low plateau; anything near the sea sits at beach level.
+    const level = toSea[idx(cx, cy, cw)] > radius + 3 ? Math.max(1, Math.min(3, heights[idx(cx, cy, cw)])) : 1;
+    for (let y = cy - radius - 1; y <= cy + radius + 2; y++) {
+      for (let x = cx - radius - 1; x <= cx + radius + 2; x++) {
+        if (x < 0 || y < 0 || x >= cw || y >= ch) continue;
+        const i = idx(x, y, cw);
+        if (!land[i]) continue;
+        heights[i] = level;
+        fixed[i] = 1;
+      }
+    }
     map.cities.push({
       id: `city-${rank}`,
-      name,
-      x: center.x,
-      y: center.y,
-      population: populationFor(size, rng),
+      name: seat.name,
+      x: cx,
+      y: cy,
+      population: seat.population,
       size,
       radius,
       venues: [],
       buildings: [],
       lots: [],
+    });
+  });
+  abroadSeats.forEach((seat, i) => {
+    const cx = Math.floor(seat.x);
+    const cy = Math.floor(seat.y);
+    for (let y = cy - seat.radius - 1; y <= cy + seat.radius + 2; y++) {
+      for (let x = cx - seat.radius - 1; x <= cx + seat.radius + 2; x++) {
+        if (x < 0 || y < 0 || x >= cw || y >= ch) continue;
+        const k = idx(x, y, cw);
+        if (!land[k] || fixed[k]) continue;
+        heights[k] = 1;
+        fixed[k] = 1;
+      }
+    }
+    map.abroad.push({
+      id: `abroad-${i}`,
+      name: seat.name,
+      x: cx,
+      y: cy,
+      population: seat.population,
+      // A million people is a city with an arena, even if it's drawn small.
+      size: seat.population >= 1_000_000 ? 'city' : 'town',
+      radius: seat.radius,
+      venues: [],
+      buildings: [],
+      lots: [],
+      abroad: { country: seat.def.country, flag: seat.def.flag },
     });
   });
   // Ramp the land up to meet raised town plateaus, then settle any clashes
@@ -456,18 +554,24 @@ export function generateWorld(seed: number): WorldMap {
   relaxHeights(heights, cw, ch);
   classifyTerrain();
 
-  // 3. Town streets: a cross through the centre (two for big places).
-  map.cities.forEach(city => {
+  // 3. Town streets: a cross through the centre (two for big places), dry land only.
+  const lay = (x: number, y: number) => {
+    if (x < 1 || y < 1 || x > width - 2 || y > height - 2) return;
+    if (map.terrain[idx(x, y, width)] === Terrain.Water) return;
+    map.road[idx(x, y, width)] = 1;
+  };
+  const towns = [...map.cities, ...map.abroad];
+  towns.forEach(city => {
     const arm = city.radius;
     for (let d = -arm; d <= arm; d++) {
-      map.road[idx(city.x + d, city.y, width)] = 1;
-      map.road[idx(city.x, city.y + d, width)] = 1;
+      lay(city.x + d, city.y);
+      lay(city.x, city.y + d);
     }
     if (city.size === 'city' || city.size === 'metropolis') {
       const off = Math.ceil(arm / 2) + 1;
       for (let d = -arm + 1; d <= arm - 1; d++) {
-        map.road[idx(city.x + d, city.y + off, width)] = 1;
-        map.road[idx(city.x - off, city.y + d, width)] = 1;
+        lay(city.x + d, city.y + off);
+        lay(city.x - off, city.y + d);
       }
     }
   });
@@ -475,13 +579,13 @@ export function generateWorld(seed: number): WorldMap {
   // 4. Inter-city roads: a minimum spanning tree plus a few short loops.
   const edges: [number, number][] = [];
   const inTree = new Set<number>([0]);
-  while (inTree.size < map.cities.length) {
+  while (inTree.size < towns.length) {
     let best: [number, number] | null = null;
     let bestD = Infinity;
     inTree.forEach(i => {
-      map.cities.forEach((c, j) => {
+      towns.forEach((c, j) => {
         if (inTree.has(j)) return;
-        const d = Math.hypot(c.x - map.cities[i].x, c.y - map.cities[i].y);
+        const d = Math.hypot(c.x - towns[i].x, c.y - towns[i].y);
         if (d < bestD) {
           bestD = d;
           best = [i, j];
@@ -492,8 +596,8 @@ export function generateWorld(seed: number): WorldMap {
     edges.push(best);
     inTree.add(best[1]);
   }
-  map.cities.forEach((c, i) => {
-    const nearest = map.cities
+  towns.forEach((c, i) => {
+    const nearest = towns
       .map((o, j) => ({ j, d: Math.hypot(o.x - c.x, o.y - c.y) }))
       .filter(o => o.j !== i)
       .sort((a, b) => a.d - b.d)
@@ -503,19 +607,30 @@ export function generateWorld(seed: number): WorldMap {
       if (!exists && d < 22) edges.push([i, j]);
     });
   });
-  edges.forEach(([a, b]) => layRoad(map, map.cities[a], map.cities[b]));
+  // Every real motorway gets its own direct road, so the corridor runs town to town.
+  geoMotorways(country.code).forEach(m => {
+    const a = towns.findIndex(t => t.name === m.from && !t.abroad);
+    const b = towns.findIndex(t => t.name === m.to && !t.abroad);
+    if (a >= 0 && b >= 0 && !edges.some(([x, y]) => (x === a && y === b) || (x === b && y === a))) edges.push([a, b]);
+  });
+  edges.forEach(([a, b]) => layRoad(map, towns[a], towns[b]));
+  geoLanes(country.code).forEach(([x, y]) => {
+    const a = towns.find(t => t.name === x);
+    const b = towns.find(t => t.name === y);
+    if (a && b) layRoad(map, a, b, true);
+  });
 
   // 5. Lots: venues and the depot site, nearest free road-adjacent ground first.
   const taken = new Uint8Array(width * height);
-  const footprintFree = (x: number, y: number, w: number, h: number) => {
+  const footprintFree = (x: number, y: number, w: number, h: number, flat = true, abroad = false) => {
     for (let j = 0; j < h; j++) {
       for (let i = 0; i < w; i++) {
         const tx = x + i;
         const ty = y + j;
         if (tx < 1 || ty < 1 || tx >= width - 1 || ty >= height - 1) return false;
         const k = idx(tx, ty, width);
-        if (map.road[k] || taken[k] || map.terrain[k] === Terrain.Water) return false;
-        if (!isFlat(map, tx, ty)) return false;
+        if (map.road[k] || taken[k] || map.foreign[k] !== (abroad ? 1 : 0) || map.terrain[k] === Terrain.Water) return false;
+        if (flat && !isFlat(map, tx, ty)) return false;
       }
     }
     return true;
@@ -532,19 +647,23 @@ export function generateWorld(seed: number): WorldMap {
     return false;
   };
   const claimLot = (city: City, w: number, h: number) => {
-    const maxR = city.radius + 3;
-    const candidates: { x: number; y: number; d: number }[] = [];
-    for (let y = city.y - maxR; y <= city.y + maxR; y++) {
-      for (let x = city.x - maxR; x <= city.x + maxR; x++) {
-        const d = Math.hypot(x + w / 2 - city.x, y + h / 2 - city.y);
-        candidates.push({ x, y, d: d + rng.next() * 1.5 });
+    // Nearest free road-side ground first; a crowded or coastal town looks a little further out.
+    // Last resort (a narrow peninsula like Florida): any dry ground, even a gentle slope.
+    for (const [reach, needRoad, flat] of [[3, true, true], [7, true, true], [7, false, true], [7, false, false]] as const) {
+      const maxR = city.radius + reach;
+      const candidates: { x: number; y: number; d: number }[] = [];
+      for (let y = city.y - maxR; y <= city.y + maxR; y++) {
+        for (let x = city.x - maxR; x <= city.x + maxR; x++) {
+          const d = Math.hypot(x + w / 2 - city.x, y + h / 2 - city.y);
+          candidates.push({ x, y, d: d + rng.next() * 1.5 });
+        }
       }
-    }
-    candidates.sort((a, b) => a.d - b.d);
-    for (const c of candidates) {
-      if (footprintFree(c.x, c.y, w, h) && touchesRoad(c.x, c.y, w, h)) {
-        for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) taken[idx(c.x + i, c.y + j, width)] = 1;
-        return { x: c.x, y: c.y };
+      candidates.sort((a, b) => a.d - b.d);
+      for (const c of candidates) {
+        if (footprintFree(c.x, c.y, w, h, flat, !!city.abroad) && (!needRoad || touchesRoad(c.x, c.y, w, h))) {
+          for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) taken[idx(c.x + i, c.y + j, width)] = 1;
+          return { x: c.x, y: c.y };
+        }
       }
     }
     return null;
@@ -562,7 +681,7 @@ export function generateWorld(seed: number): WorldMap {
       const venue: Venue = {
         id: `${city.id}-v${i}`,
         cityId: city.id,
-        name: venueName(kind, city.name, rng),
+        name: country.landmarks[city.name]?.[kind] ?? country.venueNames[kind](city.name, rng),
         kind,
         tier: spec.tier,
         capacity: rng.nextRange(spec.capacity[0], spec.capacity[1]),
@@ -582,15 +701,48 @@ export function generateWorld(seed: number): WorldMap {
     }
   });
 
+  // Towns abroad: a few rooms (the famous ones by name), no warehouse lots — you can't open a base there.
+  const ABROAD_ROOM: Record<'pub' | 'hall' | 'club' | 'theatre' | 'arena', (town: string) => string> = {
+    pub: t => `Bar ${t}`,
+    hall: t => `${t} Concert Hall`,
+    club: t => `Club ${t}`,
+    theatre: t => `${t} Theatre`,
+    arena: t => `${t} Arena`,
+  };
+  map.abroad.forEach((city, n) => {
+    const def = abroadSeats[n].def;
+    const kinds: ('pub' | 'hall' | 'club' | 'theatre' | 'arena')[] = city.size === 'city' ? ['arena', 'theatre', 'club', 'pub'] : ['theatre', 'club', 'pub'];
+    kinds.forEach((kind, i) => {
+      const spec = VENUE_SPECS[kind];
+      const lot = claimLot(city, spec.w, spec.h);
+      if (!lot) return;
+      const venue: Venue = {
+        id: `${city.id}-v${i}`,
+        cityId: city.id,
+        name: def.venues[kind] ?? ABROAD_ROOM[kind](city.name),
+        kind,
+        tier: spec.tier,
+        capacity: rng.nextRange(spec.capacity[0], spec.capacity[1]),
+        x: lot.x,
+        y: lot.y,
+        w: spec.w,
+        h: spec.h,
+      };
+      city.venues.push(venue);
+      map.venueById.set(venue.id, venue);
+    });
+    city.venues.sort((a, b) => a.tier - b.tier);
+  });
+
   // 6. Cosmetic buildings, denser and taller toward the centre of big places.
   const maxFloors: Record<CitySize, number> = { village: 1, town: 3, city: 5, metropolis: 9 };
-  map.cities.forEach(city => {
+  towns.forEach(city => {
     const r = city.radius + 1;
     for (let y = city.y - r; y <= city.y + r; y++) {
       for (let x = city.x - r; x <= city.x + r; x++) {
         if (x < 1 || y < 1 || x >= width - 1 || y >= height - 1) continue;
         const k = idx(x, y, width);
-        if (map.road[k] || taken[k] || map.terrain[k] === Terrain.Water) continue;
+        if (map.road[k] || taken[k] || map.foreign[k] !== (city.abroad ? 1 : 0) || map.terrain[k] === Terrain.Water) continue;
         const d = Math.hypot(x - city.x, y - city.y);
         if (d > r + 0.3) continue;
         const density = 0.95 - (d / (r + 0.5)) * 0.7;
@@ -603,6 +755,116 @@ export function generateWorld(seed: number): WorldMap {
     }
   });
 
-  map.cities.forEach(c => map.cityById.set(c.id, c));
+  towns.forEach(c => map.cityById.set(c.id, c));
+  map.abroad.forEach(c => c.venues.forEach(v => map.venueById.set(v.id, v)));
+
+  // 7. Whose land is it, and where are the old borders.
+  map.borderCountries = [...new Set(map.abroad.map(c => c.abroad!.country))];
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const k = idx(x, y, width);
+      if (map.foreign[k] && map.abroad.length) {
+        let best = map.abroad[0];
+        map.abroad.forEach(c => {
+          if (Math.hypot(c.x - x, c.y - y) < Math.hypot(best.x - x, best.y - y)) best = c;
+        });
+        map.landCountry[k] = map.borderCountries.indexOf(best.abroad!.country);
+      }
+    }
+  }
+  geoZones(country.code).forEach((z, zi) => {
+    map.zones.push({ name: z.name, until: z.until });
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const k = idx(x, y, width);
+        if (!map.foreign[k] && map.terrain[k] !== Terrain.Water && insidePoly(country.code, z.poly, x + 0.5, y + 0.5)) map.zoneOf[k] = zi;
+      }
+    }
+  });
+
+  // 8. Crossings: a road over water is a bridge if the land on both sides joins up anyway
+  // (an estuary or a ria), and a ferry if it doesn't (an island, another landmass) — until a
+  // real fixed link opens there.
+  const mass = new Int32Array(width * height).fill(-1);
+  let masses = 0;
+  for (let k0 = 0; k0 < width * height; k0++) {
+    if (mass[k0] >= 0 || map.terrain[k0] === Terrain.Water) continue;
+    const queue = [k0];
+    mass[k0] = masses;
+    for (let h = 0; h < queue.length; h++) {
+      const k = queue[h];
+      const x = k % width;
+      const y = (k - x) / width;
+      [x > 0 ? k - 1 : -1, x < width - 1 ? k + 1 : -1, y > 0 ? k - width : -1, y < height - 1 ? k + width : -1].forEach(nb => {
+        if (nb >= 0 && mass[nb] < 0 && map.terrain[nb] !== Terrain.Water) {
+          mass[nb] = masses;
+          queue.push(nb);
+        }
+      });
+    }
+    masses++;
+  }
+  const links = geoLinks(country.code).map(l => ({ ...l, tile: proj.toTile(l.at[0], l.at[1]) }));
+  for (let k0 = 0; k0 < width * height; k0++) {
+    if (!map.road[k0] || map.terrain[k0] !== Terrain.Water || map.crossingAt[k0] >= 0) continue;
+    const id = map.crossings.length;
+    const tiles = [k0];
+    map.crossingAt[k0] = id;
+    const shores = new Set<number>();
+    const countries = new Set<number>();
+    for (let h = 0; h < tiles.length; h++) {
+      const k = tiles[h];
+      const x = k % width;
+      const y = (k - x) / width;
+      [x > 0 ? k - 1 : -1, x < width - 1 ? k + 1 : -1, y > 0 ? k - width : -1, y < height - 1 ? k + width : -1].forEach(nb => {
+        if (nb < 0 || !map.road[nb]) return;
+        if (map.terrain[nb] === Terrain.Water) {
+          if (map.crossingAt[nb] < 0) {
+            map.crossingAt[nb] = id;
+            tiles.push(nb);
+          }
+        } else {
+          shores.add(mass[nb]);
+          countries.add(map.landCountry[nb]);
+        }
+      });
+    }
+    const link = links.find(l => tiles.some(k => Math.hypot((k % width) + 0.5 - l.tile.x, Math.floor(k / width) + 0.5 - l.tile.y) <= 3));
+    const strait = straits.find(st => tiles.some(k => st.pts.some(pt => Math.hypot((k % width) + 0.5 - pt.x, Math.floor(k / width) + 0.5 - pt.y) <= 3)));
+    const abroadSide = [...countries].find(c => c >= 0);
+    map.crossings.push({
+      id,
+      name: strait?.name ?? link?.name,
+      tiles,
+      km: tiles.length * map.kmPerTile,
+      base: shores.size > 1 ? 'ferry' : 'bridge',
+      link: link ? { kind: link.kind, opens: link.opens, name: link.name } : undefined,
+      border: countries.has(-1) && abroadSide !== undefined ? abroadSide : -1,
+    });
+  }
+
+  // 9. Motorway corridors: the roads between two towns that a real motorway upgrades when it opens.
+  const byName = new Map(map.cities.map(c => [c.name, c]));
+  geoMotorways(country.code).forEach(m => {
+    const a = byName.get(m.from);
+    const b = byName.get(m.to);
+    if (!a || !b) return;
+    const tiles = getCityPath(map, a.id, b.id).filter(k => map.crossingAt[k] < 0);
+    if (tiles.length) map.corridors.push({ name: m.name, from: a.id, to: b.id, opens: m.opens, toll: m.toll, tiles });
+  });
+  // 10. High roads that snow slows in winter.
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const k = idx(x, y, width);
+      if (!map.road[k] || map.crossingAt[k] >= 0) continue;
+      const [a, b, c, d] = tileCorners(map, x, y);
+      if ((a + b + c + d) / 4 >= SNOW_LEVEL) map.snowy[k] = 1;
+    }
+  }
+  map.pathCache.clear();
+  map.distCache.clear();
   return map;
 }
+
+/** Average corner height at which winter snow lies on the roads. */
+export const SNOW_LEVEL = 2.75;
