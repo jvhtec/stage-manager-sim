@@ -80,6 +80,8 @@ import { leftBehindChance, monthlyRent, monthlySalaries, prepFailureFactor, prep
 import { breachPenalty, checkSpec } from './techRider';
 import { bondAfterShow } from './bonds';
 import { monthlyBrandFaults } from './ecosystem';
+import { dailyProduction, hasManager, monthlyManagers } from './management';
+import { FEUD, REFUSE } from './bonds';
 import { afterBreach, afterDisaster } from './blacklist';
 import { balanceDue, dailyTerms } from './terms';
 import { HANDLING_WINDOW, LOADERS, handlingHours, handlingOverrun, loadWeight, payloadOf } from './cargo';
@@ -232,7 +234,7 @@ function loadVehicle(s: TycoonState, v: Vehicle, gig: Gig) {
   const seats = Math.min(model.crewSeats - v.crew, Math.max(crewRemaining, pinned), depot.crew);
   if (seats > 0) {
     // Pinned and named people first, then the freshest, best-matched people for the job ahead get on board.
-    const opts = { vehicleId: v.id, restAt: REST_AT[s.policies.rest], bonds: s.bonds, ...directives };
+    const opts = { vehicleId: v.id, restAt: REST_AT[s.policies.rest], bonds: s.bonds, refuseAt: hasManager(s, 'crew') ? FEUD : REFUSE, ...directives };
     pickCrew(atDepot(s, depot.id), gig, seats, aboard(s, v.id), opts).forEach(m => moveToVehicle(m, v.id));
     syncCrew(s);
   }
@@ -744,6 +746,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   dailyBusOffers(s, rng);
   dailyBusHire(s, rng);
   dailyContracts(s, world);
+  dailyProduction(s);
   pruneGigs(s);
 
   // Nag about booked shows with nothing assigned two days out.
@@ -794,6 +797,7 @@ function monthlyTick(s: TycoonState, rng: Rng) {
     if (d.staff.office) s.cityRatings[d.cityId] = Math.min(100, (s.cityRatings[d.cityId] ?? 50) + 0.6 * d.staff.office);
   });
   monthlyWorkshop(s);
+  monthlyManagers(s);
   monthlyCrew(s, rng);
   monthlyTraining(s);
   refreshCandidates(s, rng);

@@ -5,6 +5,7 @@
 import { projectCoverage } from './queries';
 import { crossHire, crossHireCost } from './techRider';
 import { askForTerms, hasTerms } from './terms';
+import { MANAGERS, hireManager, type ManagerId, type SpendLimit } from './management';
 import { bookFix, type FixId } from './production';
 import { busHireBlocker } from './buses';
 import { dispatchFreight, freightLabel, freightQuote, type FreightMode } from './freight';
@@ -506,6 +507,22 @@ export function haggleGig(state: TycoonState, gigId: string): ActionOutcome {
   if (result === 'won') return ok(s, `${gig.act}'s promoter gives way: ${formatMoney(state, fee0)} → ${formatMoney(state, gig.fee)}.`);
   if (result === 'walked') return { state: s, result: { ok: false, message: `${gig.act}'s promoter walks away and books someone else.` } };
   return { state: s, result: { ok: false, message: `${gig.act}'s promoter won't budge — the fee stands at ${formatMoney(state, gig.fee)}.` } };
+}
+
+/** Hire or let go a department head. */
+export function setManager(state: TycoonState, id: ManagerId, on: boolean): ActionOutcome {
+  if (on && state.managers?.[id]) return fail(state, 'Already on the payroll.');
+  if (!on && !state.managers?.[id]) return fail(state, 'Nobody to let go.');
+  if (on && state.company.cash < MANAGERS[id].salary) return fail(state, 'Not enough cash for the first month.');
+  const s = cloneState(state);
+  return ok(s, hireManager(s, id, on));
+}
+
+/** How much of a show's fee the production manager may spend advancing it. */
+export function setSpendLimit(state: TycoonState, limit: SpendLimit): ActionOutcome {
+  const s = cloneState(state);
+  s.managers = { ...(s.managers ?? {}), spendLimit: limit };
+  return ok(s, `The production manager may now spend up to ${Math.round(limit * 100)}% of a show's fee advancing it.`);
 }
 
 /** Push for a deposit and a cancellation clause before booking. */

@@ -585,6 +585,11 @@ export function HelpWindow() {
           department on one brand and the workshop gets cheaper — until that maker has a bad day.
         </li>
         <li>
+          <b>Department heads</b> (Company policies): a production manager advances shows and answers change requests, a crew
+          chief keeps feuds apart and burnout down, a finance director chases invoices. Hire them when the clicking gets
+          too much.
+        </li>
+        <li>
           Buy bigger trucks and more gear, and win reputation to unlock arenas and stadiums. Every January the industry awards
           judge your year and the trade press prints its supplier table, the biggest tours and reviews of your best and worst
           shows. Or start from a <b>historic scenario</b> — Live Aid, Italia ’90, Barcelona ’92 — and win a lot of the night.

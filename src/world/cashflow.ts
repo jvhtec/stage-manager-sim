@@ -47,9 +47,9 @@ export interface Forecast {
 }
 
 /** Office staff sharpen the estimate. */
-export const forecastAccuracy = (s: Pick<TycoonState, 'depots'>) => {
+export const forecastAccuracy = (s: Pick<TycoonState, 'depots' | 'managers'>) => {
   const office = s.depots.reduce((n, d) => n + d.staff.office, 0);
-  return Math.max(0.08, 0.3 - 0.06 * office);
+  return Math.max(s.managers?.finance ? 0.05 : 0.08, 0.3 - 0.06 * office - (s.managers?.finance ? 0.08 : 0));
 };
 
 export function forecastCash(s: TycoonState, world: WorldMap, weeks = FORECAST_WEEKS): Forecast {

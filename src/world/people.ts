@@ -226,6 +226,8 @@ export interface PickOptions {
   restAt?: number;
   /** Relationships: people who refuse to work together won't board together. */
   bonds?: Record<string, number>;
+  /** Rapport at or below which two people are kept apart (a crew chief keeps feuds apart too). */
+  refuseAt?: number;
 }
 
 /** Whether `m` may board the truck being loaded. */
@@ -256,7 +258,7 @@ export function pickCrew(pool: CrewMember[], gig: Gig, seats: number, alreadyAbo
     pool.forEach((m, i) => {
       if (!mayBoard(m, opts)) return;
       // Someone who refuses to work with a person already aboard stays behind — unless you named them.
-      if (opts.bonds && !opts.prefer?.has(m.id) && refusesWith({ bonds: opts.bonds }, m, together)) return;
+      if (opts.bonds && !opts.prefer?.has(m.id) && refusesWith({ bonds: opts.bonds }, m, together, opts.refuseAt)) return;
       const fit = Math.max(...CREW_DEPTS.map(d => (slots[d] > 0 ? m.skills[d] + 1 : m.skills[d] * 0.3)));
       const pinned = opts.vehicleId && m.pinnedVehicleId === opts.vehicleId ? 100 : 0;
       const named = opts.prefer?.has(m.id) ? 150 : 0;
@@ -334,7 +336,7 @@ export function dailyPeopleFatigue(s: TycoonState) {
     } else {
       m.fatigue = Math.max(0, m.fatigue - 10 - (m.depotId ? loungeRest(depotById.get(m.depotId) ?? {}) : 0));
     }
-    dailyBurnout(m);
+    dailyBurnout(m, s.managers?.crew ? 2 / 3 : 1);
   });
 }
 

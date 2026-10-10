@@ -61,7 +61,7 @@ export function teamEffect(s: Pick<TycoonState, 'bonds'>, people: Pick<CrewMembe
 }
 
 /** Would `m` refuse to board with anyone already aboard? */
-export const refusesWith = (s: Pick<TycoonState, 'bonds'>, m: Pick<CrewMember, 'id'>, aboard: Pick<CrewMember, 'id'>[]) => aboard.some(o => o.id !== m.id && rapport(s, m.id, o.id) <= REFUSE);
+export const refusesWith = (s: Pick<TycoonState, 'bonds'>, m: Pick<CrewMember, 'id'>, aboard: Pick<CrewMember, 'id'>[], limit = REFUSE) => aboard.some(o => o.id !== m.id && rapport(s, m.id, o.id) <= limit);
 
 /** After a show, rapport moves for everyone who worked it together. */
 export function bondAfterShow(s: TycoonState, people: CrewMember[], quality: number) {
@@ -98,8 +98,8 @@ export function bondAfterShow(s: TycoonState, people: CrewMember[], quality: num
 export const BURNOUT_FATIGUE = 70;
 export const BURNOUT_QUIT = 70;
 
-export function dailyBurnout(m: CrewMember) {
-  if (m.vehicleId && m.fatigue >= BURNOUT_FATIGUE) m.burnout = Math.min(100, (m.burnout ?? 0) + 1.5);
+export function dailyBurnout(m: CrewMember, rate = 1) {
+  if (m.vehicleId && m.fatigue >= BURNOUT_FATIGUE) m.burnout = Math.min(100, (m.burnout ?? 0) + 1.5 * rate);
   else if (m.depotId && m.fatigue < 30) m.burnout = Math.max(0, (m.burnout ?? 0) - 0.4);
 }
 

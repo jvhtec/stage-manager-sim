@@ -827,3 +827,13 @@ From clubs and theatres up (`production.ts`), every venue has a house power supp
 `ecosystem.ts`. A product line is supported for its first 10 years, legacy until 18 (spares slow: the workshop repairs it at 70% speed and refurbishing costs ×1.25) and end-of-life after that (35% speed, ×1.8). The warehouse window tags legacy and EOL lines.
 
 Standardising a department on one brand makes the workshop cheaper — up to 25% off for a department that's all one brand (one set of spares, techs who know it) — but concentrates the risk: each month, a brand you own four or more fragile units of (digital desks, moving lights, line arrays, LED, media servers, automation) has a 1.2% chance of a firmware bug, bad batch or recall that knocks 25% condition off every unit of its newest line you own. The warehouse window shows each department's brand share; the post-mortems log the fault and, if you'd gone all-in on the brand, say so.
+
+## Department heads
+
+`management.ts`. Early on you advance every show yourself; later you can hire heads of department (Company policies) to do the routine work to your policy, each for a monthly salary:
+
+- **Production manager** (3,200/month): every day advances the shows 1–5 days out — cross-hires whatever the technical rider needs, and books generators, ground support, van shuttles and local loaders — as long as it all costs under the share of the fee you allow (10%, 20% or 35%) and the bank can stand it. Answers clients' change requests as they come in: quotes when the client is likely to pay, does a kit extra for free for an act you're close to, otherwise holds to the contract.
+- **Crew chief** (2,600/month): keeps people who are feuding (rapport −40 or worse, not just −60) off the same truck, and rotates the road crew so burnout builds a third slower.
+- **Finance director** (3,000/month): chases invoices so 40% fewer run late, and narrows the cash forecast by 8 points (to as little as ±5%).
+
+What they do is announced in the news, so you can see the system working; you can still do any of it by hand.

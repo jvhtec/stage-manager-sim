@@ -502,6 +502,8 @@ export interface Gig {
   depositPaid?: number;
   /** The client pulled the show. */
   cancelled?: boolean;
+  /** What the production manager has spent advancing this show. */
+  pmSpent?: number;
   /** Production fixes booked for the room (production.ts). */
   fixes?: { generator?: boolean; groundSupport?: boolean; shuttle?: boolean; loaders?: boolean };
   /** Kit cross-hired from a rental house straight to the venue: product id → units. */
@@ -973,6 +975,8 @@ export interface TycoonState {
   incidents?: Incident[];
   /** Rapport between pairs of crew, −100..100, keyed by sorted id pair (bonds.ts). */
   bonds?: Record<string, number>;
+  /** Department heads on the payroll (management.ts). */
+  managers?: { production?: boolean; crew?: boolean; finance?: boolean; spendLimit?: 0.1 | 0.2 | 0.35 };
   /** Acts and venues that won't book you, until a day (blacklist.ts). Keys `act:Name`, `venue:id`. */
   blacklist?: Record<string, number>;
   /** Days you broke each act's rider. */

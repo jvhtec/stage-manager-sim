@@ -3,6 +3,7 @@ import { breachPenalty, checkSpec, type Breach } from './techRider';
 import { loadInProblem, problemEffects, productionProblems, type ProductionProblem } from './production';
 import { LOADERS, handlingHours, handlingOverrun, payloadOf } from './cargo';
 import { traitsOf } from './venueTraits';
+import { FEUD, REFUSE } from './bonds';
 import { fuelMultiplier } from './market';
 import { techResaleFactor } from './content/techWaves';
 import { zoneBill } from './regulation';
@@ -180,7 +181,7 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
     const remaining = emptyCounts();
     DEPTS.forEach(d => (remaining[d] = Math.max(0, gig.needs[d] - have[d])));
     addStock(delivered, pickGear(depot.gear, remaining, model.gearCapacity, gig.rider, gig.techSpec, payloadOf(v.modelId, model.gearCapacity)));
-    const opts = { vehicleId: v.id, restAt: REST_AT[state.policies.rest], bonds: state.bonds, ...crewDirectives(state, gig) };
+    const opts = { vehicleId: v.id, restAt: REST_AT[state.policies.rest], bonds: state.bonds, refuseAt: state.managers?.crew ? FEUD : REFUSE, ...crewDirectives(state, gig) };
     const pinned = depot.people.filter(m => m.pinnedVehicleId === v.id || opts.prefer.has(m.id)).length;
     const seats = Math.min(model.crewSeats, Math.max(pinned, gig.crewNeeded - people.length), depot.people.filter(m => mayBoard(m, opts)).length);
     people.push(...pickCrew(depot.people, gig, seats, people, opts));

@@ -7,6 +7,7 @@
  * Venue choices don't play out until the show: they're kept on the gig as
  * `mods` and folded into the night's quality, failure risk and weather.
  */
+import { pmAnswer } from './management';
 import { changeChance, makeChange, resolveChange, type ChangeKind } from './changes';
 import { worldOf } from './mapgen';
 import { ruleCountry } from './rules';
@@ -182,7 +183,13 @@ export function hourlyCrises(s: TycoonState, rng: Rng) {
     // Clients ask for extras — more so the more they've been given for free.
     const own = dealRng(s, `change-${gig.id}`);
     if (!gig.event && own.chance(changeChance(s, gig))) {
-      s.dilemmas.push({ ...makeChange(s, gig, own), id: newId(s, 'dl'), gigId: gig.id, createdHour: s.hour, expiresHour: Math.max(s.hour + 1, showStartHour(gig) - 1) });
+      const change = { ...makeChange(s, gig, own), id: newId(s, 'dl'), gigId: gig.id, createdHour: s.hour, expiresHour: Math.max(s.hour + 1, showStartHour(gig) - 1) };
+      s.dilemmas.push(change);
+      // A production manager answers it for you.
+      if (s.managers?.production) {
+        const line = resolveDilemma(s, change.id, pmAnswer(s, gig, change.payload ?? 'hour'));
+        if (line) pushNews(s, `Your production manager handled it — ${line.charAt(0).toLowerCase()}${line.slice(1)}`, 'info', { gigId: gig.id, cityId: gig.cityId });
+      }
     }
     if (!rng.chance((gig.overseas ? OVERSEAS_CRISIS_CHANCE : CRISIS_CHANCE(gig.tier)) * difficultyOf(s).crises)) return;
     // Abroad, the rig crossing a border is the likeliest thing to go wrong.
