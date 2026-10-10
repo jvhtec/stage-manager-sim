@@ -128,6 +128,9 @@ export function resolveChange(s: TycoonState, gig: Gig | undefined, kind: Change
   if (rng.chance(payChance(s, gig))) {
     remember(s, gig.act, 'paid');
     gig.fee += extra;
+    // You still pay the overtime or the extra kit — the client pays you for it.
+    const cost = kind === 'hour' ? overtimeCost(gig) : kind === 'kit' ? kitCost(gig) : 0;
+    if (cost) book(s, 'onsite', -cost);
     doIt(false);
     pushNews(s, `${gig.act} agreed to pay ${formatMoney(s, extra)} for the change.`, 'good', { gigId: gig.id, cityId: gig.cityId });
     return `${gig.act} agreed to pay ${formatMoney(s, extra)} extra.`;

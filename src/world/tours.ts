@@ -9,6 +9,7 @@
  *
  * Book the whole tour or none of it; play every date for the completion bonus.
  */
+import { actBanned, venueBanned } from './blacklist';
 import { sideRng } from './people';
 import { settleMerch } from './merch';
 import type { Rng } from '@/lib/rng';
@@ -97,7 +98,9 @@ export function generateNationalTour(state: TycoonState, world: WorldMap, rng: R
   const artist = upAndComing ? null : pickTourArtist(state, year, tier, rng, reachableOnly);
   if (!artist && !upAndComing) return null;
   const act = artist?.name ?? actName(rng);
-  const venues = world.cities.flatMap(c => c.venues).filter(v => v.tier === tier && v.kind !== 'airport' && venueOpenIn(v.name, year));
+  // An act that won't work with you doesn't offer you a tour; a promoter who's banned you isn't on the route.
+  if (actBanned(state, act)) return null;
+  const venues = world.cities.flatMap(c => c.venues).filter(v => v.tier === tier && v.kind !== 'airport' && venueOpenIn(v.name, year) && !venueBanned(state, v.id));
   const route = routeVenues(world, venues, 3 + rng.nextInt(4), rng);
   if (route.length < 3) return null;
 
@@ -121,13 +124,13 @@ export function generateWorldTour(state: TycoonState, world: WorldMap, rng: Rng)
   const year = dateOfDay(state, today).getUTCFullYear();
   const tier = rng.chance(0.6) ? 4 : 3;
   const artist = pickTourArtist(state, year, tier, rng);
-  if (!artist) return null;
+  if (!artist || actBanned(state, artist.name)) return null;
   const airport = world.cities.flatMap(c => c.venues).find(v => v.kind === 'airport');
   if (!airport) return null;
 
   // Home dates: the stadium (for stadium acts) plus a couple of arenas.
-  const stadiums = tier === 4 ? world.cities.flatMap(c => c.venues).filter(v => v.kind === 'stadium' && venueOpenIn(v.name, year)) : [];
-  const arenas = world.cities.flatMap(c => c.venues).filter(v => v.kind === 'arena' && venueOpenIn(v.name, year));
+  const stadiums = tier === 4 ? world.cities.flatMap(c => c.venues).filter(v => v.kind === 'stadium' && venueOpenIn(v.name, year) && !venueBanned(state, v.id)) : [];
+  const arenas = world.cities.flatMap(c => c.venues).filter(v => v.kind === 'arena' && venueOpenIn(v.name, year) && !venueBanned(state, v.id));
   const route = [...stadiums.slice(0, 1), ...routeVenues(world, arenas, 1 + rng.nextInt(2), rng)];
   // No big room open this year (rebuilding, or not built yet): no home dates, no world tour.
   if (!route.length) return null;

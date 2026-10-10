@@ -78,6 +78,11 @@ export function dailyBusHire(s: TycoonState, rng: Rng) {
       return;
     }
     if (today < h.startDay) return; // reserved, not yet on the road
+    // Paid for days startDay … startDay + days − 1; it comes back on startDay + days.
+    if (today >= h.startDay + h.days) {
+      endHire(s, h, bus);
+      return;
+    }
     const wages = Math.round(h.rate * DRIVER_SHARE);
     book(s, 'busHire', h.rate);
     book(s, 'wages', -wages);
@@ -91,7 +96,6 @@ export function dailyBusHire(s: TycoonState, rng: Rng) {
       h.earned -= repair;
       pushNews(s, `${bus.name} broke down on the ${h.act} tour: ${formatMoney(s, repair)} to get it going again.`, 'bad', { vehicleId: bus.id });
     }
-    if (today >= h.startDay + h.days) endHire(s, h, bus);
   });
   // Keep the books short.
   if (s.busHires.length > 40) s.busHires = s.busHires.filter(h => h.status === 'active' || h.status === 'offer').concat(s.busHires.filter(h => h.status === 'done' || h.status === 'lost').slice(-14));

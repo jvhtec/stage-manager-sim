@@ -13,6 +13,8 @@ import { monthlyInterest } from './market';
 import { defaultRisk, LATE_RISK, paymentDays } from './receivables';
 import { monthlyWorkshopCost } from './wear';
 import { PAY } from './crew';
+import { dayRate } from './people';
+import { getTech } from './content/techs';
 import { canAfford } from './consequences';
 import { depositOf } from './terms';
 import type { TycoonState, WorldMap } from './types';
@@ -103,12 +105,14 @@ export function forecastCash(s: TycoonState, world: WorldMap, weeks = FORECAST_W
     });
   }
   // Running costs: tax, upkeep, fuel and a night's allowance for every truck, each day.
+  // Crew and star-tech wages land every day, working or not (sim.ts dailyTick).
+  const payroll = Math.round(s.people.reduce((n, m) => n + dayRate(m), 0) * PAY[s.policies.pay].wage) + s.techs.reduce((n, t) => n + getTech(t.techId).wagePerDay, 0);
   const running = s.vehicles.filter(v => v.owner === 'player').reduce((n, v) => n + (getModel(v.modelId).runningCostPerYear * 0.7) / 365, 0);
   for (let d = 1; d <= horizon; d++) {
-    exp[d] -= running * 1.4;
-    low[d] -= running * 1.8;
-    high[d] -= running;
-    gross[d] += running;
+    exp[d] -= payroll + running * 1.4;
+    low[d] -= payroll + running * 1.8;
+    high[d] -= payroll + running;
+    gross[d] += payroll + running;
   }
 
   const out: ForecastWeek[] = [];

@@ -4,6 +4,7 @@
  * and whether it's an international name. Doing good shows for an act lowers
  * the bar with them. Local bands only care about the venue tier.
  */
+import { actBanned, offerBlocked } from './blacklist';
 import { tierInfo } from './catalog';
 import { yearOf } from './core';
 import { findArtist, type Artist } from './content/artists';
@@ -66,6 +67,8 @@ function repBar(state: TycoonState, gig: Gig): BookingBar {
 
 /** Reputation first; then, for shows that must be rehearsed, a stage big enough and time to use it. */
 export function gigBookingBar(state: TycoonState, gig: Gig): BookingBar {
+  // An offer made before a ban doesn't survive it.
+  if (gig.status === 'offer' && offerBlocked(state, gig)) return { ...repBar(state, gig), reason: actBanned(state, gig.act) ? `${gig.act} won't work with you.` : "This venue's promoter won't book you." };
   const rep = repBar(state, gig);
   if (rep.reason || gig.status !== 'offer') return rep;
   const why = stageBlocker(state, requiredStageLevel(state, gig), gig.day);
@@ -74,6 +77,7 @@ export function gigBookingBar(state: TycoonState, gig: Gig): BookingBar {
 
 export function tourBookingBar(state: TycoonState, tour: Tour, maxTier: number): BookingBar {
   const rep = bar(state, tour.act, maxTier, "this tour's ");
+  if (actBanned(state, tour.act)) return { ...rep, reason: `${tour.act} won't work with you.` };
   if (rep.reason) return rep;
   const first = Math.min(...tour.gigIds.map(id => state.gigs.find(g => g.id === id)?.day ?? Infinity));
   const why = stageBlocker(state, tourStageLevel(tour.kind, maxTier), Number.isFinite(first) ? first : Infinity);
