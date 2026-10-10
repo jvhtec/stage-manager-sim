@@ -868,10 +868,12 @@ What they do is announced in the news, so you can see the system working; you ca
 
 `src/world/__bench__/bot.ts` is a scripted company that plays through the same actions as a player, following a named strategy. It is deterministic for a given country, start year, seed and strategy. Beyond booking, buying and touring, it can:
 
-- **negotiate**: ask for a deposit and a cancellation clause on any show worth 5,000 or more;
+- **negotiate**: ask for a deposit and a cancellation clause on shows worth 15,000 or more (3,000 when cash is at risk);
 - **manage crew conflicts**: when two people who are feuding would share a crew, name the crew without one of them (until it has a crew chief);
 - **hire department heads**: a production manager at a dozen shows a month, a crew chief when feuds appear or the crew passes 16, a finance director when invoices pile up — once it has ten years' salary in the bank;
-- **act on the cash forecast**: weekly, and when late invoices could leave it overdrawn it factors invoices, freezes investment for a month and borrows if the expected line goes negative; it repays when the forecast is comfortable.
+- **act on the cash forecast**: weekly, a graded response — if only the pessimistic line dips below zero it sells invoices to a factor; if even the expected line does, it also freezes investment for a month and borrows; once the forecast is clear it stops factoring, and repays when it's comfortable;
+- **learn**: reads its post-mortems monthly and upgrades the workshop when kit keeps dying on stage, or when six months of refurbishing worn lines one by one has cost more than the better workshop would;
+- **re-plan**: moves shows off trucks that are off the road for days (a recall) onto free ones.
 
 Five strategies (`STRATEGIES`): **baseline** (books, buys, meets riders and fixes rooms, refurbishes worn kit lines, nothing more), **managed** (baseline plus terms, crew management, heads and the cash forecast), **premium** (managed with a full workshop, top pay, one brand per department and only shows worth having), **lean** (low pay, no workshop, insurance, training or heads) and **corner-cutter** (takes everything, never cross-hires or fixes a room, ignores the forecast).
 
@@ -881,3 +883,46 @@ Five strategies (`STRATEGIES`): **baseline** (books, buys, meets riders and fixe
 **What the first reports changed.** The report's "why" lines drove two fixes. The basic workshop repaired 0.15 condition a day against wear of 3 a show-day, so it barely beat having no workshop (kit died at 27–33% of shows either way). It now repairs 0.35 a day, and the full workshop 0.8, at the same price. And the bots never refurbished worn product lines, which any real operator does; the competent strategies now refurbish lines under 60% when the bank can stand it. Together they took a baseline run from 118 kit deaths in four years to 2.
 
 **Reading the ranking.** One lost stadium contract changes the next eight years, so the same strategy on another seed can land millions apart. The report runs four seeds per country by default, shows each strategy's range, and says for each neighbouring pair whether the gap is bigger than the run-to-run spread — a ranking inside the noise isn't a finding.
+
+## Money is tight, and the books are kept per country
+
+**Financial pressure.** The first strategy reports had competent firms clearing 37–44% after tax and investment, which no production company does. Now:
+
+- fees sit 12% lower (`FEE_LEVEL` in offers.ts), rents half as much again, and trucks carry their full running cost;
+- **office overheads** (`monthlyOverheads`, facilities.ts; "Office, admin & cover" in the books): a base per depot, a share per person and per truck, and 1.5% of last year's turnover for the accountant, liability cover and licences — in the cash forecast too;
+- promoters pay **30/45/60 days** after a club, theatre or arena show (council fiestas 75), pay late more often (12–24% by tier) and slip 15–60 days when they do; defaults are a little likelier; a factor charges 1.5% plus 0.05% a day of waiting, so selling a 60-day invoice costs 4.5%;
+- rivals pay the same overheads and wait for the same invoices with the same late and default odds.
+
+Competent strategies now clear 26–28% in Britain and 18–19% in Spain; the cheap ones 10–11% and 5%.
+
+**Per-country statistics.** A British company is worth pounds and a Spanish one pesetas (euros from 2002), so the reports never add or compare the two. Every table is per cohort — one country from one start year — in that cohort's money; only ratios (margins, failure rates, breakdowns per km, changes against a control) are set side by side.
+
+## Breakdowns per kilometre
+
+A truck breaks down by the kilometre, not by the hour: the chance per km is `(1 − reliability) / 12,000` (with a floor), so about one in 60,000 km at 80% reliability and one in 240,000 for a sound truck. Trucks carry an odometer and the company counts fleet kilometres and roadside breakdowns. Measured in the strategy reports: **0.8–2.8 breakdowns per 100,000 km** (median per strategy and country), lower for fleets that are serviced and replaced, higher for the lean Spanish operator — plausible for 1990s trucks.
+
+## Reputation is the industry's memory
+
+A show moves reputation (`reputationAfterShow`), capped by the tier of the venue. It used never to fall without a bad night, so a firm that reached 100 stayed there for decades. Now (`reputation.ts`) it slides each month towards what the last year's work supports — the cap of the best tier you've done good work at within a year — losing 6% of the excess a month, with a gentle fade above 50 so even the top has to keep delivering; a new company gets its first year's grace. The thirty-year runs (`npm run balance:decades`, docs/balance-decades.md) show the shape: reputation climbs to the 90s within ten to fifteen years, then moves in 8–18-point dips that come back in one to three years. Everything going wrong at once a decade in costs 26–46 points; all four runs were back in the 90s within five years, though one Spanish run slid again a decade later and ended at 76 against 97 without the shock.
+
+## Shocks
+
+`shocks.ts` throws the bad years at a running company through the same systems as everything else:
+
+- **the biggest client walks** — the act that paid most this year and last (the game now keeps a two-year client book) signs with a rival; its booked shows are cancelled on their contract terms and it won't book you for two years;
+- **a fleet recall** — the maker calls in the model most of the fleet runs on; those trucks finish the trip they're on and sit at the dealer for 12 days, and can't be given new work;
+- **an economic downturn** — 18 months of 30% less work at 15% lower fees, through the market, so defaults and cancellations rise with it;
+- **late-paying promoters** — a year of invoices going late three times as often, and up to twice as late, for rivals too.
+
+`npm run balance:adverse` (docs/balance-adverse.md) strikes four years into an eight-year run and compares the following twelve months with the same seed untouched (identical up to the shock). For the managed company in Britain, as a share of the next year's show income: losing the biggest client costs 17–26%; a recall of ten trucks 31–44% (the bot can't re-plan most shows when most of the fleet is the same model — a real argument for a mixed fleet); a downturn 17–28%; all four together 37–43%. In Spain, where the fleet was more mixed, the recall barely registered (0–4%), while losing the client cost 3–23%, the downturn 16–32% and all four 30–51%. Late payers barely dent an established firm (−4% to +9%), and nobody went overdrawn: four years in, a well-run company has the cash to ride it out. The lean operator loses as much income but from a far thinner cushion.
+
+## Management systems, one at a time
+
+`npm run balance:ablation` (docs/balance-ablation.md) plays the managed company on the same seeds with each system switched off in turn. With six runs (two countries, three seeds), counted as a ratio against the all-on run:
+
+- **riders and room fixes** are worth ~38% of company value, on every run; switching everything off costs ~51%, on every run;
+- **reading post-mortems** (the workshop upgrade) pays wherever it comes into play (4 of 6 runs, −7%);
+- **terms, the cash forecast, refurbishing and department heads** sit inside the seed-to-seed drift on these runs — they earn their keep in bad years (see the shocks) or not at all at this scale;
+- **crew politics and re-planning** never came into play: no feuds formed before a crew chief was hired, and no truck was recalled.
+
+The first ablation pass found the managed bot paying for its own caution — every forecast warning froze investment and left invoices with a factor until cash passed a fixed mark (80+ months of factoring in Spain), and refurbishing worn lines one at a time hid the case for a better workshop. Both were bot behaviour, fixed above; the remaining "no clear effect" results are findings about the game.

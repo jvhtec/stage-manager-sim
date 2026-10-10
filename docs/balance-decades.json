@@ -6,299 +6,305 @@
   "strategy": "managed",
   "survived": true,
   "yearsRun": 30,
-  "value": 36112987,
-  "cash": 35407356,
+  "value": 37623270,
+  "cash": 36858368,
   "loan": 0,
-  "reputation": 95,
-  "shows": 9325,
-  "failed": 15,
+  "reputation": 100,
+  "shows": 9405,
+  "failed": 18,
   "avgQuality": 0.9,
   "ledger": {
-   "wages": -18022194,
-   "running": -2082170,
-   "merch": 21650,
-   "fuel": -472214,
-   "travel": -2614650,
-   "shows": 108415553,
-   "subhire": -16620696,
-   "purchases": -788800,
-   "property": -2283520,
-   "salaries": -3043700,
-   "overheads": -4054388,
-   "workshop": -1601114,
-   "training": -436620,
-   "insurance": -493517,
-   "freelance": -2195970,
-   "servicing": -954120,
-   "tolls": -1160893,
-   "onsite": -902701,
-   "sponsorship": 2235990,
-   "tax": -12834780,
-   "marketing": -115135,
-   "facilities": -4453740,
-   "penalties": -145716,
-   "zones": -39200
+   "wages": -17957050,
+   "running": -2074190,
+   "merch": 29850,
+   "fuel": -474003,
+   "travel": -2637075,
+   "shows": 111446298,
+   "subhire": -16781974,
+   "purchases": -726200,
+   "property": -2275960,
+   "salaries": -3046700,
+   "overheads": -4082248,
+   "workshop": -2271352,
+   "training": -431840,
+   "insurance": -498088,
+   "freelance": -2239790,
+   "servicing": -948870,
+   "tolls": -1145136,
+   "onsite": -1100180,
+   "sponsorship": 2233100,
+   "marketing": -126010,
+   "interest": -2950,
+   "tax": -13253420,
+   "penalties": -304004,
+   "facilities": -4477640,
+   "zones": -46200
   },
-  "revenue": 110673193,
-  "costs": 75315838,
-  "utilisation": 25.9,
+  "revenue": 113709248,
+  "costs": 76900880,
+  "utilisation": 26.1,
   "fleet": 12,
   "crew": 25,
   "crewLost": 0,
   "burnout": 0,
-  "trusted": 60,
-  "feuds": 8,
+  "trusted": 63,
+  "feuds": 9,
   "incidents": {
    "kinds": {
-    "show": 506,
-    "client": 110,
-    "breakdown": 174
+    "show": 501,
+    "breakdown": 169,
+    "client": 135
    },
    "causes": {
-    "rider": 205,
-    "short-crew": 266,
-    "rider-twice": 67,
-    "winter": 72,
-    "breakdown-inc": 135,
-    "late": 18,
-    "bad-luck": 17,
-    "kit-worn": 13,
-    "disaster": 15,
-    "no-show": 15,
-    "overdue": 4,
-    "kit-failed": 41,
-    "client-cancel": 28,
-    "no-terms": 11,
-    "change-kit": 10,
-    "prep": 66,
-    "terms": 17,
-    "old": 143,
+    "rider": 214,
+    "short-crew": 272,
+    "bad-luck": 23,
+    "breakdown-inc": 125,
+    "rider-twice": 68,
+    "kit-failed": 13,
+    "disaster": 17,
+    "no-show": 18,
+    "late": 16,
+    "winter": 69,
+    "client-cancel": 50,
+    "terms": 27,
+    "no-terms": 23,
+    "prep": 77,
+    "old": 132,
+    "change-kit": 9,
+    "tickets": 8,
+    "overdue": 2,
+    "worn": 119,
     "change-early": 2,
-    "worn": 131,
+    "change-hour": 2,
     "brand-fault": 3,
-    "venue": 4,
-    "tickets": 5,
-    "room": 1,
-    "unrehearsed": 1
+    "venue": 5,
+    "kit-worn": 1,
+    "room": 2
    },
    "main": {
-    "rider": 175,
-    "rider-twice": 67,
-    "short-crew": 138,
-    "winter": 12,
-    "breakdown-inc": 131,
-    "bad-luck": 17,
-    "disaster": 15,
-    "no-show": 15,
-    "overdue": 2,
-    "kit-failed": 28,
-    "client-cancel": 28,
-    "old": 143,
+    "rider": 184,
+    "bad-luck": 23,
+    "breakdown-inc": 121,
+    "rider-twice": 68,
+    "short-crew": 135,
+    "disaster": 17,
+    "no-show": 18,
+    "kit-failed": 7,
+    "winter": 13,
+    "client-cancel": 50,
+    "old": 132,
+    "overdue": 1,
+    "change-early": 1,
     "brand-fault": 3,
-    "prep": 15,
-    "change-early": 1
+    "prep": 29,
+    "change-kit": 1,
+    "room": 2
    }
   },
-  "bans": 41,
+  "bans": 42,
   "kitCondition": {
-   "average": 79,
-   "end": 78
+   "average": 96,
+   "end": 99
   },
   "road": {
-   "km": 4095489,
-   "breakdowns": 174,
-   "per100k": 4.25,
-   "reliability": 46
+   "km": 4109156,
+   "breakdowns": 169,
+   "per100k": 4.11,
+   "reliability": 47
   },
   "monthsOverdrawn": 0,
   "lowestCash": 23290,
-  "forecastWarnings": 14,
+  "forecastWarnings": 17,
   "bot": {
-   "termsAsked": 829,
-   "termsWon": 532,
-   "crossHires": 62,
-   "fixes": 25,
-   "crewSplits": 0,
+   "termsAsked": 835,
+   "termsWon": 499,
+   "crossHires": 128,
+   "fixes": 32,
+   "crewSplits": 9,
    "heads": [
     "crew@1985",
-    "production@1985",
-    "finance@1985"
+    "finance@1985",
+    "production@1985"
    ],
-   "lessons": [],
-   "refurbished": 333,
-   "borrowed": 0,
-   "factoredMonths": 52,
-   "frozenMonths": 6,
+   "lessons": [
+    "workshop→full@1984"
+   ],
+   "refurbished": 111,
+   "borrowed": 60000,
+   "factoredMonths": 5,
+   "frozenMonths": 2,
    "replanned": 0
   },
   "rivals": {
-   "alive": 14,
-   "gone": 13,
-   "shows": 17103,
-   "failed": 1,
-   "avgQuality": 0.71,
-   "crossHires": 297,
-   "fixes": 811,
+   "alive": 11,
+   "gone": 11,
+   "shows": 16170,
+   "failed": 0,
+   "avgQuality": 0.67,
+   "crossHires": 437,
+   "fixes": 864,
    "declined": {
     "rider": 0,
-    "kit": 4,
-    "crew": 3,
-    "room": 50
+    "kit": 1,
+    "crew": 12,
+    "room": 59,
+    "trucks": 1
    },
-   "cashNegative": 3
+   "cashNegative": 2
   },
   "invariantViolations": [],
   "shockLog": [],
   "yearly": [
    {
     "year": 1980,
-    "reputation": 39.2,
-    "value": 109067
+    "reputation": 39.5,
+    "value": 102837
    },
    {
     "year": 1981,
-    "reputation": 46.7,
-    "value": 131423
+    "reputation": 44.6,
+    "value": 115221
    },
    {
     "year": 1982,
-    "reputation": 50.1,
-    "value": 125765
+    "reputation": 50.9,
+    "value": 150301
    },
    {
     "year": 1983,
-    "reputation": 59.2,
-    "value": 293384
+    "reputation": 57.4,
+    "value": 289774
    },
    {
     "year": 1984,
-    "reputation": 67,
-    "value": 553260
+    "reputation": 65.6,
+    "value": 525188
    },
    {
     "year": 1985,
-    "reputation": 70,
-    "value": 1071843
+    "reputation": 68.5,
+    "value": 1435371
    },
    {
     "year": 1986,
-    "reputation": 74.6,
-    "value": 2229686
+    "reputation": 68.1,
+    "value": 2510739
    },
    {
     "year": 1987,
-    "reputation": 79,
-    "value": 3319965
+    "reputation": 74.9,
+    "value": 3409289
    },
    {
     "year": 1988,
-    "reputation": 83.9,
-    "value": 3199579
+    "reputation": 78.2,
+    "value": 3629529
    },
    {
     "year": 1989,
-    "reputation": 86.4,
-    "value": 4818775
+    "reputation": 78.1,
+    "value": 4759508
    },
    {
     "year": 1990,
-    "reputation": 89.8,
-    "value": 5507501
+    "reputation": 78.5,
+    "value": 5275791
    },
    {
     "year": 1991,
-    "reputation": 91.5,
-    "value": 6254618
+    "reputation": 90.1,
+    "value": 6159193
    },
    {
     "year": 1992,
-    "reputation": 95.4,
-    "value": 7533466
+    "reputation": 94.6,
+    "value": 7835663
    },
    {
     "year": 1993,
-    "reputation": 92.1,
-    "value": 9287526
+    "reputation": 100,
+    "value": 8637660
    },
    {
     "year": 1994,
-    "reputation": 87.8,
-    "value": 9784890
+    "reputation": 99.8,
+    "value": 9584681
    },
    {
     "year": 1995,
-    "reputation": 92,
-    "value": 10918732
+    "reputation": 94.8,
+    "value": 11255776
    },
    {
     "year": 1996,
-    "reputation": 96.4,
-    "value": 12405295
+    "reputation": 98.3,
+    "value": 12808724
    },
    {
     "year": 1997,
-    "reputation": 93.7,
-    "value": 14106331
+    "reputation": 98.8,
+    "value": 15178409
    },
    {
     "year": 1998,
-    "reputation": 94.2,
-    "value": 15886183
+    "reputation": 98.9,
+    "value": 16397494
    },
    {
     "year": 1999,
-    "reputation": 93.7,
-    "value": 17802756
+    "reputation": 100,
+    "value": 18738778
    },
    {
     "year": 2000,
-    "reputation": 96.4,
-    "value": 18880752
+    "reputation": 95.6,
+    "value": 20145641
    },
    {
     "year": 2001,
-    "reputation": 93.8,
-    "value": 19716468
+    "reputation": 98.3,
+    "value": 20630948
    },
    {
     "year": 2002,
-    "reputation": 92.3,
-    "value": 20893326
+    "reputation": 96.6,
+    "value": 21751413
    },
    {
     "year": 2003,
-    "reputation": 93.8,
-    "value": 22857726
+    "reputation": 92,
+    "value": 23788653
    },
    {
     "year": 2004,
-    "reputation": 88.7,
-    "value": 25079460
+    "reputation": 92.3,
+    "value": 26305822
    },
    {
     "year": 2005,
-    "reputation": 92.4,
-    "value": 27100949
+    "reputation": 92,
+    "value": 27802200
    },
    {
     "year": 2006,
-    "reputation": 96.5,
-    "value": 28789025
+    "reputation": 90.3,
+    "value": 29636326
    },
    {
     "year": 2007,
-    "reputation": 99.8,
-    "value": 32301944
+    "reputation": 97.7,
+    "value": 32816112
    },
    {
     "year": 2008,
-    "reputation": 100,
-    "value": 34479742
+    "reputation": 96.3,
+    "value": 35805002
    },
    {
     "year": 2009,
-    "reputation": 99.9,
-    "value": 35954240
+    "reputation": 100,
+    "value": 37408949
    }
   ]
  },
@@ -309,149 +315,451 @@
   "strategy": "managed",
   "survived": true,
   "yearsRun": 30,
-  "value": 36048004,
-  "cash": 35669534,
+  "value": 41157749,
+  "cash": 40287909,
   "loan": 0,
-  "reputation": 97,
-  "shows": 9423,
-  "failed": 15,
-  "avgQuality": 0.88,
+  "reputation": 100,
+  "shows": 9380,
+  "failed": 14,
+  "avgQuality": 0.96,
   "ledger": {
-   "wages": -18141860,
-   "running": -2094710,
-   "subhire": -16473968,
-   "shows": 109057667,
-   "fuel": -465198,
-   "travel": -2586225,
-   "tolls": -1251074,
-   "property": -2383120,
-   "salaries": -3076900,
-   "overheads": -4076112,
-   "workshop": -1501017,
-   "training": -442640,
-   "insurance": -529826,
-   "servicing": -955070,
-   "freelance": -2200590,
-   "purchases": -679500,
-   "tax": -12758550,
-   "sponsorship": 1923290,
-   "onsite": -890872,
-   "marketing": -118580,
-   "facilities": -4483860,
-   "merch": 21600,
-   "interest": -563,
-   "penalties": -231386,
-   "zones": -41400
+   "wages": -17964721,
+   "running": -2070770,
+   "subhire": -17208238,
+   "shows": 117402807,
+   "fuel": -460178,
+   "travel": -2597100,
+   "tolls": -1175163,
+   "property": -2349520,
+   "salaries": -3068300,
+   "overheads": -4179484,
+   "workshop": -2177631,
+   "training": -442260,
+   "insurance": -489406,
+   "servicing": -943520,
+   "freelance": -2447410,
+   "merch": 41470,
+   "onsite": -1088739,
+   "purchases": -755600,
+   "sponsorship": 1957260,
+   "tax": -14910730,
+   "marketing": -70070,
+   "facilities": -4680920,
+   "penalties": -41868,
+   "zones": -42000
   },
-  "revenue": 111002557,
-  "costs": 75383021,
-  "utilisation": 26.2,
+  "revenue": 119401537,
+  "costs": 79163628,
+  "utilisation": 26.1,
   "fleet": 12,
   "crew": 25,
   "crewLost": 0,
   "burnout": 0,
-  "trusted": 52,
-  "feuds": 7,
+  "trusted": 51,
+  "feuds": 16,
   "incidents": {
    "kinds": {
-    "show": 586,
-    "breakdown": 195,
-    "client": 137,
-    "cash": 1
+    "show": 487,
+    "breakdown": 163,
+    "client": 121
    },
    "causes": {
-    "rider": 242,
-    "short-crew": 291,
-    "bad-luck": 33,
-    "client-cancel": 43,
-    "no-terms": 24,
-    "rider-twice": 80,
-    "breakdown-inc": 147,
-    "kit-failed": 27,
-    "kit-worn": 3,
-    "feud": 2,
-    "late": 29,
-    "winter": 59,
-    "unpaid-invoices": 1,
-    "overdrawn": 1,
-    "prep": 114,
-    "venue": 10,
+    "rider": 231,
+    "short-crew": 288,
+    "bad-luck": 25,
+    "breakdown-inc": 111,
+    "rider-twice": 73,
+    "winter": 56,
+    "kit-failed": 12,
+    "late": 22,
+    "venue": 7,
+    "client-cancel": 34,
+    "no-terms": 16,
     "disaster": 14,
-    "no-show": 15,
-    "terms": 19,
-    "old": 155,
-    "worn": 144,
-    "change-hour": 4,
-    "change-kit": 8,
-    "tickets": 6,
+    "no-show": 14,
+    "terms": 18,
+    "change-kit": 10,
+    "prep": 33,
+    "tickets": 1,
+    "old": 129,
+    "brand-fault": 2,
+    "worn": 120,
+    "unrehearsed": 3,
+    "overdue": 3,
     "change-early": 2,
-    "overdue": 1,
-    "room": 2
+    "kit-worn": 2,
+    "change-hour": 2
    },
    "main": {
-    "rider": 211,
-    "bad-luck": 33,
-    "client-cancel": 43,
-    "rider-twice": 80,
-    "short-crew": 135,
-    "breakdown-inc": 141,
-    "kit-failed": 23,
-    "winter": 7,
-    "unpaid-invoices": 1,
+    "rider": 205,
+    "short-crew": 136,
+    "bad-luck": 25,
+    "breakdown-inc": 111,
+    "rider-twice": 73,
+    "winter": 9,
+    "client-cancel": 34,
     "disaster": 14,
-    "no-show": 15,
-    "old": 155,
-    "prep": 58,
-    "room": 2,
+    "no-show": 14,
+    "prep": 7,
+    "old": 129,
+    "brand-fault": 2,
+    "unrehearsed": 3,
+    "kit-failed": 5,
+    "change-kit": 3,
     "kit-worn": 1
    }
   },
-  "bans": 39,
+  "bans": 40,
   "kitCondition": {
-   "average": 83,
-   "end": 99
+   "average": 96,
+   "end": 98
   },
   "road": {
-   "km": 4035267,
-   "breakdowns": 195,
-   "per100k": 4.83,
-   "reliability": 46
+   "km": 3990835,
+   "breakdowns": 163,
+   "per100k": 4.08,
+   "reliability": 47
   },
   "monthsOverdrawn": 0,
-  "lowestCash": -14804,
-  "forecastWarnings": 12,
+  "lowestCash": 8737,
+  "forecastWarnings": 10,
   "bot": {
-   "termsAsked": 854,
-   "termsWon": 525,
-   "crossHires": 117,
-   "fixes": 37,
-   "crewSplits": 13,
+   "termsAsked": 889,
+   "termsWon": 543,
+   "crossHires": 131,
+   "fixes": 39,
+   "crewSplits": 0,
    "heads": [
     "crew@1984",
     "finance@1985",
     "production@1985"
    ],
    "lessons": [
-    "workshop→full@2005"
+    "workshop→full@1984"
    ],
-   "refurbished": 213,
-   "borrowed": 40000,
-   "factoredMonths": 53,
-   "frozenMonths": 7,
+   "refurbished": 132,
+   "borrowed": 0,
+   "factoredMonths": 5,
+   "frozenMonths": 0,
    "replanned": 0
   },
   "rivals": {
-   "alive": 11,
-   "gone": 16,
-   "shows": 14851,
+   "alive": 12,
+   "gone": 17,
+   "shows": 13949,
    "failed": 0,
-   "avgQuality": 0.7,
-   "crossHires": 309,
-   "fixes": 651,
+   "avgQuality": 0.71,
+   "crossHires": 615,
+   "fixes": 733,
+   "declined": {
+    "kit": 0,
+    "rider": 0,
+    "crew": 2,
+    "room": 44
+   },
+   "cashNegative": 0
+  },
+  "invariantViolations": [],
+  "shockLog": [],
+  "yearly": [
+   {
+    "year": 1980,
+    "reputation": 41.1,
+    "value": 102751
+   },
+   {
+    "year": 1981,
+    "reputation": 46.2,
+    "value": 112105
+   },
+   {
+    "year": 1982,
+    "reputation": 54.2,
+    "value": 128346
+   },
+   {
+    "year": 1983,
+    "reputation": 61,
+    "value": 235652
+   },
+   {
+    "year": 1984,
+    "reputation": 69.1,
+    "value": 696631
+   },
+   {
+    "year": 1985,
+    "reputation": 76.3,
+    "value": 1960705
+   },
+   {
+    "year": 1986,
+    "reputation": 85.3,
+    "value": 2429831
+   },
+   {
+    "year": 1987,
+    "reputation": 88.8,
+    "value": 3601593
+   },
+   {
+    "year": 1988,
+    "reputation": 94,
+    "value": 5279965
+   },
+   {
+    "year": 1989,
+    "reputation": 100,
+    "value": 7136991
+   },
+   {
+    "year": 1990,
+    "reputation": 92,
+    "value": 8103145
+   },
+   {
+    "year": 1991,
+    "reputation": 95.7,
+    "value": 9674351
+   },
+   {
+    "year": 1992,
+    "reputation": 99.7,
+    "value": 10928510
+   },
+   {
+    "year": 1993,
+    "reputation": 94.3,
+    "value": 11424390
+   },
+   {
+    "year": 1994,
+    "reputation": 93.3,
+    "value": 12746072
+   },
+   {
+    "year": 1995,
+    "reputation": 92.2,
+    "value": 14570800
+   },
+   {
+    "year": 1996,
+    "reputation": 96.6,
+    "value": 15817557
+   },
+   {
+    "year": 1997,
+    "reputation": 93.5,
+    "value": 17922007
+   },
+   {
+    "year": 1998,
+    "reputation": 97.7,
+    "value": 19608199
+   },
+   {
+    "year": 1999,
+    "reputation": 96.7,
+    "value": 21503102
+   },
+   {
+    "year": 2000,
+    "reputation": 94.5,
+    "value": 22893474
+   },
+   {
+    "year": 2001,
+    "reputation": 98.2,
+    "value": 23650658
+   },
+   {
+    "year": 2002,
+    "reputation": 96.3,
+    "value": 24868221
+   },
+   {
+    "year": 2003,
+    "reputation": 99.9,
+    "value": 27372979
+   },
+   {
+    "year": 2004,
+    "reputation": 99.5,
+    "value": 29730471
+   },
+   {
+    "year": 2005,
+    "reputation": 99.6,
+    "value": 31945086
+   },
+   {
+    "year": 2006,
+    "reputation": 99.6,
+    "value": 33524855
+   },
+   {
+    "year": 2007,
+    "reputation": 99.9,
+    "value": 37348151
+   },
+   {
+    "year": 2008,
+    "reputation": 99.4,
+    "value": 39467510
+   },
+   {
+    "year": 2009,
+    "reputation": 100,
+    "value": 41007713
+   }
+  ]
+ },
+ {
+  "country": "ES",
+  "startYear": 1980,
+  "seed": 3,
+  "strategy": "managed",
+  "survived": true,
+  "yearsRun": 30,
+  "value": 32919425,
+  "cash": 32394517,
+  "loan": 0,
+  "reputation": 95,
+  "shows": 10322,
+  "failed": 40,
+  "avgQuality": 0.89,
+  "ledger": {
+   "wages": -18323787,
+   "running": -2170520,
+   "travel": -5177700,
+   "fuel": -1508583,
+   "shows": 104262908,
+   "freelance": -2410835,
+   "tolls": -354227,
+   "property": -2211160,
+   "salaries": -3199900,
+   "overheads": -4036360,
+   "workshop": -2374447,
+   "training": -360240,
+   "insurance": -513256,
+   "subhire": -12700276,
+   "servicing": -1087780,
+   "purchases": -725000,
+   "sponsorship": 2076960,
+   "tax": -11815360,
+   "marketing": -21340,
+   "onsite": -1140545,
+   "penalties": -228943,
+   "merch": 22570,
+   "facilities": -3657660
+  },
+  "revenue": 106362438,
+  "costs": 74017919,
+  "utilisation": 28.7,
+  "fleet": 12,
+  "crew": 24,
+  "crewLost": 1,
+  "burnout": 0,
+  "trusted": 90,
+  "feuds": 15,
+  "incidents": {
+   "kinds": {
+    "show": 775,
+    "breakdown": 536,
+    "client": 104
+   },
+   "causes": {
+    "rider": 153,
+    "short-crew": 249,
+    "bad-luck": 72,
+    "breakdown-inc": 468,
+    "rider-twice": 38,
+    "winter": 215,
+    "overdue": 28,
+    "late": 31,
+    "disaster": 39,
+    "no-show": 40,
+    "tired-crew": 12,
+    "client-cancel": 27,
+    "no-terms": 6,
+    "worn": 378,
+    "kit-failed": 18,
+    "change-hour": 2,
+    "change-kit": 9,
+    "terms": 21,
+    "old": 411,
+    "prep": 114,
+    "venue": 12,
+    "brand-fault": 1,
+    "tickets": 3
+   },
+   "main": {
+    "rider": 144,
+    "short-crew": 78,
+    "bad-luck": 72,
+    "breakdown-inc": 455,
+    "rider-twice": 38,
+    "winter": 43,
+    "overdue": 10,
+    "disaster": 39,
+    "no-show": 40,
+    "tired-crew": 7,
+    "client-cancel": 27,
+    "worn": 1,
+    "kit-failed": 9,
+    "late": 6,
+    "old": 410,
+    "change-kit": 1,
+    "prep": 34,
+    "brand-fault": 1
+   }
+  },
+  "bans": 45,
+  "kitCondition": {
+   "average": 98,
+   "end": 99
+  },
+  "road": {
+   "km": 12866134,
+   "breakdowns": 536,
+   "per100k": 4.17,
+   "reliability": 46
+  },
+  "monthsOverdrawn": 0,
+  "lowestCash": 16675,
+  "forecastWarnings": 5,
+  "bot": {
+   "termsAsked": 941,
+   "termsWon": 430,
+   "crossHires": 67,
+   "fixes": 8,
+   "crewSplits": 0,
+   "heads": [
+    "crew@1983",
+    "production@1984",
+    "finance@1984"
+   ],
+   "lessons": [
+    "workshop→full@1983"
+   ],
+   "refurbished": 53,
+   "borrowed": 0,
+   "factoredMonths": 1,
+   "frozenMonths": 0,
+   "replanned": 0
+  },
+  "rivals": {
+   "alive": 12,
+   "gone": 15,
+   "shows": 10340,
+   "failed": 1,
+   "avgQuality": 0.75,
+   "crossHires": 288,
+   "fixes": 304,
    "declined": {
     "rider": 0,
-    "kit": 0,
-    "crew": 2,
+    "kit": 3,
+    "crew": 3,
     "room": 47
    },
    "cashNegative": 2
@@ -461,463 +769,153 @@
   "yearly": [
    {
     "year": 1980,
-    "reputation": 40.6,
-    "value": 118533
-   },
-   {
-    "year": 1981,
-    "reputation": 47.4,
-    "value": 126092
-   },
-   {
-    "year": 1982,
-    "reputation": 56,
-    "value": 159878
-   },
-   {
-    "year": 1983,
-    "reputation": 68.1,
-    "value": 403195
-   },
-   {
-    "year": 1984,
-    "reputation": 76.3,
-    "value": 975469
-   },
-   {
-    "year": 1985,
-    "reputation": 83.3,
-    "value": 1327324
-   },
-   {
-    "year": 1986,
-    "reputation": 84,
-    "value": 2645799
-   },
-   {
-    "year": 1987,
-    "reputation": 80.7,
-    "value": 3120779
-   },
-   {
-    "year": 1988,
-    "reputation": 80.5,
-    "value": 3884400
-   },
-   {
-    "year": 1989,
-    "reputation": 85.4,
-    "value": 5254463
-   },
-   {
-    "year": 1990,
-    "reputation": 91.9,
-    "value": 6591842
-   },
-   {
-    "year": 1991,
-    "reputation": 93.7,
-    "value": 7920609
-   },
-   {
-    "year": 1992,
-    "reputation": 93.1,
-    "value": 8722023
-   },
-   {
-    "year": 1993,
-    "reputation": 91.7,
-    "value": 9577275
-   },
-   {
-    "year": 1994,
-    "reputation": 92.8,
-    "value": 10428425
-   },
-   {
-    "year": 1995,
-    "reputation": 96.3,
-    "value": 11882754
-   },
-   {
-    "year": 1996,
-    "reputation": 99.4,
-    "value": 13799621
-   },
-   {
-    "year": 1997,
-    "reputation": 92,
-    "value": 15617141
-   },
-   {
-    "year": 1998,
-    "reputation": 89.3,
-    "value": 17323151
-   },
-   {
-    "year": 1999,
-    "reputation": 88.9,
-    "value": 18904984
-   },
-   {
-    "year": 2000,
-    "reputation": 87,
-    "value": 19739298
-   },
-   {
-    "year": 2001,
-    "reputation": 92,
-    "value": 20187781
-   },
-   {
-    "year": 2002,
-    "reputation": 94.4,
-    "value": 21200829
-   },
-   {
-    "year": 2003,
-    "reputation": 94.2,
-    "value": 23378507
-   },
-   {
-    "year": 2004,
-    "reputation": 96.3,
-    "value": 25139856
-   },
-   {
-    "year": 2005,
-    "reputation": 99,
-    "value": 27342831
-   },
-   {
-    "year": 2006,
-    "reputation": 99.3,
-    "value": 29189976
-   },
-   {
-    "year": 2007,
-    "reputation": 99.9,
-    "value": 32256859
-   },
-   {
-    "year": 2008,
-    "reputation": 100,
-    "value": 34438367
-   },
-   {
-    "year": 2009,
-    "reputation": 97.7,
-    "value": 35950968
-   }
-  ]
- },
- {
-  "country": "ES",
-  "startYear": 1980,
-  "seed": 3,
-  "strategy": "managed",
-  "survived": true,
-  "yearsRun": 30,
-  "value": 33220063,
-  "cash": 32698566,
-  "loan": 0,
-  "reputation": 89,
-  "shows": 10293,
-  "failed": 37,
-  "avgQuality": 0.91,
-  "ledger": {
-   "wages": -19010156,
-   "running": -2171660,
-   "travel": -5217975,
-   "fuel": -1523388,
-   "shows": 105253924,
-   "freelance": -2468410,
-   "tolls": -359775,
-   "property": -2151880,
-   "salaries": -3156500,
-   "overheads": -4108136,
-   "workshop": -1582046,
-   "training": -384040,
-   "insurance": -446028,
-   "subhire": -13029154,
-   "servicing": -1072210,
-   "purchases": -689500,
-   "sponsorship": 2004220,
-   "tax": -12067650,
-   "onsite": -1064424,
-   "penalties": -164637,
-   "marketing": -18110,
-   "merch": 17180,
-   "facilities": -3941080
-  },
-  "revenue": 107275324,
-  "costs": 74626759,
-  "utilisation": 28.6,
-  "fleet": 12,
-  "crew": 25,
-  "crewLost": 2,
-  "burnout": 0,
-  "trusted": 94,
-  "feuds": 13,
-  "incidents": {
-   "kinds": {
-    "show": 854,
-    "breakdown": 535,
-    "client": 115
-   },
-   "causes": {
-    "rider": 188,
-    "short-crew": 279,
-    "bad-luck": 88,
-    "winter": 212,
-    "breakdown-inc": 493,
-    "disaster": 37,
-    "no-show": 35,
-    "rider-twice": 47,
-    "tired-crew": 5,
-    "overdue": 18,
-    "late": 31,
-    "no-goodwill": 2,
-    "change-hour": 4,
-    "kit-failed": 34,
-    "worn": 373,
-    "client-cancel": 31,
-    "no-terms": 9,
-    "terms": 22,
-    "prep": 100,
-    "venue": 7,
-    "old": 401,
-    "change-kit": 8,
-    "brand-fault": 1,
-    "kit-worn": 6,
-    "tickets": 3,
-    "unrehearsed": 1
-   },
-   "main": {
-    "rider": 178,
-    "short-crew": 102,
-    "bad-luck": 88,
-    "winter": 41,
-    "breakdown-inc": 466,
-    "disaster": 37,
-    "no-show": 35,
-    "rider-twice": 47,
-    "tired-crew": 1,
-    "overdue": 5,
-    "late": 6,
-    "change-hour": 1,
-    "kit-failed": 22,
-    "worn": 1,
-    "client-cancel": 31,
-    "old": 400,
-    "prep": 39,
-    "brand-fault": 1,
-    "kit-worn": 1,
-    "change-kit": 1,
-    "unrehearsed": 1
-   }
-  },
-  "bans": 45,
-  "kitCondition": {
-   "average": 79,
-   "end": 79
-  },
-  "road": {
-   "km": 13029063,
-   "breakdowns": 535,
-   "per100k": 4.11,
-   "reliability": 46
-  },
-  "monthsOverdrawn": 0,
-  "lowestCash": 16675,
-  "forecastWarnings": 15,
-  "bot": {
-   "termsAsked": 1026,
-   "termsWon": 659,
-   "crossHires": 80,
-   "fixes": 17,
-   "crewSplits": 0,
-   "heads": [
-    "production@1984",
-    "crew@1984",
-    "finance@1984"
-   ],
-   "lessons": [],
-   "refurbished": 285,
-   "borrowed": 0,
-   "factoredMonths": 45,
-   "frozenMonths": 8,
-   "replanned": 0
-  },
-  "rivals": {
-   "alive": 12,
-   "gone": 14,
-   "shows": 14315,
-   "failed": 3,
-   "avgQuality": 0.79,
-   "crossHires": 543,
-   "fixes": 412,
-   "declined": {
-    "rider": 0,
-    "room": 58,
-    "kit": 28,
-    "crew": 4,
-    "trucks": 0
-   },
-   "cashNegative": 3
-  },
-  "invariantViolations": [],
-  "shockLog": [],
-  "yearly": [
-   {
-    "year": 1980,
-    "reputation": 40.4,
-    "value": 137600
+    "reputation": 38.7,
+    "value": 152711
    },
    {
     "year": 1981,
     "reputation": 42.4,
-    "value": 175379
+    "value": 199500
    },
    {
     "year": 1982,
-    "reputation": 49.8,
-    "value": 375861
+    "reputation": 51.3,
+    "value": 386937
    },
    {
     "year": 1983,
-    "reputation": 55,
-    "value": 634632
+    "reputation": 43,
+    "value": 660640
    },
    {
     "year": 1984,
-    "reputation": 65.4,
-    "value": 1042687
+    "reputation": 62,
+    "value": 826530
    },
    {
     "year": 1985,
-    "reputation": 68.8,
-    "value": 1549794
+    "reputation": 69.7,
+    "value": 1628083
    },
    {
     "year": 1986,
-    "reputation": 68,
-    "value": 2722482
+    "reputation": 65.8,
+    "value": 2622287
    },
    {
     "year": 1987,
-    "reputation": 68,
-    "value": 3734103
+    "reputation": 68.9,
+    "value": 3184344
    },
    {
     "year": 1988,
-    "reputation": 69.3,
-    "value": 4951135
+    "reputation": 73.8,
+    "value": 4309416
    },
    {
     "year": 1989,
-    "reputation": 73.4,
-    "value": 5773378
+    "reputation": 75.8,
+    "value": 5343797
    },
    {
     "year": 1990,
-    "reputation": 68.7,
-    "value": 6428747
+    "reputation": 76.7,
+    "value": 5412918
    },
    {
     "year": 1991,
-    "reputation": 74.6,
-    "value": 7358751
+    "reputation": 74.4,
+    "value": 6986828
    },
    {
     "year": 1992,
-    "reputation": 83.4,
-    "value": 8116672
+    "reputation": 90.4,
+    "value": 8524651
    },
    {
     "year": 1993,
-    "reputation": 92,
-    "value": 8979554
+    "reputation": 91.3,
+    "value": 9289600
    },
    {
     "year": 1994,
-    "reputation": 89.4,
-    "value": 10082851
+    "reputation": 94.2,
+    "value": 10254469
    },
    {
     "year": 1995,
-    "reputation": 82.9,
-    "value": 11279234
+    "reputation": 92,
+    "value": 11471541
    },
    {
     "year": 1996,
-    "reputation": 91.8,
-    "value": 12492074
+    "reputation": 99.6,
+    "value": 13168732
    },
    {
     "year": 1997,
-    "reputation": 88.6,
-    "value": 14501047
+    "reputation": 94.5,
+    "value": 14641276
    },
    {
     "year": 1998,
-    "reputation": 91.1,
-    "value": 16110406
+    "reputation": 88.2,
+    "value": 15931016
    },
    {
     "year": 1999,
-    "reputation": 91.8,
-    "value": 17195967
+    "reputation": 87.1,
+    "value": 16951227
    },
    {
     "year": 2000,
-    "reputation": 81.9,
-    "value": 17520533
+    "reputation": 92.8,
+    "value": 18187315
    },
    {
     "year": 2001,
-    "reputation": 73.6,
-    "value": 17747890
+    "reputation": 90.7,
+    "value": 19048210
    },
    {
     "year": 2002,
-    "reputation": 88.1,
-    "value": 19557563
+    "reputation": 99.9,
+    "value": 20799066
    },
    {
     "year": 2003,
-    "reputation": 93.6,
-    "value": 22515445
+    "reputation": 82.3,
+    "value": 23078287
    },
    {
     "year": 2004,
-    "reputation": 95.6,
-    "value": 24851102
+    "reputation": 87.9,
+    "value": 24595899
    },
    {
     "year": 2005,
-    "reputation": 98.9,
-    "value": 26604589
+    "reputation": 93.9,
+    "value": 26148470
    },
    {
     "year": 2006,
-    "reputation": 95.1,
-    "value": 28721717
+    "reputation": 97.3,
+    "value": 28236639
    },
    {
     "year": 2007,
-    "reputation": 99.7,
-    "value": 30443629
+    "reputation": 99.9,
+    "value": 30591057
    },
    {
     "year": 2008,
-    "reputation": 89.7,
-    "value": 32441257
+    "reputation": 96.7,
+    "value": 32229922
    },
    {
     "year": 2009,
-    "reputation": 88.9,
-    "value": 33245096
+    "reputation": 95,
+    "value": 32784725
    }
   ]
  },
@@ -928,155 +926,145 @@
   "strategy": "managed",
   "survived": true,
   "yearsRun": 30,
-  "value": 30979676,
-  "cash": 30648543,
+  "value": 37652913,
+  "cash": 37247148,
   "loan": 0,
-  "reputation": 93,
-  "shows": 10169,
-  "failed": 38,
-  "avgQuality": 0.87,
+  "reputation": 97,
+  "shows": 10134,
+  "failed": 31,
+  "avgQuality": 0.86,
   "ledger": {
-   "wages": -18884770,
-   "running": -2157410,
-   "subhire": -12617302,
-   "shows": 101533215,
-   "travel": -4961475,
-   "fuel": -1378191,
-   "tolls": -362559,
-   "property": -2095480,
-   "salaries": -3146700,
-   "overheads": -4057656,
-   "workshop": -1716509,
-   "training": -382920,
-   "insurance": -415152,
-   "purchases": -622600,
-   "servicing": -1067280,
-   "onsite": -1358954,
-   "freelance": -2192225,
-   "merch": 24320,
-   "tax": -11279170,
-   "sponsorship": 1721710,
-   "penalties": -232956,
-   "marketing": -70435,
-   "facilities": -3679570,
-   "interest": -1389
+   "wages": -18709111,
+   "running": -2151710,
+   "subhire": -14165520,
+   "shows": 112683601,
+   "travel": -4951350,
+   "fuel": -1377157,
+   "tolls": -368193,
+   "property": -2197360,
+   "salaries": -3170900,
+   "overheads": -4201100,
+   "workshop": -2052551,
+   "training": -394720,
+   "insurance": -477479,
+   "purchases": -666100,
+   "servicing": -1064730,
+   "onsite": -1220575,
+   "freelance": -2451365,
+   "merch": 18030,
+   "tax": -13672350,
+   "sponsorship": 1971020,
+   "penalties": -93931,
+   "marketing": -26030,
+   "facilities": -4063270
   },
-  "revenue": 103279245,
-  "costs": 72680703,
-  "utilisation": 28.2,
+  "revenue": 114672651,
+  "costs": 77475502,
+  "utilisation": 28.1,
   "fleet": 12,
   "crew": 25,
-  "crewLost": 0,
+  "crewLost": 2,
   "burnout": 0,
-  "trusted": 76,
-  "feuds": 8,
+  "trusted": 98,
+  "feuds": 7,
   "incidents": {
    "kinds": {
-    "show": 777,
-    "breakdown": 511,
-    "client": 97
+    "show": 791,
+    "breakdown": 519,
+    "client": 117
    },
    "causes": {
-    "short-crew": 250,
-    "rider": 135,
+    "short-crew": 299,
+    "rider": 181,
     "bad-luck": 83,
-    "rider-twice": 32,
-    "winter": 185,
-    "breakdown-inc": 454,
-    "overdue": 12,
-    "disaster": 39,
-    "no-show": 35,
-    "kit-failed": 25,
-    "kit-worn": 7,
-    "tired-crew": 5,
-    "no-goodwill": 1,
-    "client-cancel": 26,
+    "rider-twice": 51,
+    "winter": 206,
+    "breakdown-inc": 461,
+    "overdue": 25,
+    "disaster": 31,
+    "no-show": 31,
+    "kit-failed": 21,
+    "tired-crew": 20,
+    "late": 24,
+    "venue": 9,
+    "client-cancel": 35,
     "terms": 21,
-    "room": 2,
-    "change-kit": 14,
-    "late": 37,
-    "venue": 11,
-    "change-early": 5,
-    "old": 388,
-    "no-terms": 5,
-    "brand-fault": 1,
-    "worn": 362,
-    "prep": 82,
-    "tickets": 5,
-    "change-hour": 2
+    "change-kit": 18,
+    "change-early": 3,
+    "worn": 361,
+    "no-terms": 14,
+    "old": 387,
+    "prep": 75
    },
    "main": {
-    "short-crew": 107,
-    "rider": 122,
+    "short-crew": 102,
+    "rider": 171,
     "bad-luck": 83,
-    "rider-twice": 32,
-    "winter": 37,
-    "breakdown-inc": 434,
-    "overdue": 3,
-    "disaster": 39,
-    "no-show": 35,
-    "client-cancel": 26,
-    "kit-failed": 18,
-    "tired-crew": 2,
-    "room": 1,
+    "rider-twice": 51,
+    "winter": 39,
+    "breakdown-inc": 436,
+    "overdue": 10,
+    "disaster": 31,
+    "no-show": 31,
+    "tired-crew": 13,
+    "kit-failed": 12,
+    "client-cancel": 35,
     "change-kit": 2,
-    "late": 3,
-    "old": 388,
-    "brand-fault": 1,
-    "prep": 51,
-    "kit-worn": 1
+    "change-early": 1,
+    "old": 387,
+    "prep": 23
    }
   },
-  "bans": 41,
+  "bans": 49,
   "kitCondition": {
-   "average": 85,
+   "average": 97,
    "end": 97
   },
   "road": {
-   "km": 11828383,
-   "breakdowns": 511,
-   "per100k": 4.32,
+   "km": 11791914,
+   "breakdowns": 519,
+   "per100k": 4.4,
    "reliability": 46
   },
   "monthsOverdrawn": 0,
-  "lowestCash": 17933,
-  "forecastWarnings": 8,
+  "lowestCash": 23732,
+  "forecastWarnings": 9,
   "bot": {
-   "termsAsked": 927,
-   "termsWon": 591,
-   "crossHires": 84,
-   "fixes": 35,
+   "termsAsked": 1090,
+   "termsWon": 650,
+   "crossHires": 76,
+   "fixes": 28,
    "crewSplits": 0,
    "heads": [
     "crew@1984",
-    "finance@1984",
-    "production@1984"
+    "production@1984",
+    "finance@1984"
    ],
    "lessons": [
-    "workshop→full@1999"
+    "workshop→full@1983"
    ],
-   "refurbished": 221,
-   "borrowed": 30000,
-   "factoredMonths": 17,
-   "frozenMonths": 5,
+   "refurbished": 44,
+   "borrowed": 0,
+   "factoredMonths": 2,
+   "frozenMonths": 0,
    "replanned": 0
   },
   "rivals": {
-   "alive": 12,
-   "gone": 19,
-   "shows": 13921,
+   "alive": 8,
+   "gone": 12,
+   "shows": 15153,
    "failed": 1,
-   "avgQuality": 0.72,
-   "crossHires": 509,
-   "fixes": 679,
+   "avgQuality": 0.68,
+   "crossHires": 291,
+   "fixes": 775,
    "declined": {
     "rider": 0,
-    "kit": 5,
-    "crew": 2,
-    "trucks": 0,
-    "room": 85
+    "kit": 0,
+    "crew": 1,
+    "room": 88,
+    "trucks": 1
    },
-   "cashNegative": 2
+   "cashNegative": 0
   },
   "invariantViolations": [],
   "shockLog": [],
@@ -1093,143 +1081,143 @@
    },
    {
     "year": 1982,
-    "reputation": 53.6,
-    "value": 299824
+    "reputation": 51.8,
+    "value": 288310
    },
    {
     "year": 1983,
-    "reputation": 60.1,
-    "value": 594477
+    "reputation": 65.2,
+    "value": 580905
    },
    {
     "year": 1984,
-    "reputation": 68.6,
-    "value": 942003
+    "reputation": 68,
+    "value": 1193248
    },
    {
     "year": 1985,
-    "reputation": 72.2,
-    "value": 1766567
+    "reputation": 68.6,
+    "value": 1888046
    },
    {
     "year": 1986,
-    "reputation": 71.2,
-    "value": 3110549
+    "reputation": 71.1,
+    "value": 3309790
    },
    {
     "year": 1987,
-    "reputation": 69.3,
-    "value": 3996306
+    "reputation": 68.6,
+    "value": 3936353
    },
    {
     "year": 1988,
-    "reputation": 67.9,
-    "value": 4745097
+    "reputation": 68.6,
+    "value": 4455223
    },
    {
     "year": 1989,
-    "reputation": 68,
-    "value": 5857624
+    "reputation": 69,
+    "value": 5411073
    },
    {
     "year": 1990,
-    "reputation": 69.7,
-    "value": 6287342
+    "reputation": 70.7,
+    "value": 6174072
    },
    {
     "year": 1991,
-    "reputation": 66.3,
-    "value": 7164683
+    "reputation": 76.2,
+    "value": 7043773
    },
    {
     "year": 1992,
-    "reputation": 72.6,
-    "value": 8443465
+    "reputation": 88.9,
+    "value": 8965044
    },
    {
     "year": 1993,
-    "reputation": 72.6,
-    "value": 8580012
+    "reputation": 94.3,
+    "value": 9915990
    },
    {
     "year": 1994,
-    "reputation": 79.1,
-    "value": 8607264
+    "reputation": 99.9,
+    "value": 10729791
    },
    {
     "year": 1995,
-    "reputation": 89.3,
-    "value": 10375795
+    "reputation": 99.5,
+    "value": 12947156
    },
    {
     "year": 1996,
-    "reputation": 88.5,
-    "value": 12080176
+    "reputation": 99.9,
+    "value": 14664095
    },
    {
     "year": 1997,
-    "reputation": 90.8,
-    "value": 13401252
+    "reputation": 88.5,
+    "value": 16528516
    },
    {
     "year": 1998,
-    "reputation": 92.1,
-    "value": 14547525
+    "reputation": 92.2,
+    "value": 17550215
    },
    {
     "year": 1999,
-    "reputation": 89.4,
-    "value": 15785863
+    "reputation": 99.5,
+    "value": 19265451
    },
    {
     "year": 2000,
-    "reputation": 90.5,
-    "value": 16854740
+    "reputation": 96.8,
+    "value": 20491769
    },
    {
     "year": 2001,
-    "reputation": 91.9,
-    "value": 17925085
+    "reputation": 98.1,
+    "value": 21824290
    },
    {
     "year": 2002,
-    "reputation": 92.3,
-    "value": 19413414
+    "reputation": 95.8,
+    "value": 23496936
    },
    {
     "year": 2003,
-    "reputation": 90.1,
-    "value": 21543469
+    "reputation": 99.8,
+    "value": 25683687
    },
    {
     "year": 2004,
-    "reputation": 92.9,
-    "value": 23657480
+    "reputation": 99.9,
+    "value": 27962635
    },
    {
     "year": 2005,
-    "reputation": 92.9,
-    "value": 24424447
+    "reputation": 94.4,
+    "value": 30182200
    },
    {
     "year": 2006,
-    "reputation": 97.3,
-    "value": 26695871
+    "reputation": 89.7,
+    "value": 32261239
    },
    {
     "year": 2007,
-    "reputation": 97.2,
-    "value": 28535840
+    "reputation": 93.8,
+    "value": 34387534
    },
    {
     "year": 2008,
-    "reputation": 87.8,
-    "value": 30683226
+    "reputation": 96,
+    "value": 36619436
    },
    {
     "year": 2009,
-    "reputation": 92.9,
-    "value": 30988071
+    "reputation": 97,
+    "value": 37578171
    }
   ]
  },
@@ -1240,152 +1228,149 @@
   "strategy": "managed",
   "survived": true,
   "yearsRun": 30,
-  "value": 35337259,
-  "cash": 34689313,
+  "value": 35134944,
+  "cash": 34494398,
   "loan": 0,
-  "reputation": 94,
-  "shows": 9331,
-  "failed": 21,
-  "avgQuality": 0.88,
+  "reputation": 100,
+  "shows": 9194,
+  "failed": 28,
+  "avgQuality": 0.86,
   "ledger": {
-   "wages": -18017653,
-   "running": -2082170,
-   "merch": 34060,
-   "fuel": -471224,
-   "travel": -2620350,
-   "shows": 106462338,
-   "subhire": -15822610,
-   "purchases": -745300,
-   "property": -2283520,
-   "salaries": -3043700,
-   "overheads": -4021112,
-   "workshop": -1708255,
-   "training": -432480,
-   "insurance": -476298,
-   "freelance": -2170140,
-   "servicing": -954990,
-   "tolls": -1107256,
-   "onsite": -1001329,
-   "sponsorship": 2194110,
-   "tax": -12498850,
-   "marketing": -113675,
-   "facilities": -4287440,
-   "penalties": -154045,
-   "zones": -38800
+   "wages": -17946078,
+   "running": -2074190,
+   "merch": 30630,
+   "fuel": -459440,
+   "travel": -2571375,
+   "shows": 107165362,
+   "subhire": -16319550,
+   "purchases": -722700,
+   "property": -2275960,
+   "salaries": -3046700,
+   "overheads": -4026736,
+   "workshop": -2269995,
+   "training": -438800,
+   "insurance": -499423,
+   "freelance": -2210145,
+   "servicing": -965630,
+   "tolls": -1089870,
+   "onsite": -974508,
+   "sponsorship": 2181490,
+   "marketing": -114355,
+   "interest": -2950,
+   "tax": -12443950,
+   "penalties": -101271,
+   "facilities": -4328260,
+   "zones": -51200
   },
-  "revenue": 108690508,
-  "costs": 74051197,
-  "utilisation": 25.9,
+  "revenue": 109377482,
+  "costs": 74933086,
+  "utilisation": 25.5,
   "fleet": 12,
   "crew": 25,
   "crewLost": 0,
   "burnout": 0,
-  "trusted": 64,
-  "feuds": 6,
+  "trusted": 61,
+  "feuds": 11,
   "incidents": {
    "kinds": {
-    "show": 500,
-    "client": 112,
-    "breakdown": 186
+    "show": 504,
+    "breakdown": 165,
+    "client": 132
    },
    "causes": {
-    "rider": 188,
-    "short-crew": 258,
-    "rider-twice": 57,
-    "winter": 72,
-    "breakdown-inc": 137,
-    "late": 29,
-    "bad-luck": 27,
-    "kit-worn": 10,
-    "disaster": 21,
-    "no-show": 21,
-    "overdue": 1,
-    "kit-failed": 30,
-    "client-cancel": 33,
-    "no-terms": 15,
-    "change-kit": 6,
-    "prep": 67,
+    "rider": 212,
+    "short-crew": 266,
+    "bad-luck": 24,
+    "breakdown-inc": 122,
+    "rider-twice": 71,
+    "kit-failed": 15,
+    "disaster": 28,
+    "no-show": 28,
+    "late": 16,
+    "winter": 54,
+    "client-cancel": 32,
     "terms": 18,
-    "old": 142,
+    "no-terms": 14,
+    "prep": 66,
+    "old": 132,
+    "change-kit": 7,
     "lost-client": 1,
     "recall": 1,
-    "venue": 8,
-    "worn": 130,
-    "brand-fault": 1,
-    "tickets": 7,
-    "change-early": 1,
-    "room": 3,
-    "unrehearsed": 1
+    "tickets": 5,
+    "brand-fault": 2,
+    "change-early": 3,
+    "change-hour": 3,
+    "worn": 128,
+    "venue": 4,
+    "overdue": 1,
+    "room": 4
    },
    "main": {
-    "rider": 162,
-    "rider-twice": 57,
-    "short-crew": 135,
-    "winter": 15,
-    "breakdown-inc": 135,
-    "bad-luck": 27,
-    "disaster": 21,
-    "no-show": 21,
-    "overdue": 1,
-    "kit-failed": 23,
-    "client-cancel": 33,
-    "old": 142,
+    "rider": 188,
+    "bad-luck": 24,
+    "breakdown-inc": 120,
+    "rider-twice": 71,
+    "short-crew": 127,
+    "disaster": 28,
+    "no-show": 28,
+    "kit-failed": 9,
+    "winter": 8,
+    "client-cancel": 32,
+    "old": 132,
     "lost-client": 1,
     "recall": 1,
-    "brand-fault": 1,
-    "prep": 19,
-    "room": 1,
-    "kit-worn": 2,
-    "unrehearsed": 1
+    "prep": 26,
+    "brand-fault": 2,
+    "room": 4
    }
   },
-  "bans": 42,
+  "bans": 54,
   "kitCondition": {
-   "average": 83,
-   "end": 98
+   "average": 96,
+   "end": 97
   },
   "road": {
-   "km": 4088266,
-   "breakdowns": 185,
-   "per100k": 4.53,
+   "km": 3990110,
+   "breakdowns": 164,
+   "per100k": 4.11,
    "reliability": 47
   },
   "monthsOverdrawn": 0,
   "lowestCash": 23290,
-  "forecastWarnings": 14,
+  "forecastWarnings": 17,
   "bot": {
-   "termsAsked": 713,
-   "termsWon": 452,
-   "crossHires": 62,
-   "fixes": 25,
-   "crewSplits": 0,
+   "termsAsked": 796,
+   "termsWon": 520,
+   "crossHires": 128,
+   "fixes": 32,
+   "crewSplits": 9,
    "heads": [
     "crew@1985",
-    "production@1985",
-    "finance@1985"
+    "finance@1985",
+    "production@1985"
    ],
    "lessons": [
-    "workshop→full@2004"
+    "workshop→full@1984"
    ],
-   "refurbished": 349,
-   "borrowed": 0,
-   "factoredMonths": 52,
-   "frozenMonths": 6,
+   "refurbished": 103,
+   "borrowed": 60000,
+   "factoredMonths": 5,
+   "frozenMonths": 2,
    "replanned": 0
   },
   "rivals": {
-   "alive": 11,
+   "alive": 8,
    "gone": 12,
-   "shows": 18484,
-   "failed": 1,
-   "avgQuality": 0.67,
-   "crossHires": 331,
-   "fixes": 949,
+   "shows": 16542,
+   "failed": 0,
+   "avgQuality": 0.65,
+   "crossHires": 457,
+   "fixes": 833,
    "declined": {
     "rider": 0,
-    "kit": 0,
-    "crew": 7,
-    "room": 64
+    "kit": 41,
+    "crew": 3,
+    "room": 83
    },
    "cashNegative": 1
   },
@@ -1394,7 +1379,7 @@
    {
     "kind": "lose-client",
     "day": 3710,
-    "what": "lost The Stone Roses (19% of the year's work, 0 booked shows)"
+    "what": "lost The Stone Roses (23% of the year's work, 0 booked shows)"
    },
    {
     "kind": "recall",
@@ -1415,153 +1400,153 @@
   "yearly": [
    {
     "year": 1980,
-    "reputation": 39.2,
-    "value": 109067
+    "reputation": 39.5,
+    "value": 102837
    },
    {
     "year": 1981,
-    "reputation": 46.7,
-    "value": 131423
+    "reputation": 44.6,
+    "value": 115221
    },
    {
     "year": 1982,
-    "reputation": 50.1,
-    "value": 125765
+    "reputation": 50.9,
+    "value": 150301
    },
    {
     "year": 1983,
-    "reputation": 59.2,
-    "value": 293384
+    "reputation": 57.4,
+    "value": 289774
    },
    {
     "year": 1984,
-    "reputation": 67,
-    "value": 553260
+    "reputation": 65.6,
+    "value": 525188
    },
    {
     "year": 1985,
-    "reputation": 70,
-    "value": 1071843
+    "reputation": 68.5,
+    "value": 1435371
    },
    {
     "year": 1986,
-    "reputation": 74.6,
-    "value": 2229686
+    "reputation": 68.1,
+    "value": 2510739
    },
    {
     "year": 1987,
-    "reputation": 79,
-    "value": 3319965
+    "reputation": 74.9,
+    "value": 3409289
    },
    {
     "year": 1988,
-    "reputation": 83.9,
-    "value": 3199579
+    "reputation": 78.2,
+    "value": 3629529
    },
    {
     "year": 1989,
-    "reputation": 86.4,
-    "value": 4818775
+    "reputation": 78.1,
+    "value": 4759508
    },
    {
     "year": 1990,
-    "reputation": 69.3,
-    "value": 4281739
+    "reputation": 71.4,
+    "value": 4609107
    },
    {
     "year": 1991,
-    "reputation": 77.4,
-    "value": 4606636
+    "reputation": 79,
+    "value": 4774498
    },
    {
     "year": 1992,
-    "reputation": 86.9,
-    "value": 5830276
+    "reputation": 88.4,
+    "value": 5898368
    },
    {
     "year": 1993,
-    "reputation": 92.2,
-    "value": 7609041
+    "reputation": 97.2,
+    "value": 7489505
    },
    {
     "year": 1994,
-    "reputation": 99.7,
-    "value": 9224998
+    "reputation": 93.2,
+    "value": 8874374
    },
    {
     "year": 1995,
-    "reputation": 92,
-    "value": 10671414
+    "reputation": 91.9,
+    "value": 9750969
    },
    {
     "year": 1996,
-    "reputation": 92.2,
-    "value": 11810750
+    "reputation": 89,
+    "value": 11049765
    },
    {
     "year": 1997,
-    "reputation": 90.5,
-    "value": 13639955
+    "reputation": 90.7,
+    "value": 13279791
    },
    {
     "year": 1998,
-    "reputation": 92.5,
-    "value": 14678175
+    "reputation": 92.3,
+    "value": 14794587
    },
    {
     "year": 1999,
-    "reputation": 97.8,
-    "value": 16485450
+    "reputation": 94.5,
+    "value": 16147165
    },
    {
     "year": 2000,
-    "reputation": 99.3,
-    "value": 17899789
+    "reputation": 93.1,
+    "value": 17904519
    },
    {
     "year": 2001,
-    "reputation": 98.1,
-    "value": 18673220
+    "reputation": 91.7,
+    "value": 18798918
    },
    {
     "year": 2002,
-    "reputation": 97.7,
-    "value": 20130630
+    "reputation": 92.2,
+    "value": 19724848
    },
    {
     "year": 2003,
-    "reputation": 94.6,
-    "value": 22105901
+    "reputation": 94.1,
+    "value": 21941059
    },
    {
     "year": 2004,
-    "reputation": 97.3,
-    "value": 24141271
+    "reputation": 100,
+    "value": 24631315
    },
    {
     "year": 2005,
-    "reputation": 95,
-    "value": 25854445
+    "reputation": 99.6,
+    "value": 26305635
    },
    {
     "year": 2006,
-    "reputation": 92.7,
-    "value": 27899281
+    "reputation": 98,
+    "value": 28317105
    },
    {
     "year": 2007,
-    "reputation": 99.2,
-    "value": 31118900
+    "reputation": 95.9,
+    "value": 30728565
    },
    {
     "year": 2008,
     "reputation": 100,
-    "value": 33681765
+    "value": 33620374
    },
    {
     "year": 2009,
-    "reputation": 93,
-    "value": 35105170
+    "reputation": 100,
+    "value": 34985347
    }
   ]
  },
@@ -1572,153 +1557,146 @@
   "strategy": "managed",
   "survived": true,
   "yearsRun": 30,
-  "value": 36446385,
-  "cash": 35623250,
+  "value": 36498050,
+  "cash": 35766781,
   "loan": 0,
-  "reputation": 98,
-  "shows": 9263,
-  "failed": 23,
-  "avgQuality": 0.88,
+  "reputation": 99,
+  "shows": 9139,
+  "failed": 24,
+  "avgQuality": 0.94,
   "ledger": {
-   "wages": -18134193,
-   "running": -2094710,
-   "subhire": -16864562,
-   "shows": 109465417,
-   "fuel": -457639,
-   "travel": -2556750,
-   "tolls": -1229568,
-   "property": -2383120,
-   "salaries": -3076900,
-   "overheads": -4076556,
-   "workshop": -1515560,
-   "training": -440900,
-   "insurance": -535938,
-   "servicing": -962770,
-   "freelance": -2226000,
-   "purchases": -691300,
-   "tax": -12827180,
-   "sponsorship": 1919760,
-   "onsite": -942578,
-   "marketing": -79495,
-   "facilities": -4492270,
-   "merch": 30790,
-   "interest": -563,
-   "penalties": -210164,
-   "zones": -44000
+   "wages": -17959120,
+   "running": -2070770,
+   "subhire": -16030716,
+   "shows": 109442113,
+   "fuel": -455778,
+   "travel": -2526225,
+   "tolls": -1237157,
+   "property": -2349520,
+   "salaries": -3068300,
+   "overheads": -4058368,
+   "workshop": -2226867,
+   "training": -443700,
+   "insurance": -504973,
+   "servicing": -946270,
+   "freelance": -2245320,
+   "merch": 21500,
+   "onsite": -1070893,
+   "purchases": -773100,
+   "sponsorship": 1873200,
+   "tax": -13018910,
+   "marketing": -105925,
+   "facilities": -4358170,
+   "penalties": -128950,
+   "zones": -41000
   },
-  "revenue": 111415967,
-  "costs": 75842716,
-  "utilisation": 25.7,
+  "revenue": 111336813,
+  "costs": 75620032,
+  "utilisation": 25.4,
   "fleet": 12,
   "crew": 25,
   "crewLost": 0,
   "burnout": 0,
-  "trusted": 58,
-  "feuds": 7,
+  "trusted": 52,
+  "feuds": 15,
   "incidents": {
    "kinds": {
-    "show": 572,
-    "breakdown": 190,
-    "client": 138,
-    "cash": 1
+    "show": 493,
+    "breakdown": 181,
+    "client": 121
    },
    "causes": {
-    "rider": 212,
-    "short-crew": 277,
-    "bad-luck": 34,
-    "client-cancel": 50,
-    "no-terms": 18,
-    "rider-twice": 64,
-    "breakdown-inc": 145,
-    "kit-failed": 48,
-    "kit-worn": 8,
-    "feud": 2,
-    "late": 29,
-    "winter": 67,
-    "unpaid-invoices": 1,
-    "overdrawn": 1,
-    "prep": 116,
-    "venue": 11,
+    "rider": 213,
+    "short-crew": 278,
+    "bad-luck": 24,
+    "breakdown-inc": 134,
+    "rider-twice": 71,
+    "winter": 58,
+    "kit-failed": 7,
+    "late": 23,
+    "venue": 5,
+    "client-cancel": 26,
+    "no-terms": 8,
     "disaster": 23,
-    "no-show": 23,
-    "terms": 32,
+    "no-show": 24,
+    "terms": 18,
+    "change-kit": 11,
+    "prep": 62,
+    "tickets": 4,
+    "old": 145,
+    "brand-fault": 3,
     "lost-client": 1,
     "recall": 1,
-    "old": 150,
-    "change-kit": 8,
-    "worn": 131,
-    "overdue": 1,
-    "tickets": 7,
-    "brand-fault": 2,
-    "room": 4
+    "worn": 134,
+    "change-early": 3,
+    "change-hour": 1,
+    "overdue": 1
    },
    "main": {
-    "rider": 180,
-    "bad-luck": 34,
-    "client-cancel": 50,
-    "rider-twice": 64,
-    "short-crew": 135,
-    "breakdown-inc": 143,
-    "kit-failed": 38,
-    "winter": 5,
-    "unpaid-invoices": 1,
+    "rider": 189,
+    "short-crew": 127,
+    "bad-luck": 24,
+    "breakdown-inc": 131,
+    "rider-twice": 71,
+    "winter": 11,
+    "client-cancel": 26,
     "disaster": 23,
-    "no-show": 23,
+    "no-show": 24,
+    "prep": 17,
+    "old": 145,
+    "brand-fault": 3,
     "lost-client": 1,
     "recall": 1,
-    "old": 150,
-    "prep": 47,
-    "brand-fault": 2,
-    "room": 3,
-    "late": 1
+    "kit-failed": 2
    }
   },
-  "bans": 38,
+  "bans": 41,
   "kitCondition": {
-   "average": 80,
-   "end": 80
+   "average": 96,
+   "end": 98
   },
   "road": {
-   "km": 3976420,
-   "breakdowns": 189,
-   "per100k": 4.75,
+   "km": 3952848,
+   "breakdowns": 180,
+   "per100k": 4.55,
    "reliability": 47
   },
   "monthsOverdrawn": 0,
-  "lowestCash": -14804,
-  "forecastWarnings": 12,
+  "lowestCash": 8737,
+  "forecastWarnings": 10,
   "bot": {
-   "termsAsked": 867,
-   "termsWon": 535,
-   "crossHires": 117,
-   "fixes": 37,
-   "crewSplits": 13,
+   "termsAsked": 835,
+   "termsWon": 501,
+   "crossHires": 131,
+   "fixes": 39,
+   "crewSplits": 0,
    "heads": [
     "crew@1984",
     "finance@1985",
     "production@1985"
    ],
-   "lessons": [],
-   "refurbished": 398,
-   "borrowed": 40000,
-   "factoredMonths": 53,
-   "frozenMonths": 7,
+   "lessons": [
+    "workshop→full@1984"
+   ],
+   "refurbished": 50,
+   "borrowed": 0,
+   "factoredMonths": 5,
+   "frozenMonths": 0,
    "replanned": 0
   },
   "rivals": {
-   "alive": 8,
-   "gone": 14,
-   "shows": 16405,
+   "alive": 12,
+   "gone": 16,
+   "shows": 16627,
    "failed": 1,
-   "avgQuality": 0.64,
-   "crossHires": 156,
-   "fixes": 783,
+   "avgQuality": 0.69,
+   "crossHires": 663,
+   "fixes": 773,
    "declined": {
-    "rider": 0,
-    "kit": 46,
-    "crew": 2,
-    "trucks": 0,
-    "room": 62
+    "rider": 12,
+    "kit": 0,
+    "crew": 5,
+    "room": 80
    },
    "cashNegative": 1
   },
@@ -1727,7 +1705,7 @@
    {
     "kind": "lose-client",
     "day": 3710,
-    "what": "lost The Stone Roses (18% of the year's work, 0 booked shows)"
+    "what": "lost Red Hot Chili Peppers (28% of the year's work, 0 booked shows)"
    },
    {
     "kind": "recall",
@@ -1748,153 +1726,153 @@
   "yearly": [
    {
     "year": 1980,
-    "reputation": 40.6,
-    "value": 118533
+    "reputation": 41.1,
+    "value": 102751
    },
    {
     "year": 1981,
-    "reputation": 47.4,
-    "value": 126092
+    "reputation": 46.2,
+    "value": 112105
    },
    {
     "year": 1982,
-    "reputation": 56,
-    "value": 159878
+    "reputation": 54.2,
+    "value": 128346
    },
    {
     "year": 1983,
-    "reputation": 68.1,
-    "value": 403195
+    "reputation": 61,
+    "value": 235652
    },
    {
     "year": 1984,
-    "reputation": 76.3,
-    "value": 975469
+    "reputation": 69.1,
+    "value": 696631
    },
    {
     "year": 1985,
-    "reputation": 83.3,
-    "value": 1327324
+    "reputation": 76.3,
+    "value": 1960705
    },
    {
     "year": 1986,
-    "reputation": 84,
-    "value": 2645799
+    "reputation": 85.3,
+    "value": 2429831
    },
    {
     "year": 1987,
-    "reputation": 80.7,
-    "value": 3120779
+    "reputation": 88.8,
+    "value": 3601593
    },
    {
     "year": 1988,
-    "reputation": 80.5,
-    "value": 3884400
+    "reputation": 94,
+    "value": 5279965
    },
    {
     "year": 1989,
-    "reputation": 85.4,
-    "value": 5254463
+    "reputation": 100,
+    "value": 7136991
    },
    {
     "year": 1990,
-    "reputation": 68,
-    "value": 5121031
+    "reputation": 68.2,
+    "value": 6550556
    },
    {
     "year": 1991,
-    "reputation": 74.5,
-    "value": 5134567
+    "reputation": 74.7,
+    "value": 6357079
    },
    {
     "year": 1992,
-    "reputation": 81.9,
-    "value": 5935564
+    "reputation": 76,
+    "value": 7552803
    },
    {
     "year": 1993,
-    "reputation": 92,
-    "value": 7374567
+    "reputation": 82.7,
+    "value": 8365222
    },
    {
     "year": 1994,
-    "reputation": 96.4,
-    "value": 8656859
+    "reputation": 85.2,
+    "value": 9411769
    },
    {
     "year": 1995,
-    "reputation": 98.2,
-    "value": 10945351
+    "reputation": 92.7,
+    "value": 11503561
    },
    {
     "year": 1996,
-    "reputation": 99.7,
-    "value": 12330225
+    "reputation": 97.4,
+    "value": 12958280
    },
    {
     "year": 1997,
-    "reputation": 99.9,
-    "value": 14897870
+    "reputation": 98.3,
+    "value": 15012768
    },
    {
     "year": 1998,
-    "reputation": 98,
-    "value": 16426822
+    "reputation": 95.9,
+    "value": 17304815
    },
    {
     "year": 1999,
-    "reputation": 99.4,
-    "value": 18021439
+    "reputation": 95.6,
+    "value": 18959924
    },
    {
     "year": 2000,
-    "reputation": 94.6,
-    "value": 19496523
+    "reputation": 98,
+    "value": 20531930
    },
    {
     "year": 2001,
-    "reputation": 96.8,
-    "value": 20039082
+    "reputation": 94.3,
+    "value": 20541776
    },
    {
     "year": 2002,
-    "reputation": 88.7,
-    "value": 20971585
+    "reputation": 91.9,
+    "value": 21941390
    },
    {
     "year": 2003,
-    "reputation": 92.6,
-    "value": 23359175
+    "reputation": 94.4,
+    "value": 24254077
    },
    {
     "year": 2004,
-    "reputation": 94.1,
-    "value": 24893752
+    "reputation": 98.8,
+    "value": 26387192
    },
    {
     "year": 2005,
-    "reputation": 94.6,
-    "value": 26820886
+    "reputation": 93.4,
+    "value": 28280092
    },
    {
     "year": 2006,
-    "reputation": 96.1,
-    "value": 28535500
+    "reputation": 92.3,
+    "value": 29626912
    },
    {
     "year": 2007,
-    "reputation": 92,
-    "value": 31927781
+    "reputation": 99.6,
+    "value": 32864830
    },
    {
     "year": 2008,
-    "reputation": 99.9,
-    "value": 34579651
+    "reputation": 99.6,
+    "value": 34530516
    },
    {
     "year": 2009,
-    "reputation": 97.4,
-    "value": 36193714
+    "reputation": 98.8,
+    "value": 36319865
    }
   ]
  },
@@ -1905,166 +1883,161 @@
   "strategy": "managed",
   "survived": true,
   "yearsRun": 30,
-  "value": 35333309,
-  "cash": 34764415,
+  "value": 33446807,
+  "cash": 32586188,
   "loan": 0,
-  "reputation": 100,
-  "shows": 10329,
-  "failed": 36,
-  "avgQuality": 0.9,
+  "reputation": 99,
+  "shows": 10186,
+  "failed": 44,
+  "avgQuality": 0.83,
   "ledger": {
-   "wages": -19008754,
-   "running": -2171660,
-   "travel": -5232975,
-   "fuel": -1527574,
-   "shows": 109267620,
-   "freelance": -2511775,
-   "tolls": -363472,
-   "property": -2133400,
-   "salaries": -3156500,
-   "overheads": -4166780,
-   "workshop": -1645998,
-   "training": -384220,
-   "insurance": -433038,
-   "subhire": -13792844,
-   "servicing": -1068550,
-   "purchases": -661900,
-   "sponsorship": 2101090,
-   "tax": -12884870,
-   "onsite": -1276668,
-   "penalties": -155483,
-   "marketing": -22785,
-   "merch": 20560,
-   "facilities": -4075610
+   "wages": -18316375,
+   "running": -2170520,
+   "travel": -5097900,
+   "fuel": -1482382,
+   "shows": 105269764,
+   "freelance": -2446990,
+   "tolls": -343497,
+   "property": -2190040,
+   "salaries": -3199900,
+   "overheads": -4051576,
+   "workshop": -2208526,
+   "training": -365880,
+   "insurance": -482427,
+   "subhire": -13272164,
+   "servicing": -1094300,
+   "purchases": -694500,
+   "sponsorship": 2035720,
+   "tax": -12039640,
+   "marketing": -19015,
+   "onsite": -1294845,
+   "penalties": -141813,
+   "merch": 19540,
+   "facilities": -3876550
   },
-  "revenue": 111389270,
-  "costs": 76674856,
-  "utilisation": 28.7,
+  "revenue": 107325024,
+  "costs": 74788840,
+  "utilisation": 28.3,
   "fleet": 12,
-  "crew": 25,
-  "crewLost": 2,
+  "crew": 24,
+  "crewLost": 1,
   "burnout": 0,
-  "trusted": 92,
+  "trusted": 86,
   "feuds": 14,
   "incidents": {
    "kinds": {
-    "show": 860,
-    "breakdown": 551,
-    "client": 112
+    "show": 821,
+    "breakdown": 550,
+    "client": 122
    },
    "causes": {
-    "rider": 190,
-    "short-crew": 291,
-    "bad-luck": 86,
-    "winter": 194,
-    "breakdown-inc": 508,
-    "disaster": 37,
-    "no-show": 35,
-    "rider-twice": 47,
-    "tired-crew": 6,
+    "rider": 180,
+    "short-crew": 271,
+    "bad-luck": 75,
+    "breakdown-inc": 503,
+    "rider-twice": 46,
+    "winter": 209,
     "overdue": 23,
-    "late": 29,
-    "no-goodwill": 1,
-    "change-hour": 3,
-    "kit-failed": 19,
-    "worn": 384,
-    "client-cancel": 27,
-    "no-terms": 3,
+    "late": 39,
+    "disaster": 44,
+    "no-show": 44,
+    "tired-crew": 12,
+    "client-cancel": 31,
+    "no-terms": 7,
+    "worn": 393,
+    "kit-failed": 17,
+    "change-hour": 1,
+    "change-kit": 20,
     "terms": 24,
-    "prep": 80,
-    "venue": 10,
-    "old": 419,
-    "change-kit": 3,
+    "old": 426,
+    "prep": 105,
     "lost-client": 1,
     "recall": 1,
-    "brand-fault": 5,
-    "kit-worn": 10,
     "tickets": 4,
-    "unrehearsed": 2,
-    "room": 2
+    "brand-fault": 1,
+    "change-early": 1,
+    "venue": 10
    },
    "main": {
-    "rider": 181,
-    "short-crew": 93,
-    "bad-luck": 86,
-    "winter": 40,
-    "breakdown-inc": 482,
-    "disaster": 37,
-    "no-show": 35,
-    "rider-twice": 47,
-    "tired-crew": 1,
-    "overdue": 5,
-    "late": 7,
-    "change-hour": 2,
-    "kit-failed": 12,
+    "rider": 168,
+    "short-crew": 80,
+    "bad-luck": 75,
+    "breakdown-inc": 483,
+    "rider-twice": 46,
+    "winter": 38,
+    "overdue": 9,
+    "disaster": 44,
+    "no-show": 44,
+    "tired-crew": 7,
+    "client-cancel": 31,
     "worn": 1,
-    "client-cancel": 27,
-    "old": 418,
-    "prep": 36,
+    "kit-failed": 7,
+    "late": 4,
+    "old": 426,
+    "change-kit": 3,
+    "prep": 24,
     "lost-client": 1,
     "recall": 1,
-    "brand-fault": 5,
-    "kit-worn": 2,
-    "unrehearsed": 2,
-    "room": 2
+    "brand-fault": 1
    }
   },
-  "bans": 48,
+  "bans": 50,
   "kitCondition": {
-   "average": 83,
-   "end": 98
+   "average": 97,
+   "end": 99
   },
   "road": {
-   "km": 13058374,
-   "breakdowns": 550,
-   "per100k": 4.21,
+   "km": 12661345,
+   "breakdowns": 549,
+   "per100k": 4.34,
    "reliability": 46
   },
   "monthsOverdrawn": 0,
   "lowestCash": 16675,
-  "forecastWarnings": 15,
+  "forecastWarnings": 5,
   "bot": {
-   "termsAsked": 1044,
-   "termsWon": 697,
-   "crossHires": 80,
-   "fixes": 17,
+   "termsAsked": 1005,
+   "termsWon": 446,
+   "crossHires": 67,
+   "fixes": 8,
    "crewSplits": 0,
    "heads": [
+    "crew@1983",
     "production@1984",
-    "crew@1984",
     "finance@1984"
    ],
    "lessons": [
-    "workshop→full@2003"
+    "workshop→full@1983"
    ],
-   "refurbished": 272,
+   "refurbished": 48,
    "borrowed": 0,
-   "factoredMonths": 45,
-   "frozenMonths": 8,
+   "factoredMonths": 1,
+   "frozenMonths": 0,
    "replanned": 0
   },
   "rivals": {
-   "alive": 11,
-   "gone": 14,
-   "shows": 12143,
+   "alive": 9,
+   "gone": 15,
+   "shows": 11208,
    "failed": 0,
-   "avgQuality": 0.72,
-   "crossHires": 272,
-   "fixes": 341,
+   "avgQuality": 0.74,
+   "crossHires": 100,
+   "fixes": 333,
    "declined": {
-    "kit": 0,
-    "crew": 1,
-    "rider": 1,
-    "room": 45
+    "rider": 0,
+    "kit": 3,
+    "crew": 0,
+    "trucks": 0,
+    "room": 29
    },
-   "cashNegative": 2
+   "cashNegative": 3
   },
   "invariantViolations": [],
   "shockLog": [
    {
     "kind": "lose-client",
     "day": 3710,
-    "what": "lost Rosendo (14% of the year's work, 0 booked shows)"
+    "what": "lost Radio Futura (21% of the year's work, 2 booked shows)"
    },
    {
     "kind": "recall",
@@ -2085,153 +2058,153 @@
   "yearly": [
    {
     "year": 1980,
-    "reputation": 40.4,
-    "value": 137600
+    "reputation": 38.7,
+    "value": 152711
    },
    {
     "year": 1981,
     "reputation": 42.4,
-    "value": 175379
+    "value": 199500
    },
    {
     "year": 1982,
-    "reputation": 49.8,
-    "value": 375861
+    "reputation": 51.3,
+    "value": 386937
    },
    {
     "year": 1983,
-    "reputation": 55,
-    "value": 634632
+    "reputation": 43,
+    "value": 660640
    },
    {
     "year": 1984,
-    "reputation": 65.4,
-    "value": 1042687
+    "reputation": 62,
+    "value": 826530
    },
    {
     "year": 1985,
-    "reputation": 68.8,
-    "value": 1549794
+    "reputation": 69.7,
+    "value": 1628083
    },
    {
     "year": 1986,
-    "reputation": 68,
-    "value": 2722482
+    "reputation": 65.8,
+    "value": 2622287
    },
    {
     "year": 1987,
-    "reputation": 68,
-    "value": 3734103
+    "reputation": 68.9,
+    "value": 3184344
    },
    {
     "year": 1988,
-    "reputation": 69.3,
-    "value": 4951135
+    "reputation": 73.8,
+    "value": 4309416
    },
    {
     "year": 1989,
-    "reputation": 73.4,
-    "value": 5773378
+    "reputation": 75.8,
+    "value": 5343797
    },
    {
     "year": 1990,
-    "reputation": 69.6,
-    "value": 5923236
+    "reputation": 71.9,
+    "value": 5262617
    },
    {
     "year": 1991,
-    "reputation": 69.3,
-    "value": 6685728
+    "reputation": 80.1,
+    "value": 5339265
    },
    {
     "year": 1992,
-    "reputation": 76.6,
-    "value": 8149492
+    "reputation": 90.9,
+    "value": 7167914
    },
    {
     "year": 1993,
-    "reputation": 82.1,
-    "value": 8306491
+    "reputation": 96.8,
+    "value": 8146304
    },
    {
     "year": 1994,
-    "reputation": 91.9,
-    "value": 9114276
+    "reputation": 95,
+    "value": 9354027
    },
    {
     "year": 1995,
-    "reputation": 97.2,
-    "value": 10792982
+    "reputation": 95.9,
+    "value": 10667374
    },
    {
     "year": 1996,
-    "reputation": 92.7,
-    "value": 12408665
+    "reputation": 99.9,
+    "value": 12400129
    },
    {
     "year": 1997,
-    "reputation": 87.4,
-    "value": 14530101
+    "reputation": 95.4,
+    "value": 14192273
    },
    {
     "year": 1998,
-    "reputation": 92.3,
-    "value": 15826877
+    "reputation": 94.9,
+    "value": 15793711
    },
    {
     "year": 1999,
-    "reputation": 98.9,
-    "value": 17834613
+    "reputation": 91.4,
+    "value": 17638194
    },
    {
     "year": 2000,
-    "reputation": 99.8,
-    "value": 19079635
+    "reputation": 89.1,
+    "value": 18316569
    },
    {
     "year": 2001,
-    "reputation": 95.8,
-    "value": 20074564
+    "reputation": 94.6,
+    "value": 19668713
    },
    {
     "year": 2002,
-    "reputation": 91.9,
-    "value": 20981917
+    "reputation": 98.2,
+    "value": 21127326
    },
    {
     "year": 2003,
-    "reputation": 95,
-    "value": 23843778
+    "reputation": 93.7,
+    "value": 23786936
    },
    {
     "year": 2004,
-    "reputation": 96.2,
-    "value": 25473470
+    "reputation": 96.5,
+    "value": 24838300
    },
    {
     "year": 2005,
-    "reputation": 99.9,
-    "value": 28131249
+    "reputation": 93.5,
+    "value": 27119779
    },
    {
     "year": 2006,
-    "reputation": 99.7,
-    "value": 30335517
+    "reputation": 99.3,
+    "value": 29266003
    },
    {
     "year": 2007,
-    "reputation": 99.8,
-    "value": 32583922
+    "reputation": 99.9,
+    "value": 30877631
    },
    {
     "year": 2008,
-    "reputation": 95.8,
-    "value": 34359333
+    "reputation": 99.6,
+    "value": 32467601
    },
    {
     "year": 2009,
-    "reputation": 99.4,
-    "value": 35189350
+    "reputation": 98.2,
+    "value": 33277661
    }
   ]
  },
@@ -2242,163 +2215,166 @@
   "strategy": "managed",
   "survived": true,
   "yearsRun": 30,
-  "value": 34374590,
-  "cash": 33898965,
+  "value": 28193004,
+  "cash": 27872921,
   "loan": 0,
-  "reputation": 97,
-  "shows": 10197,
-  "failed": 37,
+  "reputation": 76,
+  "shows": 10081,
+  "failed": 46,
   "avgQuality": 0.84,
   "ledger": {
-   "wages": -18878583,
-   "running": -2157410,
-   "subhire": -13243476,
-   "shows": 106316550,
-   "travel": -4920525,
-   "fuel": -1364439,
-   "tolls": -358402,
-   "property": -2177320,
-   "salaries": -3146700,
-   "overheads": -4114548,
-   "workshop": -1342978,
-   "training": -384480,
-   "insurance": -513155,
-   "purchases": -734300,
-   "servicing": -1052180,
-   "onsite": -1199531,
-   "freelance": -2266180,
-   "merch": 27610,
-   "tax": -12435140,
-   "sponsorship": 1917560,
-   "penalties": -183983,
-   "marketing": -56985,
-   "facilities": -3881050,
-   "interest": -1389
+   "wages": -18700539,
+   "running": -2151710,
+   "subhire": -11391346,
+   "shows": 95381399,
+   "travel": -4906425,
+   "fuel": -1368491,
+   "tolls": -353380,
+   "property": -2139280,
+   "salaries": -3170900,
+   "overheads": -3963656,
+   "workshop": -1656465,
+   "training": -393520,
+   "insurance": -408335,
+   "purchases": -598300,
+   "servicing": -1081500,
+   "onsite": -1237025,
+   "freelance": -2062305,
+   "merch": 14390,
+   "tax": -10142550,
+   "sponsorship": 1770890,
+   "penalties": -218251,
+   "marketing": -24240,
+   "facilities": -3375540
   },
-  "revenue": 108261720,
-  "costs": 74412754,
-  "utilisation": 28.3,
+  "revenue": 97166679,
+  "costs": 69343758,
+  "utilisation": 28,
   "fleet": 12,
   "crew": 25,
-  "crewLost": 0,
+  "crewLost": 2,
   "burnout": 0,
-  "trusted": 82,
-  "feuds": 5,
+  "trusted": 94,
+  "feuds": 6,
   "incidents": {
    "kinds": {
-    "show": 786,
-    "breakdown": 530,
-    "client": 104
+    "show": 835,
+    "breakdown": 542,
+    "client": 123
    },
    "causes": {
-    "short-crew": 251,
-    "rider": 150,
-    "bad-luck": 75,
-    "rider-twice": 39,
-    "winter": 195,
-    "breakdown-inc": 466,
-    "overdue": 17,
-    "disaster": 38,
-    "no-show": 35,
-    "kit-failed": 22,
-    "kit-worn": 2,
-    "tired-crew": 5,
-    "no-goodwill": 1,
-    "client-cancel": 26,
-    "terms": 16,
-    "room": 1,
-    "change-kit": 12,
-    "late": 21,
-    "venue": 6,
-    "change-early": 3,
-    "old": 407,
+    "short-crew": 299,
+    "rider": 179,
+    "bad-luck": 84,
+    "rider-twice": 48,
+    "winter": 188,
+    "breakdown-inc": 463,
+    "overdue": 23,
+    "disaster": 45,
+    "no-show": 45,
+    "kit-failed": 21,
+    "tired-crew": 20,
+    "late": 32,
+    "venue": 9,
+    "client-cancel": 29,
+    "terms": 19,
+    "change-kit": 13,
+    "change-early": 4,
+    "worn": 371,
     "no-terms": 10,
-    "brand-fault": 1,
-    "worn": 382,
+    "old": 408,
     "lost-client": 1,
     "recall": 1,
-    "prep": 116,
+    "change-hour": 1,
+    "prep": 70,
+    "unrehearsed": 1,
     "tickets": 5,
-    "change-hour": 4
+    "brand-fault": 2,
+    "kit-worn": 2,
+    "room": 1
    },
    "main": {
-    "short-crew": 101,
-    "rider": 136,
-    "bad-luck": 75,
-    "rider-twice": 39,
+    "short-crew": 99,
+    "rider": 169,
+    "bad-luck": 84,
+    "rider-twice": 48,
     "winter": 43,
-    "breakdown-inc": 450,
-    "overdue": 4,
-    "disaster": 38,
-    "no-show": 35,
-    "client-cancel": 26,
+    "breakdown-inc": 446,
+    "overdue": 7,
+    "disaster": 45,
+    "no-show": 45,
+    "tired-crew": 13,
     "kit-failed": 14,
-    "tired-crew": 2,
-    "room": 1,
+    "client-cancel": 29,
     "change-kit": 2,
-    "late": 3,
+    "change-early": 2,
     "old": 407,
-    "brand-fault": 1,
     "lost-client": 1,
     "recall": 1,
-    "prep": 39,
-    "change-hour": 2
+    "prep": 38,
+    "unrehearsed": 1,
+    "late": 3,
+    "brand-fault": 2,
+    "room": 1
    }
   },
-  "bans": 41,
+  "bans": 50,
   "kitCondition": {
-   "average": 79,
-   "end": 80
+   "average": 96,
+   "end": 95
   },
   "road": {
-   "km": 11715616,
-   "breakdowns": 529,
-   "per100k": 4.52,
+   "km": 11731539,
+   "breakdowns": 541,
+   "per100k": 4.61,
    "reliability": 46
   },
   "monthsOverdrawn": 0,
-  "lowestCash": 17933,
-  "forecastWarnings": 8,
+  "lowestCash": 23732,
+  "forecastWarnings": 9,
   "bot": {
-   "termsAsked": 1023,
-   "termsWon": 613,
-   "crossHires": 84,
-   "fixes": 35,
+   "termsAsked": 832,
+   "termsWon": 464,
+   "crossHires": 76,
+   "fixes": 28,
    "crewSplits": 0,
    "heads": [
     "crew@1984",
-    "finance@1984",
-    "production@1984"
+    "production@1984",
+    "finance@1984"
    ],
-   "lessons": [],
-   "refurbished": 196,
-   "borrowed": 30000,
-   "factoredMonths": 17,
-   "frozenMonths": 5,
+   "lessons": [
+    "workshop→full@1983"
+   ],
+   "refurbished": 89,
+   "borrowed": 0,
+   "factoredMonths": 2,
+   "frozenMonths": 0,
    "replanned": 0
   },
   "rivals": {
-   "alive": 14,
-   "gone": 15,
-   "shows": 14587,
-   "failed": 1,
-   "avgQuality": 0.73,
-   "crossHires": 211,
-   "fixes": 748,
+   "alive": 11,
+   "gone": 13,
+   "shows": 15785,
+   "failed": 0,
+   "avgQuality": 0.75,
+   "crossHires": 325,
+   "fixes": 773,
    "declined": {
     "rider": 0,
     "kit": 0,
-    "crew": 10,
-    "room": 83
+    "crew": 2,
+    "trucks": 0,
+    "room": 79
    },
-   "cashNegative": 3
+   "cashNegative": 4
   },
   "invariantViolations": [],
   "shockLog": [
    {
     "kind": "lose-client",
     "day": 3710,
-    "what": "lost Loquillo y los Trogloditas (19% of the year's work, 1 booked shows)"
+    "what": "lost Rosendo (16% of the year's work, 1 booked shows)"
    },
    {
     "kind": "recall",
@@ -2429,143 +2405,143 @@
    },
    {
     "year": 1982,
-    "reputation": 53.6,
-    "value": 299824
+    "reputation": 51.8,
+    "value": 288310
    },
    {
     "year": 1983,
-    "reputation": 60.1,
-    "value": 594477
+    "reputation": 65.2,
+    "value": 580905
    },
    {
     "year": 1984,
-    "reputation": 68.6,
-    "value": 942003
+    "reputation": 68,
+    "value": 1193248
    },
    {
     "year": 1985,
-    "reputation": 72.2,
-    "value": 1766567
+    "reputation": 68.6,
+    "value": 1888046
    },
    {
     "year": 1986,
-    "reputation": 71.2,
-    "value": 3110549
+    "reputation": 71.1,
+    "value": 3309790
    },
    {
     "year": 1987,
-    "reputation": 69.3,
-    "value": 3996306
+    "reputation": 68.6,
+    "value": 3936353
    },
    {
     "year": 1988,
-    "reputation": 67.9,
-    "value": 4745097
+    "reputation": 68.6,
+    "value": 4455223
    },
    {
     "year": 1989,
-    "reputation": 68,
-    "value": 5857624
+    "reputation": 69,
+    "value": 5411073
    },
    {
     "year": 1990,
-    "reputation": 68.2,
-    "value": 5722708
+    "reputation": 56.9,
+    "value": 5301469
    },
    {
     "year": 1991,
-    "reputation": 77.9,
-    "value": 6393322
+    "reputation": 73.1,
+    "value": 5914000
    },
    {
     "year": 1992,
-    "reputation": 90.1,
-    "value": 7770899
+    "reputation": 77.5,
+    "value": 7359720
    },
    {
     "year": 1993,
-    "reputation": 95.3,
-    "value": 8864185
+    "reputation": 85.2,
+    "value": 7448686
    },
    {
     "year": 1994,
-    "reputation": 94.1,
-    "value": 9621583
+    "reputation": 87.6,
+    "value": 8666668
    },
    {
     "year": 1995,
-    "reputation": 94.9,
-    "value": 11343489
+    "reputation": 92.4,
+    "value": 10076677
    },
    {
     "year": 1996,
-    "reputation": 96.9,
-    "value": 13390148
+    "reputation": 97.4,
+    "value": 11677950
    },
    {
     "year": 1997,
     "reputation": 92,
-    "value": 15656481
+    "value": 13618554
    },
    {
     "year": 1998,
-    "reputation": 84.3,
-    "value": 16379207
+    "reputation": 87.4,
+    "value": 14639983
    },
    {
     "year": 1999,
-    "reputation": 83,
-    "value": 17260436
+    "reputation": 89.9,
+    "value": 16087360
    },
    {
     "year": 2000,
-    "reputation": 92.1,
-    "value": 18549266
+    "reputation": 91.8,
+    "value": 16729620
    },
    {
     "year": 2001,
-    "reputation": 92.3,
-    "value": 19544983
+    "reputation": 92.6,
+    "value": 17665995
    },
    {
     "year": 2002,
-    "reputation": 94.6,
-    "value": 21334740
+    "reputation": 98,
+    "value": 19157067
    },
    {
     "year": 2003,
-    "reputation": 99.9,
-    "value": 23937077
+    "reputation": 92,
+    "value": 20978064
    },
    {
     "year": 2004,
-    "reputation": 99.9,
-    "value": 25943698
+    "reputation": 88.2,
+    "value": 22675971
    },
    {
     "year": 2005,
-    "reputation": 92.3,
-    "value": 27686203
+    "reputation": 76.3,
+    "value": 23346455
    },
    {
     "year": 2006,
-    "reputation": 94.6,
-    "value": 29572143
+    "reputation": 74.7,
+    "value": 23924554
    },
    {
     "year": 2007,
-    "reputation": 99.6,
-    "value": 31587701
+    "reputation": 85.3,
+    "value": 25666916
    },
    {
     "year": 2008,
-    "reputation": 100,
-    "value": 33191311
+    "reputation": 87.4,
+    "value": 28098973
    },
    {
     "year": 2009,
-    "reputation": 97.5,
-    "value": 34258352
+    "reputation": 75,
+    "value": 28131561
    }
   ]
  }

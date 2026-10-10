@@ -56,11 +56,20 @@ export function renderAblation(reports: BotReport[], variants: Strategy[], syste
     const worse = x.deltas.filter(d => d < 0).length;
     const better = x.deltas.filter(d => d > 0).length;
     const m = median(x.deltas);
+    const changed = worse + better;
     const verdict = !x.deltas.length
       ? '—'
-      : !worse && !better
+      : !changed
         ? 'never came into play on these runs'
-        : Math.abs(m) < 0.02
+        : worse === changed
+          ? changed === x.deltas.length
+            ? 'pays its way on every run'
+            : `pays its way on every run where it came into play (${worse} of ${x.deltas.length})`
+          : better === changed
+            ? changed === x.deltas.length
+              ? 'the company does better without it on every run'
+              : `the company does better without it wherever it came into play (${better} of ${x.deltas.length})`
+            : Math.abs(m) < 0.02
           ? 'no clear effect: inside the seed-to-seed drift'
           : worse === x.deltas.length
             ? 'pays its way on every run'
@@ -216,7 +225,7 @@ export function renderDecades(reports: BotReport[], meta: { years: number; runs:
     shocked.forEach(({ r }) => {
       const rec = recovery(r);
       const ctrl = cohort.find(c => c.seed === r.seed && c.strategy === r.strategy && !c.shockLog.length);
-      lines.push(`- ${r.strategy}, seed ${r.seed}: hit in ${rec.at?.year} at reputation ${rec.at?.reputation}; reputation fell ${Math.abs(rec.repDip).toFixed(1)} points; value back to its pre-shock level after ${rec.months === undefined ? 'never, within the run' : `${rec.months} months`}; ended at reputation ${r.reputation} against ${ctrl?.reputation ?? '?'} without the shock.`);
+      lines.push(`- ${r.strategy}, seed ${r.seed}: hit in ${rec.at?.year} at reputation ${rec.at?.reputation}; reputation fell ${Math.abs(rec.repDip).toFixed(1)} points at worst; ended at reputation ${r.reputation} against ${ctrl?.reputation ?? '?'} without the shock, worth ${k(r.value)} against ${ctrl ? k(ctrl.value) : '?'}.`);
     });
     if (shocked.length) lines.push('');
   });

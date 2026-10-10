@@ -64,7 +64,13 @@ export function cohortTitle(r: Pick<BotReport, 'country' | 'startYear' | 'yearsR
   const name = ({ GB: 'Britain', ES: 'Spain', DE: 'Germany', FR: 'France', IT: 'Italy', US: 'United States' } as Record<string, string>)[r.country] ?? r.country;
   const end = r.startYear + Math.floor(r.yearsRun);
   const c = currencyFor(r.country, end);
-  const unit = c.rate !== 1 ? `${c.symbol} (game units ×${c.rate}; the euro arrives in 2002)` : c.symbol;
+  const first = currencyFor(r.country, r.startYear);
+  const unit =
+    c.rate !== 1
+      ? `${c.symbol} (game units ×${c.rate}; the euro arrives in 2002)`
+      : first.symbol !== c.symbol
+        ? `${c.symbol} (the books were in ${first.symbol} until 2002; shown throughout at the conversion rate)`
+        : c.symbol;
   return `${name} from ${r.startYear} — money in ${unit}`;
 }
 
