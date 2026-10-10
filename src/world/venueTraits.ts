@@ -7,6 +7,7 @@
  *  - a union house (IATSE in American theatres and arenas, some British theatres): you pay their call.
  */
 import type { Venue, WorldMap } from './types';
+import { worldOf } from './mapgen';
 
 export interface VenueTraits {
   loadIn: 'dock' | 'street' | 'stairs';
@@ -34,6 +35,16 @@ function hash(s: string): number {
 
 const STRICT_NOISE = new Set(['DE', 'CH', 'AT']);
 
+/** Spain has no stagehands' unions calling extra hands, and never will. */
+const NO_STAGEHAND_UNIONS = new Set(['ES']);
+export const hasStagehandUnions = (country: string) => !NO_STAGEHAND_UNIONS.has(country);
+
+/** The country a show is played in (a town abroad keeps its own). */
+export function gigCountry(s: { country?: string; mapSeed: number; startYear: number; hour: number }, gig: { cityId: string }): string {
+  const city = worldOf(s).cityById.get(gig.cityId);
+  return city?.abroad?.country ?? s.country ?? 'GB';
+}
+
 export function venueTraits(venue: Pick<Venue, 'name' | 'kind'>, country: string): VenueTraits {
   const r = (salt: string) => hash(`${venue.name}|${salt}`);
   const big = venue.kind === 'arena' || venue.kind === 'stadium';
@@ -43,6 +54,7 @@ export function venueTraits(venue: Pick<Venue, 'name' | 'kind'>, country: string
   if (venue.kind !== 'pub' && r('curfew') < curfewChance) t.curfew = big && venue.kind === 'stadium' ? 22 : 23;
   if (STRICT_NOISE.has(country) ? r('noise') < (big ? 0.7 : 0.4) : r('noise') < (big ? 0.15 : 0.1)) t.noiseDb = STRICT_NOISE.has(country) ? 99 : 102;
   if (country === 'US' && (venue.kind === 'theatre' || big) && r('union') < 0.8) t.union = true;
+  // (Never in Spain — see NO_STAGEHAND_UNIONS.)
   if (country === 'GB' && venue.kind === 'theatre' && r('union') < 0.4) t.union = true;
   return t;
 }

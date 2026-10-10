@@ -3,6 +3,20 @@ import { venueTraits, traitsOf, UNION_CALL } from '../venueTraits';
 import { getWorld } from '../mapgen';
 
 describe('venue character', () => {
+  it('Spain has no stagehand unions: no union houses, no union crises', async () => {
+    const { hasStagehandUnions } = await import('../venueTraits');
+    expect(hasStagehandUnions('ES')).toBe(false);
+    expect(hasStagehandUnions('US')).toBe(true);
+    ['theatre', 'arena', 'stadium', 'club', 'hall'].forEach(kind =>
+      Array.from({ length: 30 }, (_, i) => expect(venueTraits({ name: `Sala ${i}`, kind: kind as never }, 'ES').union).toBeUndefined()),
+    );
+    const { createTycoonGame } = await import('../state');
+    const { MAKERS } = await import('../dilemmas');
+    const s = createTycoonGame({ companyName: 'U', color: '#f00', seed: 5, country: 'ES', startYear: 2000 });
+    const gig = { ...s.gigs[0], tier: 4, cityId: s.company.hqCityId, overseas: undefined };
+    expect(MAKERS.union(s, gig, {} as never)).toBeNull();
+  });
+
   it('is stable for a venue and follows the country', () => {
     const v = { name: 'Test Playhouse', kind: 'theatre' as const };
     expect(venueTraits(v, 'GB')).toEqual(venueTraits(v, 'GB'));
