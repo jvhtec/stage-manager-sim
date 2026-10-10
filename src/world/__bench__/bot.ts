@@ -21,6 +21,7 @@ import {
   makeDecision,
   negotiateTerms,
   orderTourMerch,
+  refurbishGear,
   rehearseShow,
   repay,
   setCrewPicks,
@@ -42,7 +43,7 @@ import { nextUpgrade } from '../facilities';
 import { crossHireCost, crossHireOptions } from '../techRider';
 import { forecastCash } from '../cashflow';
 import { brandShares } from '../ecosystem';
-import { ownedStock } from '../wear';
+import { averageCondition, ownedStock, refurbishCost } from '../wear';
 import { relationOf, rapport } from '../bonds';
 import { checkInvariants } from '../invariants';
 import { MANAGERS } from '../management';
@@ -69,7 +70,8 @@ export type Feature =
   | 'cash' // act on the cash forecast
   | 'standardise' // buy one brand per department
   | 'haggle'
-  | 'learn'; // read its own post-mortems and fix the biggest recurring cause
+  | 'learn' // read its own post-mortems and fix the biggest recurring cause
+  | 'maintain'; // refurbish worn product lines
 
 export interface Strategy {
   id: string;
@@ -83,7 +85,7 @@ export interface Strategy {
   policies: Partial<Record<'workshop' | 'pay' | 'insurance' | 'training' | 'rest', string>>;
 }
 
-const CORE: Feature[] = ['gear', 'invest', 'tours', 'merch', 'annex', 'train', 'invoice', 'sponsor', 'haggle'];
+const CORE: Feature[] = ['gear', 'invest', 'tours', 'merch', 'annex', 'train', 'invoice', 'sponsor', 'haggle', 'maintain'];
 
 export const STRATEGIES: Record<string, Strategy> = {
   baseline: {
@@ -171,10 +173,12 @@ export interface BotReport {
   /** Incidents by kind and by cause, over the whole run. */
   incidents: { kinds: Record<string, number>; causes: Record<string, number>; main: Record<string, number> };
   bans: number;
+  /** Average condition of the kit, sampled monthly and at the end. */
+  kitCondition: { average: number; end: number };
   monthsOverdrawn: number;
   lowestCash: number;
   forecastWarnings: number;
-  bot: { termsAsked: number; termsWon: number; crossHires: number; fixes: number; crewSplits: number; heads: string[]; lessons: string[]; borrowed: number; factoredMonths: number; frozenMonths: number };
+  bot: { termsAsked: number; termsWon: number; crossHires: number; fixes: number; crewSplits: number; heads: string[]; lessons: string[]; refurbished: number; borrowed: number; factoredMonths: number; frozenMonths: number };
   rivals: { alive: number; gone: number; shows: number; failed: number; avgQuality: number; crossHires: number; fixes: number; declined: Record<string, number>; cashNegative: number };
   invariantViolations: string[];
 }
@@ -214,18 +218,20 @@ export function runBot(run: BotRun): BotReport {
   const world = worldOf(s);
   for (const [k, v] of Object.entries(strategy.policies)) s = ok(s, setPolicy(s, k as S, v as S));
   s = ok(s, setPolicy(s, 'rehearsal', 'auto'));
-  const bot = { termsAsked: 0, termsWon: 0, crossHires: 0, fixes: 0, crewSplits: 0, heads: [] as string[], lessons: [] as string[], borrowed: 0, factoredMonths: 0, frozenMonths: 0 };
+  const bot = { termsAsked: 0, termsWon: 0, crossHires: 0, fixes: 0, crewSplits: 0, heads: [] as string[], lessons: [] as string[], refurbished: 0, borrowed: 0, factoredMonths: 0, frozenMonths: 0 };
   const violations: string[] = [];
   let monthsOverdrawn = 0;
   let lowestCash = Infinity;
   let forecastWarnings = 0;
   let frozenUntil = -1;
   let learned = { kit: 0, shows: 0 };
+  const conditions: number[] = [];
 
   for (let day = 0; day < 365 * years && !s.gameOver; day++) {
     s = advanceHours(s, 24);
     const today = dayOf(s.hour);
     lowestCash = Math.min(lowestCash, s.company.cash);
+    if (day % 30 === 0) conditions.push(averageCondition(s, ownedStock(s)));
     if (day % 30 === 0) checkInvariants(s).forEach(v => violations.length < 200 && violations.push(`${v.kind}: ${v.message}`));
 
     // Decisions: the defaults, except where there's a clearly better answer.
@@ -359,6 +365,18 @@ export function runBot(run: BotRun): BotReport {
           if (m && rep >= 40 && s.company.cash > 30000) s = ok(s, trainCrew(s, m.id, cert));
         }
       }
+      // Refurbish the most worn lines while the bank can stand it.
+      if (on('maintain') && !frozen) {
+        const worn = Object.keys(s.gearCondition).filter(id => s.gearCondition[id] < 60).sort((a, b) => s.gearCondition[a] - s.gearCondition[b]);
+        for (const id of worn.slice(0, 3)) {
+          const cost = refurbishCost(s, id);
+          if (cost > 0 && cost < s.company.cash * 0.1) {
+            const before = s;
+            s = ok(s, refurbishGear(s, id));
+            if (s !== before) bot.refurbished++;
+          }
+        }
+      }
       // Read the month's post-mortems: if kit dying on stage keeps coming up, buy a better workshop.
       if (on('learn')) {
         const main = s.incidentTally?.main ?? {};
@@ -429,6 +447,7 @@ export function runBot(run: BotRun): BotReport {
     feuds: Object.values(s.bonds ?? {}).filter((x: S) => x <= -40).length,
     incidents: s.incidentTally ?? { kinds: {}, causes: {}, main: {} },
     bans: Object.keys(s.blacklist ?? {}).length,
+    kitCondition: { average: Math.round(conditions.reduce((a, b) => a + b, 0) / Math.max(1, conditions.length)), end: Math.round(averageCondition(s, ownedStock(s))) },
     monthsOverdrawn,
     lowestCash: Math.round(lowestCash),
     forecastWarnings,
