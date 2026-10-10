@@ -15,8 +15,10 @@ const TOTAL_BUDGET_KB = 900;
 // decision. The game chunk carries every strategy system plus the real-geography
 // data (coastline masks and town coordinates for six countries, ~15KB), plus the
 // road eras, historic disruptions, venue quirks, freight and map views (~10KB),
-// and the consequence systems: incident log, change orders, cash forecast (~15KB).
-const CHUNK_BUDGET_KB = 640;
+// and the consequence systems: incident log, change orders, cash forecast (~15KB),
+// and the rival operations, office overheads, reputation memory and market shocks
+// that keep the competition and the books honest (~5KB).
+const CHUNK_BUDGET_KB = 660;
 
 let files;
 try {
