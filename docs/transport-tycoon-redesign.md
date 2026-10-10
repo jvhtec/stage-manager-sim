@@ -238,6 +238,11 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
     working-time rules (+1 relief crew on tier 3+ or multi-day shows); US right-to-work towns have no union houses
     or union crises, and Spain has no stagehand unions at all. Spanish rooms are strict about curfews (50–70%) and noise
     (30–35%). Rule flags live on the offer (`council`, `meister`, `relief`) and show in its window.
+  - **Tour bus hire** (`buses.ts`): a business line independent of your shows. Touring acts post bus contracts
+    (10–50 days, a day rate that scales with tier, country fee premium and the market); you reserve a parked coach
+    (Duple 1975, Setra 1985, Skyliner 1994) and it leaves on the start date, earning the rate less a 30% driver share,
+    wearing 0.06 reliability a day and breaking down now and then (4% of the bus's price). Open contracts can be
+    taken by rivals (12%/day) or lapse. A finished tour raises the act's regard for you and your reputation a touch.
 
 - **Start years** (1975, 1980, 1985, 1990, 2000, 2010) — the era sets which trucks, gear and
   desks exist (Bedford TK, Altec A4s, Yamaha PM1000 and Strand lanterns in 1975; no video kit
