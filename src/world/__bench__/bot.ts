@@ -44,7 +44,7 @@ import { nextUpgrade } from '../facilities';
 import { crossHireCost, crossHireOptions } from '../techRider';
 import { forecastCash } from '../cashflow';
 import { brandShares } from '../ecosystem';
-import { averageCondition, ownedStock, refurbishCost } from '../wear';
+import { averageCondition, monthlyWorkshopCost, ownedStock, refurbishCost } from '../wear';
 import { relationOf, rapport } from '../bonds';
 import { checkInvariants } from '../invariants';
 import { MANAGERS } from '../management';
@@ -156,6 +156,8 @@ export interface BotMonth {
   value: number;
   reputation: number;
   shows: number;
+  /** Show income booked so far, all years. */
+  income: number;
 }
 
 export interface BotReport {
@@ -248,6 +250,7 @@ export function runBot(run: BotRun): BotReport {
   let learned = { kit: 0, shows: 0 };
   const conditions: number[] = [];
   const reliabilities: number[] = [];
+  const refurbSpend: { day: number; cost: number }[] = [];
   const series: BotMonth[] = [];
   const shockLog: BotReport['shockLog'] = [];
 
@@ -256,7 +259,7 @@ export function runBot(run: BotRun): BotReport {
     const today = dayOf(s.hour);
     lowestCash = Math.min(lowestCash, s.company.cash);
     for (const sh of shocks) if (sh.day === day) shockLog.push({ kind: sh.kind, day, what: applyShock(s, sh.kind) });
-    if (day % 30 === 0) series.push({ day, year: yearOf(s, s.hour), cash: Math.round(s.company.cash), value: companyValue(s), reputation: Math.round(s.company.reputation * 10) / 10, shows: s.stats.showsPlayed });
+    if (day % 30 === 0) series.push({ day, year: yearOf(s, s.hour), cash: Math.round(s.company.cash), value: companyValue(s), reputation: Math.round(s.company.reputation * 10) / 10, shows: s.stats.showsPlayed, income: Math.round(Object.values(s.ledger).reduce((n: number, y: S) => n + (y.shows ?? 0), 0)) });
     if (day % 30 === 0) conditions.push(averageCondition(s, ownedStock(s)));
     if (day % 30 === 0) s.vehicles.forEach((x: S) => x.owner === 'player' && reliabilities.push(x.reliability));
     if (day % 30 === 0) checkInvariants(s).forEach(v => violations.length < 200 && violations.push(`${v.kind}: ${v.message}`));
@@ -371,17 +374,20 @@ export function runBot(run: BotRun): BotReport {
     // Weekly: the cash forecast.
     if (on('cash') && day % 7 === 3) {
       const f = forecastCash(s, world);
+      // A graded response: if only the pessimistic line dips, sell this month's invoices; if even
+      // the expected line goes under, also stop spending and borrow. Stop factoring once it's clear.
       if (f.riskWeek !== undefined) {
         forecastWarnings++;
-        frozenUntil = today + 30;
         s = ok(s, setPolicy(s, 'invoicing', 'factor'));
         if (f.lowest.expected < 0) {
+          frozenUntil = today + 30;
           const before = s.company.loan;
           s = ok(s, borrow(s));
           if (s.company.loan > before) bot.borrowed += s.company.loan - before;
         }
-      } else if (s.company.loan > 0 && f.lowest.low > s.company.loan * 2) {
-        s = ok(s, repay(s));
+      } else {
+        if (s.policies.invoicing === 'factor') s = ok(s, setPolicy(s, 'invoicing', 'hold'));
+        if (s.company.loan > 0 && f.lowest.low > s.company.loan * 2) s = ok(s, repay(s));
       }
     }
 
@@ -417,7 +423,10 @@ export function runBot(run: BotRun): BotReport {
           if (cost > 0 && cost < s.company.cash * 0.1) {
             const before = s;
             s = ok(s, refurbishGear(s, id));
-            if (s !== before) bot.refurbished++;
+            if (s !== before) {
+              bot.refurbished++;
+              refurbSpend.push({ day, cost });
+            }
           }
         }
       }
@@ -428,13 +437,16 @@ export function runBot(run: BotRun): BotReport {
         const showsNow = s.stats.showsPlayed;
         const kitRate = (kitNow - learned.kit) / Math.max(1, showsNow - learned.shows);
         learned = { kit: kitNow, shows: showsNow };
-        if (kitRate > 0.08 && s.policies.workshop !== 'full' && !frozen) {
+        // …or if patching worn lines one by one is costing more than a better workshop would.
+        const recentRefurb = refurbSpend.filter(x => day - x.day <= 180).reduce((n, x) => n + x.cost, 0);
+        const better = s.policies.workshop === 'none' ? 'basic' : 'full';
+        const upgradeCost = (monthlyWorkshopCost(s, better) - monthlyWorkshopCost(s)) * 6;
+        if ((kitRate > 0.08 || (recentRefurb > upgradeCost && upgradeCost > 0)) && s.policies.workshop !== 'full' && !frozen) {
           s = ok(s, setPolicy(s, 'workshop', s.policies.workshop === 'none' ? 'basic' : 'full'));
           bot.lessons.push(`workshop→${s.policies.workshop}@${yearOf(s, s.hour)}`);
         }
       }
       if (on('invoice') && !on('cash')) s = ok(s, setPolicy(s, 'invoicing', s.company.cash < 60000 ? 'factor' : 'hold'));
-      if (on('cash') && !frozen && s.policies.invoicing === 'factor' && s.company.cash > 150000) s = ok(s, setPolicy(s, 'invoicing', 'hold'));
       // Department heads, once the business can carry them (a year's salary in the bank, ten times over).
       if (on('heads') && !frozen) {
         const showsPerMonth = s.stats.showsPlayed / Math.max(1, day / 30);

@@ -1,0 +1,2572 @@
+[
+ {
+  "country": "GB",
+  "startYear": 1980,
+  "seed": 3,
+  "strategy": "managed",
+  "survived": true,
+  "yearsRun": 30,
+  "value": 36112987,
+  "cash": 35407356,
+  "loan": 0,
+  "reputation": 95,
+  "shows": 9325,
+  "failed": 15,
+  "avgQuality": 0.9,
+  "ledger": {
+   "wages": -18022194,
+   "running": -2082170,
+   "merch": 21650,
+   "fuel": -472214,
+   "travel": -2614650,
+   "shows": 108415553,
+   "subhire": -16620696,
+   "purchases": -788800,
+   "property": -2283520,
+   "salaries": -3043700,
+   "overheads": -4054388,
+   "workshop": -1601114,
+   "training": -436620,
+   "insurance": -493517,
+   "freelance": -2195970,
+   "servicing": -954120,
+   "tolls": -1160893,
+   "onsite": -902701,
+   "sponsorship": 2235990,
+   "tax": -12834780,
+   "marketing": -115135,
+   "facilities": -4453740,
+   "penalties": -145716,
+   "zones": -39200
+  },
+  "revenue": 110673193,
+  "costs": 75315838,
+  "utilisation": 25.9,
+  "fleet": 12,
+  "crew": 25,
+  "crewLost": 0,
+  "burnout": 0,
+  "trusted": 60,
+  "feuds": 8,
+  "incidents": {
+   "kinds": {
+    "show": 506,
+    "client": 110,
+    "breakdown": 174
+   },
+   "causes": {
+    "rider": 205,
+    "short-crew": 266,
+    "rider-twice": 67,
+    "winter": 72,
+    "breakdown-inc": 135,
+    "late": 18,
+    "bad-luck": 17,
+    "kit-worn": 13,
+    "disaster": 15,
+    "no-show": 15,
+    "overdue": 4,
+    "kit-failed": 41,
+    "client-cancel": 28,
+    "no-terms": 11,
+    "change-kit": 10,
+    "prep": 66,
+    "terms": 17,
+    "old": 143,
+    "change-early": 2,
+    "worn": 131,
+    "brand-fault": 3,
+    "venue": 4,
+    "tickets": 5,
+    "room": 1,
+    "unrehearsed": 1
+   },
+   "main": {
+    "rider": 175,
+    "rider-twice": 67,
+    "short-crew": 138,
+    "winter": 12,
+    "breakdown-inc": 131,
+    "bad-luck": 17,
+    "disaster": 15,
+    "no-show": 15,
+    "overdue": 2,
+    "kit-failed": 28,
+    "client-cancel": 28,
+    "old": 143,
+    "brand-fault": 3,
+    "prep": 15,
+    "change-early": 1
+   }
+  },
+  "bans": 41,
+  "kitCondition": {
+   "average": 79,
+   "end": 78
+  },
+  "road": {
+   "km": 4095489,
+   "breakdowns": 174,
+   "per100k": 4.25,
+   "reliability": 46
+  },
+  "monthsOverdrawn": 0,
+  "lowestCash": 23290,
+  "forecastWarnings": 14,
+  "bot": {
+   "termsAsked": 829,
+   "termsWon": 532,
+   "crossHires": 62,
+   "fixes": 25,
+   "crewSplits": 0,
+   "heads": [
+    "crew@1985",
+    "production@1985",
+    "finance@1985"
+   ],
+   "lessons": [],
+   "refurbished": 333,
+   "borrowed": 0,
+   "factoredMonths": 52,
+   "frozenMonths": 6,
+   "replanned": 0
+  },
+  "rivals": {
+   "alive": 14,
+   "gone": 13,
+   "shows": 17103,
+   "failed": 1,
+   "avgQuality": 0.71,
+   "crossHires": 297,
+   "fixes": 811,
+   "declined": {
+    "rider": 0,
+    "kit": 4,
+    "crew": 3,
+    "room": 50
+   },
+   "cashNegative": 3
+  },
+  "invariantViolations": [],
+  "shockLog": [],
+  "yearly": [
+   {
+    "year": 1980,
+    "reputation": 39.2,
+    "value": 109067
+   },
+   {
+    "year": 1981,
+    "reputation": 46.7,
+    "value": 131423
+   },
+   {
+    "year": 1982,
+    "reputation": 50.1,
+    "value": 125765
+   },
+   {
+    "year": 1983,
+    "reputation": 59.2,
+    "value": 293384
+   },
+   {
+    "year": 1984,
+    "reputation": 67,
+    "value": 553260
+   },
+   {
+    "year": 1985,
+    "reputation": 70,
+    "value": 1071843
+   },
+   {
+    "year": 1986,
+    "reputation": 74.6,
+    "value": 2229686
+   },
+   {
+    "year": 1987,
+    "reputation": 79,
+    "value": 3319965
+   },
+   {
+    "year": 1988,
+    "reputation": 83.9,
+    "value": 3199579
+   },
+   {
+    "year": 1989,
+    "reputation": 86.4,
+    "value": 4818775
+   },
+   {
+    "year": 1990,
+    "reputation": 89.8,
+    "value": 5507501
+   },
+   {
+    "year": 1991,
+    "reputation": 91.5,
+    "value": 6254618
+   },
+   {
+    "year": 1992,
+    "reputation": 95.4,
+    "value": 7533466
+   },
+   {
+    "year": 1993,
+    "reputation": 92.1,
+    "value": 9287526
+   },
+   {
+    "year": 1994,
+    "reputation": 87.8,
+    "value": 9784890
+   },
+   {
+    "year": 1995,
+    "reputation": 92,
+    "value": 10918732
+   },
+   {
+    "year": 1996,
+    "reputation": 96.4,
+    "value": 12405295
+   },
+   {
+    "year": 1997,
+    "reputation": 93.7,
+    "value": 14106331
+   },
+   {
+    "year": 1998,
+    "reputation": 94.2,
+    "value": 15886183
+   },
+   {
+    "year": 1999,
+    "reputation": 93.7,
+    "value": 17802756
+   },
+   {
+    "year": 2000,
+    "reputation": 96.4,
+    "value": 18880752
+   },
+   {
+    "year": 2001,
+    "reputation": 93.8,
+    "value": 19716468
+   },
+   {
+    "year": 2002,
+    "reputation": 92.3,
+    "value": 20893326
+   },
+   {
+    "year": 2003,
+    "reputation": 93.8,
+    "value": 22857726
+   },
+   {
+    "year": 2004,
+    "reputation": 88.7,
+    "value": 25079460
+   },
+   {
+    "year": 2005,
+    "reputation": 92.4,
+    "value": 27100949
+   },
+   {
+    "year": 2006,
+    "reputation": 96.5,
+    "value": 28789025
+   },
+   {
+    "year": 2007,
+    "reputation": 99.8,
+    "value": 32301944
+   },
+   {
+    "year": 2008,
+    "reputation": 100,
+    "value": 34479742
+   },
+   {
+    "year": 2009,
+    "reputation": 99.9,
+    "value": 35954240
+   }
+  ]
+ },
+ {
+  "country": "GB",
+  "startYear": 1980,
+  "seed": 4,
+  "strategy": "managed",
+  "survived": true,
+  "yearsRun": 30,
+  "value": 36048004,
+  "cash": 35669534,
+  "loan": 0,
+  "reputation": 97,
+  "shows": 9423,
+  "failed": 15,
+  "avgQuality": 0.88,
+  "ledger": {
+   "wages": -18141860,
+   "running": -2094710,
+   "subhire": -16473968,
+   "shows": 109057667,
+   "fuel": -465198,
+   "travel": -2586225,
+   "tolls": -1251074,
+   "property": -2383120,
+   "salaries": -3076900,
+   "overheads": -4076112,
+   "workshop": -1501017,
+   "training": -442640,
+   "insurance": -529826,
+   "servicing": -955070,
+   "freelance": -2200590,
+   "purchases": -679500,
+   "tax": -12758550,
+   "sponsorship": 1923290,
+   "onsite": -890872,
+   "marketing": -118580,
+   "facilities": -4483860,
+   "merch": 21600,
+   "interest": -563,
+   "penalties": -231386,
+   "zones": -41400
+  },
+  "revenue": 111002557,
+  "costs": 75383021,
+  "utilisation": 26.2,
+  "fleet": 12,
+  "crew": 25,
+  "crewLost": 0,
+  "burnout": 0,
+  "trusted": 52,
+  "feuds": 7,
+  "incidents": {
+   "kinds": {
+    "show": 586,
+    "breakdown": 195,
+    "client": 137,
+    "cash": 1
+   },
+   "causes": {
+    "rider": 242,
+    "short-crew": 291,
+    "bad-luck": 33,
+    "client-cancel": 43,
+    "no-terms": 24,
+    "rider-twice": 80,
+    "breakdown-inc": 147,
+    "kit-failed": 27,
+    "kit-worn": 3,
+    "feud": 2,
+    "late": 29,
+    "winter": 59,
+    "unpaid-invoices": 1,
+    "overdrawn": 1,
+    "prep": 114,
+    "venue": 10,
+    "disaster": 14,
+    "no-show": 15,
+    "terms": 19,
+    "old": 155,
+    "worn": 144,
+    "change-hour": 4,
+    "change-kit": 8,
+    "tickets": 6,
+    "change-early": 2,
+    "overdue": 1,
+    "room": 2
+   },
+   "main": {
+    "rider": 211,
+    "bad-luck": 33,
+    "client-cancel": 43,
+    "rider-twice": 80,
+    "short-crew": 135,
+    "breakdown-inc": 141,
+    "kit-failed": 23,
+    "winter": 7,
+    "unpaid-invoices": 1,
+    "disaster": 14,
+    "no-show": 15,
+    "old": 155,
+    "prep": 58,
+    "room": 2,
+    "kit-worn": 1
+   }
+  },
+  "bans": 39,
+  "kitCondition": {
+   "average": 83,
+   "end": 99
+  },
+  "road": {
+   "km": 4035267,
+   "breakdowns": 195,
+   "per100k": 4.83,
+   "reliability": 46
+  },
+  "monthsOverdrawn": 0,
+  "lowestCash": -14804,
+  "forecastWarnings": 12,
+  "bot": {
+   "termsAsked": 854,
+   "termsWon": 525,
+   "crossHires": 117,
+   "fixes": 37,
+   "crewSplits": 13,
+   "heads": [
+    "crew@1984",
+    "finance@1985",
+    "production@1985"
+   ],
+   "lessons": [
+    "workshop→full@2005"
+   ],
+   "refurbished": 213,
+   "borrowed": 40000,
+   "factoredMonths": 53,
+   "frozenMonths": 7,
+   "replanned": 0
+  },
+  "rivals": {
+   "alive": 11,
+   "gone": 16,
+   "shows": 14851,
+   "failed": 0,
+   "avgQuality": 0.7,
+   "crossHires": 309,
+   "fixes": 651,
+   "declined": {
+    "rider": 0,
+    "kit": 0,
+    "crew": 2,
+    "room": 47
+   },
+   "cashNegative": 2
+  },
+  "invariantViolations": [],
+  "shockLog": [],
+  "yearly": [
+   {
+    "year": 1980,
+    "reputation": 40.6,
+    "value": 118533
+   },
+   {
+    "year": 1981,
+    "reputation": 47.4,
+    "value": 126092
+   },
+   {
+    "year": 1982,
+    "reputation": 56,
+    "value": 159878
+   },
+   {
+    "year": 1983,
+    "reputation": 68.1,
+    "value": 403195
+   },
+   {
+    "year": 1984,
+    "reputation": 76.3,
+    "value": 975469
+   },
+   {
+    "year": 1985,
+    "reputation": 83.3,
+    "value": 1327324
+   },
+   {
+    "year": 1986,
+    "reputation": 84,
+    "value": 2645799
+   },
+   {
+    "year": 1987,
+    "reputation": 80.7,
+    "value": 3120779
+   },
+   {
+    "year": 1988,
+    "reputation": 80.5,
+    "value": 3884400
+   },
+   {
+    "year": 1989,
+    "reputation": 85.4,
+    "value": 5254463
+   },
+   {
+    "year": 1990,
+    "reputation": 91.9,
+    "value": 6591842
+   },
+   {
+    "year": 1991,
+    "reputation": 93.7,
+    "value": 7920609
+   },
+   {
+    "year": 1992,
+    "reputation": 93.1,
+    "value": 8722023
+   },
+   {
+    "year": 1993,
+    "reputation": 91.7,
+    "value": 9577275
+   },
+   {
+    "year": 1994,
+    "reputation": 92.8,
+    "value": 10428425
+   },
+   {
+    "year": 1995,
+    "reputation": 96.3,
+    "value": 11882754
+   },
+   {
+    "year": 1996,
+    "reputation": 99.4,
+    "value": 13799621
+   },
+   {
+    "year": 1997,
+    "reputation": 92,
+    "value": 15617141
+   },
+   {
+    "year": 1998,
+    "reputation": 89.3,
+    "value": 17323151
+   },
+   {
+    "year": 1999,
+    "reputation": 88.9,
+    "value": 18904984
+   },
+   {
+    "year": 2000,
+    "reputation": 87,
+    "value": 19739298
+   },
+   {
+    "year": 2001,
+    "reputation": 92,
+    "value": 20187781
+   },
+   {
+    "year": 2002,
+    "reputation": 94.4,
+    "value": 21200829
+   },
+   {
+    "year": 2003,
+    "reputation": 94.2,
+    "value": 23378507
+   },
+   {
+    "year": 2004,
+    "reputation": 96.3,
+    "value": 25139856
+   },
+   {
+    "year": 2005,
+    "reputation": 99,
+    "value": 27342831
+   },
+   {
+    "year": 2006,
+    "reputation": 99.3,
+    "value": 29189976
+   },
+   {
+    "year": 2007,
+    "reputation": 99.9,
+    "value": 32256859
+   },
+   {
+    "year": 2008,
+    "reputation": 100,
+    "value": 34438367
+   },
+   {
+    "year": 2009,
+    "reputation": 97.7,
+    "value": 35950968
+   }
+  ]
+ },
+ {
+  "country": "ES",
+  "startYear": 1980,
+  "seed": 3,
+  "strategy": "managed",
+  "survived": true,
+  "yearsRun": 30,
+  "value": 33220063,
+  "cash": 32698566,
+  "loan": 0,
+  "reputation": 89,
+  "shows": 10293,
+  "failed": 37,
+  "avgQuality": 0.91,
+  "ledger": {
+   "wages": -19010156,
+   "running": -2171660,
+   "travel": -5217975,
+   "fuel": -1523388,
+   "shows": 105253924,
+   "freelance": -2468410,
+   "tolls": -359775,
+   "property": -2151880,
+   "salaries": -3156500,
+   "overheads": -4108136,
+   "workshop": -1582046,
+   "training": -384040,
+   "insurance": -446028,
+   "subhire": -13029154,
+   "servicing": -1072210,
+   "purchases": -689500,
+   "sponsorship": 2004220,
+   "tax": -12067650,
+   "onsite": -1064424,
+   "penalties": -164637,
+   "marketing": -18110,
+   "merch": 17180,
+   "facilities": -3941080
+  },
+  "revenue": 107275324,
+  "costs": 74626759,
+  "utilisation": 28.6,
+  "fleet": 12,
+  "crew": 25,
+  "crewLost": 2,
+  "burnout": 0,
+  "trusted": 94,
+  "feuds": 13,
+  "incidents": {
+   "kinds": {
+    "show": 854,
+    "breakdown": 535,
+    "client": 115
+   },
+   "causes": {
+    "rider": 188,
+    "short-crew": 279,
+    "bad-luck": 88,
+    "winter": 212,
+    "breakdown-inc": 493,
+    "disaster": 37,
+    "no-show": 35,
+    "rider-twice": 47,
+    "tired-crew": 5,
+    "overdue": 18,
+    "late": 31,
+    "no-goodwill": 2,
+    "change-hour": 4,
+    "kit-failed": 34,
+    "worn": 373,
+    "client-cancel": 31,
+    "no-terms": 9,
+    "terms": 22,
+    "prep": 100,
+    "venue": 7,
+    "old": 401,
+    "change-kit": 8,
+    "brand-fault": 1,
+    "kit-worn": 6,
+    "tickets": 3,
+    "unrehearsed": 1
+   },
+   "main": {
+    "rider": 178,
+    "short-crew": 102,
+    "bad-luck": 88,
+    "winter": 41,
+    "breakdown-inc": 466,
+    "disaster": 37,
+    "no-show": 35,
+    "rider-twice": 47,
+    "tired-crew": 1,
+    "overdue": 5,
+    "late": 6,
+    "change-hour": 1,
+    "kit-failed": 22,
+    "worn": 1,
+    "client-cancel": 31,
+    "old": 400,
+    "prep": 39,
+    "brand-fault": 1,
+    "kit-worn": 1,
+    "change-kit": 1,
+    "unrehearsed": 1
+   }
+  },
+  "bans": 45,
+  "kitCondition": {
+   "average": 79,
+   "end": 79
+  },
+  "road": {
+   "km": 13029063,
+   "breakdowns": 535,
+   "per100k": 4.11,
+   "reliability": 46
+  },
+  "monthsOverdrawn": 0,
+  "lowestCash": 16675,
+  "forecastWarnings": 15,
+  "bot": {
+   "termsAsked": 1026,
+   "termsWon": 659,
+   "crossHires": 80,
+   "fixes": 17,
+   "crewSplits": 0,
+   "heads": [
+    "production@1984",
+    "crew@1984",
+    "finance@1984"
+   ],
+   "lessons": [],
+   "refurbished": 285,
+   "borrowed": 0,
+   "factoredMonths": 45,
+   "frozenMonths": 8,
+   "replanned": 0
+  },
+  "rivals": {
+   "alive": 12,
+   "gone": 14,
+   "shows": 14315,
+   "failed": 3,
+   "avgQuality": 0.79,
+   "crossHires": 543,
+   "fixes": 412,
+   "declined": {
+    "rider": 0,
+    "room": 58,
+    "kit": 28,
+    "crew": 4,
+    "trucks": 0
+   },
+   "cashNegative": 3
+  },
+  "invariantViolations": [],
+  "shockLog": [],
+  "yearly": [
+   {
+    "year": 1980,
+    "reputation": 40.4,
+    "value": 137600
+   },
+   {
+    "year": 1981,
+    "reputation": 42.4,
+    "value": 175379
+   },
+   {
+    "year": 1982,
+    "reputation": 49.8,
+    "value": 375861
+   },
+   {
+    "year": 1983,
+    "reputation": 55,
+    "value": 634632
+   },
+   {
+    "year": 1984,
+    "reputation": 65.4,
+    "value": 1042687
+   },
+   {
+    "year": 1985,
+    "reputation": 68.8,
+    "value": 1549794
+   },
+   {
+    "year": 1986,
+    "reputation": 68,
+    "value": 2722482
+   },
+   {
+    "year": 1987,
+    "reputation": 68,
+    "value": 3734103
+   },
+   {
+    "year": 1988,
+    "reputation": 69.3,
+    "value": 4951135
+   },
+   {
+    "year": 1989,
+    "reputation": 73.4,
+    "value": 5773378
+   },
+   {
+    "year": 1990,
+    "reputation": 68.7,
+    "value": 6428747
+   },
+   {
+    "year": 1991,
+    "reputation": 74.6,
+    "value": 7358751
+   },
+   {
+    "year": 1992,
+    "reputation": 83.4,
+    "value": 8116672
+   },
+   {
+    "year": 1993,
+    "reputation": 92,
+    "value": 8979554
+   },
+   {
+    "year": 1994,
+    "reputation": 89.4,
+    "value": 10082851
+   },
+   {
+    "year": 1995,
+    "reputation": 82.9,
+    "value": 11279234
+   },
+   {
+    "year": 1996,
+    "reputation": 91.8,
+    "value": 12492074
+   },
+   {
+    "year": 1997,
+    "reputation": 88.6,
+    "value": 14501047
+   },
+   {
+    "year": 1998,
+    "reputation": 91.1,
+    "value": 16110406
+   },
+   {
+    "year": 1999,
+    "reputation": 91.8,
+    "value": 17195967
+   },
+   {
+    "year": 2000,
+    "reputation": 81.9,
+    "value": 17520533
+   },
+   {
+    "year": 2001,
+    "reputation": 73.6,
+    "value": 17747890
+   },
+   {
+    "year": 2002,
+    "reputation": 88.1,
+    "value": 19557563
+   },
+   {
+    "year": 2003,
+    "reputation": 93.6,
+    "value": 22515445
+   },
+   {
+    "year": 2004,
+    "reputation": 95.6,
+    "value": 24851102
+   },
+   {
+    "year": 2005,
+    "reputation": 98.9,
+    "value": 26604589
+   },
+   {
+    "year": 2006,
+    "reputation": 95.1,
+    "value": 28721717
+   },
+   {
+    "year": 2007,
+    "reputation": 99.7,
+    "value": 30443629
+   },
+   {
+    "year": 2008,
+    "reputation": 89.7,
+    "value": 32441257
+   },
+   {
+    "year": 2009,
+    "reputation": 88.9,
+    "value": 33245096
+   }
+  ]
+ },
+ {
+  "country": "ES",
+  "startYear": 1980,
+  "seed": 4,
+  "strategy": "managed",
+  "survived": true,
+  "yearsRun": 30,
+  "value": 30979676,
+  "cash": 30648543,
+  "loan": 0,
+  "reputation": 93,
+  "shows": 10169,
+  "failed": 38,
+  "avgQuality": 0.87,
+  "ledger": {
+   "wages": -18884770,
+   "running": -2157410,
+   "subhire": -12617302,
+   "shows": 101533215,
+   "travel": -4961475,
+   "fuel": -1378191,
+   "tolls": -362559,
+   "property": -2095480,
+   "salaries": -3146700,
+   "overheads": -4057656,
+   "workshop": -1716509,
+   "training": -382920,
+   "insurance": -415152,
+   "purchases": -622600,
+   "servicing": -1067280,
+   "onsite": -1358954,
+   "freelance": -2192225,
+   "merch": 24320,
+   "tax": -11279170,
+   "sponsorship": 1721710,
+   "penalties": -232956,
+   "marketing": -70435,
+   "facilities": -3679570,
+   "interest": -1389
+  },
+  "revenue": 103279245,
+  "costs": 72680703,
+  "utilisation": 28.2,
+  "fleet": 12,
+  "crew": 25,
+  "crewLost": 0,
+  "burnout": 0,
+  "trusted": 76,
+  "feuds": 8,
+  "incidents": {
+   "kinds": {
+    "show": 777,
+    "breakdown": 511,
+    "client": 97
+   },
+   "causes": {
+    "short-crew": 250,
+    "rider": 135,
+    "bad-luck": 83,
+    "rider-twice": 32,
+    "winter": 185,
+    "breakdown-inc": 454,
+    "overdue": 12,
+    "disaster": 39,
+    "no-show": 35,
+    "kit-failed": 25,
+    "kit-worn": 7,
+    "tired-crew": 5,
+    "no-goodwill": 1,
+    "client-cancel": 26,
+    "terms": 21,
+    "room": 2,
+    "change-kit": 14,
+    "late": 37,
+    "venue": 11,
+    "change-early": 5,
+    "old": 388,
+    "no-terms": 5,
+    "brand-fault": 1,
+    "worn": 362,
+    "prep": 82,
+    "tickets": 5,
+    "change-hour": 2
+   },
+   "main": {
+    "short-crew": 107,
+    "rider": 122,
+    "bad-luck": 83,
+    "rider-twice": 32,
+    "winter": 37,
+    "breakdown-inc": 434,
+    "overdue": 3,
+    "disaster": 39,
+    "no-show": 35,
+    "client-cancel": 26,
+    "kit-failed": 18,
+    "tired-crew": 2,
+    "room": 1,
+    "change-kit": 2,
+    "late": 3,
+    "old": 388,
+    "brand-fault": 1,
+    "prep": 51,
+    "kit-worn": 1
+   }
+  },
+  "bans": 41,
+  "kitCondition": {
+   "average": 85,
+   "end": 97
+  },
+  "road": {
+   "km": 11828383,
+   "breakdowns": 511,
+   "per100k": 4.32,
+   "reliability": 46
+  },
+  "monthsOverdrawn": 0,
+  "lowestCash": 17933,
+  "forecastWarnings": 8,
+  "bot": {
+   "termsAsked": 927,
+   "termsWon": 591,
+   "crossHires": 84,
+   "fixes": 35,
+   "crewSplits": 0,
+   "heads": [
+    "crew@1984",
+    "finance@1984",
+    "production@1984"
+   ],
+   "lessons": [
+    "workshop→full@1999"
+   ],
+   "refurbished": 221,
+   "borrowed": 30000,
+   "factoredMonths": 17,
+   "frozenMonths": 5,
+   "replanned": 0
+  },
+  "rivals": {
+   "alive": 12,
+   "gone": 19,
+   "shows": 13921,
+   "failed": 1,
+   "avgQuality": 0.72,
+   "crossHires": 509,
+   "fixes": 679,
+   "declined": {
+    "rider": 0,
+    "kit": 5,
+    "crew": 2,
+    "trucks": 0,
+    "room": 85
+   },
+   "cashNegative": 2
+  },
+  "invariantViolations": [],
+  "shockLog": [],
+  "yearly": [
+   {
+    "year": 1980,
+    "reputation": 39.5,
+    "value": 128548
+   },
+   {
+    "year": 1981,
+    "reputation": 43.6,
+    "value": 170371
+   },
+   {
+    "year": 1982,
+    "reputation": 53.6,
+    "value": 299824
+   },
+   {
+    "year": 1983,
+    "reputation": 60.1,
+    "value": 594477
+   },
+   {
+    "year": 1984,
+    "reputation": 68.6,
+    "value": 942003
+   },
+   {
+    "year": 1985,
+    "reputation": 72.2,
+    "value": 1766567
+   },
+   {
+    "year": 1986,
+    "reputation": 71.2,
+    "value": 3110549
+   },
+   {
+    "year": 1987,
+    "reputation": 69.3,
+    "value": 3996306
+   },
+   {
+    "year": 1988,
+    "reputation": 67.9,
+    "value": 4745097
+   },
+   {
+    "year": 1989,
+    "reputation": 68,
+    "value": 5857624
+   },
+   {
+    "year": 1990,
+    "reputation": 69.7,
+    "value": 6287342
+   },
+   {
+    "year": 1991,
+    "reputation": 66.3,
+    "value": 7164683
+   },
+   {
+    "year": 1992,
+    "reputation": 72.6,
+    "value": 8443465
+   },
+   {
+    "year": 1993,
+    "reputation": 72.6,
+    "value": 8580012
+   },
+   {
+    "year": 1994,
+    "reputation": 79.1,
+    "value": 8607264
+   },
+   {
+    "year": 1995,
+    "reputation": 89.3,
+    "value": 10375795
+   },
+   {
+    "year": 1996,
+    "reputation": 88.5,
+    "value": 12080176
+   },
+   {
+    "year": 1997,
+    "reputation": 90.8,
+    "value": 13401252
+   },
+   {
+    "year": 1998,
+    "reputation": 92.1,
+    "value": 14547525
+   },
+   {
+    "year": 1999,
+    "reputation": 89.4,
+    "value": 15785863
+   },
+   {
+    "year": 2000,
+    "reputation": 90.5,
+    "value": 16854740
+   },
+   {
+    "year": 2001,
+    "reputation": 91.9,
+    "value": 17925085
+   },
+   {
+    "year": 2002,
+    "reputation": 92.3,
+    "value": 19413414
+   },
+   {
+    "year": 2003,
+    "reputation": 90.1,
+    "value": 21543469
+   },
+   {
+    "year": 2004,
+    "reputation": 92.9,
+    "value": 23657480
+   },
+   {
+    "year": 2005,
+    "reputation": 92.9,
+    "value": 24424447
+   },
+   {
+    "year": 2006,
+    "reputation": 97.3,
+    "value": 26695871
+   },
+   {
+    "year": 2007,
+    "reputation": 97.2,
+    "value": 28535840
+   },
+   {
+    "year": 2008,
+    "reputation": 87.8,
+    "value": 30683226
+   },
+   {
+    "year": 2009,
+    "reputation": 92.9,
+    "value": 30988071
+   }
+  ]
+ },
+ {
+  "country": "GB",
+  "startYear": 1980,
+  "seed": 3,
+  "strategy": "managed",
+  "survived": true,
+  "yearsRun": 30,
+  "value": 35337259,
+  "cash": 34689313,
+  "loan": 0,
+  "reputation": 94,
+  "shows": 9331,
+  "failed": 21,
+  "avgQuality": 0.88,
+  "ledger": {
+   "wages": -18017653,
+   "running": -2082170,
+   "merch": 34060,
+   "fuel": -471224,
+   "travel": -2620350,
+   "shows": 106462338,
+   "subhire": -15822610,
+   "purchases": -745300,
+   "property": -2283520,
+   "salaries": -3043700,
+   "overheads": -4021112,
+   "workshop": -1708255,
+   "training": -432480,
+   "insurance": -476298,
+   "freelance": -2170140,
+   "servicing": -954990,
+   "tolls": -1107256,
+   "onsite": -1001329,
+   "sponsorship": 2194110,
+   "tax": -12498850,
+   "marketing": -113675,
+   "facilities": -4287440,
+   "penalties": -154045,
+   "zones": -38800
+  },
+  "revenue": 108690508,
+  "costs": 74051197,
+  "utilisation": 25.9,
+  "fleet": 12,
+  "crew": 25,
+  "crewLost": 0,
+  "burnout": 0,
+  "trusted": 64,
+  "feuds": 6,
+  "incidents": {
+   "kinds": {
+    "show": 500,
+    "client": 112,
+    "breakdown": 186
+   },
+   "causes": {
+    "rider": 188,
+    "short-crew": 258,
+    "rider-twice": 57,
+    "winter": 72,
+    "breakdown-inc": 137,
+    "late": 29,
+    "bad-luck": 27,
+    "kit-worn": 10,
+    "disaster": 21,
+    "no-show": 21,
+    "overdue": 1,
+    "kit-failed": 30,
+    "client-cancel": 33,
+    "no-terms": 15,
+    "change-kit": 6,
+    "prep": 67,
+    "terms": 18,
+    "old": 142,
+    "lost-client": 1,
+    "recall": 1,
+    "venue": 8,
+    "worn": 130,
+    "brand-fault": 1,
+    "tickets": 7,
+    "change-early": 1,
+    "room": 3,
+    "unrehearsed": 1
+   },
+   "main": {
+    "rider": 162,
+    "rider-twice": 57,
+    "short-crew": 135,
+    "winter": 15,
+    "breakdown-inc": 135,
+    "bad-luck": 27,
+    "disaster": 21,
+    "no-show": 21,
+    "overdue": 1,
+    "kit-failed": 23,
+    "client-cancel": 33,
+    "old": 142,
+    "lost-client": 1,
+    "recall": 1,
+    "brand-fault": 1,
+    "prep": 19,
+    "room": 1,
+    "kit-worn": 2,
+    "unrehearsed": 1
+   }
+  },
+  "bans": 42,
+  "kitCondition": {
+   "average": 83,
+   "end": 98
+  },
+  "road": {
+   "km": 4088266,
+   "breakdowns": 185,
+   "per100k": 4.53,
+   "reliability": 47
+  },
+  "monthsOverdrawn": 0,
+  "lowestCash": 23290,
+  "forecastWarnings": 14,
+  "bot": {
+   "termsAsked": 713,
+   "termsWon": 452,
+   "crossHires": 62,
+   "fixes": 25,
+   "crewSplits": 0,
+   "heads": [
+    "crew@1985",
+    "production@1985",
+    "finance@1985"
+   ],
+   "lessons": [
+    "workshop→full@2004"
+   ],
+   "refurbished": 349,
+   "borrowed": 0,
+   "factoredMonths": 52,
+   "frozenMonths": 6,
+   "replanned": 0
+  },
+  "rivals": {
+   "alive": 11,
+   "gone": 12,
+   "shows": 18484,
+   "failed": 1,
+   "avgQuality": 0.67,
+   "crossHires": 331,
+   "fixes": 949,
+   "declined": {
+    "rider": 0,
+    "kit": 0,
+    "crew": 7,
+    "room": 64
+   },
+   "cashNegative": 1
+  },
+  "invariantViolations": [],
+  "shockLog": [
+   {
+    "kind": "lose-client",
+    "day": 3710,
+    "what": "lost The Stone Roses (19% of the year's work, 0 booked shows)"
+   },
+   {
+    "kind": "recall",
+    "day": 3730,
+    "what": "recalled 10 × Bedford TK box truck"
+   },
+   {
+    "kind": "downturn",
+    "day": 3750,
+    "what": "downturn"
+   },
+   {
+    "kind": "late-payers",
+    "day": 3770,
+    "what": "late-payers"
+   }
+  ],
+  "yearly": [
+   {
+    "year": 1980,
+    "reputation": 39.2,
+    "value": 109067
+   },
+   {
+    "year": 1981,
+    "reputation": 46.7,
+    "value": 131423
+   },
+   {
+    "year": 1982,
+    "reputation": 50.1,
+    "value": 125765
+   },
+   {
+    "year": 1983,
+    "reputation": 59.2,
+    "value": 293384
+   },
+   {
+    "year": 1984,
+    "reputation": 67,
+    "value": 553260
+   },
+   {
+    "year": 1985,
+    "reputation": 70,
+    "value": 1071843
+   },
+   {
+    "year": 1986,
+    "reputation": 74.6,
+    "value": 2229686
+   },
+   {
+    "year": 1987,
+    "reputation": 79,
+    "value": 3319965
+   },
+   {
+    "year": 1988,
+    "reputation": 83.9,
+    "value": 3199579
+   },
+   {
+    "year": 1989,
+    "reputation": 86.4,
+    "value": 4818775
+   },
+   {
+    "year": 1990,
+    "reputation": 69.3,
+    "value": 4281739
+   },
+   {
+    "year": 1991,
+    "reputation": 77.4,
+    "value": 4606636
+   },
+   {
+    "year": 1992,
+    "reputation": 86.9,
+    "value": 5830276
+   },
+   {
+    "year": 1993,
+    "reputation": 92.2,
+    "value": 7609041
+   },
+   {
+    "year": 1994,
+    "reputation": 99.7,
+    "value": 9224998
+   },
+   {
+    "year": 1995,
+    "reputation": 92,
+    "value": 10671414
+   },
+   {
+    "year": 1996,
+    "reputation": 92.2,
+    "value": 11810750
+   },
+   {
+    "year": 1997,
+    "reputation": 90.5,
+    "value": 13639955
+   },
+   {
+    "year": 1998,
+    "reputation": 92.5,
+    "value": 14678175
+   },
+   {
+    "year": 1999,
+    "reputation": 97.8,
+    "value": 16485450
+   },
+   {
+    "year": 2000,
+    "reputation": 99.3,
+    "value": 17899789
+   },
+   {
+    "year": 2001,
+    "reputation": 98.1,
+    "value": 18673220
+   },
+   {
+    "year": 2002,
+    "reputation": 97.7,
+    "value": 20130630
+   },
+   {
+    "year": 2003,
+    "reputation": 94.6,
+    "value": 22105901
+   },
+   {
+    "year": 2004,
+    "reputation": 97.3,
+    "value": 24141271
+   },
+   {
+    "year": 2005,
+    "reputation": 95,
+    "value": 25854445
+   },
+   {
+    "year": 2006,
+    "reputation": 92.7,
+    "value": 27899281
+   },
+   {
+    "year": 2007,
+    "reputation": 99.2,
+    "value": 31118900
+   },
+   {
+    "year": 2008,
+    "reputation": 100,
+    "value": 33681765
+   },
+   {
+    "year": 2009,
+    "reputation": 93,
+    "value": 35105170
+   }
+  ]
+ },
+ {
+  "country": "GB",
+  "startYear": 1980,
+  "seed": 4,
+  "strategy": "managed",
+  "survived": true,
+  "yearsRun": 30,
+  "value": 36446385,
+  "cash": 35623250,
+  "loan": 0,
+  "reputation": 98,
+  "shows": 9263,
+  "failed": 23,
+  "avgQuality": 0.88,
+  "ledger": {
+   "wages": -18134193,
+   "running": -2094710,
+   "subhire": -16864562,
+   "shows": 109465417,
+   "fuel": -457639,
+   "travel": -2556750,
+   "tolls": -1229568,
+   "property": -2383120,
+   "salaries": -3076900,
+   "overheads": -4076556,
+   "workshop": -1515560,
+   "training": -440900,
+   "insurance": -535938,
+   "servicing": -962770,
+   "freelance": -2226000,
+   "purchases": -691300,
+   "tax": -12827180,
+   "sponsorship": 1919760,
+   "onsite": -942578,
+   "marketing": -79495,
+   "facilities": -4492270,
+   "merch": 30790,
+   "interest": -563,
+   "penalties": -210164,
+   "zones": -44000
+  },
+  "revenue": 111415967,
+  "costs": 75842716,
+  "utilisation": 25.7,
+  "fleet": 12,
+  "crew": 25,
+  "crewLost": 0,
+  "burnout": 0,
+  "trusted": 58,
+  "feuds": 7,
+  "incidents": {
+   "kinds": {
+    "show": 572,
+    "breakdown": 190,
+    "client": 138,
+    "cash": 1
+   },
+   "causes": {
+    "rider": 212,
+    "short-crew": 277,
+    "bad-luck": 34,
+    "client-cancel": 50,
+    "no-terms": 18,
+    "rider-twice": 64,
+    "breakdown-inc": 145,
+    "kit-failed": 48,
+    "kit-worn": 8,
+    "feud": 2,
+    "late": 29,
+    "winter": 67,
+    "unpaid-invoices": 1,
+    "overdrawn": 1,
+    "prep": 116,
+    "venue": 11,
+    "disaster": 23,
+    "no-show": 23,
+    "terms": 32,
+    "lost-client": 1,
+    "recall": 1,
+    "old": 150,
+    "change-kit": 8,
+    "worn": 131,
+    "overdue": 1,
+    "tickets": 7,
+    "brand-fault": 2,
+    "room": 4
+   },
+   "main": {
+    "rider": 180,
+    "bad-luck": 34,
+    "client-cancel": 50,
+    "rider-twice": 64,
+    "short-crew": 135,
+    "breakdown-inc": 143,
+    "kit-failed": 38,
+    "winter": 5,
+    "unpaid-invoices": 1,
+    "disaster": 23,
+    "no-show": 23,
+    "lost-client": 1,
+    "recall": 1,
+    "old": 150,
+    "prep": 47,
+    "brand-fault": 2,
+    "room": 3,
+    "late": 1
+   }
+  },
+  "bans": 38,
+  "kitCondition": {
+   "average": 80,
+   "end": 80
+  },
+  "road": {
+   "km": 3976420,
+   "breakdowns": 189,
+   "per100k": 4.75,
+   "reliability": 47
+  },
+  "monthsOverdrawn": 0,
+  "lowestCash": -14804,
+  "forecastWarnings": 12,
+  "bot": {
+   "termsAsked": 867,
+   "termsWon": 535,
+   "crossHires": 117,
+   "fixes": 37,
+   "crewSplits": 13,
+   "heads": [
+    "crew@1984",
+    "finance@1985",
+    "production@1985"
+   ],
+   "lessons": [],
+   "refurbished": 398,
+   "borrowed": 40000,
+   "factoredMonths": 53,
+   "frozenMonths": 7,
+   "replanned": 0
+  },
+  "rivals": {
+   "alive": 8,
+   "gone": 14,
+   "shows": 16405,
+   "failed": 1,
+   "avgQuality": 0.64,
+   "crossHires": 156,
+   "fixes": 783,
+   "declined": {
+    "rider": 0,
+    "kit": 46,
+    "crew": 2,
+    "trucks": 0,
+    "room": 62
+   },
+   "cashNegative": 1
+  },
+  "invariantViolations": [],
+  "shockLog": [
+   {
+    "kind": "lose-client",
+    "day": 3710,
+    "what": "lost The Stone Roses (18% of the year's work, 0 booked shows)"
+   },
+   {
+    "kind": "recall",
+    "day": 3730,
+    "what": "recalled 10 × Bedford TK box truck"
+   },
+   {
+    "kind": "downturn",
+    "day": 3750,
+    "what": "downturn"
+   },
+   {
+    "kind": "late-payers",
+    "day": 3770,
+    "what": "late-payers"
+   }
+  ],
+  "yearly": [
+   {
+    "year": 1980,
+    "reputation": 40.6,
+    "value": 118533
+   },
+   {
+    "year": 1981,
+    "reputation": 47.4,
+    "value": 126092
+   },
+   {
+    "year": 1982,
+    "reputation": 56,
+    "value": 159878
+   },
+   {
+    "year": 1983,
+    "reputation": 68.1,
+    "value": 403195
+   },
+   {
+    "year": 1984,
+    "reputation": 76.3,
+    "value": 975469
+   },
+   {
+    "year": 1985,
+    "reputation": 83.3,
+    "value": 1327324
+   },
+   {
+    "year": 1986,
+    "reputation": 84,
+    "value": 2645799
+   },
+   {
+    "year": 1987,
+    "reputation": 80.7,
+    "value": 3120779
+   },
+   {
+    "year": 1988,
+    "reputation": 80.5,
+    "value": 3884400
+   },
+   {
+    "year": 1989,
+    "reputation": 85.4,
+    "value": 5254463
+   },
+   {
+    "year": 1990,
+    "reputation": 68,
+    "value": 5121031
+   },
+   {
+    "year": 1991,
+    "reputation": 74.5,
+    "value": 5134567
+   },
+   {
+    "year": 1992,
+    "reputation": 81.9,
+    "value": 5935564
+   },
+   {
+    "year": 1993,
+    "reputation": 92,
+    "value": 7374567
+   },
+   {
+    "year": 1994,
+    "reputation": 96.4,
+    "value": 8656859
+   },
+   {
+    "year": 1995,
+    "reputation": 98.2,
+    "value": 10945351
+   },
+   {
+    "year": 1996,
+    "reputation": 99.7,
+    "value": 12330225
+   },
+   {
+    "year": 1997,
+    "reputation": 99.9,
+    "value": 14897870
+   },
+   {
+    "year": 1998,
+    "reputation": 98,
+    "value": 16426822
+   },
+   {
+    "year": 1999,
+    "reputation": 99.4,
+    "value": 18021439
+   },
+   {
+    "year": 2000,
+    "reputation": 94.6,
+    "value": 19496523
+   },
+   {
+    "year": 2001,
+    "reputation": 96.8,
+    "value": 20039082
+   },
+   {
+    "year": 2002,
+    "reputation": 88.7,
+    "value": 20971585
+   },
+   {
+    "year": 2003,
+    "reputation": 92.6,
+    "value": 23359175
+   },
+   {
+    "year": 2004,
+    "reputation": 94.1,
+    "value": 24893752
+   },
+   {
+    "year": 2005,
+    "reputation": 94.6,
+    "value": 26820886
+   },
+   {
+    "year": 2006,
+    "reputation": 96.1,
+    "value": 28535500
+   },
+   {
+    "year": 2007,
+    "reputation": 92,
+    "value": 31927781
+   },
+   {
+    "year": 2008,
+    "reputation": 99.9,
+    "value": 34579651
+   },
+   {
+    "year": 2009,
+    "reputation": 97.4,
+    "value": 36193714
+   }
+  ]
+ },
+ {
+  "country": "ES",
+  "startYear": 1980,
+  "seed": 3,
+  "strategy": "managed",
+  "survived": true,
+  "yearsRun": 30,
+  "value": 35333309,
+  "cash": 34764415,
+  "loan": 0,
+  "reputation": 100,
+  "shows": 10329,
+  "failed": 36,
+  "avgQuality": 0.9,
+  "ledger": {
+   "wages": -19008754,
+   "running": -2171660,
+   "travel": -5232975,
+   "fuel": -1527574,
+   "shows": 109267620,
+   "freelance": -2511775,
+   "tolls": -363472,
+   "property": -2133400,
+   "salaries": -3156500,
+   "overheads": -4166780,
+   "workshop": -1645998,
+   "training": -384220,
+   "insurance": -433038,
+   "subhire": -13792844,
+   "servicing": -1068550,
+   "purchases": -661900,
+   "sponsorship": 2101090,
+   "tax": -12884870,
+   "onsite": -1276668,
+   "penalties": -155483,
+   "marketing": -22785,
+   "merch": 20560,
+   "facilities": -4075610
+  },
+  "revenue": 111389270,
+  "costs": 76674856,
+  "utilisation": 28.7,
+  "fleet": 12,
+  "crew": 25,
+  "crewLost": 2,
+  "burnout": 0,
+  "trusted": 92,
+  "feuds": 14,
+  "incidents": {
+   "kinds": {
+    "show": 860,
+    "breakdown": 551,
+    "client": 112
+   },
+   "causes": {
+    "rider": 190,
+    "short-crew": 291,
+    "bad-luck": 86,
+    "winter": 194,
+    "breakdown-inc": 508,
+    "disaster": 37,
+    "no-show": 35,
+    "rider-twice": 47,
+    "tired-crew": 6,
+    "overdue": 23,
+    "late": 29,
+    "no-goodwill": 1,
+    "change-hour": 3,
+    "kit-failed": 19,
+    "worn": 384,
+    "client-cancel": 27,
+    "no-terms": 3,
+    "terms": 24,
+    "prep": 80,
+    "venue": 10,
+    "old": 419,
+    "change-kit": 3,
+    "lost-client": 1,
+    "recall": 1,
+    "brand-fault": 5,
+    "kit-worn": 10,
+    "tickets": 4,
+    "unrehearsed": 2,
+    "room": 2
+   },
+   "main": {
+    "rider": 181,
+    "short-crew": 93,
+    "bad-luck": 86,
+    "winter": 40,
+    "breakdown-inc": 482,
+    "disaster": 37,
+    "no-show": 35,
+    "rider-twice": 47,
+    "tired-crew": 1,
+    "overdue": 5,
+    "late": 7,
+    "change-hour": 2,
+    "kit-failed": 12,
+    "worn": 1,
+    "client-cancel": 27,
+    "old": 418,
+    "prep": 36,
+    "lost-client": 1,
+    "recall": 1,
+    "brand-fault": 5,
+    "kit-worn": 2,
+    "unrehearsed": 2,
+    "room": 2
+   }
+  },
+  "bans": 48,
+  "kitCondition": {
+   "average": 83,
+   "end": 98
+  },
+  "road": {
+   "km": 13058374,
+   "breakdowns": 550,
+   "per100k": 4.21,
+   "reliability": 46
+  },
+  "monthsOverdrawn": 0,
+  "lowestCash": 16675,
+  "forecastWarnings": 15,
+  "bot": {
+   "termsAsked": 1044,
+   "termsWon": 697,
+   "crossHires": 80,
+   "fixes": 17,
+   "crewSplits": 0,
+   "heads": [
+    "production@1984",
+    "crew@1984",
+    "finance@1984"
+   ],
+   "lessons": [
+    "workshop→full@2003"
+   ],
+   "refurbished": 272,
+   "borrowed": 0,
+   "factoredMonths": 45,
+   "frozenMonths": 8,
+   "replanned": 0
+  },
+  "rivals": {
+   "alive": 11,
+   "gone": 14,
+   "shows": 12143,
+   "failed": 0,
+   "avgQuality": 0.72,
+   "crossHires": 272,
+   "fixes": 341,
+   "declined": {
+    "kit": 0,
+    "crew": 1,
+    "rider": 1,
+    "room": 45
+   },
+   "cashNegative": 2
+  },
+  "invariantViolations": [],
+  "shockLog": [
+   {
+    "kind": "lose-client",
+    "day": 3710,
+    "what": "lost Rosendo (14% of the year's work, 0 booked shows)"
+   },
+   {
+    "kind": "recall",
+    "day": 3730,
+    "what": "recalled 10 × Bedford TK box truck"
+   },
+   {
+    "kind": "downturn",
+    "day": 3750,
+    "what": "downturn"
+   },
+   {
+    "kind": "late-payers",
+    "day": 3770,
+    "what": "late-payers"
+   }
+  ],
+  "yearly": [
+   {
+    "year": 1980,
+    "reputation": 40.4,
+    "value": 137600
+   },
+   {
+    "year": 1981,
+    "reputation": 42.4,
+    "value": 175379
+   },
+   {
+    "year": 1982,
+    "reputation": 49.8,
+    "value": 375861
+   },
+   {
+    "year": 1983,
+    "reputation": 55,
+    "value": 634632
+   },
+   {
+    "year": 1984,
+    "reputation": 65.4,
+    "value": 1042687
+   },
+   {
+    "year": 1985,
+    "reputation": 68.8,
+    "value": 1549794
+   },
+   {
+    "year": 1986,
+    "reputation": 68,
+    "value": 2722482
+   },
+   {
+    "year": 1987,
+    "reputation": 68,
+    "value": 3734103
+   },
+   {
+    "year": 1988,
+    "reputation": 69.3,
+    "value": 4951135
+   },
+   {
+    "year": 1989,
+    "reputation": 73.4,
+    "value": 5773378
+   },
+   {
+    "year": 1990,
+    "reputation": 69.6,
+    "value": 5923236
+   },
+   {
+    "year": 1991,
+    "reputation": 69.3,
+    "value": 6685728
+   },
+   {
+    "year": 1992,
+    "reputation": 76.6,
+    "value": 8149492
+   },
+   {
+    "year": 1993,
+    "reputation": 82.1,
+    "value": 8306491
+   },
+   {
+    "year": 1994,
+    "reputation": 91.9,
+    "value": 9114276
+   },
+   {
+    "year": 1995,
+    "reputation": 97.2,
+    "value": 10792982
+   },
+   {
+    "year": 1996,
+    "reputation": 92.7,
+    "value": 12408665
+   },
+   {
+    "year": 1997,
+    "reputation": 87.4,
+    "value": 14530101
+   },
+   {
+    "year": 1998,
+    "reputation": 92.3,
+    "value": 15826877
+   },
+   {
+    "year": 1999,
+    "reputation": 98.9,
+    "value": 17834613
+   },
+   {
+    "year": 2000,
+    "reputation": 99.8,
+    "value": 19079635
+   },
+   {
+    "year": 2001,
+    "reputation": 95.8,
+    "value": 20074564
+   },
+   {
+    "year": 2002,
+    "reputation": 91.9,
+    "value": 20981917
+   },
+   {
+    "year": 2003,
+    "reputation": 95,
+    "value": 23843778
+   },
+   {
+    "year": 2004,
+    "reputation": 96.2,
+    "value": 25473470
+   },
+   {
+    "year": 2005,
+    "reputation": 99.9,
+    "value": 28131249
+   },
+   {
+    "year": 2006,
+    "reputation": 99.7,
+    "value": 30335517
+   },
+   {
+    "year": 2007,
+    "reputation": 99.8,
+    "value": 32583922
+   },
+   {
+    "year": 2008,
+    "reputation": 95.8,
+    "value": 34359333
+   },
+   {
+    "year": 2009,
+    "reputation": 99.4,
+    "value": 35189350
+   }
+  ]
+ },
+ {
+  "country": "ES",
+  "startYear": 1980,
+  "seed": 4,
+  "strategy": "managed",
+  "survived": true,
+  "yearsRun": 30,
+  "value": 34374590,
+  "cash": 33898965,
+  "loan": 0,
+  "reputation": 97,
+  "shows": 10197,
+  "failed": 37,
+  "avgQuality": 0.84,
+  "ledger": {
+   "wages": -18878583,
+   "running": -2157410,
+   "subhire": -13243476,
+   "shows": 106316550,
+   "travel": -4920525,
+   "fuel": -1364439,
+   "tolls": -358402,
+   "property": -2177320,
+   "salaries": -3146700,
+   "overheads": -4114548,
+   "workshop": -1342978,
+   "training": -384480,
+   "insurance": -513155,
+   "purchases": -734300,
+   "servicing": -1052180,
+   "onsite": -1199531,
+   "freelance": -2266180,
+   "merch": 27610,
+   "tax": -12435140,
+   "sponsorship": 1917560,
+   "penalties": -183983,
+   "marketing": -56985,
+   "facilities": -3881050,
+   "interest": -1389
+  },
+  "revenue": 108261720,
+  "costs": 74412754,
+  "utilisation": 28.3,
+  "fleet": 12,
+  "crew": 25,
+  "crewLost": 0,
+  "burnout": 0,
+  "trusted": 82,
+  "feuds": 5,
+  "incidents": {
+   "kinds": {
+    "show": 786,
+    "breakdown": 530,
+    "client": 104
+   },
+   "causes": {
+    "short-crew": 251,
+    "rider": 150,
+    "bad-luck": 75,
+    "rider-twice": 39,
+    "winter": 195,
+    "breakdown-inc": 466,
+    "overdue": 17,
+    "disaster": 38,
+    "no-show": 35,
+    "kit-failed": 22,
+    "kit-worn": 2,
+    "tired-crew": 5,
+    "no-goodwill": 1,
+    "client-cancel": 26,
+    "terms": 16,
+    "room": 1,
+    "change-kit": 12,
+    "late": 21,
+    "venue": 6,
+    "change-early": 3,
+    "old": 407,
+    "no-terms": 10,
+    "brand-fault": 1,
+    "worn": 382,
+    "lost-client": 1,
+    "recall": 1,
+    "prep": 116,
+    "tickets": 5,
+    "change-hour": 4
+   },
+   "main": {
+    "short-crew": 101,
+    "rider": 136,
+    "bad-luck": 75,
+    "rider-twice": 39,
+    "winter": 43,
+    "breakdown-inc": 450,
+    "overdue": 4,
+    "disaster": 38,
+    "no-show": 35,
+    "client-cancel": 26,
+    "kit-failed": 14,
+    "tired-crew": 2,
+    "room": 1,
+    "change-kit": 2,
+    "late": 3,
+    "old": 407,
+    "brand-fault": 1,
+    "lost-client": 1,
+    "recall": 1,
+    "prep": 39,
+    "change-hour": 2
+   }
+  },
+  "bans": 41,
+  "kitCondition": {
+   "average": 79,
+   "end": 80
+  },
+  "road": {
+   "km": 11715616,
+   "breakdowns": 529,
+   "per100k": 4.52,
+   "reliability": 46
+  },
+  "monthsOverdrawn": 0,
+  "lowestCash": 17933,
+  "forecastWarnings": 8,
+  "bot": {
+   "termsAsked": 1023,
+   "termsWon": 613,
+   "crossHires": 84,
+   "fixes": 35,
+   "crewSplits": 0,
+   "heads": [
+    "crew@1984",
+    "finance@1984",
+    "production@1984"
+   ],
+   "lessons": [],
+   "refurbished": 196,
+   "borrowed": 30000,
+   "factoredMonths": 17,
+   "frozenMonths": 5,
+   "replanned": 0
+  },
+  "rivals": {
+   "alive": 14,
+   "gone": 15,
+   "shows": 14587,
+   "failed": 1,
+   "avgQuality": 0.73,
+   "crossHires": 211,
+   "fixes": 748,
+   "declined": {
+    "rider": 0,
+    "kit": 0,
+    "crew": 10,
+    "room": 83
+   },
+   "cashNegative": 3
+  },
+  "invariantViolations": [],
+  "shockLog": [
+   {
+    "kind": "lose-client",
+    "day": 3710,
+    "what": "lost Loquillo y los Trogloditas (19% of the year's work, 1 booked shows)"
+   },
+   {
+    "kind": "recall",
+    "day": 3730,
+    "what": "recalled 10 × Bedford TK box truck"
+   },
+   {
+    "kind": "downturn",
+    "day": 3750,
+    "what": "downturn"
+   },
+   {
+    "kind": "late-payers",
+    "day": 3770,
+    "what": "late-payers"
+   }
+  ],
+  "yearly": [
+   {
+    "year": 1980,
+    "reputation": 39.5,
+    "value": 128548
+   },
+   {
+    "year": 1981,
+    "reputation": 43.6,
+    "value": 170371
+   },
+   {
+    "year": 1982,
+    "reputation": 53.6,
+    "value": 299824
+   },
+   {
+    "year": 1983,
+    "reputation": 60.1,
+    "value": 594477
+   },
+   {
+    "year": 1984,
+    "reputation": 68.6,
+    "value": 942003
+   },
+   {
+    "year": 1985,
+    "reputation": 72.2,
+    "value": 1766567
+   },
+   {
+    "year": 1986,
+    "reputation": 71.2,
+    "value": 3110549
+   },
+   {
+    "year": 1987,
+    "reputation": 69.3,
+    "value": 3996306
+   },
+   {
+    "year": 1988,
+    "reputation": 67.9,
+    "value": 4745097
+   },
+   {
+    "year": 1989,
+    "reputation": 68,
+    "value": 5857624
+   },
+   {
+    "year": 1990,
+    "reputation": 68.2,
+    "value": 5722708
+   },
+   {
+    "year": 1991,
+    "reputation": 77.9,
+    "value": 6393322
+   },
+   {
+    "year": 1992,
+    "reputation": 90.1,
+    "value": 7770899
+   },
+   {
+    "year": 1993,
+    "reputation": 95.3,
+    "value": 8864185
+   },
+   {
+    "year": 1994,
+    "reputation": 94.1,
+    "value": 9621583
+   },
+   {
+    "year": 1995,
+    "reputation": 94.9,
+    "value": 11343489
+   },
+   {
+    "year": 1996,
+    "reputation": 96.9,
+    "value": 13390148
+   },
+   {
+    "year": 1997,
+    "reputation": 92,
+    "value": 15656481
+   },
+   {
+    "year": 1998,
+    "reputation": 84.3,
+    "value": 16379207
+   },
+   {
+    "year": 1999,
+    "reputation": 83,
+    "value": 17260436
+   },
+   {
+    "year": 2000,
+    "reputation": 92.1,
+    "value": 18549266
+   },
+   {
+    "year": 2001,
+    "reputation": 92.3,
+    "value": 19544983
+   },
+   {
+    "year": 2002,
+    "reputation": 94.6,
+    "value": 21334740
+   },
+   {
+    "year": 2003,
+    "reputation": 99.9,
+    "value": 23937077
+   },
+   {
+    "year": 2004,
+    "reputation": 99.9,
+    "value": 25943698
+   },
+   {
+    "year": 2005,
+    "reputation": 92.3,
+    "value": 27686203
+   },
+   {
+    "year": 2006,
+    "reputation": 94.6,
+    "value": 29572143
+   },
+   {
+    "year": 2007,
+    "reputation": 99.6,
+    "value": 31587701
+   },
+   {
+    "year": 2008,
+    "reputation": 100,
+    "value": 33191311
+   },
+   {
+    "year": 2009,
+    "reputation": 97.5,
+    "value": 34258352
+   }
+  ]
+ }
+]

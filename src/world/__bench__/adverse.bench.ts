@@ -14,9 +14,9 @@ import type { CountryCode } from '../content/countries';
  *   ADVERSE_RUNS='[["GB",1995]]' ADVERSE_SEEDS='[3]' ADVERSE_STRATEGIES=managed npm run balance:adverse
  */
 const RUNS: [CountryCode, number][] = JSON.parse(process.env.ADVERSE_RUNS ?? '[["GB",1995],["ES",1990]]');
-const SEEDS: number[] = JSON.parse(process.env.ADVERSE_SEEDS ?? '[3,4]');
-const YEARS = Number(process.env.ADVERSE_YEARS ?? 6);
-const SHOCK_DAY = Number(process.env.ADVERSE_DAY ?? 365 * 2 + 120);
+const SEEDS: number[] = JSON.parse(process.env.ADVERSE_SEEDS ?? '[3,4,5]');
+const YEARS = Number(process.env.ADVERSE_YEARS ?? 8);
+const SHOCK_DAY = Number(process.env.ADVERSE_DAY ?? 365 * 4 + 120);
 const IDS = (process.env.ADVERSE_STRATEGIES ?? 'managed,lean').split(',').filter(id => STRATEGIES[id]);
 const OUT = process.env.ADVERSE_OUT ?? 'docs/balance-adverse';
 
