@@ -20,6 +20,7 @@ import {
 } from '@/world/catalog';
 import { formatDay, formatHour, yearOf } from '@/world/core';
 import { MILESTONES } from '@/world/milestones';
+import { chainText, incidentsOf } from '@/world/consequences';
 import { SCENARIOS, getScenario } from '@/world/scenarios';
 import { DIFFICULTIES, DIFFICULTY_IDS, GOALS, GOAL_IDS, goalDeadlineYear, legacyScore } from '@/world/scenario';
 import { worldOf } from '@/world/mapgen';
@@ -966,6 +967,7 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
         <div className="tt-dim">Empty — for now.</div>
       )}
       <PressCharts state={state} />
+      <PostMortems state={state} />
       <h4>
         Milestones ({state.milestones.length}/{MILESTONES.length})
       </h4>
@@ -1033,6 +1035,41 @@ function PressCharts({ state }: { state: TycoonState }) {
       {chart.pan && (
         <div style={{ whiteSpace: 'normal', marginTop: 4 }}>
           📰 <b>{chart.pan.act}</b> — “{chart.pan.text}”
+        </div>
+      )}
+    </>
+  );
+}
+
+/** The incident log: what went wrong, and the chain of conditions behind it. */
+function PostMortems({ state }: { state: TycoonState }) {
+  const log = incidentsOf(state).slice(-8).reverse();
+  return (
+    <>
+      <h4>Post-mortems</h4>
+      {log.length ? (
+        <div className="tt-list">
+          {log.map(inc => (
+            <div key={inc.id} style={{ whiteSpace: 'normal', marginBottom: 8 }}>
+              <div className="tt-row">
+                <span>
+                  {inc.kind === 'cash' ? '💸' : inc.kind === 'breakdown' ? '🔧' : '🎭'} <b>{inc.title}</b>
+                </span>
+                <span className="tt-dim">{formatDay(state, Math.floor(inc.hour / 24))}</span>
+              </div>
+              <div className="tt-dim">{inc.outcome}</div>
+              {inc.causes.slice(0, 3).map(c => (
+                <div key={c.id} style={{ fontSize: 12, paddingLeft: 10 }}>
+                  ↳ <b>{c.label}</b> — {c.detail}
+                  {c.link && <span className="tt-dim"> ({chainText(state, c)})</span>}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+          When something goes wrong — a breakdown, a rough night, a bill you couldn't pay — the cause is written up here, including what set it up.
         </div>
       )}
     </>

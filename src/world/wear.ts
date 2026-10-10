@@ -6,6 +6,7 @@
  * or pay to refurbish a line all at once.
  */
 import { benchRepair } from './annexes';
+import { deferWorkshop, workshopLapsed } from './consequences';
 import { techResaleFactor } from './content/techWaves';
 import type { Rng } from '@/lib/rng';
 import { GEAR_RESALE_RATE } from './catalog';
@@ -67,6 +68,7 @@ export function wearFromShow(s: TycoonState, delivered: GearStock, days: number,
 }
 
 export function dailyWorkshop(s: TycoonState) {
+  if (workshopLapsed(s)) return;
   const w = WORKSHOP[s.policies.workshop];
   const [bench, benchCap] = benchRepair(s);
   const repair = w.repairPerDay + bench;
@@ -88,7 +90,9 @@ export const monthlyWorkshopCost = (state: TycoonState, level = state.policies.w
   Math.round(replacementValue(ownedStock(state)) * WORKSHOP[level].monthlyRate);
 
 export function monthlyWorkshop(s: TycoonState) {
-  book(s, 'workshop', -monthlyWorkshopCost(s));
+  const cost = monthlyWorkshopCost(s);
+  if (deferWorkshop(s, cost)) return;
+  book(s, 'workshop', -cost);
 }
 
 export function refurbishCost(state: TycoonState, productId: string): number {

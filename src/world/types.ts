@@ -357,6 +357,8 @@ export interface Vehicle {
   boughtHour: number;
   reliability: number;
   lastServiceHour: number;
+  /** A service fell due and was put off because cash was short (consequences.ts). */
+  serviceSkipped?: { hour: number; incidentId: string };
   status: VehicleStatus;
   /** City the vehicle is sitting in (undefined while on the road). */
   cityId?: string;
@@ -460,6 +462,8 @@ export interface Gig {
   relief?: boolean;
   /** Kit sent by rail or air freight instead of (or as well as) a truck (freight.ts). */
   freight?: { mode: 'rail' | 'air'; fromDepotId: string; gear: GearStock; arrives: number; cost: number; hours: number; returned?: boolean };
+  /** Conditions noted on the way to the night that will explain how it went (consequences.ts). */
+  trouble?: Cause[];
   venueId: string;
   cityId: string;
   tier: number;
@@ -552,6 +556,8 @@ export type InvoicingPolicy = 'hold' | 'factor' | 'insure';
 /** Money a promoter owes you (receivables.ts). */
 export interface Invoice {
   id: string;
+  /** The promoter has already paid late once (consequences.ts). */
+  slipped?: boolean;
   gigId: string;
   act: string;
   amount: number;
@@ -779,6 +785,28 @@ export interface YearStats {
 
 /** The year's books and standing (milestones.ts). */
 /** The trade press's year-end charts and reviews (charts.ts). */
+/** One reason something went wrong, with how much it contributed (0-1). */
+export interface Cause {
+  id: string;
+  label: string;
+  detail: string;
+  weight: number;
+  /** The earlier incident that set this up. */
+  link?: string;
+}
+
+/** A recorded problem and the chain of conditions that produced it (consequences.ts). */
+export interface Incident {
+  id: string;
+  hour: number;
+  kind: 'cash' | 'breakdown' | 'show' | 'client';
+  title: string;
+  gigId?: string;
+  vehicleId?: string;
+  causes: Cause[];
+  outcome: string;
+}
+
 export interface YearChart {
   year: number;
   rank: number;
@@ -909,6 +937,10 @@ export interface TycoonState {
   partners: Partial<Record<Dept, { brand: string; sinceDay: number; lapse: number }>>;
   reports: AnnualReport[];
   charts?: YearChart[];
+  /** Why things went wrong: the recent incident log (consequences.ts). */
+  incidents?: Incident[];
+  /** Maintenance you've put off because cash was short. */
+  lapses?: { workshop?: { hour: number; incidentId: string } };
   /** Exclusive production deals with acts (deals.ts). */
   deals: { id: string; act: string; tier: number; monthly: number; startDay: number; endDay: number; strikes: number; status: 'offer' | 'active' | 'ended'; offerExpires: number }[];
   /** Your own products (encoded ids, see content/gear.ts ownProductId). */

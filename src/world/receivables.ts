@@ -14,6 +14,8 @@ import type { Gig, InvoicingPolicy, Invoice, TycoonState } from './types';
 export const PAYMENT_DAYS = [0, 0, 14, 30, 45];
 export const FESTIVAL_EXTRA_DAYS = 15;
 /** Factors buy invoices at this discount. */
+/** Chance a promoter pays late, by tier. */
+export const LATE_RISK = [0, 0, 0.08, 0.12, 0.16];
 export const FACTOR_DISCOUNT = 0.035;
 /** Credit insurance premium on each invoice. */
 export const INSURE_PREMIUM = 0.012;
@@ -66,6 +68,14 @@ export function collectOrInvoice(s: TycoonState, gig: Gig, amount: number) {
 export function dailyReceivables(s: TycoonState, rng: Rng) {
   const today = dayOf(s.hour);
   if (!s.receivables.some(i => i.dueDay <= today)) return;
+  // Some promoters pay late: the money comes, but weeks after it was due.
+  s.receivables.forEach(inv => {
+    if (inv.dueDay > today || inv.slipped || inv.insured) return;
+    inv.slipped = true;
+    if (!rng.chance(LATE_RISK[Math.max(0, Math.min(4, inv.tier))])) return;
+    inv.dueDay = today + 10 + rng.nextInt(25);
+    pushNews(s, `${inv.act}'s promoter is late paying your ${formatMoney(s, inv.amount)} invoice — they promise it within ${inv.dueDay - today} days.`, 'bad');
+  });
   const due = s.receivables.filter(i => i.dueDay <= today);
   s.receivables = s.receivables.filter(i => i.dueDay > today);
   due.forEach(inv => {

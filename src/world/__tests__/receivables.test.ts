@@ -59,7 +59,9 @@ describe('getting paid', () => {
     const c3 = h.company.cash;
     collectOrInvoice(h, gig(3), 10000);
     h.hour += 24 * 31;
-    dailyReceivables(h, yes);
+    dailyReceivables(h, yes); // a promoter who is late first…
+    h.hour += 24 * 40;
+    dailyReceivables(h, yes); // …and then never pays
     expect(h.company.cash).toBe(c3);
     expect(h.news.some(n => /gone under owing you/.test(n.text))).toBe(true);
   });

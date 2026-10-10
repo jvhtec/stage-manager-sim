@@ -77,9 +77,10 @@ import { worldOf } from './mapgen';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize } from './loading';
 import { GEAR_PRODUCTS, getProduct } from './content/gear';
 import { leftBehindChance, monthlyRent, monthlySalaries, prepFailureFactor, prepOf, prepRatio } from './facilities';
+import { canAfford, deferService, lastingConsequences, nightCauses, OVERDUE_DECAY, overdueDays, postMortem, recordBreakdown, serviceCleared } from './consequences';
 import { monthlyTraining, PAY, freelancersFor, monthlyCrew, moraleBonus } from './crew';
 import { REST_AT, crewDirectives, aboard, atDepot, dailyPeopleFatigue, dailyPoachBids, dayRate, evaluateCrew, learnFromShow, moveToDepot, moveToVehicle, pickCrew, refreshCandidates, sideRng, syncCrew } from './people';
-import { dailyWorkshop, monthlyWorkshop, rollFailure, wearFromShow, type Failure } from './wear';
+import { averageCondition, dailyWorkshop, monthlyWorkshop, rollFailure, wearFromShow, type Failure } from './wear';
 import { rivalsFor } from './content/companies';
 import { getTech, techBonus, techsActiveIn } from './content/techs';
 import { dailyOffers, pruneGigs, rivalsTakeOffers, yearlyVenues } from './offers';
@@ -246,6 +247,10 @@ function maybeService(s: TycoonState, v: Vehicle, freeHours: number) {
   if (v.owner !== 'player') return false;
   const due = s.hour - v.lastServiceHour >= SERVICE_INTERVAL_DAYS * HOURS_PER_DAY;
   if (!due || freeHours < SERVICE_HOURS) return false;
+  if (!canAfford(s, SERVICE_COST)) {
+    deferService(s, v);
+    return false;
+  }
   serviceNow(s, v);
   return true;
 }
@@ -255,6 +260,7 @@ export function serviceNow(s: TycoonState, v: Vehicle) {
   v.busyUntil = s.hour + SERVICE_HOURS;
   v.lastServiceHour = s.hour;
   v.reliability = maxReliability(v, s.hour);
+  serviceCleared(v);
   book(s, 'servicing', -SERVICE_COST);
   v.profitThisYear -= SERVICE_COST;
 }
@@ -358,7 +364,8 @@ function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
         v.status = 'broken';
         v.brokenUntil = s.hour + 3 + rng.nextInt(6);
         if (v.owner === 'player') {
-          pushNews(s, `${v.name} has broken down!`, 'bad', { vehicleId: v.id });
+          const inc = recordBreakdown(s, v, !!world.era?.winter);
+          pushNews(s, `${v.name} has broken down! ${inc.causes[0].label}: ${inc.causes[0].detail}`, 'bad', { vehicleId: v.id });
           breakdownDilemma(s, v);
         }
         return;
@@ -542,6 +549,20 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
       onSite.forEach(v => (v.profitThisYear -= Math.round(papers.total / onSite.length)));
     }
   }
+  const causes = nightCauses(s, gig, {
+    lateHours,
+    failedKit: failures.map(f => `${getProduct(f.productId).brand} ${getProduct(f.productId).name}`),
+    avgCondition: averageCondition(s, delivered),
+    crewCoverage,
+    crewFatigue: onSite.length ? onSite.reduce((a, v) => a + (v.crewFatigue ?? 0), 0) / onSite.length : 0,
+    forgotten: forgotten.length,
+    unrehearsed: unrehearsed(s, gig),
+    missingTickets: tickets.missing,
+    venueNotes,
+    present,
+    workshop: s.policies.workshop,
+    noKit: !stockSize(delivered),
+  });
   if (!present || quality < 0.3) {
     const penalty = Math.round(gig.fee * NO_SHOW_PENALTY_RATE);
     book(s, 'penalties', -penalty);
@@ -553,11 +574,13 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     strike(s, gig.act, `the show at ${where} fell apart`);
     recordVenueNight(s, gig.venueId, quality, true);
     recordShow(s, yearOf(s, s.hour), quality, true, !!gig.festival);
+    const why = postMortem(s, gig, where, quality, true, causes);
+    lastingConsequences(s, gig, quality, causes);
     pushNews(
       s,
-      onSite.length
+      (onSite.length
         ? `Disaster at ${where}: ${gig.act} played to a half-built rig.${failureNote} Penalty ${formatMoney(s, penalty)}.`
-        : `No-show! Nobody turned up for ${gig.act} at ${where}. Penalty ${formatMoney(s, penalty)}.`,
+        : `No-show! Nobody turned up for ${gig.act} at ${where}. Penalty ${formatMoney(s, penalty)}.`) + why,
       'bad',
       { cityId: gig.cityId, gigId: gig.id },
     );
@@ -596,13 +619,15 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   s.stats.showsPlayed += 1;
   learnFromShow(s, people, crewEval.assigned, gig.tier >= 3 || !!gig.festival || !!gig.event);
   recordShow(s, yearOf(s, s.hour), quality, false, !!gig.festival);
+  const why = postMortem(s, gig, where, quality, false, causes);
+  lastingConsequences(s, gig, quality, causes);
   const verdict = quality >= 0.9 ? 'Storming show' : quality >= 0.7 ? 'Solid show' : 'Rough show';
   const riderNote = gear.riderMet === undefined ? '' : gear.riderMet ? ` Rider (${gig.rider!.brand}) honoured.` : ` They wanted ${gig.rider!.brand} and didn't get it.`;
   const kitNote = gear.quality < 0.8 ? ' Reviewers called the kit dated.' : '';
   const techNote = techIds.length ? ` ${techIds.map(id => getTech(id).name).join(' & ')} on the crew.` : '';
   const specialistNote = Math.abs(specialist) >= 0.015 ? ` (${specialist > 0 ? '+' : ''}${Math.round(specialist * 100)}% ${specialist > 0 ? 'specialist' : 'off-speciality'})` : '';
   const gateNote = gig.gate ? ` Tickets: ${hypeLabel(gig.gate.hype)} (gate deal).` : '';
-  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}${specialistNote}.${gateNote}${weather?.note ?? ''}${failureNote}${freelanceNote}${hire.units ? ` Sub-hired ${hire.units} unit${hire.units > 1 ? 's' : ''} from ${hire.from.join(' & ')}.` : ''}${stakes.note}${riderNote}${kitNote}${techNote}${venueNotes.length ? ` At the venue, ${venueNotes.join('; ')}.` : ''}`, quality >= 0.7 ? 'good' : 'info', {
+  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}${specialistNote}.${gateNote}${weather?.note ?? ''}${failureNote}${freelanceNote}${hire.units ? ` Sub-hired ${hire.units} unit${hire.units > 1 ? 's' : ''} from ${hire.from.join(' & ')}.` : ''}${stakes.note}${riderNote}${kitNote}${techNote}${venueNotes.length ? ` At the venue, ${venueNotes.join('; ')}.` : ''}${why}`, quality >= 0.7 ? 'good' : 'info', {
     cityId: gig.cityId,
     gigId: gig.id,
   });
@@ -668,7 +693,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     book(s, 'running', -cost);
     v.profitThisYear -= cost;
     const decay = vehicleAgeYears(v, s.hour) > model.lifespanYears ? 0.3 : 0.12;
-    v.reliability = Math.max(10, v.reliability - decay);
+    v.reliability = Math.max(10, v.reliability - decay - (overdueDays(s, v) > 0 ? OVERDUE_DECAY : 0));
   });
 
   dailyOffers(s, world, rng);
