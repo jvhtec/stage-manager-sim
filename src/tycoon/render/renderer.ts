@@ -9,7 +9,7 @@
  */
 import { gigBookingBar } from '@/world/standing';
 import { getModel, SHOW_END_HOUR, SHOW_START_HOUR, tierInfo } from '@/world/catalog';
-import { dayOf, loadInHour, loadOutDoneHour } from '@/world/core';
+import { dayOf, loadInHour, loadOutDoneHour, vehicleSpeed } from '@/world/core';
 import { kmoney } from '../ui/format';
 import { SHADOW_LAG } from './sprites';
 import { tileCorners } from '@/world/mapgen';
@@ -39,7 +39,7 @@ export interface RenderInput {
 
 export interface HitTargets {
   vehicles: { id: string; x: number; y: number }[];
-  markers: { gigIds: string[]; venueId: string; x: number; y: number; w: number; h: number }[];
+  markers: { gigIds: string[]; venueId: string; cityId?: string; x: number; y: number; w: number; h: number }[];
   labels: { cityId: string; x: number; y: number; w: number; h: number }[];
 }
 
@@ -180,6 +180,14 @@ function drawTile(rc: RC, idx: StaticIndex, x: number, y: number) {
   const variation = 0.95 + hash2(x, y) * 0.08;
   let base = TERRAIN_COLORS[t];
   if (idx.urban[i] && t !== Terrain.Water) base = [138, 150, 112];
+  // Winter: snow on the high ground.
+  if (map.era?.winter && t !== Terrain.Water) {
+    const avg = (hN + hE + hS + hW) / 4;
+    if (avg >= 2.4) {
+      const f = Math.min(0.9, (avg - 2.2) / 1.3);
+      base = [base[0] + (236 - base[0]) * f, base[1] + (241 - base[1]) * f, base[2] + (248 - base[2]) * f];
+    }
+  }
   // Neighbouring countries sit there as a muted backdrop: you can see the shape of home.
   const abroad = map.foreign[i] === 1;
   if (abroad) base = [base[0] * 0.45 + 150 * 0.55, base[1] * 0.45 + 156 * 0.55, base[2] * 0.45 + 162 * 0.55];
@@ -424,7 +432,7 @@ function placeVehicles(state: TycoonState, map: WorldMap, alpha: number) {
 
   state.vehicles.forEach(v => {
     if ((v.status === 'driving' || v.status === 'broken') && v.route) {
-      const moving = v.status === 'driving' ? getModel(v.modelId).speed * alpha : 0;
+      const moving = v.status === 'driving' ? vehicleSpeed(v) * alpha : 0;
       const pos = positionOnRoute(map, v.route.from, v.route.to, v.route.progress + moving);
       // Keep to the left, TT-style.
       const off = 0.13;
@@ -676,8 +684,9 @@ export function renderWorld(ctx: CanvasRenderingContext2D, input: RenderInput): 
 
   const planned = selectedVehicle ? state.vehicles.find(v => v.id === selectedVehicle) : undefined;
   if (planned && planned.owner === 'player') drawRoutePlan(rc, state, planned);
-  drawCityLabels(rc, state, hits);
-  drawGigMarkers(rc, state, venueTop, hits, colorFor);
+  const markers = layoutGigMarkers(rc, state, venueTop, colorFor);
+  drawCityLabels(rc, state, hits, markers.map(m => m.rect));
+  drawGigMarkers(rc, markers, hits);
   return hits;
 }
 
@@ -758,11 +767,23 @@ function outlineFootprint(rc: RC, x: number, y: number, w: number, h: number) {
   ctx.setLineDash([]);
 }
 
-function drawCityLabels(rc: RC, state: TycoonState, hits: HitTargets) {
+type Rect = { x: number; y: number; w: number; h: number };
+const overlaps = (a: Rect, b: Rect, pad = 2) =>
+  a.x < b.x + b.w + pad && b.x < a.x + a.w + pad && a.y < b.y + b.h + pad && b.y < a.y + a.h + pad;
+
+/**
+ * Town name tags, most important first (your bases, then the biggest towns): a tag that would
+ * overlap one already placed — or a show marker — is left out rather than piled on top.
+ */
+function drawCityLabels(rc: RC, state: TycoonState, hits: HitTargets, taken: Rect[]) {
   const { ctx, cam, map } = rc;
   const scale = Math.max(0.85, Math.min(1.25, cam.zoom * 0.6));
-  [...map.cities, ...map.abroad].forEach(city => {
-    if (cam.zoom < 0.7 && city.size === 'village') return;
+  const hasDepot = (id: string) => state.depots.some(d => d.cityId === id);
+  const towns = [...map.cities, ...map.abroad].sort(
+    (a, b) => Number(hasDepot(b.id)) - Number(hasDepot(a.id)) || b.population - a.population,
+  );
+  towns.forEach(city => {
+    if (cam.zoom < 0.7 && city.size === 'village' && !hasDepot(city.id)) return;
     // Anchor at the town's front edge (straight down-screen from the centre)
     // so the label never sits on top of the venues.
     const edge = city.radius * 0.75 + 1;
@@ -774,11 +795,19 @@ function drawCityLabels(rc: RC, state: TycoonState, hits: HitTargets) {
     ctx.font = `700 ${Math.round(12 * scale)}px ui-rounded, system-ui, sans-serif`;
     const w = ctx.measureText(name).width + 34 * scale;
     const h = 18 * scale;
-    const hasDepot = state.depots.some(d => d.cityId === city.id);
+    const rect = { x: sx - w / 2, y: sy - h / 2, w, h };
+    const mine = hasDepot(city.id);
+    // Slide a big town's tag down past whatever's in the way; small towns just give way.
+    const big = city.size === 'city' || city.size === 'metropolis';
+    for (let k = 0; k < (big ? 3 : 1) && !mine && taken.some(t => overlaps(t, rect)); k++) {
+      if (k > 0 || big) rect.y += h + 3;
+    }
+    if (!mine && !big && taken.some(t => overlaps(t, rect))) return;
+    taken.push(rect);
     ctx.fillStyle = city.abroad ? 'rgba(52,44,70,0.78)' : 'rgba(16,18,26,0.78)';
-    roundRect(ctx, sx - w / 2, sy - h / 2, w, h, 4 * scale);
+    roundRect(ctx, rect.x, rect.y, w, h, 4 * scale);
     ctx.fill();
-    if (hasDepot) {
+    if (mine) {
       ctx.strokeStyle = state.company.color;
       ctx.lineWidth = 2;
       ctx.stroke();
@@ -786,81 +815,126 @@ function drawCityLabels(rc: RC, state: TycoonState, hits: HitTargets) {
     ctx.fillStyle = '#fff';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(name, sx - w / 2 + 6 * scale, sy + 0.5);
+    const ty = rect.y + h / 2;
+    ctx.fillText(name, sx - w / 2 + 6 * scale, ty + 0.5);
     ctx.font = `500 ${Math.round(9 * scale)}px ui-rounded, system-ui, sans-serif`;
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.textAlign = 'right';
-    ctx.fillText(pop, sx + w / 2 - 5 * scale, sy + 1);
-    hits.labels.push({ cityId: city.id, x: sx - w / 2, y: sy - h / 2, w, h });
+    ctx.fillText(pop, sx + w / 2 - 5 * scale, ty + 1);
+    hits.labels.push({ cityId: city.id, ...rect });
   });
 }
 
-function drawGigMarkers(rc: RC, state: TycoonState, venueTop: Map<string, Pt>, hits: HitTargets, colorFor: (o: string) => RGB) {
-  const { ctx, cam, time } = rc;
+interface MarkerLayout {
+  gigs: Gig[];
+  venueId: string;
+  cityId?: string;
+  x: number;
+  y: number;
+  stem: number;
+  rect: Rect;
+  label: string;
+  bg: string;
+  fg: string;
+  font: string;
+}
+
+/** Zoomed out, a town's shows share one marker; closer in, each venue gets its own, stacked if they'd collide. */
+const MARKERS_PER_TOWN_BELOW = 0.75;
+
+function layoutGigMarkers(rc: RC, state: TycoonState, venueTop: Map<string, Pt>, colorFor: (o: string) => RGB): MarkerLayout[] {
+  const { ctx, cam, time, map } = rc;
   const today = dayOf(state.hour);
-  const byVenue = new Map<string, Gig[]>();
+  const perTown = cam.zoom < MARKERS_PER_TOWN_BELOW;
+  const groups = new Map<string, Gig[]>();
   state.gigs.forEach(g => {
-    const relevant =
-      (g.status === 'offer' && g.acceptByDay >= today) ||
-      (g.status === 'booked') ||
-      (g.status === 'rival' && !g.result);
+    const relevant = (g.status === 'offer' && g.acceptByDay >= today) || g.status === 'booked' || (g.status === 'rival' && !g.result);
     if (!relevant) return;
-    const list = byVenue.get(g.venueId);
+    const key = perTown ? g.cityId : g.venueId;
+    const list = groups.get(key);
     if (list) list.push(g);
-    else byVenue.set(g.venueId, [g]);
+    else groups.set(key, [g]);
   });
 
   const scale = Math.max(0.85, Math.min(1.2, cam.zoom * 0.55));
-  byVenue.forEach((gigs, venueId) => {
-    const top = venueTop.get(venueId);
-    if (!top) return;
-    const rank = (g: Gig) => (g.status === 'booked' ? 0 : g.status === 'offer' ? 1 : 2);
-    gigs.sort((a, b) => rank(a) - rank(b) || a.day - b.day);
-    const g = gigs[0];
-    const bob = Math.sin(time / 380 + top[0]) * 2.5;
-    const x = top[0];
-    const y = top[1] - 14 * scale + bob;
+  const font = `700 ${Math.round(11 * scale)}px ui-rounded, system-ui, sans-serif`;
+  ctx.font = font;
+  const rank = (g: Gig) => (g.status === 'booked' ? 0 : g.status === 'offer' ? 1 : 2);
+  const out: MarkerLayout[] = [];
+  [...groups.entries()]
+    .map(([key, gigs]) => {
+      gigs.sort((a, b) => rank(a) - rank(b) || b.fee - a.fee || a.day - b.day);
+      return { key, gigs };
+    })
+    // Your booked shows get placed first, then the richest offers.
+    .sort((a, b) => rank(a.gigs[0]) - rank(b.gigs[0]) || b.gigs[0].fee - a.gigs[0].fee)
+    .forEach(({ key, gigs }) => {
+      const g = gigs[0];
+      const top = perTown
+        ? (() => {
+            const c = map.cityById.get(key);
+            return c ? project(cam, c.x + 0.5, c.y + 0.5, groundZ(map, c.x, c.y) + 1.5) : undefined;
+          })()
+        : venueTop.get(key);
+      if (!top) return;
+      const bob = Math.sin(time / 380 + top[0]) * 2.5;
+      let label: string;
+      let bg: string;
+      let fg = '#fff';
+      const booked = gigs.filter(x => x.status === 'booked').length;
+      const offers = gigs.filter(x => x.status === 'offer').length;
+      if (g.status === 'booked') {
+        const days = g.day - today;
+        label = g.overseas ? `★ ✈ ${Math.max(0, days)}d` : days <= 0 ? '★ TONIGHT' : `★ ${days}d`;
+        if (perTown && booked > 1) label = `★ ${booked} booked`;
+        bg = state.company.color;
+      } else if (g.status === 'offer') {
+        const locked = !!gigBookingBar(state, g).reason;
+        label = perTown && offers > 1 ? `${offers} offers · ${kmoney(g.fee)}` : `${g.tourId ? 'TOUR ' : ''}${locked ? '🔒 ' : g.asksForYou ? '♥ ' : ''}${kmoney(g.fee)}`;
+        bg = locked ? '#3f3f46' : tierInfo(g.tier).color;
+        fg = locked ? '#a1a1aa' : '#0b0d12';
+      } else {
+        label = '●';
+        const c = colorFor(g.rivalId ?? '');
+        bg = `rgb(${c[0]},${c[1]},${c[2]})`;
+      }
+      if (!perTown && gigs.length > 1) label += ` +${gigs.length - 1}`;
+      const w = ctx.measureText(label).width + 12 * scale;
+      const h = 17 * scale;
+      let y = top[1] - 14 * scale + bob;
+      let rect = { x: top[0] - w / 2, y: y - h, w, h };
+      // Stack upwards out of the way of markers already placed; give up after a few tries.
+      for (let tries = 0; tries < 4 && out.some(m => overlaps(m.rect, rect)); tries++) {
+        y -= h + 3;
+        rect = { x: top[0] - w / 2, y: y - h, w, h };
+      }
+      if (out.some(m => overlaps(m.rect, rect))) return;
+      out.push({ gigs, venueId: perTown ? g.venueId : key, cityId: perTown ? key : undefined, x: top[0], y, stem: top[1], rect, label, bg, fg, font });
+    });
+  return out;
+}
 
-    let label: string;
-    let bg: string;
-    let fg = '#fff';
-    if (g.status === 'booked') {
-      const days = g.day - today;
-      label = g.overseas ? `★ ✈ ${Math.max(0, days)}d` : days <= 0 ? '★ TONIGHT' : `★ ${days}d`;
-      bg = state.company.color;
-    } else if (g.status === 'offer') {
-      const locked = !!gigBookingBar(state, g).reason;
-      label = `${g.tourId ? 'TOUR ' : ''}${locked ? '🔒 ' : g.asksForYou ? '♥ ' : ''}${kmoney(g.fee)}`;
-      bg = locked ? '#3f3f46' : tierInfo(g.tier).color;
-      fg = locked ? '#a1a1aa' : '#0b0d12';
-    } else {
-      label = '●';
-      const c = colorFor(g.rivalId ?? '');
-      bg = `rgb(${c[0]},${c[1]},${c[2]})`;
-    }
-    if (gigs.length > 1) label += ` +${gigs.length - 1}`;
-
-    ctx.font = `700 ${Math.round(11 * scale)}px ui-rounded, system-ui, sans-serif`;
-    const w = ctx.measureText(label).width + 12 * scale;
-    const h = 17 * scale;
-    // Stem + pin.
+function drawGigMarkers(rc: RC, layouts: MarkerLayout[], hits: HitTargets) {
+  const { ctx } = rc;
+  layouts.forEach(m => {
+    ctx.font = m.font;
     ctx.strokeStyle = 'rgba(0,0,0,0.5)';
     ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x, top[1]);
+    ctx.moveTo(m.x, m.y);
+    ctx.lineTo(m.x, m.stem);
     ctx.stroke();
-    ctx.fillStyle = bg;
-    roundRect(ctx, x - w / 2, y - h, w, h, 5 * scale);
+    ctx.fillStyle = m.bg;
+    roundRect(ctx, m.rect.x, m.rect.y, m.rect.w, m.rect.h, 5);
     ctx.fill();
     ctx.strokeStyle = 'rgba(0,0,0,0.45)';
     ctx.lineWidth = 1;
     ctx.stroke();
-    ctx.fillStyle = fg;
+    ctx.fillStyle = m.fg;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(label, x, y - h / 2 + 0.5);
-    hits.markers.push({ gigIds: gigs.map(x2 => x2.id), venueId, x: x - w / 2, y: y - h, w, h });
+    ctx.fillText(m.label, m.x, m.rect.y + m.rect.h / 2 + 0.5);
+    hits.markers.push({ gigIds: m.gigs.map(g => g.id), venueId: m.venueId, cityId: m.cityId, ...m.rect });
   });
 }
 

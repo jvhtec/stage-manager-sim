@@ -12,7 +12,8 @@
  * depend on time — tolls, ferry fares, customs agents — is charged when a truck
  * sets off (tripCharges).
  */
-import type { Era, WorldMap } from './types';
+import type { Era, TycoonState, WorldMap } from './types';
+import { pushNews } from './core';
 import type { VehicleModel } from './catalog';
 import {
   CROSS_BRIDGE,
@@ -81,19 +82,25 @@ const TOLLS: Record<string, { from: number; lorriesOnly?: boolean }> = {
 
 const homeOf = (world: WorldMap) => world.country;
 
-/** The world as its roads were in `year`. Cached per distinct era. */
-export function eraWorld(base: WorldMap, year: number): WorldMap {
+/** Snow lies on the high roads from December to March. */
+export const isWinter = (date: Date) => [11, 0, 1, 2].includes(date.getUTCMonth());
+/** Chains, winter tyres and a slower day: per truck crossing a snowy pass. */
+export const CHAINS_FEE = 40;
+
+/** The world as its roads were in `year` (and in winter, if it is). Cached per distinct era. */
+export function eraWorld(base: WorldMap, year: number, winter = false): WorldMap {
   const home = base.country;
   const open = base.corridors.map(c => year >= c.opens);
   const links = base.crossings.map(c => (c.link && year >= c.link.opens ? 1 : 0));
   const border = base.borderCountries.map(c => borderRegime(home, c, year));
   const zone = base.zones.map(z => (year < z.until ? ZONE_HOURS : 0));
   const tollYear = TOLLS[home] && year >= TOLLS[home].from ? 1 : 0;
-  const key = `${open.map(Number).join('')}|${links.join('')}|${border.map(b => `${b.hours}:${b.fee}`).join(',')}|${zone.join(',')}|${tollYear}`;
+  const snow = winter;
+  const key = `${open.map(Number).join('')}|${links.join('')}|${border.map(b => `${b.hours}:${b.fee}`).join(',')}|${zone.join(',')}|${tollYear}|${snow ? 'w' : ''}`;
   base.eras ??= new Map();
   const cached = base.eras.get(key);
   if (cached) return cached;
-  const era: Era = { year, key, border, zone };
+  const era: Era = { year, key, border, zone, winter: snow };
   const motorway = new Uint8Array(base.width * base.height);
   base.corridors.forEach((c, i) => {
     if (open[i]) c.tiles.forEach(k => (motorway[k] = c.toll && tollYear ? 2 : 1));
@@ -134,6 +141,8 @@ export interface RouteNotes {
   borders: string[];
   motorwayKm: number;
   tollKm: number;
+  /** Snowbound high road on the way (winter only). */
+  snowKm: number;
 }
 
 const notesCache = new WeakMap<WorldMap, Map<string, RouteNotes>>();
@@ -148,7 +157,7 @@ export function routeNotes(world: WorldMap, from: string, to: string): RouteNote
   const key = `${from}|${to}`;
   const hit = byKey.get(key);
   if (hit) return hit;
-  const notes: RouteNotes = { ferries: [], tunnels: [], borders: [], motorwayKm: 0, tollKm: 0 };
+  const notes: RouteNotes = { ferries: [], tunnels: [], borders: [], motorwayKm: 0, tollKm: 0, snowKm: 0 };
   const path = getCityPath(world, from, to);
   const km = unitsPerTile(world) * 18;
   const tolled = TOLLS[homeOf(world)];
@@ -158,6 +167,7 @@ export function routeNotes(world: WorldMap, from: string, to: string): RouteNote
     const mw = world.motorway?.[k] ?? 0;
     if (mw) notes.motorwayKm += km;
     if (mw === 2 || (mw && lorriesOnly)) notes.tollKm += km;
+    if (world.era?.winter && world.snowy[k]) notes.snowKm += km;
     if (i === 0) continue;
     const p = path[i - 1];
     const wa = world.crossingAt[p] >= 0;
@@ -190,6 +200,15 @@ export function tripCharges(world: WorldMap, from: string, to: string, kind: Veh
   }
   const tolls = notes.tollKm * TOLL_PER_KM[kind] * (TOLLS[homeOf(world)]?.lorriesOnly && kind === 'van' ? 0 : 1);
   const customs = routeBorders(world, from, to).reduce((sum, b) => sum + b.fee, 0);
-  const total = Math.round(tolls + crossings + customs);
-  return { tolls: Math.round(tolls), crossings: Math.round(crossings), customs, total };
+  const chains = notes.snowKm > 0 ? CHAINS_FEE : 0;
+  const total = Math.round(tolls + crossings + customs + chains);
+  return { tolls: Math.round(tolls), crossings: Math.round(crossings + chains), customs, total };
+}
+
+/** Tell the player when the passes close up and when they clear. */
+export function monthlyWinter(s: TycoonState, world: WorldMap) {
+  if (!world.snowy.some(Boolean)) return;
+  const month = new Date(Date.UTC(s.startYear, 0, 1) + Math.floor(s.hour / 24) * 86400000).getUTCMonth();
+  if (month === 11) pushNews(s, 'Winter on the high roads: snow slows the mountain passes until spring, and trucks crossing them need chains.', 'info');
+  if (month === 3) pushNews(s, 'The passes are clear again: mountain roads are back to normal.', 'info');
 }

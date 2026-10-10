@@ -107,6 +107,8 @@ export interface Era {
   border: { hours: number; fee: number }[];
   /** Hours lost at each historic internal border (index as zones). */
   zone: number[];
+  /** December to March: snow on the high roads. */
+  winter: boolean;
 }
 
 export interface WorldMap {
@@ -142,6 +144,8 @@ export interface WorldMap {
   /** Crossing id per water tile carrying a road, -1 elsewhere. */
   crossingAt: Int16Array;
   corridors: Corridor[];
+  /** 1 on high road tiles that snow slows in winter (mountain passes). */
+  snowy: Uint8Array;
   /** The year's road network (set on the world for a particular year, see infra.eraWorld). */
   era?: Era;
   /** 1 where an open motorway runs. */
@@ -333,6 +337,8 @@ export interface Vehicle {
   id: string;
   /** 'player' or a rival id. */
   owner: string;
+  /** Two drivers taking turns in a sleeper cab: quicker on long hauls, at a second driver's pay. */
+  teamDrivers?: boolean;
   modelId: string;
   name: string;
   homeCityId: string;

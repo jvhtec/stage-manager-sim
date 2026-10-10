@@ -69,6 +69,8 @@ import {
   vehicleAgeYears,
   withRng,
   yearOf,
+  TEAM_DRIVER_PER_HOUR,
+  vehicleSpeed,
 } from './core';
 import { worldOf } from './mapgen';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize } from './loading';
@@ -96,7 +98,7 @@ import { dailyContracts, houseRigAt, monthlyContracts } from './contracts';
 import { dailyMarket, fuelMultiplier, marketNow, monthlyInterest } from './market';
 import { getRegion } from './content/world';
 import { getCityPath, roadDistance } from './pathfinding';
-import { tripCharges } from './infra';
+import { monthlyWinter, tripCharges } from './infra';
 import { DEPTS, type GearStock, type Gig, type TycoonState, type Vehicle, type WorldMap } from './types';
 import { findArtist } from './content/artists';
 
@@ -296,8 +298,8 @@ function decide(s: TycoonState, world: WorldMap, v: Vehicle) {
 
   // Out on the road between shows: go straight on if the next show is soon,
   // otherwise pop home first (unload, service, reload for the next leg).
-  const direct = travelHours(world, v.modelId, at, gig.cityId);
-  const viaHome = travelHours(world, v.modelId, at, v.homeCityId) + travelHours(world, v.modelId, v.homeCityId, gig.cityId);
+  const direct = travelHours(world, v, at, gig.cityId);
+  const viaHome = travelHours(world, v, at, v.homeCityId) + travelHours(world, v, v.homeCityId, gig.cityId);
   const window = loadInHour(gig) - s.hour;
   if (v.owner === 'player' && window - direct > 48 && viaHome + 24 < window) {
     startDrive(s, world, v, v.homeCityId);
@@ -364,11 +366,16 @@ function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
   const total = roadDistance(world, route.from, route.to);
   if (route.total !== undefined && route.total !== total && route.total > 0) route.progress *= total / route.total;
   route.total = total;
-  route.progress += model.speed;
+  const speed = vehicleSpeed(v);
+  route.progress += speed;
   if (v.owner === 'player') {
-    const fuel = model.speed * fuelPerTile(model) * fuelMultiplier(s);
+    const fuel = speed * fuelPerTile(model) * fuelMultiplier(s);
     book(s, 'fuel', -fuel);
     v.profitThisYear -= fuel;
+    if (v.teamDrivers) {
+      book(s, 'wages', -TEAM_DRIVER_PER_HOUR);
+      v.profitThisYear -= TEAM_DRIVER_PER_HOUR;
+    }
   }
   if (route.progress >= total || path.length < 2) arrive(s, world, v);
 }
@@ -655,6 +662,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     monthlyTowns(s, world);
     monthlyMarketing(s);
     monthlyGoal(s);
+    monthlyWinter(s, world);
     monthlyPriceWars(s, sideRng(s, dayOf(s.hour) + 7002));
     monthlyShares(s, p => rng.chance(p));
     monthlyVenues(s, rng);

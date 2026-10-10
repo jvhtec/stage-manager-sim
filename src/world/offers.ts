@@ -83,6 +83,12 @@ export interface GigSpec {
 }
 
 /** Rolls the rider, needs and fee for one show. */
+/**
+ * Production budgets by country: American promoters pay more (and the haulage across a continent is in
+ * the price), so a US company isn't sunk by its distances.
+ */
+export const COUNTRY_FEES: Record<string, number> = { US: 1.45 };
+
 export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
   const tier = spec.tier ?? spec.venue.tier;
   const info = tierInfo(tier);
@@ -110,7 +116,7 @@ export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
   const star = spec.real ? 1.15 : 1;
   const loyalty = asksForYou ? 1.1 : 1;
   const fee =
-    Math.round((info.baseFee * marketOnDay(state, spec.day).fees * (0.85 + rng.next() * 0.4) * (0.9 + rating / 500) * star * loyalty * (spec.feeMultiplier ?? 1)) / 50) * 50;
+    Math.round((info.baseFee * marketOnDay(state, spec.day).fees * (0.85 + rng.next() * 0.4) * (0.9 + rating / 500) * star * loyalty * (spec.feeMultiplier ?? 1) * (COUNTRY_FEES[state.country ?? ''] ?? 1)) / 50) * 50;
 
   return {
     id: newId(state, 'gig'),

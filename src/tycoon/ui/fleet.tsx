@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { bookAndAssign, retrofitVehicle, rehomeVehicle, sellVehicle, sendHome, serviceVehicle, unassignVehicle } from '@/world/actions';
+import { bookAndAssign, retrofitVehicle, rehomeVehicle, sellVehicle, sendHome, serviceVehicle, setTeamDrivers, unassignVehicle } from '@/world/actions';
 import { leaseReturnPenalty } from '@/world/finance';
 import { SERVICE_INTERVAL_DAYS, getModel } from '@/world/catalog';
 import { stockSize } from '@/world/loading';
 import { StockLines } from './gear';
 import { getTech } from '@/world/content/techs';
-import { formatDay, gigById, loadInHour, sellValue, vehicleAgeYears } from '@/world/core';
+import { TEAM_DRIVER_PER_HOUR, TEAM_PACE, formatDay, gigById, loadInHour, sellValue, vehicleAgeYears, vehicleSpeed } from '@/world/core';
 import { worldOf } from '@/world/mapgen';
 import { estimateArrival, suggestJobs, vehicleActivity } from '@/world/queries';
 import { roadDistance } from '@/world/pathfinding';
@@ -77,6 +77,26 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
               Retrofit {money(retrofitCost(v))}
             </button>
           )}
+        </Stat>
+      )}
+      {v.owner === 'player' && model.kind !== 'van' && (
+        <Stat label="Drivers">
+          {v.teamDrivers ? (
+            <>
+              <b>Team</b> <span className="tt-dim">· {Math.round((TEAM_PACE - 1) * 100)}% quicker · +{money(TEAM_DRIVER_PER_HOUR)}/h on the road</span>
+            </>
+          ) : (
+            <span className="tt-dim">One driver</span>
+          )}
+          <button
+            className="tt-btn sm"
+            style={{ marginLeft: 6 }}
+            data-on={!!v.teamDrivers}
+            onClick={() => act(s => setTeamDrivers(s, v.id, !v.teamDrivers))}
+            title="Two drivers taking turns in a sleeper cab keep the truck rolling: worth it on long hauls, an expense on short hops."
+          >
+            {v.teamDrivers ? 'One driver' : 'Team drivers'}
+          </button>
         </Stat>
       )}
       <Stat label="Profit this year">
@@ -151,7 +171,7 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
             {(() => {
               const last = gigById(state, v.orders[v.orders.length - 1]);
               const back = last ? roadDistance(world, last.cityId, v.homeCityId) : NaN;
-              return Number.isFinite(back) && back > 0 ? ` — ${distance(back)}, about ${Math.ceil(back / model.speed)}h.` : '.';
+              return Number.isFinite(back) && back > 0 ? ` — ${distance(back)}, about ${Math.ceil(back / vehicleSpeed(v))}h.` : '.';
             })()}
           </div>
         </div>

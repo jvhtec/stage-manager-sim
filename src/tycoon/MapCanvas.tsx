@@ -8,7 +8,7 @@ import { renderWorld, type HitTargets, type Selection } from './render/renderer'
 export type Pick =
   | { kind: 'vehicle'; id: string }
   | { kind: 'venue'; id: string; cityId: string }
-  | { kind: 'gigs'; gigIds: string[]; venueId: string }
+  | { kind: 'gigs'; gigIds: string[]; venueId: string; cityId?: string }
   | { kind: 'city'; id: string }
   | { kind: 'depot'; id: string };
 
@@ -214,7 +214,7 @@ export const MapCanvas = forwardRef<MapHandle, Props>(function MapCanvas(
       const inRect = (r: { x: number; y: number; w: number; h: number }) =>
         x >= r.x - slop && x <= r.x + r.w + slop && y >= r.y - slop && y <= r.y + r.h + slop;
       const marker = [...hits.markers].reverse().find(inRect);
-      if (marker) return { kind: 'gigs', gigIds: marker.gigIds, venueId: marker.venueId };
+      if (marker) return { kind: 'gigs', gigIds: marker.gigIds, venueId: marker.venueId, cityId: marker.cityId };
       const label = hits.labels.find(inRect);
       if (label) return { kind: 'city', id: label.cityId };
       const radius = Math.max(touch ? 24 : 10, 9 * camRef.current.zoom);

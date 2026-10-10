@@ -9,7 +9,7 @@ import { roadDistance } from '../pathfinding';
 import { companyValue, projectCoverage } from '../queries';
 import { deptTotals } from '../loading';
 import { productsAvailableIn, expectedQuality } from '../content/gear';
-import { VEHICLE_MODELS } from '../catalog';
+import { VEHICLE_MODELS, getModel } from '../catalog';
 import { tourMaxTier } from '../tours';
 import { nextUpgrade, facilitySpec } from '../facilities';
 import { DEPTS } from '../types';
@@ -80,7 +80,8 @@ it('smart bot', () => {
       s = advanceHours(s, 24);
       s = answer(s);
       const today = dayOf(s.hour);
-      const maxDist = 25 + Math.min(50, s.company.reputation);
+      if (FEATURES.has('team')) s.vehicles.forEach((v: S) => { if (v.owner === 'player' && getModel(v.modelId).kind !== 'van') v.teamDrivers = true; });
+      const maxDist = (25 + Math.min(50, s.company.reputation)) * (FEATURES.has('team') ? 1.4 : 1);
       // Singles.
       for (const g of s.gigs.filter((g: S) => g.status === 'offer' && !g.tourId)) {
         if (gigBookingBar(s, g).reason) continue;

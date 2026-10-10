@@ -464,6 +464,15 @@ export function HelpWindow() {
           borders and tolls on the way; tolls, fares and customs go in the ledger as their own line.
         </li>
         <li>
+          <b>Winter</b> (December to March) puts snow on the high roads: mountain passes are slower and a truck crossing
+          one needs chains. Plan long runs over the Alps, Pyrenees or Rockies with more slack.
+        </li>
+        <li>
+          <b>Team drivers</b> (a truck's window): two drivers taking turns in a sleeper cab keep it rolling, about a third
+          quicker, at a second driver's pay for every hour on the road. Worth it on long hauls — America especially — and
+          a waste on short hops. Vans can't take them.
+        </li>
+        <li>
           <b>Rehearsals are mandatory</b> for big jobs: arena shows, stadiums, broadcast events and tours can't be booked
           without a rehearsal stage of the right size (Base → Annexes), and an unrehearsed show suffers. Policies has an
           automatic option.

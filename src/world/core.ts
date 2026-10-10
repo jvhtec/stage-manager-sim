@@ -81,15 +81,23 @@ export const loadOutDoneHour = (gig: Gig) => (lastShowDay(gig) + freightDays(gig
 
 // Travel --------------------------------------------------------------------
 
-export function travelHours(world: WorldMap, modelId: string, from: string, to: string): number {
+/** Team drivers (a sleeper cab and two drivers taking turns) keep a truck rolling: this much quicker. */
+export const TEAM_PACE = 1.4;
+/** What the second driver costs per hour on the road. */
+export const TEAM_DRIVER_PER_HOUR = 14;
+
+/** Distance units per hour for a vehicle as crewed. */
+export const vehicleSpeed = (v: Pick<Vehicle, 'modelId' | 'teamDrivers'>) => getModel(v.modelId).speed * (v.teamDrivers ? TEAM_PACE : 1);
+
+export function travelHours(world: WorldMap, v: Pick<Vehicle, 'modelId' | 'teamDrivers'>, from: string, to: string): number {
   const dist = roadDistance(world, from, to);
   if (!Number.isFinite(dist)) return Infinity;
-  return Math.ceil(dist / getModel(modelId).speed);
+  return Math.ceil(dist / vehicleSpeed(v));
 }
 
 /** When a vehicle sitting in `from` should leave to make `gig`'s load-in with a safety margin. */
 export function plannedDepartureHour(world: WorldMap, v: Vehicle, from: string, gig: Gig): number {
-  const hours = travelHours(world, v.modelId, from, gig.cityId);
+  const hours = travelHours(world, v, from, gig.cityId);
   const buffer = DEPARTURE_BUFFER_HOURS + Math.ceil(hours * 0.1);
   return loadInHour(gig) - hours - buffer;
 }

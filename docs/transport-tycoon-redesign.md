@@ -177,9 +177,10 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
   warehouse lots (on a thin peninsula like Florida the last lot may sit on a gentle slope). **Distance is real distance**: a tile knows its kilometres, one game unit
   is 18 km, and speeds, fuel, ranges and trip times are all in units, so a 300 km run takes the same
   time in Britain as in the States and the UI speaks km (miles in Britain and the US) rather than
-  tiles. The consequence is that America is huge — its towns are a few thousand km apart, so
-  play there is regional circuits and the odd long haul (a smart-bot test company ends 9 years at
-  roughly £5M value against £7–12M elsewhere). Saves from before the real maps are discarded (save v7).
+  tiles. The consequence is that America is huge — its towns are a few thousand km apart — so American
+  promoters pay 45% more (`offers.COUNTRY_FEES`: bigger production budgets, the haulage in the price) and team
+  drivers (below) earn their keep there: a smart-bot test company ends 9 years at ~$12M with one driver per truck and
+  ~$13M with team drivers, against £/€10–14M in Europe. Saves from before the real maps are discarded (save v7).
 
 - **Roads, borders and crossings through the years** (`infra.ts`, `pathfinding.ts`, `geoParams.json`) — the
   map is generated once per seed and country; each year gets an *era* view of it (cached per distinct era):
@@ -206,6 +207,14 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
     route's length, so ETAs, planners, fuel and ranges all agree. Money costs (tolls, fares, customs) are charged as a
     truck sets off and booked as "Tolls, ferries & customs". The show and town windows list what's on the road; the
     run planner includes the charges.
+  - **Winter** (December to March): road tiles on high ground (average corner height ≥ 2.75 — the passes) take 1.7×
+    as long and a truck crossing one pays for chains. The era key includes the season, so ETAs and planners see it; the
+    map turns snow-capped and the news says when the passes close and clear.
+  - **Team drivers** (per truck, not vans): two drivers in a sleeper cab keep it rolling 35% quicker, at a second
+    driver's pay per hour on the road (booked as wages). The answer to America's distances.
+  - **Readable map**: town tags are placed most-important-first (your bases, then by population) and skipped rather
+    than overlapped; show markers are laid out first (your bookings, then the richest offers), stacked out of each
+    other's way, and zoomed out (below 0.75) a town's shows share one marker ("3 offers · £4.2k") that opens the town.
 
 - **Start years** (1975, 1980, 1985, 1990, 2000, 2010) — the era sets which trucks, gear and
   desks exist (Bedford TK, Altec A4s, Yamaha PM1000 and Strand lanterns in 1975; no video kit

@@ -25,7 +25,8 @@ import {
 import { MinHeap } from './heap';
 import { getCityPath } from './pathfinding';
 import { eraWorld } from './infra';
-import { yearOf } from './core';
+import { dateOfDay, dayOf, yearOf } from './core';
+import { isWinter } from './infra';
 import { DEFAULT_COUNTRY, getCountry } from './content/countries';
 import { geoAbroad, geoCities, geoExcluded, geoLanes, geoLinks, geoMotorways, geoStraits, geoZones, homeMask, insidePoly, sizeOfGeo, landMask, projectionFor, rangeLift } from './content/geo';
 
@@ -255,10 +256,11 @@ export function worldOf(state: { mapSeed: number; country?: string; startYear?: 
   const base = getWorld(state.mapSeed, state.country);
   if (state.startYear === undefined) return base;
   const year = yearOf({ startYear: state.startYear }, state.hour ?? 0);
-  const key = `${state.mapSeed}:${state.country}:${year}`;
+  const winter = isWinter(dateOfDay({ startYear: state.startYear }, dayOf(state.hour ?? 0)));
+  const key = `${state.mapSeed}:${state.country}:${year}:${winter}`;
   let world = byYear.get(key);
   if (!world) {
-    world = eraWorld(base, year);
+    world = eraWorld(base, year, winter);
     if (byYear.size > 200) byYear.clear();
     byYear.set(key, world);
   }
@@ -368,6 +370,7 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
     crossings: [],
     crossingAt: new Int16Array(width * height).fill(-1),
     corridors: [],
+    snowy: new Uint8Array(width * height),
   };
 
   const classifyTerrain = () => {
@@ -843,7 +846,19 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
     const tiles = getCityPath(map, a.id, b.id).filter(k => map.crossingAt[k] < 0);
     if (tiles.length) map.corridors.push({ name: m.name, from: a.id, to: b.id, opens: m.opens, toll: m.toll, tiles });
   });
+  // 10. High roads that snow slows in winter.
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const k = idx(x, y, width);
+      if (!map.road[k] || map.crossingAt[k] >= 0) continue;
+      const [a, b, c, d] = tileCorners(map, x, y);
+      if ((a + b + c + d) / 4 >= SNOW_LEVEL) map.snowy[k] = 1;
+    }
+  }
   map.pathCache.clear();
   map.distCache.clear();
   return map;
 }
+
+/** Average corner height at which winter snow lies on the roads. */
+export const SNOW_LEVEL = 2.75;

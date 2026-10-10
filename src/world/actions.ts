@@ -300,6 +300,16 @@ export function serviceVehicle(state: TycoonState, vehicleId: string): ActionOut
   return ok(s, `${v0.name} is in the workshop.`);
 }
 
+/** Put a second driver in the cab (or take them off): quicker long hauls for a driver's pay while rolling. */
+export function setTeamDrivers(state: TycoonState, vehicleId: string, on: boolean): ActionOutcome {
+  const v0 = state.vehicles.find(v => v.id === vehicleId && v.owner === 'player');
+  if (!v0) return fail(state, 'Unknown vehicle.');
+  if (on && getModel(v0.modelId).kind === 'van') return fail(state, 'A van has no sleeper cab — team drivers need a truck, artic or bus.');
+  const s = cloneState(state);
+  s.vehicles.find(v => v.id === vehicleId)!.teamDrivers = on || undefined;
+  return ok(s, on ? `${v0.name} now runs with two drivers taking turns.` : `${v0.name} is back to one driver.`);
+}
+
 export function rehomeVehicle(state: TycoonState, vehicleId: string, depotId: string): ActionOutcome {
   const depot = state.depots.find(d => d.id === depotId);
   const v0 = state.vehicles.find(v => v.id === vehicleId && v.owner === 'player');

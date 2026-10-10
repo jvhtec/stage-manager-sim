@@ -159,6 +159,7 @@ export default function TycoonGame() {
       if (!pick) return;
       if (pick.kind === 'gigs') {
         if (pick.gigIds.length === 1) open('gig', pick.gigIds[0]);
+        else if (pick.cityId) open('city', pick.cityId);
         else open('venue', pick.venueId);
       } else if (pick.kind === 'venue') open('venue', pick.id);
       else open(pick.kind, pick.id);

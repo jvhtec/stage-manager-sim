@@ -28,6 +28,9 @@ export const HOURS_TO_UNITS = 1.5;
 export const FERRY_BOARDING_HOURS = 2;
 export const TUNNEL_BOARDING_HOURS = 1;
 
+/** A snowy tile takes this much longer to drive (winter, high roads). */
+export const SNOW_FACTOR = 1.7;
+
 export const CROSS_BRIDGE = 1;
 export const CROSS_FERRY = 2;
 export const CROSS_TUNNEL = 3;
@@ -45,7 +48,10 @@ export function crossKindAt(map: WorldMap, i: number): number {
 export function stepCost(map: WorldMap, a: number, b: number): number {
   const upt = unitsPerTile(map);
   const mw = map.motorway;
-  let c = (upt * ((mw?.[a] ? MOTORWAY_FACTOR : 1) + (mw?.[b] ? MOTORWAY_FACTOR : 1))) / 2;
+  const snow = map.era?.winter ? map.snowy : undefined;
+  const fa = (mw?.[a] ? MOTORWAY_FACTOR : 1) * (snow?.[a] ? SNOW_FACTOR : 1);
+  const fb = (mw?.[b] ? MOTORWAY_FACTOR : 1) * (snow?.[b] ? SNOW_FACTOR : 1);
+  let c = (upt * (fa + fb)) / 2;
   const wa = isWaterRoad(map, a);
   const wb = isWaterRoad(map, b);
   const era = map.era;

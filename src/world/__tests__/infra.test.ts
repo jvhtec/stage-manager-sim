@@ -7,8 +7,8 @@ import { buildDepot } from '../actions';
 import type { WorldMap } from '../types';
 
 const town = (w: WorldMap, name: string) => [...w.cities, ...w.abroad].find(c => c.name === name)!;
-const trip = (code: string, year: number, a: string, b: string) => {
-  const w = eraWorld(getWorld(7, code), year);
+const trip = (code: string, year: number, a: string, b: string, winter = false) => {
+  const w = eraWorld(getWorld(7, code), year, winter);
   const from = town(w, a).id;
   const to = town(w, b).id;
   return { units: roadDistance(w, from, to), notes: routeNotes(w, from, to), due: tripCharges(w, from, to, 'semi') };
@@ -95,5 +95,59 @@ describe('towns abroad', () => {
     s.company.cash = 10_000_000;
     const lisboa = town(getWorld(7, 'ES'), 'Lisboa');
     expect(buildDepot(s, lisboa.id, 'warehouse').result.ok).toBe(false);
+  });
+});
+
+describe('winter', () => {
+  it('snow slows the high roads from December to March, and the trip needs chains', () => {
+    const w = getWorld(7, 'IT');
+    expect(w.snowy.some(Boolean)).toBe(true);
+    // Find a pair of towns whose road crosses snowy ground.
+    const all = [...w.cities];
+    let pair: [string, string] | null = null;
+    for (const a of all) for (const b of all) if (!pair && a !== b && routeNotes(eraWorld(w, 2000, true), a.id, b.id).snowKm > 0) pair = [a.name, b.name];
+    expect(pair).not.toBeNull();
+    const summer = trip('IT', 2000, pair![0], pair![1]);
+    const winter = trip('IT', 2000, pair![0], pair![1], true);
+    expect(winter.units).toBeGreaterThan(summer.units);
+    expect(winter.due.total).toBeGreaterThan(summer.due.total);
+    expect(summer.notes.snowKm).toBe(0);
+  });
+
+  it('the game world turns wintry in January and back in summer', async () => {
+    const { worldOf } = await import('../mapgen');
+    const s = createTycoonGame({ companyName: 'W', color: '#f00', seed: 7, country: 'IT', startYear: 2000 });
+    expect(worldOf(s).era?.winter).toBe(true);
+    expect(worldOf({ ...s, hour: s.hour + 24 * 180 }).era?.winter).toBe(false);
+  });
+});
+
+describe('team drivers', () => {
+  it('a sleeper-cab crew gets there sooner, at a second driver\'s pay', async () => {
+    const { setTeamDrivers } = await import('../actions');
+    const { travelHours } = await import('../core');
+    const { worldOf } = await import('../mapgen');
+    const { advanceHours } = await import('../sim');
+    const s = createTycoonGame({ companyName: 'T', color: '#f00', seed: 7, country: 'US', startYear: 2000 });
+    const truck = s.vehicles.find(v => v.owner === 'player' && v.modelId !== 'splitter-van') ?? s.vehicles.find(v => v.owner === 'player')!;
+    const world = worldOf(s);
+    const far = [...world.cities].sort((a, b) => roadDistance(world, truck.homeCityId, b.id) - roadDistance(world, truck.homeCityId, a.id))[0];
+    const solo = travelHours(world, truck, truck.homeCityId, far.id);
+    const team = travelHours(world, { ...truck, teamDrivers: true }, truck.homeCityId, far.id);
+    expect(team).toBeLessThan(solo * 0.8);
+    const van = s.vehicles.find(v => v.owner === 'player' && v.modelId === 'splitter-van');
+    if (van) expect(setTeamDrivers(s, van.id, true).result.ok).toBe(false);
+    if (truck.modelId !== 'splitter-van') {
+      const on = setTeamDrivers(s, truck.id, true).state;
+      expect(on.vehicles.find(v => v.id === truck.id)!.teamDrivers).toBe(true);
+      // Driving costs wages while it rolls.
+      const t = on.vehicles.find(v => v.id === truck.id)!;
+      t.status = 'driving';
+      t.cityId = undefined;
+      t.route = { from: truck.homeCityId, to: far.id, progress: 0, total: roadDistance(world, truck.homeCityId, far.id) };
+      const before = on.ledger[2000]?.wages ?? 0;
+      const later = advanceHours(on, 3);
+      expect((later.ledger[2000]?.wages ?? 0) - before).toBeLessThan(0);
+    }
   });
 });
