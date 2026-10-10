@@ -31,9 +31,9 @@ export function defaultTerms(gig: Pick<Gig, 'act' | 'tier' | 'festival' | 'event
 
 /** Chance a client agrees to better terms. */
 export function termsChance(s: Pick<TycoonState, 'artistRelations' | 'clients'>, gig: Gig): number {
-  const base = { easy: 0.8, fair: 0.55, pushy: 0.25 }[clientTemper(gig.act)];
+  const base = { easy: 0.7, fair: 0.45, pushy: 0.2 }[clientTemper(gig.act)];
   const m = memoryOf(s, gig.act);
-  return Math.max(0.05, Math.min(0.95, base + 0.04 * Math.min(5, s.artistRelations[gig.act] ?? 0) + 0.04 * m.paid - 0.05 * m.refused));
+  return Math.max(0.05, Math.min(0.95, base + 0.02 * Math.min(5, s.artistRelations[gig.act] ?? 0) + 0.02 * m.paid - 0.05 * m.refused));
 }
 const WALK = { easy: 0.05, fair: 0.2, pushy: 0.4 };
 

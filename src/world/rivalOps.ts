@@ -23,6 +23,8 @@ import { DEPTS } from './types';
 export const RIVAL_FIX_LIMIT = 0.2;
 /** Share of the fee a show costs a rival to deliver (crew, fuel, per diems). */
 export const RIVAL_SHOW_COST = 0.25;
+/** Chance a rival's truck breaks down on the way to a show (more with worn kit and trucks). */
+export const RIVAL_BREAKDOWN = 0.06;
 
 const hash = (s: string) => [...s].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 41);
 
@@ -147,14 +149,23 @@ export function playRivalShow(s: TycoonState, r: Rival, gig: Gig, rng: Rng): num
   const ops = opsOf(s, r);
   const year = dateOfDay(s, gig.day).getUTCFullYear();
   const kit = Math.min(1.05, ops.quality / expectedQuality(gig.tier, year));
-  const q = Math.max(0, Math.min(1, 0.25 + 0.55 * kit + (ops.condition - 70) / 300 + (rng.next() - 0.5) * 0.16));
+  // The same things that go wrong for you go wrong for them: a truck breaks down and the load-in
+  // runs late, worn kit dies on stage, a crew stretched across too many shows is tired.
+  const late = rng.chance(RIVAL_BREAKDOWN * (1 + (100 - ops.condition) / 100));
+  const dies = rng.chance(((100 - ops.condition) / 100) * 0.35);
+  const busyCrew = rivalCommitments(s, r.id, gig).reduce((n, g) => n + g.crewNeeded, 0) + gig.crewNeeded;
+  const stretched = busyCrew > ops.crew * 0.8;
+  const trouble = (late ? 0.15 : 0) + (dies ? 0.08 : 0) + (stretched ? 0.05 : 0);
+  if (late) ops.record.late = (ops.record.late ?? 0) + 1;
+  if (dies) ops.record.kitFailures = (ops.record.kitFailures ?? 0) + 1;
+  const q = Math.max(0, Math.min(1, 0.2 + 0.6 * kit + (ops.condition - 80) / 400 - trouble + (rng.next() - 0.5) * 0.16));
   const failed = q < 0.3;
   const payout = failed ? -Math.round(gig.fee * 0.3) : showPayout(gig, q);
   const cost = Math.round(gig.fee * RIVAL_SHOW_COST);
   ops.cash += payout - cost;
   ops.month.income += Math.max(0, payout);
   ops.month.costs += cost + Math.max(0, -payout);
-  ops.condition = Math.max(20, ops.condition - 0.6 * (gig.days ?? 1));
+  ops.condition = Math.max(20, ops.condition - 1 * (gig.days ?? 1));
   ops.record.shows += 1;
   if (failed) ops.record.failed += 1;
   const tw = [0, 1, 1.5, 2.5, 4][gig.tier] ?? 1;

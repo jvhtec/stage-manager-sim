@@ -743,7 +743,7 @@ export interface RivalOps {
   /** Kit condition, 0-100. */
   condition: number;
   month: { income: number; costs: number };
-  record: { shows: number; failed: number; crossHires: number; fixes: number; cancelled: number; declined: Partial<Record<'kit' | 'crew' | 'trucks' | 'rider' | 'room', number>> };
+  record: { shows: number; failed: number; late?: number; kitFailures?: number; crossHires: number; fixes: number; cancelled: number; declined: Partial<Record<'kit' | 'crew' | 'trucks' | 'rider' | 'room', number>> };
 }
 
 export interface Rival {
@@ -993,6 +993,8 @@ export interface TycoonState {
   partners: Partial<Record<Dept, { brand: string; sinceDay: number; lapse: number }>>;
   reports: AnnualReport[];
   charts?: YearChart[];
+  /** Every incident ever, counted by kind and by cause (consequences.ts). */
+  incidentTally?: { kinds: Record<string, number>; causes: Record<string, number>; main: Record<string, number> };
   /** Why things went wrong: the recent incident log (consequences.ts). */
   incidents?: Incident[];
   /** Rapport between pairs of crew, −100..100, keyed by sorted id pair (bonds.ts). */
@@ -1027,7 +1029,7 @@ export interface TycoonState {
   artistRelations: Record<string, number>;
   negativeMonths: number;
   nextId: number;
-  stats: { showsPlayed: number; showsFailed: number; peakCash: number; rivalsBought?: number; /** Cash at the start, for the money invariant (invariants.ts). */ startCash?: number };
+  stats: { showsPlayed: number; showsFailed: number; peakCash: number; rivalsBought?: number; /** Cash at the start, for the money invariant (invariants.ts). */ startCash?: number; /** Crew who quit, burnt out or were poached. */ crewLost?: number };
   /** Chosen at the start (scenario.ts). */
   difficulty?: Difficulty;
   goal?: GoalId;

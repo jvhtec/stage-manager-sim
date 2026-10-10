@@ -317,6 +317,7 @@ export function resolveDilemma(s: TycoonState, id: string, optionId: string, aut
       const m = s.people.find(p => p.id === d.personId);
       if (m) {
         s.people = s.people.filter(p => p.id !== m.id);
+        s.stats.crewLost = (s.stats.crewLost ?? 0) + 1;
         s.poachBids = s.poachBids.filter(b => b.personId !== m.id);
         syncCrew(s);
         line = `${m.name} walks off the tour.`;

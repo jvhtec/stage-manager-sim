@@ -368,6 +368,7 @@ export function burnoutLeave(s: TycoonState, rng: Rng): number {
   const gone = s.people.filter(m => m.depotId && (m.burnout ?? 0) >= BURNOUT_QUIT && rng.chance(0.12));
   gone.forEach(m => pushNews(s, `${m.name} has burnt out after too long on the road, and is leaving the business.`, 'bad'));
   if (!gone.length) return 0;
+  s.stats.crewLost = (s.stats.crewLost ?? 0) + gone.length;
   const ids = new Set(gone.map(m => m.id));
   s.people = s.people.filter(m => !ids.has(m.id));
   s.poachBids = s.poachBids.filter(b => !ids.has(b.personId));
@@ -391,6 +392,7 @@ export function peopleLeave(s: TycoonState, rng: Rng, morale: number) {
   });
   const quit = gone.length;
   if (!quit) return 0;
+  s.stats.crewLost = (s.stats.crewLost ?? 0) + quit;
   s.people = s.people.filter(m => !gone.includes(m.id));
   s.poachBids = s.poachBids.filter(b => !gone.includes(b.personId));
   return quit;
@@ -427,6 +429,7 @@ export function settlePoachBid(s: TycoonState, bidId: string, keep: boolean): st
     return `${m.name} will leave for ${bid.rivalName} once they’re back at base.`;
   }
   s.people = s.people.filter(p => p.id !== m.id);
+  s.stats.crewLost = (s.stats.crewLost ?? 0) + 1;
   return `${m.name} has joined ${bid.rivalName}. Good luck to them.`;
 }
 

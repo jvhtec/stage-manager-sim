@@ -16,9 +16,17 @@ const RESERVE_MULTIPLE = 4;
 
 export const incidentsOf = (s: Pick<TycoonState, 'incidents'>) => s.incidents ?? [];
 
+/** A cause's family, without its instance number: 'rider-1' → 'rider', 'breakdown-inc12' → 'breakdown'. */
+export const causeKey = (id: string) => id.replace(/-(inc)?[0-9]+$/, '');
+
 export function logIncident(s: TycoonState, inc: Omit<Incident, 'id' | 'hour'>): Incident {
   const full: Incident = { id: newId(s, 'inc'), hour: s.hour, ...inc, causes: [...inc.causes].sort((a, b) => b.weight - a.weight) };
   s.incidents = [...incidentsOf(s), full].slice(-MAX_INCIDENTS);
+  // The whole history, counted (the log itself keeps only the latest): by kind, by every cause, by the main cause.
+  const t = (s.incidentTally ??= { kinds: {}, causes: {}, main: {} });
+  t.kinds[full.kind] = (t.kinds[full.kind] ?? 0) + 1;
+  full.causes.forEach(cause => (t.causes[causeKey(cause.id)] = (t.causes[causeKey(cause.id)] ?? 0) + 1));
+  if (full.causes[0]) t.main[causeKey(full.causes[0].id)] = (t.main[causeKey(full.causes[0].id)] ?? 0) + 1;
   return full;
 }
 

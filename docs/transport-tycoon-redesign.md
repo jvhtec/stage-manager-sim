@@ -863,3 +863,17 @@ What they do is announced in the news, so you can see the system working; you ca
 - **Personnel**: everyone is in exactly one place (a base or a truck) that exists; base and truck headcounts match the people there; fatigue and burnout stay 0–100; nobody named for a show or chased by a poacher has already left.
 
 `invariants.test.ts` runs games in four countries and eras with a simple operator and checks every month; the balance bot checks every month of its nine-year runs and reports any violations. The check found one real hole: a firm that went bust or was bought left its booked shows held by nobody. Now a buyer takes them over, and otherwise they go back on the market (or lapse if it's too late to book them).
+
+## Balance bot, strategies and reports
+
+`src/world/__bench__/bot.ts` is a scripted company that plays through the same actions as a player, following a named strategy. It is deterministic for a given country, start year, seed and strategy. Beyond booking, buying and touring, it can:
+
+- **negotiate**: ask for a deposit and a cancellation clause on any show worth 5,000 or more;
+- **manage crew conflicts**: when two people who are feuding would share a crew, name the crew without one of them (until it has a crew chief);
+- **hire department heads**: a production manager at a dozen shows a month, a crew chief when feuds appear or the crew passes 16, a finance director when invoices pile up — once it has ten years' salary in the bank;
+- **act on the cash forecast**: weekly, and when late invoices could leave it overdrawn it factors invoices, freezes investment for a month and borrows if the expected line goes negative; it repays when the forecast is comfortable.
+
+Five strategies (`STRATEGIES`): **baseline** (books, buys, meets riders and fixes rooms, nothing more), **managed** (baseline plus terms, crew management, heads and the cash forecast), **premium** (managed with a full workshop, top pay, one brand per department and only shows worth having), **lean** (low pay, no workshop, insurance, training or heads) and **corner-cutter** (takes everything, never cross-hires or fixes a room, ignores the forecast).
+
+- `npm run balance` runs one strategy (`STRATEGY=managed`) for `BOT_RUNS` and prints a summary and an explanation per run.
+- `npm run balance:report` plays every strategy through the same countries, start years and seeds (`REPORT_RUNS`, `REPORT_SEEDS`, `REPORT_YEARS`) and writes `docs/balance-report.md` and `.json`: a comparison table (survival, median value, margin, quality, failures, months overdrawn, crew lost, cancellations, bans) and, for every run, why it went the way it did — revenue mix, cost structure as a share of revenue, utilisation, the main causes of bad nights and the root conditions behind them (from a full-history incident tally), cash stress, clients, crew, riders and rooms, fleet and kit faults, and how the rivals fared under the same rules — plus any invariant violations.
