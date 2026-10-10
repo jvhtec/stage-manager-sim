@@ -18,12 +18,54 @@ interface Range {
   width: number;
 }
 
+export interface AbroadTown {
+  name: string;
+  at: [number, number];
+  pop: number;
+  /** ISO code of the neighbouring country. */
+  country: string;
+  flag: string;
+  /** Real rooms by kind; the rest get plain names. */
+  venues: Partial<Record<'pub' | 'hall' | 'club' | 'theatre' | 'arena', string>>;
+}
+
+export interface FixedLink {
+  name: string;
+  at: [number, number];
+  kind: 'bridge' | 'tunnel';
+  /** Before this year the crossing is a ferry. */
+  opens: number;
+}
+
+export interface MotorwayDef {
+  name: string;
+  from: string;
+  to: string;
+  opens: number;
+  toll: boolean;
+}
+
+/** A historic internal border (the GDR until 1990): crossing it costs time while it stands. */
+export interface ZoneDef {
+  name: string;
+  until: number;
+  poly: [number, number][];
+}
+
 export interface GeoParams {
   lat: [number, number];
   lon: [number, number];
   exclude: string[];
   cities: Record<string, [number, number]>;
   ranges: Range[];
+  abroad: AbroadTown[];
+  links: FixedLink[];
+  motorways: MotorwayDef[];
+  zones?: ZoneDef[];
+  /** Narrow seas the coarse land mask closes up (Messina): carved back to water so the ferry stays. */
+  straits?: { name: string; line: [number, number][] }[];
+  /** Extra town-to-town roads, e.g. a ferry lane (Liverpool–Dublin). */
+  lanes?: [string, string][];
 }
 
 const PARAMS = params as unknown as Record<string, GeoParams>;
@@ -53,6 +95,25 @@ export function projectionFor(code: string): Projection {
 }
 
 export const geoCities = (code: string) => PARAMS[code].cities;
+export const geoAbroad = (code: string) => PARAMS[code].abroad ?? [];
+export const geoLinks = (code: string) => PARAMS[code].links ?? [];
+export const geoMotorways = (code: string) => PARAMS[code].motorways ?? [];
+export const geoZones = (code: string) => PARAMS[code].zones ?? [];
+export const geoStraits = (code: string) => PARAMS[code].straits ?? [];
+export const geoLanes = (code: string) => PARAMS[code].lanes ?? [];
+
+/** Is the tile-space point inside a lat/lon polygon (projected)? */
+export function insidePoly(code: string, poly: [number, number][], x: number, y: number): boolean {
+  const proj = projectionFor(code);
+  const pts = poly.map(([lat, lon]) => proj.toTile(lat, lon));
+  let inside = false;
+  for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+    const a = pts[i];
+    const b = pts[j];
+    if (a.y > y !== b.y > y && x < ((b.x - a.x) * (y - a.y)) / (b.y - a.y) + a.x) inside = !inside;
+  }
+  return inside;
+}
 export const geoExcluded = (code: string) => PARAMS[code].exclude;
 
 function unpack(code: string, b64: string): Uint8Array {

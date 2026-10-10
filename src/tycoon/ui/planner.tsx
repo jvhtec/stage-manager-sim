@@ -95,6 +95,7 @@ export function PlannerWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId?: str
           </Stat>
           <Stat label="Driving">
             {distance(plan.distance)} · fuel {money(plan.fuel)}
+            {plan.tolls > 0 ? ` · tolls & crossings ${money(plan.tolls)}` : ''}
           </Stat>
           <Stat label="Nights away">
             {plan.nights} · {money(plan.travel)}

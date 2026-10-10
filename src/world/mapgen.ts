@@ -23,8 +23,11 @@ import {
   type WorldMap,
 } from './types';
 import { MinHeap } from './heap';
+import { getCityPath } from './pathfinding';
+import { eraWorld } from './infra';
+import { yearOf } from './core';
 import { DEFAULT_COUNTRY, getCountry } from './content/countries';
-import { geoCities, geoExcluded, homeMask, sizeOfGeo, landMask, projectionFor, rangeLift } from './content/geo';
+import { geoAbroad, geoCities, geoExcluded, geoLanes, geoLinks, geoMotorways, geoStraits, geoZones, homeMask, insidePoly, sizeOfGeo, landMask, projectionFor, rangeLift } from './content/geo';
 
 const MAX_LEVEL = 5;
 const CITY_COUNT = 16;
@@ -165,6 +168,8 @@ function layRoad(
   map: WorldMap,
   from: { x: number; y: number },
   to: { x: number; y: number },
+  /** A ferry lane: the sea is cheap and existing roads aren't preferred. */
+  lane = false,
 ) {
   const { width, height, terrain, road } = map;
   const n = width * height;
@@ -177,6 +182,7 @@ function layRoad(
   heap.push(start, 0);
 
   const stepCost = (i: number) => {
+    if (lane) return terrain[i] === Terrain.Water ? 0.6 : road[i] ? 0.8 : 1.5;
     if (road[i]) return 0.35;
     const x = i % width;
     const y = (i - x) / width;
@@ -241,10 +247,24 @@ export function getWorld(seed: number, country: string = DEFAULT_COUNTRY): World
   return world;
 }
 
-/** The world a saved game is played on. */
-export function worldOf(state: { mapSeed: number; country?: string }): WorldMap {
-  return getWorld(state.mapSeed, state.country);
+/**
+ * The world a saved game is played on, with its roads as they were this year
+ * (motorways open, the Channel Tunnel, border queues — see infra.ts).
+ */
+export function worldOf(state: { mapSeed: number; country?: string; startYear?: number; hour?: number }): WorldMap {
+  const base = getWorld(state.mapSeed, state.country);
+  if (state.startYear === undefined) return base;
+  const year = yearOf({ startYear: state.startYear }, state.hour ?? 0);
+  const key = `${state.mapSeed}:${state.country}:${year}`;
+  let world = byYear.get(key);
+  if (!world) {
+    world = eraWorld(base, year);
+    if (byYear.size > 200) byYear.clear();
+    byYear.set(key, world);
+  }
+  return world;
 }
+const byYear = new Map<string, WorldMap>();
 
 interface Seat {
   name: string;
@@ -290,6 +310,21 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
   // 1. The real country: coast, mountains.
   const land = landMask(country.code);
   const proj0 = projectionFor(country.code);
+  // Re-open straits the mask closed at this scale, so islands stay islands.
+  const straits = geoStraits(country.code).map(st => ({ name: st.name, pts: st.line.map(([la, lo]) => proj0.toTile(la, lo)) }));
+  const segDist = (x: number, y: number, a: { x: number; y: number }, b: { x: number; y: number }) => {
+    const vx = b.x - a.x;
+    const vy = b.y - a.y;
+    const t = Math.max(0, Math.min(1, ((x - a.x) * vx + (y - a.y) * vy) / (vx * vx + vy * vy || 1)));
+    return Math.hypot(x - (a.x + vx * t), y - (a.y + vy * t));
+  };
+  straits.forEach(st => {
+    for (let y = 0; y < ch; y++) {
+      for (let x = 0; x < cw; x++) {
+        for (let i = 0; i < st.pts.length - 1; i++) if (segDist(x, y, st.pts[i], st.pts[i + 1]) < 1.05) land[idx(x, y, cw)] = 0;
+      }
+    }
+  });
   const home = homeMask(country.code);
   const lift = rangeLift(country.code);
   const toSea = seaDistance(land, cw, ch);
@@ -312,6 +347,7 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
 
   const map: WorldMap = {
     seed,
+    country: country.code,
     width,
     height,
     kmPerTile: proj0.kmPerTile,
@@ -320,9 +356,18 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
     foreign: new Uint8Array(width * height),
     heights,
     cities: [],
+    abroad: [],
     cityById: new Map(),
     venueById: new Map(),
     pathCache: new Map(),
+    distCache: new Map(),
+    landCountry: new Int8Array(width * height).fill(-1),
+    borderCountries: [],
+    zoneOf: new Int8Array(width * height).fill(-1),
+    zones: [],
+    crossings: [],
+    crossingAt: new Int16Array(width * height).fill(-1),
+    corridors: [],
   };
 
   const classifyTerrain = () => {
@@ -402,6 +447,38 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
     placed.push(seat);
   });
 
+  // 2b. Real towns just over the border, on the neighbours' land, where there's room for them.
+  const foreignRoomy = (x: number, y: number, r: number) => {
+    const tx = Math.floor(x);
+    const ty = Math.floor(y);
+    if (tx < r + 2 || ty < r + 2 || tx > width - r - 3 || ty > height - r - 3) return false;
+    for (let j = 0; j <= 1; j++) for (let i = 0; i <= 1; i++) if (!land[idx(tx + i, ty + j, cw)] || home[idx(tx + i, ty + j, cw)]) return false;
+    let ok = 0;
+    let all = 0;
+    for (let j = -r; j <= r + 1; j++) {
+      for (let i = -r; i <= r + 1; i++) {
+        all++;
+        if (land[idx(tx + i, ty + j, cw)] && !home[idx(tx + i, ty + j, cw)]) ok++;
+      }
+    }
+    return ok >= all * 0.4;
+  };
+  const abroadSeats: (Seat & { def: ReturnType<typeof geoAbroad>[number] })[] = [];
+  geoAbroad(country.code).forEach(def => {
+    const ideal = proj.toTile(def.at[0], def.at[1]);
+    const radius = def.pop >= 1_500_000 ? 3 : 2;
+    let best: { x: number; y: number } | null = null;
+    let bestD = Math.max(3, 60 / proj.kmPerTile);
+    for (const t of roomyTiles) {
+      const d = Math.hypot(t.x - ideal.x, t.y - ideal.y);
+      if (d >= bestD || !foreignRoomy(t.x, t.y, radius)) continue;
+      if ([...placed, ...abroadSeats].some(o => Math.hypot(o.x - t.x, o.y - t.y) < (o.radius + radius + 1) * 0.8)) continue;
+      bestD = d;
+      best = t;
+    }
+    if (best) abroadSeats.push({ name: def.name, population: def.pop, radius, ideal, ...best, def });
+  });
+
   const fixed = new Uint8Array(cw * ch);
   land.forEach((l, i) => {
     if (!l) fixed[i] = 1;
@@ -435,6 +512,32 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
       lots: [],
     });
   });
+  abroadSeats.forEach((seat, i) => {
+    const cx = Math.floor(seat.x);
+    const cy = Math.floor(seat.y);
+    for (let y = cy - seat.radius - 1; y <= cy + seat.radius + 2; y++) {
+      for (let x = cx - seat.radius - 1; x <= cx + seat.radius + 2; x++) {
+        if (x < 0 || y < 0 || x >= cw || y >= ch) continue;
+        const k = idx(x, y, cw);
+        if (!land[k] || fixed[k]) continue;
+        heights[k] = 1;
+        fixed[k] = 1;
+      }
+    }
+    map.abroad.push({
+      id: `abroad-${i}`,
+      name: seat.name,
+      x: cx,
+      y: cy,
+      population: seat.population,
+      size: seat.radius >= 3 ? 'city' : 'town',
+      radius: seat.radius,
+      venues: [],
+      buildings: [],
+      lots: [],
+      abroad: { country: seat.def.country, flag: seat.def.flag },
+    });
+  });
   // Ramp the land up to meet raised town plateaus, then settle any clashes
   // where two towns at different levels meet.
   relaxHeights(heights, cw, ch, { raise: true, fixed });
@@ -447,7 +550,8 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
     if (map.terrain[idx(x, y, width)] === Terrain.Water) return;
     map.road[idx(x, y, width)] = 1;
   };
-  map.cities.forEach(city => {
+  const towns = [...map.cities, ...map.abroad];
+  towns.forEach(city => {
     const arm = city.radius;
     for (let d = -arm; d <= arm; d++) {
       lay(city.x + d, city.y);
@@ -465,13 +569,13 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
   // 4. Inter-city roads: a minimum spanning tree plus a few short loops.
   const edges: [number, number][] = [];
   const inTree = new Set<number>([0]);
-  while (inTree.size < map.cities.length) {
+  while (inTree.size < towns.length) {
     let best: [number, number] | null = null;
     let bestD = Infinity;
     inTree.forEach(i => {
-      map.cities.forEach((c, j) => {
+      towns.forEach((c, j) => {
         if (inTree.has(j)) return;
-        const d = Math.hypot(c.x - map.cities[i].x, c.y - map.cities[i].y);
+        const d = Math.hypot(c.x - towns[i].x, c.y - towns[i].y);
         if (d < bestD) {
           bestD = d;
           best = [i, j];
@@ -482,8 +586,8 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
     edges.push(best);
     inTree.add(best[1]);
   }
-  map.cities.forEach((c, i) => {
-    const nearest = map.cities
+  towns.forEach((c, i) => {
+    const nearest = towns
       .map((o, j) => ({ j, d: Math.hypot(o.x - c.x, o.y - c.y) }))
       .filter(o => o.j !== i)
       .sort((a, b) => a.d - b.d)
@@ -493,18 +597,29 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
       if (!exists && d < 22) edges.push([i, j]);
     });
   });
-  edges.forEach(([a, b]) => layRoad(map, map.cities[a], map.cities[b]));
+  // Every real motorway gets its own direct road, so the corridor runs town to town.
+  geoMotorways(country.code).forEach(m => {
+    const a = towns.findIndex(t => t.name === m.from && !t.abroad);
+    const b = towns.findIndex(t => t.name === m.to && !t.abroad);
+    if (a >= 0 && b >= 0 && !edges.some(([x, y]) => (x === a && y === b) || (x === b && y === a))) edges.push([a, b]);
+  });
+  edges.forEach(([a, b]) => layRoad(map, towns[a], towns[b]));
+  geoLanes(country.code).forEach(([x, y]) => {
+    const a = towns.find(t => t.name === x);
+    const b = towns.find(t => t.name === y);
+    if (a && b) layRoad(map, a, b, true);
+  });
 
   // 5. Lots: venues and the depot site, nearest free road-adjacent ground first.
   const taken = new Uint8Array(width * height);
-  const footprintFree = (x: number, y: number, w: number, h: number, flat = true) => {
+  const footprintFree = (x: number, y: number, w: number, h: number, flat = true, abroad = false) => {
     for (let j = 0; j < h; j++) {
       for (let i = 0; i < w; i++) {
         const tx = x + i;
         const ty = y + j;
         if (tx < 1 || ty < 1 || tx >= width - 1 || ty >= height - 1) return false;
         const k = idx(tx, ty, width);
-        if (map.road[k] || taken[k] || map.foreign[k] || map.terrain[k] === Terrain.Water) return false;
+        if (map.road[k] || taken[k] || map.foreign[k] !== (abroad ? 1 : 0) || map.terrain[k] === Terrain.Water) return false;
         if (flat && !isFlat(map, tx, ty)) return false;
       }
     }
@@ -535,7 +650,7 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
       }
       candidates.sort((a, b) => a.d - b.d);
       for (const c of candidates) {
-        if (footprintFree(c.x, c.y, w, h, flat) && (!needRoad || touchesRoad(c.x, c.y, w, h))) {
+        if (footprintFree(c.x, c.y, w, h, flat, !!city.abroad) && (!needRoad || touchesRoad(c.x, c.y, w, h))) {
           for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) taken[idx(c.x + i, c.y + j, width)] = 1;
           return { x: c.x, y: c.y };
         }
@@ -576,15 +691,48 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
     }
   });
 
+  // Towns abroad: a few rooms (the famous ones by name), no warehouse lots — you can't open a base there.
+  const ABROAD_ROOM: Record<'pub' | 'hall' | 'club' | 'theatre' | 'arena', (town: string) => string> = {
+    pub: t => `Bar ${t}`,
+    hall: t => `${t} Concert Hall`,
+    club: t => `Club ${t}`,
+    theatre: t => `${t} Theatre`,
+    arena: t => `${t} Arena`,
+  };
+  map.abroad.forEach((city, n) => {
+    const def = abroadSeats[n].def;
+    const kinds: ('pub' | 'hall' | 'club' | 'theatre' | 'arena')[] = city.size === 'city' ? ['arena', 'theatre', 'club', 'pub'] : ['theatre', 'club', 'pub'];
+    kinds.forEach((kind, i) => {
+      const spec = VENUE_SPECS[kind];
+      const lot = claimLot(city, spec.w, spec.h);
+      if (!lot) return;
+      const venue: Venue = {
+        id: `${city.id}-v${i}`,
+        cityId: city.id,
+        name: def.venues[kind] ?? ABROAD_ROOM[kind](city.name),
+        kind,
+        tier: spec.tier,
+        capacity: rng.nextRange(spec.capacity[0], spec.capacity[1]),
+        x: lot.x,
+        y: lot.y,
+        w: spec.w,
+        h: spec.h,
+      };
+      city.venues.push(venue);
+      map.venueById.set(venue.id, venue);
+    });
+    city.venues.sort((a, b) => a.tier - b.tier);
+  });
+
   // 6. Cosmetic buildings, denser and taller toward the centre of big places.
   const maxFloors: Record<CitySize, number> = { village: 1, town: 3, city: 5, metropolis: 9 };
-  map.cities.forEach(city => {
+  towns.forEach(city => {
     const r = city.radius + 1;
     for (let y = city.y - r; y <= city.y + r; y++) {
       for (let x = city.x - r; x <= city.x + r; x++) {
         if (x < 1 || y < 1 || x >= width - 1 || y >= height - 1) continue;
         const k = idx(x, y, width);
-        if (map.road[k] || taken[k] || map.foreign[k] || map.terrain[k] === Terrain.Water) continue;
+        if (map.road[k] || taken[k] || map.foreign[k] !== (city.abroad ? 1 : 0) || map.terrain[k] === Terrain.Water) continue;
         const d = Math.hypot(x - city.x, y - city.y);
         if (d > r + 0.3) continue;
         const density = 0.95 - (d / (r + 0.5)) * 0.7;
@@ -597,6 +745,104 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
     }
   });
 
-  map.cities.forEach(c => map.cityById.set(c.id, c));
+  towns.forEach(c => map.cityById.set(c.id, c));
+  map.abroad.forEach(c => c.venues.forEach(v => map.venueById.set(v.id, v)));
+
+  // 7. Whose land is it, and where are the old borders.
+  map.borderCountries = [...new Set(map.abroad.map(c => c.abroad!.country))];
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const k = idx(x, y, width);
+      if (map.foreign[k] && map.abroad.length) {
+        let best = map.abroad[0];
+        map.abroad.forEach(c => {
+          if (Math.hypot(c.x - x, c.y - y) < Math.hypot(best.x - x, best.y - y)) best = c;
+        });
+        map.landCountry[k] = map.borderCountries.indexOf(best.abroad!.country);
+      }
+    }
+  }
+  geoZones(country.code).forEach((z, zi) => {
+    map.zones.push({ name: z.name, until: z.until });
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        const k = idx(x, y, width);
+        if (!map.foreign[k] && map.terrain[k] !== Terrain.Water && insidePoly(country.code, z.poly, x + 0.5, y + 0.5)) map.zoneOf[k] = zi;
+      }
+    }
+  });
+
+  // 8. Crossings: a road over water is a bridge if the land on both sides joins up anyway
+  // (an estuary or a ria), and a ferry if it doesn't (an island, another landmass) — until a
+  // real fixed link opens there.
+  const mass = new Int32Array(width * height).fill(-1);
+  let masses = 0;
+  for (let k0 = 0; k0 < width * height; k0++) {
+    if (mass[k0] >= 0 || map.terrain[k0] === Terrain.Water) continue;
+    const queue = [k0];
+    mass[k0] = masses;
+    for (let h = 0; h < queue.length; h++) {
+      const k = queue[h];
+      const x = k % width;
+      const y = (k - x) / width;
+      [x > 0 ? k - 1 : -1, x < width - 1 ? k + 1 : -1, y > 0 ? k - width : -1, y < height - 1 ? k + width : -1].forEach(nb => {
+        if (nb >= 0 && mass[nb] < 0 && map.terrain[nb] !== Terrain.Water) {
+          mass[nb] = masses;
+          queue.push(nb);
+        }
+      });
+    }
+    masses++;
+  }
+  const links = geoLinks(country.code).map(l => ({ ...l, tile: proj.toTile(l.at[0], l.at[1]) }));
+  for (let k0 = 0; k0 < width * height; k0++) {
+    if (!map.road[k0] || map.terrain[k0] !== Terrain.Water || map.crossingAt[k0] >= 0) continue;
+    const id = map.crossings.length;
+    const tiles = [k0];
+    map.crossingAt[k0] = id;
+    const shores = new Set<number>();
+    const countries = new Set<number>();
+    for (let h = 0; h < tiles.length; h++) {
+      const k = tiles[h];
+      const x = k % width;
+      const y = (k - x) / width;
+      [x > 0 ? k - 1 : -1, x < width - 1 ? k + 1 : -1, y > 0 ? k - width : -1, y < height - 1 ? k + width : -1].forEach(nb => {
+        if (nb < 0 || !map.road[nb]) return;
+        if (map.terrain[nb] === Terrain.Water) {
+          if (map.crossingAt[nb] < 0) {
+            map.crossingAt[nb] = id;
+            tiles.push(nb);
+          }
+        } else {
+          shores.add(mass[nb]);
+          countries.add(map.landCountry[nb]);
+        }
+      });
+    }
+    const link = links.find(l => tiles.some(k => Math.hypot((k % width) + 0.5 - l.tile.x, Math.floor(k / width) + 0.5 - l.tile.y) <= 3));
+    const strait = straits.find(st => tiles.some(k => st.pts.some(pt => Math.hypot((k % width) + 0.5 - pt.x, Math.floor(k / width) + 0.5 - pt.y) <= 3)));
+    const abroadSide = [...countries].find(c => c >= 0);
+    map.crossings.push({
+      id,
+      name: strait?.name ?? link?.name,
+      tiles,
+      km: tiles.length * map.kmPerTile,
+      base: shores.size > 1 ? 'ferry' : 'bridge',
+      link: link ? { kind: link.kind, opens: link.opens, name: link.name } : undefined,
+      border: countries.has(-1) && abroadSide !== undefined ? abroadSide : -1,
+    });
+  }
+
+  // 9. Motorway corridors: the roads between two towns that a real motorway upgrades when it opens.
+  const byName = new Map(map.cities.map(c => [c.name, c]));
+  geoMotorways(country.code).forEach(m => {
+    const a = byName.get(m.from);
+    const b = byName.get(m.to);
+    if (!a || !b) return;
+    const tiles = getCityPath(map, a.id, b.id).filter(k => map.crossingAt[k] < 0);
+    if (tiles.length) map.corridors.push({ name: m.name, from: a.id, to: b.id, opens: m.opens, toll: m.toll, tiles });
+  });
+  map.pathCache.clear();
+  map.distCache.clear();
   return map;
 }

@@ -1,6 +1,6 @@
 import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 import { worldOf } from '@/world/mapgen';
-import { getCityPath, positionOnPath } from '@/world/pathfinding';
+import { positionOnRoute } from '@/world/pathfinding';
 import type { TycoonState } from '@/world/types';
 import { centreOn, pickTile, type Camera } from './render/iso';
 import { renderWorld, type HitTargets, type Selection } from './render/renderer';
@@ -103,7 +103,7 @@ export const MapCanvas = forwardRef<MapHandle, Props>(function MapCanvas(
             let tx: number;
             let ty: number;
             if (v.route) {
-              const pos = positionOnPath(map, getCityPath(map, v.route.from, v.route.to), v.route.progress);
+              const pos = positionOnRoute(map, v.route.from, v.route.to, v.route.progress);
               tx = pos.x;
               ty = pos.y;
             } else {

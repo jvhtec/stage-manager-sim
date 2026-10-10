@@ -70,10 +70,49 @@ export interface City {
   buildings: Building[];
   /** 2x2 warehouse lots (top-left tiles). You and rivals each take one. */
   lots: { x: number; y: number }[];
+  /** A town just over the border: shows only (no bases), and a border or a ferry on the way. */
+  abroad?: { country: string; flag: string };
+}
+
+/** A stretch of road over water: a bridge, a ferry, or (once it opens) a tunnel. */
+export interface Crossing {
+  id: number;
+  name?: string;
+  /** Water tiles of the crossing. */
+  tiles: number[];
+  km: number;
+  /** What it is when no fixed link has been built: short hops are bridges, the rest ferries. */
+  base: 'bridge' | 'ferry';
+  /** A fixed link that replaces the ferry in a given year. */
+  link?: { kind: 'bridge' | 'tunnel'; opens: number; name: string };
+  /** Index into WorldMap.borderCountries when it lands in another country. */
+  border: number;
+}
+
+/** A real motorway: the road tiles between two towns that it upgrades from the year it opens. */
+export interface Corridor {
+  name: string;
+  from: string;
+  to: string;
+  opens: number;
+  toll: boolean;
+  tiles: number[];
+}
+
+/** What the roads are like in a given year: which motorways and links are open, how long borders take. */
+export interface Era {
+  year: number;
+  key: string;
+  /** Hours lost at each neighbouring country's border (index as borderCountries), and the customs fee. */
+  border: { hours: number; fee: number }[];
+  /** Hours lost at each historic internal border (index as zones). */
+  zone: number[];
 }
 
 export interface WorldMap {
   seed: number;
+  /** Home country code. */
+  country: string;
   width: number;
   height: number;
   /** Ground distance of one tile — game distances and travel times follow real kilometres. */
@@ -85,10 +124,32 @@ export interface WorldMap {
   /** Integer height per tile *corner*, (width+1) x (height+1). Adjacent corners differ by at most 1. */
   heights: Uint8Array;
   cities: City[];
+  /** Real towns just over the border (shows only). */
+  abroad: City[];
   cityById: Map<string, City>;
   venueById: Map<string, Venue>;
   /** Cache of road paths (tile indices) between city centers. */
   pathCache: Map<string, number[]>;
+  /** Cost of each cached path in game distance units (see pathfinding.KM_PER_UNIT). */
+  distCache: Map<string, number>;
+  /** Which neighbouring country each foreign land tile belongs to (index into borderCountries), -1 at home or sea. */
+  landCountry: Int8Array;
+  borderCountries: string[];
+  /** Historic internal borders (index into zones) per tile, -1 outside. */
+  zoneOf: Int8Array;
+  zones: { name: string; until: number }[];
+  crossings: Crossing[];
+  /** Crossing id per water tile carrying a road, -1 elsewhere. */
+  crossingAt: Int16Array;
+  corridors: Corridor[];
+  /** The year's road network (set on the world for a particular year, see infra.eraWorld). */
+  era?: Era;
+  /** 1 where an open motorway runs. */
+  motorway?: Uint8Array;
+  /** Per crossing tile: 1 bridge, 2 ferry, 3 tunnel. */
+  crossKind?: Uint8Array;
+  /** Era worlds derived from this one, by era key. */
+  eras?: Map<string, WorldMap>;
 }
 
 // ---------------------------------------------------------------------------
@@ -113,6 +174,7 @@ export type LedgerCategory =
   | 'freelance'
   | 'travel'
   | 'fuel'
+  | 'tolls'
   | 'subhire'
   | 'rental'
   | 'leasing'
@@ -153,6 +215,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   freelance: 'Freelance crew',
   travel: 'Per diems & hotels',
   fuel: 'Fuel',
+  tolls: 'Tolls, ferries & customs',
   subhire: 'Sub-hired kit',
   rental: 'Kit rented out',
   leasing: 'Vehicle leases',
@@ -260,8 +323,10 @@ export type VehicleStatus =
 export interface VehicleRoute {
   from: string;
   to: string;
-  /** Tiles travelled along the cached path. */
+  /** Distance units travelled along the route (see pathfinding.KM_PER_UNIT). */
   progress: number;
+  /** The route's length in units when the vehicle set off (motorways or a new tunnel can shorten it mid-trip). */
+  total?: number;
 }
 
 export interface Vehicle {

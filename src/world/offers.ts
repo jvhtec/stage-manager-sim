@@ -193,7 +193,18 @@ export function dailyOffers(state: TycoonState, world: WorldMap, rng: Rng) {
       if (gig) state.gigs.push(gig);
     }
   });
+  // Just over the border: promoters there call foreign crews less often — but they do call.
+  world.abroad.forEach(city => {
+    const chance = OFFER_RATE[city.size] * ABROAD_OFFER_SHARE * demand * localFame(state, city.id) * offerBuzz(state);
+    if (rng.chance(chance)) {
+      const gig = generateOffer(state, world, city, rng, { minLeadDays: 9 });
+      if (gig) state.gigs.push(gig);
+    }
+  });
 }
+
+/** How often a town abroad offers you a show, relative to a home town of its size. */
+export const ABROAD_OFFER_SHARE = 0.45;
 
 function rivalVehicleModel(tier: number): string {
   if (tier >= 4) return 'artic-40';

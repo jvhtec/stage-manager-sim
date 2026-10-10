@@ -21,6 +21,7 @@ import { EventBid, EventList } from './events';
 import { getTech } from '@/world/content/techs';
 import { worldOf } from '@/world/mapgen';
 import { roadDistance } from '@/world/pathfinding';
+import { routeNotes, tripCharges } from '@/world/infra';
 import { estimateArrival, estimateJobCosts, projectCoverage } from '@/world/queries';
 import { DEPTS, type Gig, type TycoonState } from '@/world/types';
 import { Bar, Stat, TierChip } from './bits';
@@ -33,6 +34,23 @@ import { TourList } from './tours';
 function nearestDepotDistance(state: TycoonState, gig: Gig): number {
   const world = worldOf(state);
   return Math.min(...state.depots.map(d => roadDistance(world, d.cityId, gig.cityId)));
+}
+
+/** "Dover–Calais ferry · 🛂 FR · ~£666 each way" for the trip from your nearest base. */
+function roadNotes(state: TycoonState, gig: Gig): string | null {
+  const world = worldOf(state);
+  const depot = [...state.depots].sort((a, b) => roadDistance(world, a.cityId, gig.cityId) - roadDistance(world, b.cityId, gig.cityId))[0];
+  if (!depot || depot.cityId === gig.cityId) return null;
+  const n = routeNotes(world, depot.cityId, gig.cityId);
+  const due = tripCharges(world, depot.cityId, gig.cityId, 'truck');
+  const bits = [
+    ...n.ferries.map(f => `⛴ ${f}`),
+    ...n.tunnels.map(t => `🚇 ${t}`),
+    ...n.borders.map(b => `🛂 ${b === 'the GDR' ? 'GDR transit' : `border (${b})`}`),
+    n.motorwayKm > 0 ? `🛣 ${distance(n.motorwayKm / 18)} of motorway` : '',
+    due.total > 0 ? `${money(due.total)} tolls, fares & customs each way (truck)` : '',
+  ].filter(Boolean);
+  return bits.length ? bits.join(' · ') : null;
 }
 
 export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
@@ -147,6 +165,11 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
         <Stat label="Book by">
           {formatDay(state, gig.acceptByDay)}{' '}
           <span className="tt-dim">· {distance(nearestDepotDistance(state, gig))} from your nearest depot</span>
+        </Stat>
+      )}
+      {gig.status === 'offer' && roadNotes(state, gig) && (
+        <Stat label="On the road">
+          <span className="tt-dim">{roadNotes(state, gig)}</span>
         </Stat>
       )}
 
@@ -546,6 +569,7 @@ export function ShowsWindow({ ctx }: { ctx: WinCtx }) {
                   {g.tourId ? '🎫 ' : ''}
                   {gigWhere(state, g)} · {gigDates(state, g)}
                   {tab === 'offers' ? ` · ${distance(dist)}` : ''}
+                  {tab === 'offers' && worldOf(state).cityById.get(g.cityId)?.abroad ? ' · 🛂 abroad' : ''}
                 </div>
               </div>
               {tab === 'offers' && <TierChip tier={g.tier} locked={!!isLocked(g)} />}

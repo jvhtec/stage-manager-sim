@@ -13,7 +13,7 @@ import { dayOf, loadInHour, loadOutDoneHour } from '@/world/core';
 import { kmoney } from '../ui/format';
 import { SHADOW_LAG } from './sprites';
 import { tileCorners } from '@/world/mapgen';
-import { getCityPath, positionOnPath, unitsPerTile } from '@/world/pathfinding';
+import { getCityPath, positionOnRoute } from '@/world/pathfinding';
 import { Terrain, type City, type Gig, type TycoonState, type Venue, type Vehicle, type WorldMap } from '@/world/types';
 import { TH, TW, groundZ, project, type Camera, type Pt } from './iso';
 import { C, glow, hexToRgb, paint, setNight, type RGB } from './palette';
@@ -341,9 +341,8 @@ function placeVehicles(state: TycoonState, map: WorldMap, alpha: number) {
 
   state.vehicles.forEach(v => {
     if ((v.status === 'driving' || v.status === 'broken') && v.route) {
-      const path = getCityPath(map, v.route.from, v.route.to);
-      const moving = v.status === 'driving' ? (getModel(v.modelId).speed * alpha) / unitsPerTile(map) : 0;
-      const pos = positionOnPath(map, path, v.route.progress + moving);
+      const moving = v.status === 'driving' ? getModel(v.modelId).speed * alpha : 0;
+      const pos = positionOnRoute(map, v.route.from, v.route.to, v.route.progress + moving);
       // Keep to the left, TT-style.
       const off = 0.13;
       const ox = pos.dir === 1 ? off : pos.dir === 3 ? -off : 0;

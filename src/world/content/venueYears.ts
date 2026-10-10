@@ -37,6 +37,18 @@ export const VENUE_YEARS: Record<string, VenueYears> = {
   'LDLC Arena': { opens: 2023 },
   // Italy
   'Unipol Forum': { opens: 1990 },
+  // Just over the border
+  'Pavilhão Atlântico': { opens: 1998, note: 'built for Expo 98' },
+  'The Point Depot': { opens: 1988, shut: [[2008, 2100]], note: 'a converted railway depot by the Liffey' },
+  'Zénith de Lille': { opens: 1994 },
+  'Zénith de Toulouse': { opens: 1999 },
+  'Zénith de Strasbourg': { opens: 2008 },
+  'Arena de Genève': { opens: 1995 },
+  'Palais Nikaïa': { opens: 2001 },
+  'Arena Monterrey': { opens: 2003 },
+  'Auditorio Banamex': { opens: 1995 },
+  'Maple Leaf Gardens': { shut: [[1999, 2100]] },
+  'Montreal Forum': { shut: [[1996, 2100]] },
 };
 
 /** Whether a venue called `name` is standing in `year`. */

@@ -10,7 +10,7 @@ import type { TycoonState } from '../types';
 const game = (): TycoonState => {
   let s = createTycoonGame({ companyName: 'S', color: '#f00', seed: 31, country: 'GB', startYear: 1995 });
   s = { ...s, company: { ...s.company, cash: 2_000_000, reputation: 40 } };
-  return advanceHours(s, 24 * 12); // let offers pile up
+  return advanceHours(s, 24 * 20); // let offers pile up
 };
 
 describe('suggested next jobs', () => {

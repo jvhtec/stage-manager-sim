@@ -13,7 +13,8 @@ export function gigWhere(state: TycoonState, gig: Gig): string {
   const world = worldOf(state);
   if (gig.festival) return `🎪 ${gig.festival.stage}, ${world.cityById.get(gig.cityId)?.name}`;
   if (gig.event && !gig.event.citywide) return `★ ${gig.event.lot} lot, ${world.cityById.get(gig.cityId)?.name}`;
-  return `${world.venueById.get(gig.venueId)?.name}, ${world.cityById.get(gig.cityId)?.name}`;
+  const city = world.cityById.get(gig.cityId);
+  return `${world.venueById.get(gig.venueId)?.name}, ${city?.name}${city?.abroad ? ` ${city.abroad.flag}` : ''}`;
 }
 
 /** "24 Jun 1985", or "24–26 Jun 1985" for multi-day shows. */

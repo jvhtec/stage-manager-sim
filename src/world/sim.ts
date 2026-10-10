@@ -95,7 +95,8 @@ import { dailyIncidents, monthlyInsurance, rollWeather } from './incidents';
 import { dailyContracts, houseRigAt, monthlyContracts } from './contracts';
 import { dailyMarket, fuelMultiplier, marketNow, monthlyInterest } from './market';
 import { getRegion } from './content/world';
-import { getCityPath, unitsPerTile } from './pathfinding';
+import { getCityPath, roadDistance } from './pathfinding';
+import { tripCharges } from './infra';
 import { DEPTS, type GearStock, type Gig, type TycoonState, type Vehicle, type WorldMap } from './types';
 import { findArtist } from './content/artists';
 
@@ -166,7 +167,14 @@ function startDrive(s: TycoonState, world: WorldMap, v: Vehicle, to: string) {
     return;
   }
   v.status = 'driving';
-  v.route = { from, to, progress: 0 };
+  v.route = { from, to, progress: 0, total: roadDistance(world, from, to) };
+  if (v.owner === 'player') {
+    const due = tripCharges(world, from, to, getModel(v.modelId).kind);
+    if (due.total > 0) {
+      book(s, 'tolls', -due.total);
+      v.profitThisYear -= due.total;
+    }
+  }
   v.cityId = undefined;
   v.arrivedHour = undefined;
 }
@@ -352,13 +360,17 @@ function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
   const route = v.route!;
   const path = getCityPath(world, route.from, route.to);
   const model = getModel(v.modelId);
-  route.progress += model.speed / unitsPerTile(world); // progress is in path tiles
+  // A motorway or a tunnel opening mid-trip changes the route's length: keep the share already driven.
+  const total = roadDistance(world, route.from, route.to);
+  if (route.total !== undefined && route.total !== total && route.total > 0) route.progress *= total / route.total;
+  route.total = total;
+  route.progress += model.speed;
   if (v.owner === 'player') {
     const fuel = model.speed * fuelPerTile(model) * fuelMultiplier(s);
     book(s, 'fuel', -fuel);
     v.profitThisYear -= fuel;
   }
-  if (route.progress >= path.length - 1) arrive(s, world, v);
+  if (route.progress >= total || path.length < 2) arrive(s, world, v);
 }
 
 // ---------------------------------------------------------------------------
