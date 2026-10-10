@@ -109,6 +109,10 @@ export interface Era {
   zone: number[];
   /** December to March: snow on the high roads. */
   winter: boolean;
+  /** How fast a solo-driven truck averages under the day's drivers'-hours rules (team drivers are unaffected). */
+  soloPace: number;
+  /** Those rules, in a few words. */
+  driversRules: string;
 }
 
 export interface WorldMap {

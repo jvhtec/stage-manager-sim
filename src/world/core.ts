@@ -86,13 +86,17 @@ export const TEAM_PACE = 1.4;
 /** What the second driver costs per hour on the road. */
 export const TEAM_DRIVER_PER_HOUR = 14;
 
-/** Distance units per hour for a vehicle as crewed. */
-export const vehicleSpeed = (v: Pick<Vehicle, 'modelId' | 'teamDrivers'>) => getModel(v.modelId).speed * (v.teamDrivers ? TEAM_PACE : 1);
+/**
+ * Distance units per hour for a vehicle as crewed, under the drivers'-hours rules of the day (a
+ * solo driver's pace follows the era — see infra.driversRules; a team is unaffected).
+ */
+export const vehicleSpeed = (v: Pick<Vehicle, 'modelId' | 'teamDrivers'>, world?: Pick<WorldMap, 'era'>) =>
+  getModel(v.modelId).speed * (v.teamDrivers ? TEAM_PACE : (world?.era?.soloPace ?? 1));
 
 export function travelHours(world: WorldMap, v: Pick<Vehicle, 'modelId' | 'teamDrivers'>, from: string, to: string): number {
   const dist = roadDistance(world, from, to);
   if (!Number.isFinite(dist)) return Infinity;
-  return Math.ceil(dist / vehicleSpeed(v));
+  return Math.ceil(dist / vehicleSpeed(v, world));
 }
 
 /** When a vehicle sitting in `from` should leave to make `gig`'s load-in with a safety margin. */

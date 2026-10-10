@@ -98,7 +98,7 @@ import { dailyContracts, houseRigAt, monthlyContracts } from './contracts';
 import { dailyMarket, fuelMultiplier, marketNow, monthlyInterest } from './market';
 import { getRegion } from './content/world';
 import { getCityPath, roadDistance } from './pathfinding';
-import { monthlyWinter, tripCharges } from './infra';
+import { monthlyWinter, tripCharges, yearlyDriversRules } from './infra';
 import { countTownShow, fadeTownShows } from './territory';
 import { DEPTS, type GearStock, type Gig, type TycoonState, type Vehicle, type WorldMap } from './types';
 import { findArtist } from './content/artists';
@@ -367,7 +367,7 @@ function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
   const total = roadDistance(world, route.from, route.to);
   if (route.total !== undefined && route.total !== total && route.total > 0) route.progress *= total / route.total;
   route.total = total;
-  const speed = vehicleSpeed(v);
+  const speed = vehicleSpeed(v, world);
   route.progress += speed;
   if (v.owner === 'player') {
     const fuel = speed * fuelPerTile(model) * fuelMultiplier(s);
@@ -666,7 +666,10 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     monthlyMarketing(s);
     monthlyGoal(s);
     monthlyWinter(s, world);
-    if (date.getUTCMonth() === 0) fadeTownShows(s);
+    if (date.getUTCMonth() === 0) {
+      fadeTownShows(s);
+      yearlyDriversRules(s, date.getUTCFullYear());
+    }
     monthlyPriceWars(s, sideRng(s, dayOf(s.hour) + 7002));
     monthlyShares(s, p => rng.chance(p));
     monthlyVenues(s, rng);

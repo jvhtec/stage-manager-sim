@@ -151,3 +151,22 @@ describe('team drivers', () => {
     }
   });
 });
+
+describe("drivers' hours", () => {
+  it('rules tighten through the eras, and solo trucks slow with them', async () => {
+    const { driversRules } = await import('../infra');
+    expect(driversRules('FR', 1980).pace).toBeGreaterThan(driversRules('FR', 1995).pace);
+    expect(driversRules('FR', 1995).pace).toBeGreaterThan(driversRules('FR', 2010).pace);
+    expect(driversRules('US', 2020).label).toMatch(/Electronic/);
+    const { travelHours } = await import('../core');
+    const base = getWorld(7, 'DE');
+    const w1980 = eraWorld(base, 1980);
+    const w2010 = eraWorld(base, 2010);
+    const a = base.cities[0].id;
+    const b = base.cities[3].id;
+    const solo = { modelId: 'artic-40' };
+    // Same road, slower solo pace under digital tachographs (motorways aside).
+    expect(w2010.era!.soloPace).toBeLessThan(w1980.era!.soloPace);
+    expect(travelHours(w2010, { ...solo, teamDrivers: true }, a, b)).toBeLessThan(travelHours(w2010, solo, a, b));
+  });
+});

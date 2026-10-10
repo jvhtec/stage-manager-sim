@@ -83,10 +83,10 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
         <Stat label="Drivers">
           {v.teamDrivers ? (
             <>
-              <b>Team</b> <span className="tt-dim">· {Math.round((TEAM_PACE - 1) * 100)}% quicker · +{money(TEAM_DRIVER_PER_HOUR)}/h on the road</span>
+              <b>Team</b> <span className="tt-dim">· {Math.round((TEAM_PACE / (world.era?.soloPace ?? 1) - 1) * 100)}% quicker than one driver · +{money(TEAM_DRIVER_PER_HOUR)}/h on the road</span>
             </>
           ) : (
-            <span className="tt-dim">One driver</span>
+            <span className="tt-dim">One driver · {world.era?.driversRules ?? ''}</span>
           )}
           <button
             className="tt-btn sm"
@@ -171,7 +171,7 @@ export function VehicleWindow({ ctx, vehicleId }: { ctx: WinCtx; vehicleId: stri
             {(() => {
               const last = gigById(state, v.orders[v.orders.length - 1]);
               const back = last ? roadDistance(world, last.cityId, v.homeCityId) : NaN;
-              return Number.isFinite(back) && back > 0 ? ` — ${distance(back)}, about ${Math.ceil(back / vehicleSpeed(v))}h.` : '.';
+              return Number.isFinite(back) && back > 0 ? ` — ${distance(back)}, about ${Math.ceil(back / vehicleSpeed(v, world))}h.` : '.';
             })()}
           </div>
         </div>

@@ -65,6 +65,28 @@ export function borderRegime(home: string, other: string, year: number): { hours
   return { hours: (customs ? CUSTOMS_HOURS : 0) + (passport ? PASSPORT_HOURS : 0), fee: customs ? CUSTOMS_FEE : 0 };
 }
 
+// ---------------------------------------------------------------------------
+// Drivers' hours
+// ---------------------------------------------------------------------------
+
+/**
+ * How the rules on drivers' hours bite on a solo driver, by era. Speeds in the game already
+ * average in a driver's rests; what changes is how strictly they're kept: loosely before the EU
+ * rules of 1986, by the book after, and to the minute once digital tachographs came in (2006/07).
+ * In America, hours-of-service tightened in 2004 and 2013 and electronic logs became law in 2017.
+ */
+export function driversRules(country: string, year: number): { pace: number; label: string } {
+  if (country === 'US') {
+    if (year < 2004) return { pace: 1.05, label: 'Hours of service: 10 hours at the wheel, paper logbooks' };
+    if (year < 2013) return { pace: 1, label: 'Hours of service: 11 hours at the wheel, 10 off' };
+    if (year < 2017) return { pace: 0.96, label: 'Hours of service with a mandatory 30-minute break' };
+    return { pace: 0.92, label: 'Electronic logging devices: every hour recorded' };
+  }
+  if (year < 1986) return { pace: 1.08, label: 'Analogue tachographs, loosely policed' };
+  if (year < 2007) return { pace: 1, label: 'EU drivers’ hours: 9 hours a day, 11 off' };
+  return { pace: 0.9, label: 'Digital tachographs: every minute counted' };
+}
+
 /** The GDR's transit checks on the way into the East and Berlin. */
 const ZONE_HOURS = 3;
 
@@ -96,11 +118,12 @@ export function eraWorld(base: WorldMap, year: number, winter = false): WorldMap
   const zone = base.zones.map(z => (year < z.until ? ZONE_HOURS : 0));
   const tollYear = TOLLS[home] && year >= TOLLS[home].from ? 1 : 0;
   const snow = winter;
-  const key = `${open.map(Number).join('')}|${links.join('')}|${border.map(b => `${b.hours}:${b.fee}`).join(',')}|${zone.join(',')}|${tollYear}|${snow ? 'w' : ''}`;
+  const rules = driversRules(home, year);
+  const key = `${open.map(Number).join('')}|${links.join('')}|${border.map(b => `${b.hours}:${b.fee}`).join(',')}|${zone.join(',')}|${tollYear}|${snow ? 'w' : ''}|${rules.pace}`;
   base.eras ??= new Map();
   const cached = base.eras.get(key);
   if (cached) return cached;
-  const era: Era = { year, key, border, zone, winter: snow };
+  const era: Era = { year, key, border, zone, winter: snow, soloPace: rules.pace, driversRules: rules.label };
   const motorway = new Uint8Array(base.width * base.height);
   base.corridors.forEach((c, i) => {
     if (open[i]) c.tiles.forEach(k => (motorway[k] = c.toll && tollYear ? 2 : 1));
@@ -211,4 +234,13 @@ export function monthlyWinter(s: TycoonState, world: WorldMap) {
   const month = new Date(Date.UTC(s.startYear, 0, 1) + Math.floor(s.hour / 24) * 86400000).getUTCMonth();
   if (month === 11) pushNews(s, 'Winter on the high roads: snow slows the mountain passes until spring, and trucks crossing them need chains.', 'info');
   if (month === 3) pushNews(s, 'The passes are clear again: mountain roads are back to normal.', 'info');
+}
+
+/** January: say so when the drivers' hours rules change. */
+export function yearlyDriversRules(s: TycoonState, year: number) {
+  const now = driversRules(s.country ?? 'GB', year);
+  const before = driversRules(s.country ?? 'GB', year - 1);
+  if (now.label === before.label) return;
+  const change = now.pace < before.pace ? 'Solo drivers will average less; team drivers are unaffected.' : 'Solo drivers can cover more ground.';
+  pushNews(s, `New drivers' hours rules: ${now.label}. ${change}`, 'info');
 }

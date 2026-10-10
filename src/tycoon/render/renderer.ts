@@ -501,7 +501,7 @@ function placeVehicles(state: TycoonState, map: WorldMap, alpha: number) {
 
   state.vehicles.forEach(v => {
     if ((v.status === 'driving' || v.status === 'broken') && v.route) {
-      const moving = v.status === 'driving' ? vehicleSpeed(v) * alpha : 0;
+      const moving = v.status === 'driving' ? vehicleSpeed(v, map) * alpha : 0;
       const pos = positionOnRoute(map, v.route.from, v.route.to, v.route.progress + moving);
       // Keep to the left, TT-style.
       const off = 0.13;

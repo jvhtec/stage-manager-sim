@@ -69,7 +69,7 @@ export function estimateArrival(state: TycoonState, v: Vehicle, gig: Gig): numbe
   }
   if (v.status === 'driving' || v.status === 'broken') {
     const to = v.route!.to;
-    const remaining = Math.ceil((roadDistance(world, v.route!.from, to) - v.route!.progress) / vehicleSpeed(v));
+    const remaining = Math.ceil((roadDistance(world, v.route!.from, to) - v.route!.progress) / vehicleSpeed(v, world));
     const start = state.hour + Math.max(0, remaining) + Math.max(0, (v.brokenUntil ?? 0) - state.hour);
     return start + travelHours(world, v, to, gig.cityId);
   }
@@ -256,7 +256,7 @@ export function estimateJobCosts(state: TycoonState, gig: Gig, projection = proj
     if (!Number.isFinite(dist)) return;
     fuel += dist * 2 * fuelPerTile(model) * fuelMultiplier(state);
     if (v.homeCityId === gig.cityId && !gig.overseas) return;
-    const away = Math.max(1, Math.ceil((loadOutDoneHour(gig) - loadInHour(gig) + (2 * dist) / vehicleSpeed(v)) / HOURS_PER_DAY));
+    const away = Math.max(1, Math.ceil((loadOutDoneHour(gig) - loadInHour(gig) + (2 * dist) / vehicleSpeed(v, world)) / HOURS_PER_DAY));
     const crew = Math.min(model.crewSeats, gig.crewNeeded);
     nights += away;
     travel += away * crew * (PER_DIEM + (model.kind === 'bus' ? 0 : HOTEL_NIGHT));
