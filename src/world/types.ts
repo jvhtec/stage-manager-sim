@@ -448,6 +448,8 @@ export interface Rider {
 export interface Gig {
   id: string;
   act: string;
+  /** Kit sent by rail or air freight instead of (or as well as) a truck (freight.ts). */
+  freight?: { mode: 'rail' | 'air'; fromDepotId: string; gear: GearStock; arrives: number; cost: number; hours: number; returned?: boolean };
   venueId: string;
   cityId: string;
   tier: number;

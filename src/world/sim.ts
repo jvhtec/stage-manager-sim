@@ -100,6 +100,7 @@ import { getRegion } from './content/world';
 import { getCityPath, roadDistance } from './pathfinding';
 import { dailyDisruptions, monthlyWinter, tripCharges, yearlyDriversRules } from './infra';
 import { countTownShow, fadeTownShows } from './territory';
+import { returnFreight } from './freight';
 import { CURFEW_FINE, CURFEW_QUALITY, NOISE_HEADROOM, NOISE_QUALITY, UNION_CALL, traitsOf } from './venueTraits';
 import { DEPTS, type GearStock, type Gig, type TycoonState, type Vehicle, type WorldMap } from './types';
 import { findArtist } from './content/artists';
@@ -401,6 +402,7 @@ function resolveShows(s: TycoonState, world: WorldMap, rng: Rng) {
     }
     if (gig.status !== 'booked') return;
     playShow(s, world, gig, rng);
+    returnFreight(s, gig);
   });
 }
 
@@ -427,11 +429,15 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     addStock(delivered, v.cargo);
     crew += v.crew;
   });
+  // Kit sent by rail or air is there if it landed before the doors.
+  const freighted = gig.freight && gig.freight.arrives <= showStartHour(gig) ? gig.freight : undefined;
+  if (freighted) addStock(delivered, freighted.gear);
+  const present = onSite.length > 0 || !!freighted;
   // Your house rig is already in the room (it still needs a crew to run it).
-  const houseRig = onSite.length ? houseRigAt(s, gig.venueId) : undefined;
+  const houseRig = present ? houseRigAt(s, gig.venueId) : undefined;
   if (houseRig) addStock(delivered, houseRig);
   // Short of kit? A rival nearby sends the rest straight to the venue, at a day rate.
-  const hire = onSite.length ? subHireFor(s, world, gig, delivered) : { stock: {}, units: 0, cost: 0, from: [] };
+  const hire = present ? subHireFor(s, world, gig, delivered) : { stock: {}, units: 0, cost: 0, from: [] };
   bookSubHire(s, hire);
   if (hire.cost) onSite.forEach(v => (v.profitThisYear -= Math.round(hire.cost / onSite.length)));
   const working: GearStock = { ...delivered };
@@ -465,7 +471,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     if (f) failures.push(f);
   }
   const gear = evaluateGear(working, gig, yearOf(s, s.hour), s.gearCondition);
-  const weather = onSite.length ? rollWeather(s, gig, rng) : null;
+  const weather = present ? rollWeather(s, gig, rng) : null;
   wearFromShow(s, delivered, showDays + (weather?.extraWear ?? 0), !!gig.overseas);
   const failureNote =
     (failures.length ? ` ${failures.map(f => `${getProduct(f.productId).brand} ${getProduct(f.productId).name}`).join(' and ')} died mid-set.` : '') +
@@ -475,7 +481,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const gearCoverage = gear.coverage;
   // Tired crews are worth less on the night.
   // Short-handed? Local freelancers fill the gap, at a day rate.
-  const freelance = onSite.length ? freelancersFor(s, world, gig, crew) : { count: 0, cost: 0, effectiveness: 0, local: false };
+  const freelance = present ? freelancersFor(s, world, gig, crew) : { count: 0, cost: 0, effectiveness: 0, local: false };
   const effCrew = crewEval.effective + freelance.count * freelance.effectiveness;
   const crewCoverage = Math.min(1, effCrew / Math.max(1, gig.crewNeeded));
   if (freelance.cost) {
@@ -489,7 +495,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const traits = venue && !gig.overseas && !gig.festival ? traitsOf(world, venue) : undefined;
   let venueHit = 0;
   const venueNotes: string[] = [];
-  if (traits && onSite.length) {
+  if (traits && present) {
     if (traits.union) {
       const call = UNION_CALL * gig.crewNeeded;
       book(s, 'freelance', -call);
@@ -531,7 +537,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
       onSite.forEach(v => (v.profitThisYear -= Math.round(papers.total / onSite.length)));
     }
   }
-  if (!onSite.length || quality < 0.3) {
+  if (!present || quality < 0.3) {
     const penalty = Math.round(gig.fee * NO_SHOW_PENALTY_RATE);
     book(s, 'penalties', -penalty);
     gig.status = 'failed';
@@ -672,7 +678,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   // Nag about booked shows with nothing assigned two days out.
   s.gigs.forEach(gig => {
     if (gig.status !== 'booked' || gig.day - day !== 2) return;
-    const assigned = s.vehicles.some(v => v.owner === 'player' && v.orders.includes(gig.id));
+    const assigned = s.vehicles.some(v => v.owner === 'player' && v.orders.includes(gig.id)) || !!gig.freight;
     if (!assigned) {
       pushNews(s, `${gig.act} plays in 2 days and no vehicles are assigned!`, 'bad', { cityId: gig.cityId, gigId: gig.id });
     }

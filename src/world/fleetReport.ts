@@ -81,7 +81,7 @@ export function fleetSummary(state: TycoonState): FleetSummary {
     const p = projectCoverage(state, g);
     const days = g.day - today;
     const when = days <= 0 ? 'today' : days === 1 ? 'tomorrow' : `in ${days} days`;
-    if (!p.vehicles.length) {
+    if (!p.vehicles.length && !g.freight) {
       alerts.push({ id: `a-${g.id}`, severity: 'bad', text: `${g.act} plays ${when} and no vehicle is assigned.`, gigId: g.id });
     } else if (!p.onTime) {
       alerts.push({ id: `l-${g.id}`, severity: 'bad', text: `${g.act} (${when}): the truck won't make load-in.`, gigId: g.id });

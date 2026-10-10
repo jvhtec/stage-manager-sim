@@ -144,7 +144,8 @@ export interface CoverageProjection {
 export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjection {
   const vehicles = state.vehicles.filter(v => v.owner === 'player' && v.orders.includes(gig.id));
   const stock = new Map(state.depots.map(d => [d.cityId, { gear: { ...d.gear }, people: atDepot(state, d.id) }]));
-  const delivered: GearStock = { ...(vehicles.length ? houseRigAt(state, gig.venueId) : undefined) };
+  const delivered: GearStock = { ...(vehicles.length || gig.freight ? houseRigAt(state, gig.venueId) : undefined) };
+  if (gig.freight) addStock(delivered, gig.freight.gear);
   const people: CrewMember[] = [];
   let latestArrival = 0;
 
@@ -189,7 +190,8 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
     : 1;
   const vehicleIds = new Set(vehicles.map(v => v.id));
   const techIds = state.techs.filter(t => t.vehicleId && vehicleIds.has(t.vehicleId)).map(t => t.techId);
-  const onTime = !vehicles.length || latestArrival <= loadInHour(gig);
+  if (gig.freight) latestArrival = Math.max(latestArrival, gig.freight.arrives);
+  const onTime = (!vehicles.length && !gig.freight) || latestArrival <= loadInHour(gig);
   const expectedQuality = vehicles.length
     ? baseShowQuality({
         gearCoverage: evaluation.coverage,

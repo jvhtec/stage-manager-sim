@@ -1,6 +1,7 @@
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
-import { assignVehicle, bookGate, bookGig, haggleGig, rehearseShow, unassignVehicle } from '@/world/actions';
+import { assignVehicle, bookGate, bookGig, haggleGig, rehearseShow, sendFreight, unassignVehicle } from '@/world/actions';
+import { freightQuote } from '@/world/freight';
 import { certCount, requiredCerts } from '@/world/certs';
 import { expertiseBonus } from '@/world/expertise';
 import { MODULES, REHEARSAL_QUALITY, bestStageLevel, gigRehearsalCost, rehearsalBlocker, requiredStageLevel, stageName, tourRehearsalCost } from '@/world/annexes';
@@ -423,8 +424,46 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
                 </div>
               );
             })}
-            {!projection.vehicles.length && <div className="tt-dim">None yet.</div>}
+            {!projection.vehicles.length && !gig.freight && <div className="tt-dim">None yet.</div>}
+            {gig.freight && (
+              <div className="tt-item">
+                <div className="grow">
+                  <div style={{ fontWeight: 700 }}>
+                    {gig.freight.mode === 'air' ? '✈ Air freight' : '🚆 Rail freight'} · {Object.values(gig.freight.gear).reduce((a, b) => a + b, 0)} units
+                  </div>
+                  <div className="tt-dim">Lands {formatHour(state, gig.freight.arrives)} · crewed by local freelancers</div>
+                </div>
+              </div>
+            )}
           </div>
+          {!gig.freight && !gig.overseas && !gig.festival && (
+            <>
+              <h4>Or send the kit by freight</h4>
+              <div className="tt-list">
+                {state.depots.flatMap(d =>
+                  (['rail', 'air'] as const).map(mode => {
+                    const q = freightQuote(state, gig, d, mode);
+                    if (!q.ok && !q.units) return null;
+                    return (
+                      <div key={`${d.id}-${mode}`} className="tt-item">
+                        <div className="grow">
+                          <div style={{ fontWeight: 700 }}>
+                            {mode === 'air' ? '✈ Air' : '🚆 Rail'} from {worldOf(state).cityById.get(d.cityId)?.name}
+                          </div>
+                          <div className={q.ok ? 'tt-dim' : 'tt-bad'}>
+                            {q.ok ? `${q.units} units · ${q.hours}h · lands ${formatHour(state, q.arrives)} · crew: local freelancers` : q.reason}
+                          </div>
+                        </div>
+                        <button className="tt-btn sm" disabled={!q.ok || state.company.cash < q.cost} onClick={() => act(s => sendFreight(s, gig.id, d.id, mode))}>
+                          {kmoney(q.cost)}
+                        </button>
+                      </div>
+                    );
+                  }),
+                )}
+              </div>
+            </>
+          )}
           <h4>Add a vehicle</h4>
           <div className="tt-list">
             {candidates.map(v => {
