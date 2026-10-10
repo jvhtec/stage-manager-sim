@@ -78,6 +78,7 @@ import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSiz
 import { GEAR_PRODUCTS, getProduct } from './content/gear';
 import { leftBehindChance, monthlyRent, monthlySalaries, prepFailureFactor, prepOf, prepRatio } from './facilities';
 import { breachPenalty, checkSpec } from './techRider';
+import { FIX_TEXT, problemEffects, productionProblems } from './production';
 import { canAfford, deferService, lastingConsequences, nightCauses, OVERDUE_DECAY, overdueDays, postMortem, recordBreakdown, serviceCleared } from './consequences';
 import { monthlyTraining, PAY, freelancersFor, monthlyCrew, moraleBonus } from './crew';
 import { REST_AT, crewDirectives, aboard, atDepot, dailyPeopleFatigue, dailyPoachBids, dayRate, evaluateCrew, learnFromShow, moveToDepot, moveToVehicle, pickCrew, refreshCandidates, sideRng, syncCrew } from './people';
@@ -460,6 +461,9 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   // The technical rider: inputs, show file, approved PA. Break it and the act's engineer won't have it.
   const breaches = present ? checkSpec(gig.techSpec, working) : [];
   const breach = breachPenalty(breaches);
+  // Does the production fit the room? Power, roof load, where an artic can park.
+  const problems = present ? productionProblems(world, gig, working, onSite) : [];
+  const fx = problemEffects(problems);
   // Who's working the show, and how well their skills fit its departments.
   const people = onSite.flatMap(v => aboard(s, v.id));
   const crewEval = evaluateCrew(people, gig);
@@ -485,7 +489,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const showDays = gig.overseas ? gig.overseas.stops.length : (gig.days ?? 1);
   const failures: Failure[] = [];
   for (let d = 0; d < Math.min(4, showDays); d++) {
-    const f = rollFailure(s, working, rng, prepFailureFactor(prep) * crewEval.failureFactor * (gig.mods?.failureFactor ?? 1) * (unrehearsed(s, gig) ? UNREHEARSED_FAILURE : 1) * tickets.failureFactor);
+    const f = rollFailure(s, working, rng, prepFailureFactor(prep) * crewEval.failureFactor * (gig.mods?.failureFactor ?? 1) * (unrehearsed(s, gig) ? UNREHEARSED_FAILURE : 1) * tickets.failureFactor * fx.failureFactor);
     if (f) failures.push(f);
   }
   const gear = evaluateGear(working, gig, yearOf(s, s.hour), s.gearCondition);
@@ -508,11 +512,11 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   }
   const freelanceNote = freelance.count ? ` ${freelance.count} local freelancer${freelance.count > 1 ? 's' : ''} filled in.` : '';
   const lastArrival = Math.max(...onSite.map(v => v.arrivedHour ?? 0), 0);
-  const lateHours = onSite.length ? Math.max(0, lastArrival - loadInHour(gig)) : 0;
+  const lateHours = onSite.length ? Math.max(0, lastArrival + fx.delay - loadInHour(gig)) : 0;
   // The room's quirks: a union call to pay, a curfew to run into, a noise limiter to trip.
   const traits = venue && !gig.overseas && !gig.festival ? traitsOf(world, venue) : undefined;
   let venueHit = 0;
-  const venueNotes: string[] = [];
+  const venueNotes: string[] = problems.map(p => FIX_TEXT[p.id]);
   if (traits && present) {
     if (traits.union) {
       const call = UNION_CALL * gig.crewNeeded;
@@ -534,7 +538,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     0,
     Math.min(
       1,
-      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) + crewEval.bonus - (weather?.penalty ?? 0) + (gig.mods?.quality ?? 0) - (unrehearsed(s, gig) ? UNREHEARSED_QUALITY : 0) - tickets.quality - venueHit - breach.quality }) +
+      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) + crewEval.bonus - (weather?.penalty ?? 0) + (gig.mods?.quality ?? 0) - (unrehearsed(s, gig) ? UNREHEARSED_QUALITY : 0) - tickets.quality - venueHit - breach.quality - fx.quality }) +
         (rng.next() - 0.5) * 0.08,
     ),
   );
@@ -564,8 +568,9 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     forgotten: forgotten.length,
     unrehearsed: unrehearsed(s, gig),
     missingTickets: tickets.missing,
-    venueNotes,
+    venueNotes: venueNotes.slice(problems.length),
     breaches: breaches.map(b => `${b.label}: ${b.detail}`),
+    production: problems.map(p => `${p.label}: ${p.detail}`),
     present,
     workshop: s.policies.workshop,
     noKit: !stockSize(delivered),

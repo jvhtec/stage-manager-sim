@@ -2,7 +2,7 @@ import { it } from 'vitest';
 import { createTycoonGame } from '../state';
 import { advanceHours } from '../sim';
 import { crossHireCost, crossHireOptions } from '../techRider';
-import { crossHireKit, assignVehicle, bookGig, buildAnnex, buyGear, buyVehicle, hireCrew, haggleGig, makeDecision, orderTourMerch, rehearseShow, setPolicy, trainCrew, upgradeDepot, bookTour, assignVehicleToTour } from '../actions';
+import { crossHireKit, fixProduction, assignVehicle, bookGig, buildAnnex, buyGear, buyVehicle, hireCrew, haggleGig, makeDecision, orderTourMerch, rehearseShow, setPolicy, trainCrew, upgradeDepot, bookTour, assignVehicleToTour } from '../actions';
 import { gigBookingBar, tourBookingBar } from '../standing';
 import { dayOf, yearOf } from '../core';
 import { worldOf } from '../mapgen';
@@ -148,13 +148,14 @@ it('smart bot', () => {
       for (const g of s.gigs.filter((g: S) => g.status === 'booked' && !g.rehearsed && g.day - today >= 2 && g.day - today <= 14)) s = ok(s, rehearseShow(s, g.id));
       // Meet technical riders: cross-hire what the kit going out lacks, when it's worth it.
       if (!FEATURES.has('norider'))
-        for (const g of s.gigs.filter((g: S) => g.status === 'booked' && g.techSpec && g.day - today >= 1 && g.day - today <= 5)) {
+        for (const g of s.gigs.filter((g: S) => g.status === 'booked' && g.day - today >= 1 && g.day - today <= 5)) {
           const proj = projectCoverage(s, g);
           for (const b of proj.breaches) {
             const opt = crossHireOptions(g.techSpec, b.id, yearOf(s, g.day * 24))[0];
             const units = b.id === 'pa' ? Math.max(1, g.needs.audio) : 1;
             if (opt && crossHireCost(opt.id, units, g.days ?? 1) < g.fee * 0.2) s = ok(s, crossHireKit(s, g.id, opt.id, units));
           }
+          for (const pr of proj.production) if (pr.fixCost < g.fee * 0.2) s = ok(s, fixProduction(s, g.id, pr.id));
         }
       void projectCoverage;
     }

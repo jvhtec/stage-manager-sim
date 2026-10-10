@@ -781,3 +781,12 @@ From club level up a show carries a technical rider (`techRider.ts`) with hard r
 - **Approved PA**: bigger shows list the two or three PA brands they accept.
 
 Trucks load compliant kit first. The show window lists the rider and, once trucks are assigned, checks the kit going out; for each breach it offers **cross-hire** from a rental house (6% of the unit price a day, delivered to the venue). Break the rider and the engineer fights the kit all night (−8% quality per breach), the client withholds 12% of the fee per breach (up to 30%), the act's goodwill drops and the breach goes into the post-mortem. Owning one console family means fewer hires; mixing brands means hiring more often.
+
+## Can the room take the show?
+
+From clubs and theatres up (`production.ts`), every venue has a house power supply, a roof that takes so many tonnes (open-air stadiums: none) and, unless it has a loading dock, no access for artics. Every gear kind draws power and flies weight: a par-can rig drinks power that an LED rig doesn't, line arrays and video walls are heavy, and each staging unit brings 5 t of ground support for open-air shows.
+
+- **The offer** says if a typical rig for the show would overload the room, and roughly what the fix costs — some jobs aren't worth it.
+- **A booked show** checks the actual kit and trucks going out, with a button per problem: hire a generator, hire ground-support towers, or book local vans to shuttle the kit from where the artic can park.
+- **Left unfixed**: the house supply trips (twice the chance of kit failing, −4% quality), half the rig stays on the floor (−8%), or the artics are hand-balled in (+2 h on the load-in). Each goes into the post-mortem as "The production didn't fit the room".
+- The venue window lists each room's power, roof load and access. The old random "undersized power" crisis is gone: power is now something you can see coming.

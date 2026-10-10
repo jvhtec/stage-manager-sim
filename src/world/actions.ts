@@ -2,7 +2,9 @@
  * Player commands. Each takes the current state and returns
  * `{ state, result }` — a new state on success, the untouched one on failure.
  */
+import { projectCoverage } from './queries';
 import { crossHire, crossHireCost } from './techRider';
+import { bookFix, type FixId } from './production';
 import { busHireBlocker } from './buses';
 import { dispatchFreight, freightLabel, freightQuote, type FreightMode } from './freight';
 import { gateBlocker, hypeLabel, rollGate } from './gate';
@@ -343,6 +345,17 @@ export function crossHireKit(state: TycoonState, gigId: string, productId: strin
   if (state.company.cash < cost) return fail(state, 'Not enough cash for the hire.');
   const s = cloneState(state);
   return ok(s, crossHire(s, s.gigs.find(g => g.id === gigId)!, productId, units));
+}
+
+/** Book a production fix for a show's room: a generator, ground support, or vans to shuttle from the street. */
+export function fixProduction(state: TycoonState, gigId: string, fix: FixId): ActionOutcome {
+  const g0 = state.gigs.find(g => g.id === gigId);
+  if (!g0 || g0.status !== 'booked') return fail(state, 'Book the show first.');
+  const problem = projectCoverage(state, g0).production.find(p => p.id === fix);
+  if (!problem) return fail(state, 'Nothing to fix.');
+  if (state.company.cash < problem.fixCost) return fail(state, 'Not enough cash.');
+  const s = cloneState(state);
+  return ok(s, bookFix(s, s.gigs.find(g => g.id === gigId)!, problem));
 }
 
 /** Put a second driver in the cab (or take them off): quicker long hauls for a driver's pay while rolling. */

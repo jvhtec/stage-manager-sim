@@ -1,4 +1,5 @@
 import { describeTraits, traitsOf } from '@/world/venueTraits';
+import { venueLimits } from '@/world/production';
 import { routeNotes, tripCharges } from '@/world/infra';
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
@@ -232,6 +233,18 @@ export function VenueWindow({ ctx, venueId }: { ctx: WinCtx; venueId: string }) 
           <span style={{ whiteSpace: 'normal' }}>{describeTraits(traitsOf(world, venue)).join(' · ')}</span>
         </Stat>
       )}
+      {venue.kind !== 'airport' &&
+        (() => {
+          const lim = venueLimits(world, venue);
+          return (
+            <Stat label="Production">
+              <span style={{ whiteSpace: 'normal' }}>
+                {lim.powerKw} kW house power · {lim.roofT ? `roof takes ${lim.roofT} t` : 'open air: bring ground support'}
+                {lim.noArtics ? ' · no artic access' : ''}
+              </span>
+            </Stat>
+          );
+        })()}
       <Stat label="Promoter">
         <b>{relationLabel(venueRelation(state, venueId))}</b>
         {venueRelation(state, venueId) > 0 && (

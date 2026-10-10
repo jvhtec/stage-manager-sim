@@ -563,6 +563,10 @@ export function HelpWindow() {
           rental house; break the rider and the client holds back part of the fee.
         </li>
         <li>
+          <b>The room</b>: clubs and up have limited power, a roof that only takes so much weight and sometimes no dock for an
+          artic. The offer warns you, and a booked show offers a generator, ground support or a van shuttle.
+        </li>
+        <li>
           Buy bigger trucks and more gear, and win reputation to unlock arenas and stadiums. Every January the industry awards
           judge your year and the trade press prints its supplier table, the biggest tours and reviews of your best and worst
           shows. Or start from a <b>historic scenario</b> — Live Aid, Italia ’90, Barcelona ’92 — and win a lot of the night.

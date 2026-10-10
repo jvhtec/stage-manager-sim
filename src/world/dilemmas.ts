@@ -186,7 +186,7 @@ export function hourlyCrises(s: TycoonState, rng: Rng) {
     }
     if (!rng.chance((gig.overseas ? OVERSEAS_CRISIS_CHANCE : CRISIS_CHANCE(gig.tier)) * difficultyOf(s).crises)) return;
     // Abroad, the rig crossing a border is the likeliest thing to go wrong.
-    const kinds = gig.overseas ? (['customs', 'customs', 'manager', 'injury'] as (keyof typeof MAKERS)[]) : VENUE_KINDS.filter(k => k !== 'storm' && k !== 'customs' || (k === 'storm' && !!gig.festival));
+    const kinds = gig.overseas ? (['customs', 'customs', 'manager', 'injury'] as (keyof typeof MAKERS)[]) : VENUE_KINDS.filter(k => k !== 'power' && (k !== 'storm' && k !== 'customs') || (k === 'storm' && !!gig.festival));
     for (let tries = 0; tries < 3; tries++) {
       const made = MAKERS[rng.pick(kinds)](s, gig, rng);
       if (!made) continue;

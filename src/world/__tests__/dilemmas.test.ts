@@ -49,7 +49,7 @@ describe('on-the-day decisions', () => {
   it('unanswered problems fall back to the default at the deadline', () => {
     const { s, gig } = scenario();
     s.hour = loadInHour(gig);
-    hourlyCrises(s, yes);
+    hourlyCrises(s, { ...(yes as object), pick: <T,>(a: T[]) => (a.includes('manager' as T) ? ('manager' as T) : a[0]) } as never);
     s.dilemmas = s.dilemmas.filter(x => x.kind !== 'change'); // client change requests have their own test
     expect(s.dilemmas.length).toBe(1);
     const d = s.dilemmas[0];

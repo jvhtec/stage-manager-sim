@@ -1,5 +1,6 @@
 /** Read-only projections for the UI — nothing here mutates state. */
 import { breachPenalty, checkSpec, type Breach } from './techRider';
+import { problemEffects, productionProblems, type ProductionProblem } from './production';
 import { fuelMultiplier } from './market';
 import { techResaleFactor } from './content/techWaves';
 import { zoneBill } from './regulation';
@@ -123,6 +124,8 @@ export function suggestJobs(state: TycoonState, v: Vehicle, limit = 3): JobSugge
 export interface CoverageProjection {
   /** Ways the kit going out would break the technical rider (techRider.ts). */
   breaches: Breach[];
+  /** Ways the production doesn't fit the room (production.ts). */
+  production: ProductionProblem[];
   gear: DeptCounts;
   crew: number;
   latestArrival: number;
@@ -187,6 +190,8 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
   addStock(withHire, subhire.stock);
   if (gig.crossHire) addStock(withHire, gig.crossHire);
   const breaches = vehicles.length || gig.freight ? checkSpec(gig.techSpec, withHire) : [];
+  const production = vehicles.length || gig.freight ? productionProblems(worldOf(state), gig, withHire, vehicles) : [];
+  const fx = problemEffects(production);
   const evaluation = evaluateGear(withHire, gig, dateOfDay(state, gig.day).getUTCFullYear(), state.gearCondition);
   const freelance = vehicles.length ? freelancersFor(state, worldOf(state), gig, crew) : { count: 0, cost: 0, effectiveness: 0, local: false };
   effCrew += freelance.count * freelance.effectiveness;
@@ -205,13 +210,13 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
     ? baseShowQuality({
         gearCoverage: evaluation.coverage,
         crewCoverage: Math.min(1, effCrew / Math.max(1, gig.crewNeeded)),
-        lateHours: Math.max(0, latestArrival - loadInHour(gig)),
+        lateHours: Math.max(0, latestArrival + fx.delay - loadInHour(gig)),
         gearQuality: evaluation.quality,
         riderMet: evaluation.riderMet,
-        bonus: techBonus(techIds, gig.act) + moraleBonus(state.crewMorale) + crewEval.bonus - breachPenalty(breaches).quality,
+        bonus: techBonus(techIds, gig.act) + moraleBonus(state.crewMorale) + crewEval.bonus - breachPenalty(breaches).quality - fx.quality,
       })
     : 0;
-  return { breaches, gear: evaluation.delivered, crew, latestArrival, onTime, vehicles, evaluation, expectedQuality, techIds, delivered, freelance, prep, subhire, people, crewEval };
+  return { breaches, production, gear: evaluation.delivered, crew, latestArrival, onTime, vehicles, evaluation, expectedQuality, techIds, delivered, freelance, prep, subhire, people, crewEval };
 }
 
 /** What a pile of kit would fetch, given its condition. */

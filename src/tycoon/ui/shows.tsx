@@ -1,6 +1,6 @@
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
-import { assignVehicle, bookGate, bookGig, crossHireKit, haggleGig, rehearseShow, sendFreight, unassignVehicle } from '@/world/actions';
+import { assignVehicle, bookGate, bookGig, crossHireKit, fixProduction, haggleGig, rehearseShow, sendFreight, unassignVehicle } from '@/world/actions';
 import { freightQuote } from '@/world/freight';
 import { certCount, requiredCerts } from '@/world/certs';
 import { expertiseBonus } from '@/world/expertise';
@@ -30,6 +30,7 @@ import { DEPTS, type Gig, type TycoonState } from '@/world/types';
 import { Bar, Stat, TierChip } from './bits';
 import { clientNote } from '@/world/changes';
 import { crossHireCost, crossHireOptions } from '@/world/techRider';
+import { productionProblems, typicalKit } from '@/world/production';
 import { BrandBadge } from './brands';
 import { distance, kmoney, money } from './format';
 import type { WinCtx } from './types';
@@ -174,6 +175,16 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
           {gig.techSpec.paBrands ? ` · PA: ${gig.techSpec.paBrands.join(' / ')} only` : ''}
         </Stat>
       )}
+      {gig.status === 'offer' &&
+        (() => {
+          const issues = productionProblems(worldOf(state), gig, typicalKit(gig, gigYear), []);
+          return issues.length ? (
+            <Stat label="The room">
+              <span className="tt-bad">{issues.map(i => i.label).join('; ')}</span>{' '}
+              <span className="tt-dim">— a typical rig for this show would need {issues.map(i => `${i.fixLabel.toLowerCase()} (~${money(i.fixCost)})`).join(' and ')}.</span>
+            </Stat>
+          ) : null;
+        })()}
       {gig.status === 'offer' && !gig.event && !gig.festival && <Stat label="Client">{clientNote(state, gig.act)}</Stat>}
       {gig.status === 'offer' && (
         <Stat label="Book by">
@@ -432,6 +443,19 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
                     })}
                   </div>
                 ))}
+              {projection.production.map(pr => (
+                <div key={pr.id} style={{ whiteSpace: 'normal', fontSize: 12, marginBottom: 4 }}>
+                  <span className="tt-bad">✗ {pr.label}.</span> <span className="tt-dim">{pr.detail}</span>{' '}
+                  <button className="tt-btn sm" onClick={() => act(s => fixProduction(s, gig.id, pr.id))}>
+                    {pr.fixLabel} · {money(pr.fixCost)}
+                  </button>
+                </div>
+              ))}
+              {gig.fixes && (
+                <Stat label="Booked for the room">
+                  {[gig.fixes.generator && 'generator', gig.fixes.groundSupport && 'ground support', gig.fixes.shuttle && 'van shuttle'].filter(Boolean).join(', ')}
+                </Stat>
+              )}
               {gig.crossHire && (
                 <Stat label="Cross-hired">
                   {Object.entries(gig.crossHire)
