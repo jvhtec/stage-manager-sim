@@ -11,6 +11,7 @@ import { gigBookingBar } from '@/world/standing';
 import { getModel, SHOW_END_HOUR, SHOW_START_HOUR, tierInfo } from '@/world/catalog';
 import { dayOf, loadInHour, loadOutDoneHour } from '@/world/core';
 import { kmoney } from '../ui/format';
+import { SHADOW_LAG } from './sprites';
 import { tileCorners } from '@/world/mapgen';
 import { getCityPath, positionOnPath, unitsPerTile } from '@/world/pathfinding';
 import { Terrain, type City, type Gig, type TycoonState, type Venue, type Vehicle, type WorldMap } from '@/world/types';
@@ -451,14 +452,13 @@ export function renderWorld(ctx: CanvasRenderingContext2D, input: RenderInput): 
   const dMin = Math.max(0, Math.floor((byMin * 2) / TH));
   const dMax = Math.min(map.width + map.height - 2, Math.ceil(((byMax + 60) * 2) / TH));
 
-  // Ground first, so shadows cast over neighbouring tiles aren't painted over by them.
-  for (let d = dMin; d <= dMax; d++) {
+  const drawGround = (d: number) => {
     const xLo = Math.max(0, d - map.height + 1, Math.floor(((bxMin * 2) / TW + d) / 2) - 1);
     const xHi = Math.min(map.width - 1, d, Math.ceil(((bxMax * 2) / TW + d) / 2) + 1);
     for (let x = xLo; x <= xHi; x++) drawTile(rc, idx, x, d - x);
-  }
+  };
 
-  for (let d = dMin; d <= dMax; d++) {
+  const drawObjects = (d: number) => {
     // bx = (x - y) * TW/2 = (2x - d) * TW/2  →  x range from visible bx range
     const xLo = Math.max(0, d - map.height + 1, Math.floor(((bxMin * 2) / TW + d) / 2) - 1);
     const xHi = Math.min(map.width - 1, d, Math.ceil(((bxMax * 2) / TW + d) / 2) + 1);
@@ -521,6 +521,14 @@ export function renderWorld(ctx: CanvasRenderingContext2D, input: RenderInput): 
       placed.loose.get(ti)?.forEach((p, k) => drawPlaced({ ...p, x: p.x + k * 0.15, y: p.y + 0.2 }));
       placed.onRoad.get(ti)?.forEach(drawPlaced);
     }
+  };
+
+  // Painter's order, with objects trailing the ground by SHADOW_LAG diagonals: a shadow (at most
+  // that many diagonals long) lands on ground that's already drawn, while a hill more than that far
+  // in front still hides what's behind it.
+  for (let d = dMin; d <= dMax + SHADOW_LAG; d++) {
+    if (d <= dMax) drawGround(d);
+    if (d - SHADOW_LAG >= dMin) drawObjects(d - SHADOW_LAG);
   }
 
   // Hover cursor.

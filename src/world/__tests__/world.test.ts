@@ -82,6 +82,17 @@ describe('world generation', () => {
     expect(map.cities.find(c => c.size === 'metropolis')!.venues.some(v => v.kind === 'stadium')).toBe(true);
   });
 
+  it.each(['ES', 'GB', 'US', 'DE', 'FR', 'IT'])('%s gives every town its venues and warehouse lots, even on a thin peninsula', code => {
+    const venues = { village: 1, town: 3, city: 4, metropolis: 6 };
+    const lots = { village: 1, town: 2, city: 3, metropolis: 3 };
+    for (const seed of [0, 5, 10]) {
+      generateWorld(seed, code).cities.forEach(c => {
+        expect(c.venues.length, `${c.name} venues`).toBe(venues[c.size]);
+        expect(c.lots.length, `${c.name} lots`).toBe(lots[c.size]);
+      });
+    }
+  });
+
   it('measures distance in real kilometres, whatever the size of the tile', () => {
     const gb = generateWorld(SEED, 'GB');
     const us = generateWorld(SEED, 'US');

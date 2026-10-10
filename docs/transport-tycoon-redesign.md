@@ -171,12 +171,13 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
   coast is flat beach. Towns near the sea sit at beach level, inland ones may stand on a low
   plateau; roads cross narrow straits on bridges. The seed only varies the rolling hills, the
   woods, venue sizes and each town's street layout — "Reroll terrain" in the setup screen.
-  Grid size follows the country: Spain, France and the US use 72×56; Britain (59×91, ~11 km a
-  tile), Italy (80×91, ~13 km) and Germany (59×81, ~11 km) get finer, taller grids so their oversized
-  towns aren't cramped. **Distance is real distance**: a tile knows its kilometres, one game unit
+  Grid size follows the country: Spain and France use 72×56; Britain (59×91, ~11 km a
+  tile), Italy (80×91, ~13 km), Germany (59×81, ~11 km) and the US (115×62, ~45 km) get grids sized
+  so their oversized towns aren't cramped. Every town is guaranteed its full set of venues and
+  warehouse lots (on a thin peninsula like Florida the last lot may sit on a gentle slope). **Distance is real distance**: a tile knows its kilometres, one game unit
   is 18 km, and speeds, fuel, ranges and trip times are all in units, so a 300 km run takes the same
   time in Britain as in the States and the UI speaks km (miles in Britain and the US) rather than
-  tiles. The consequence is that America is huge — its towns are ~3,500 km apart on average, so
+  tiles. The consequence is that America is huge — its towns are a few thousand km apart, so
   play there is regional circuits and the odd long haul (a smart-bot test company ends 9 years at
   roughly £5M value against £7–12M elsewhere). Saves from before the real maps are discarded (save v7).
 

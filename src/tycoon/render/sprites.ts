@@ -128,6 +128,10 @@ export function groundQuad(rc: RC, x0: number, y0: number, x1: number, y1: numbe
 /** Which way shadows fall (tiles per tile of height) — the sun is behind and to the left. */
 const SHADOW_DX = 0.62;
 const SHADOW_DY = 0.18;
+/** Shadows never reach further than this many tile diagonals (the renderer draws objects that far behind the ground). */
+export const SHADOW_LAG = 2;
+/** Tallest height a shadow is cast for, so it stays within SHADOW_LAG diagonals. */
+const SHADOW_MAX_H = SHADOW_LAG / (SHADOW_DX + SHADOW_DY);
 
 /**
  * A soft ground shadow for a box-shaped footprint of the given height: the footprint swept along the
@@ -138,8 +142,9 @@ export function boxShadow(rc: RC, x0: number, y0: number, x1: number, y1: number
   const strength = 0.17 * (1 - getNight() * 0.9);
   if (strength < 0.02) return;
   const { ctx } = rc;
-  const ox = SHADOW_DX * height;
-  const oy = SHADOW_DY * height;
+  const h = Math.min(height, SHADOW_MAX_H);
+  const ox = SHADOW_DX * h;
+  const oy = SHADOW_DY * h;
   // The footprint and the same footprint slid along the shadow: the hull of the eight corners is the shadow.
   const pts: Pt[] = [];
   for (const [dx, dy] of [[0, 0], [ox, oy]]) {
@@ -179,7 +184,8 @@ export function blobShadow(rc: RC, x: number, y: number, z: number, radius: numb
   const strength = 0.2 * (1 - getNight() * 0.9);
   if (strength < 0.03) return;
   const { ctx } = rc;
-  const [sx, sy] = P(rc, x + SHADOW_DX * height * 0.5, y + SHADOW_DY * height * 0.5, z);
+  const sh = Math.min(height, SHADOW_MAX_H);
+  const [sx, sy] = P(rc, x + SHADOW_DX * sh * 0.5, y + SHADOW_DY * sh * 0.5, z);
   const rx = radius * TW * 0.5 * rc.cam.zoom * (1 + height * 0.25);
   const ry = radius * TH * 0.5 * rc.cam.zoom;
   ctx.fillStyle = `rgba(14,20,34,${strength})`;

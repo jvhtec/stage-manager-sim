@@ -361,7 +361,16 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
     const ty = Math.floor(y);
     if (tx < r + 2 || ty < r + 2 || tx > width - r - 3 || ty > height - r - 3) return false;
     for (let j = 0; j <= 1; j++) for (let i = 0; i <= 1; i++) if (!land[idx(tx + i, ty + j, cw)] || !home[idx(tx + i, ty + j, cw)]) return false;
-    return true;
+    // Enough dry home ground around it for streets, venues and warehouse lots.
+    let ok = 0;
+    let all = 0;
+    for (let j = -r; j <= r + 1; j++) {
+      for (let i = -r; i <= r + 1; i++) {
+        all++;
+        if (land[idx(tx + i, ty + j, cw)] && home[idx(tx + i, ty + j, cw)]) ok++;
+      }
+    }
+    return ok >= all * 0.4;
   };
   // Biggest first: each town takes the roomy ground nearest to where it really is that leaves
   // the towns already placed their elbow room (real distances are far smaller than oversized
@@ -488,7 +497,7 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
 
   // 5. Lots: venues and the depot site, nearest free road-adjacent ground first.
   const taken = new Uint8Array(width * height);
-  const footprintFree = (x: number, y: number, w: number, h: number) => {
+  const footprintFree = (x: number, y: number, w: number, h: number, flat = true) => {
     for (let j = 0; j < h; j++) {
       for (let i = 0; i < w; i++) {
         const tx = x + i;
@@ -496,7 +505,7 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
         if (tx < 1 || ty < 1 || tx >= width - 1 || ty >= height - 1) return false;
         const k = idx(tx, ty, width);
         if (map.road[k] || taken[k] || map.foreign[k] || map.terrain[k] === Terrain.Water) return false;
-        if (!isFlat(map, tx, ty)) return false;
+        if (flat && !isFlat(map, tx, ty)) return false;
       }
     }
     return true;
@@ -513,19 +522,23 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
     return false;
   };
   const claimLot = (city: City, w: number, h: number) => {
-    const maxR = city.radius + 3;
-    const candidates: { x: number; y: number; d: number }[] = [];
-    for (let y = city.y - maxR; y <= city.y + maxR; y++) {
-      for (let x = city.x - maxR; x <= city.x + maxR; x++) {
-        const d = Math.hypot(x + w / 2 - city.x, y + h / 2 - city.y);
-        candidates.push({ x, y, d: d + rng.next() * 1.5 });
+    // Nearest free road-side ground first; a crowded or coastal town looks a little further out.
+    // Last resort (a narrow peninsula like Florida): any dry ground, even a gentle slope.
+    for (const [reach, needRoad, flat] of [[3, true, true], [7, true, true], [7, false, true], [7, false, false]] as const) {
+      const maxR = city.radius + reach;
+      const candidates: { x: number; y: number; d: number }[] = [];
+      for (let y = city.y - maxR; y <= city.y + maxR; y++) {
+        for (let x = city.x - maxR; x <= city.x + maxR; x++) {
+          const d = Math.hypot(x + w / 2 - city.x, y + h / 2 - city.y);
+          candidates.push({ x, y, d: d + rng.next() * 1.5 });
+        }
       }
-    }
-    candidates.sort((a, b) => a.d - b.d);
-    for (const c of candidates) {
-      if (footprintFree(c.x, c.y, w, h) && touchesRoad(c.x, c.y, w, h)) {
-        for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) taken[idx(c.x + i, c.y + j, width)] = 1;
-        return { x: c.x, y: c.y };
+      candidates.sort((a, b) => a.d - b.d);
+      for (const c of candidates) {
+        if (footprintFree(c.x, c.y, w, h, flat) && (!needRoad || touchesRoad(c.x, c.y, w, h))) {
+          for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) taken[idx(c.x + i, c.y + j, width)] = 1;
+          return { x: c.x, y: c.y };
+        }
       }
     }
     return null;
