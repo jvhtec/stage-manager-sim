@@ -453,6 +453,17 @@ export function HelpWindow() {
           12 months if you see a spike coming.
         </li>
         <li>
+          <b>The roads change with the years.</b> Real motorways open on their real dates (wider roads with a central
+          reservation): quicker, and tolled in Spain, France and Italy (and for lorries in Germany from 2005). Sea crossings
+          are ferries — a couple of hours to board plus the fare — until a fixed link opens (the Channel Tunnel in 1994).
+        </li>
+        <li>
+          <b>Over the border</b> (towns with a flag) there are shows but no bases. Borders cost time and money as they did:
+          customs and a carnet until the EU single market in 1993, passport queues until Schengen, the GDR's transit
+          checks until 1990, Brexit from 2021, and North America's borders always. A show's window lists the ferries,
+          borders and tolls on the way; tolls, fares and customs go in the ledger as their own line.
+        </li>
+        <li>
           <b>Rehearsals are mandatory</b> for big jobs: arena shows, stadiums, broadcast events and tours can't be booked
           without a rehearsal stage of the right size (Base → Annexes), and an unrehearsed show suffers. Policies has an
           automatic option.

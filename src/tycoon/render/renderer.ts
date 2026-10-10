@@ -13,11 +13,11 @@ import { dayOf, loadInHour, loadOutDoneHour } from '@/world/core';
 import { kmoney } from '../ui/format';
 import { SHADOW_LAG } from './sprites';
 import { tileCorners } from '@/world/mapgen';
-import { getCityPath, positionOnRoute } from '@/world/pathfinding';
+import { CROSS_FERRY, CROSS_TUNNEL, crossKindAt, getCityPath, positionOnRoute } from '@/world/pathfinding';
 import { Terrain, type City, type Gig, type TycoonState, type Venue, type Vehicle, type WorldMap } from '@/world/types';
 import { TH, TW, groundZ, project, type Camera, type Pt } from './iso';
 import { C, glow, hexToRgb, paint, setNight, type RGB } from './palette';
-import { delegation, hash2, house, poly, tree, venue as drawVenue, vehicle as drawVehicle, warehouse, type RC } from './sprites';
+import { delegation, ferry, hash2, house, poly, tree, venue as drawVenue, vehicle as drawVehicle, warehouse, type RC } from './sprites';
 
 export type Selection =
   | { kind: 'vehicle'; id: string }
@@ -61,6 +61,31 @@ interface StaticIndex {
 
 const staticCache = new WeakMap<WorldMap, StaticIndex>();
 
+/** Each ferry crossing's water tiles in order from one shore to the other. */
+const ferryLanes = new WeakMap<WorldMap, number[][]>();
+function lanesOf(map: WorldMap): number[][] {
+  const hit = ferryLanes.get(map);
+  if (hit) return hit;
+  const lanes: number[][] = [];
+  map.crossings.forEach(cr => {
+    if (!cr.tiles.length || crossKindAt(map, cr.tiles[0]) !== CROSS_FERRY) return;
+    const set = new Set(cr.tiles);
+    const nbs = (k: number) => [k - 1, k + 1, k - map.width, k + map.width];
+    const start = cr.tiles.find(k => nbs(k).some(nb => map.road[nb] && map.crossingAt[nb] < 0)) ?? cr.tiles[0];
+    const order = [start];
+    const seen = new Set([start]);
+    for (let h = 0; h < order.length; h++) nbs(order[h]).forEach(nb => {
+      if (set.has(nb) && !seen.has(nb)) {
+        seen.add(nb);
+        order.push(nb);
+      }
+    });
+    lanes.push(order);
+  });
+  ferryLanes.set(map, lanes);
+  return lanes;
+}
+
 function staticIndex(map: WorldMap): StaticIndex {
   const cached = staticCache.get(map);
   if (cached) return cached;
@@ -74,7 +99,7 @@ function staticIndex(map: WorldMap): StaticIndex {
   const urban = new Uint8Array(map.width * map.height);
   const occupied = new Uint8Array(map.width * map.height);
 
-  map.cities.forEach(city => {
+  [...map.cities, ...map.abroad].forEach(city => {
     const r = city.radius + 1;
     for (let y = city.y - r; y <= city.y + r; y++)
       for (let x = city.x - r; x <= city.x + r; x++)
@@ -218,6 +243,30 @@ function drawTile(rc: RC, idx: StaticIndex, x: number, y: number) {
     rc.ctx.stroke();
   }
 
+  // Borders: a dashed line where home meets a neighbour (and the inner-German border while it stands).
+  if (t !== Terrain.Water && rc.cam.zoom >= 0.5) {
+    const era = map.era;
+    const edge = (nx: number, ny: number, p: Pt, q: Pt) => {
+      if (nx >= map.width || ny >= map.height) return;
+      const j = ny * map.width + nx;
+      if (map.terrain[j] === Terrain.Water) return;
+      const country = map.foreign[i] !== map.foreign[j];
+      const zi = map.zoneOf[i] >= 0 ? map.zoneOf[i] : map.zoneOf[j];
+      const zone = !country && map.zoneOf[i] !== map.zoneOf[j] && !!era && era.zone[zi] > 0;
+      if (!country && !zone) return;
+      rc.ctx.strokeStyle = zone ? 'rgba(200,30,30,0.95)' : 'rgba(110,50,150,0.9)';
+      rc.ctx.lineWidth = Math.max(1.6, rc.cam.zoom * 1.3);
+      rc.ctx.setLineDash([rc.cam.zoom * 3, rc.cam.zoom * 2]);
+      rc.ctx.beginPath();
+      rc.ctx.moveTo(p[0], p[1]);
+      rc.ctx.lineTo(q[0], q[1]);
+      rc.ctx.stroke();
+      rc.ctx.setLineDash([]);
+    };
+    edge(x + 1, y, pts[1], pts[2]);
+    edge(x, y + 1, pts[2], pts[3]);
+  }
+
   // Map-edge cliffs give the world a diorama slab.
   const dirt: RGB = [110, 84, 58];
   if (x === map.width - 1) {
@@ -249,6 +298,27 @@ function drawRoad(rc: RC, idx: StaticIndex, x: number, y: number) {
   const w = has(-1, 0);
   const e = has(1, 0);
 
+  // Ferries and the tunnel aren't roads on the water: a dashed lane (or a faint line under the sea).
+  const kind = bridge ? crossKindAt(map, i) : 0;
+  if (kind === CROSS_FERRY || kind === CROSS_TUNNEL) {
+    if (rc.cam.zoom < 0.3) return;
+    const c = project(rc.cam, x + 0.5, y + 0.5, 0);
+    rc.ctx.strokeStyle = kind === CROSS_FERRY ? 'rgba(255,255,255,0.55)' : 'rgba(30,36,60,0.45)';
+    rc.ctx.lineWidth = Math.max(1, rc.cam.zoom * (kind === CROSS_FERRY ? 0.7 : 1.1));
+    rc.ctx.setLineDash(kind === CROSS_FERRY ? [rc.cam.zoom * 3, rc.cam.zoom * 3] : [rc.cam.zoom * 1.5, rc.cam.zoom * 2.5]);
+    rc.ctx.beginPath();
+    ([[n, 0.5, 0], [s, 0.5, 1], [w, 0, 0.5], [e, 1, 0.5]] as [boolean, number, number][]).forEach(([on, u, v]) => {
+      if (!on) return;
+      const p = project(rc.cam, x + u, y + v, 0);
+      rc.ctx.moveTo(c[0], c[1]);
+      rc.ctx.lineTo(p[0], p[1]);
+    });
+    rc.ctx.stroke();
+    rc.ctx.setLineDash([]);
+    return;
+  }
+  const motorway = !bridge && !!map.motorway?.[i];
+
   if (bridge) {
     // Piers down to the water.
     [0.25, 0.75].forEach(u => {
@@ -261,9 +331,9 @@ function drawRoad(rc: RC, idx: StaticIndex, x: number, y: number) {
 
   const urban = idx.urban[i];
   if (urban && !bridge) rect(0.08, 0.08, 0.92, 0.92, paint(C.pavement, 0.95));
-  const a = 0.3;
-  const b = 0.7;
-  const asphalt = paint(bridge ? C.bridge : C.road);
+  const a = motorway ? 0.2 : 0.3;
+  const b = motorway ? 0.8 : 0.7;
+  const asphalt = paint(bridge ? C.bridge : C.road, motorway ? 0.86 : 1);
   // A kerb: a slightly wider darker edge under the asphalt.
   if (rc.cam.zoom >= 1.1 && !bridge) {
     const kerb = paint(C.roadEdge, 1.05);
@@ -280,7 +350,20 @@ function drawRoad(rc: RC, idx: StaticIndex, x: number, y: number) {
   if (w) rect(0, a, a, b, asphalt);
   if (e) rect(b, a, 1, b, asphalt);
 
-  if (rc.cam.zoom >= 1.8) {
+  if (motorway && rc.cam.zoom >= 0.9) {
+    // A central reservation down the middle of the carriageways.
+    rc.ctx.strokeStyle = 'rgba(214,222,206,0.85)';
+    rc.ctx.lineWidth = Math.max(0.8, rc.cam.zoom * 0.55);
+    rc.ctx.beginPath();
+    const c = Q(0.5, 0.5);
+    ([[n, 0.5, 0], [s, 0.5, 1], [w, 0, 0.5], [e, 1, 0.5]] as [boolean, number, number][]).forEach(([on, u, v]) => {
+      if (!on) return;
+      const p = Q(u, v);
+      rc.ctx.moveTo(c[0], c[1]);
+      rc.ctx.lineTo(p[0], p[1]);
+    });
+    rc.ctx.stroke();
+  } else if (rc.cam.zoom >= 1.8) {
     rc.ctx.strokeStyle = paint(C.marking, 1, 0.75);
     rc.ctx.lineWidth = Math.max(0.6, rc.cam.zoom * 0.35);
     rc.ctx.setLineDash([rc.cam.zoom * 2, rc.cam.zoom * 2]);
@@ -451,6 +534,26 @@ export function renderWorld(ctx: CanvasRenderingContext2D, input: RenderInput): 
   const dMin = Math.max(0, Math.floor((byMin * 2) / TH));
   const dMax = Math.min(map.width + map.height - 2, Math.ceil(((byMax + 60) * 2) / TH));
 
+  // Ferries ply their lanes back and forth.
+  const boats = new Map<number, { x: number; y: number; along: 0 | 1 }>();
+  lanesOf(map).forEach((lane, li) => {
+    if (lane.length < 2) return;
+    const span = lane.length - 1;
+    const t = (time / 1000 / (span * 1.2) + li * 0.37) % 2;
+    const p = (t < 1 ? t : 2 - t) * span;
+    const k = Math.min(span - 1, Math.floor(p));
+    const a = lane[k];
+    const b = lane[k + 1];
+    const ax = a % map.width;
+    const ay = (a - ax) / map.width;
+    const bx = b % map.width;
+    const by = (b - bx) / map.width;
+    const f = p - k;
+    const x = ax + (bx - ax) * f + 0.5;
+    const y = ay + (by - ay) * f + 0.5;
+    boats.set(Math.floor(y) * map.width + Math.floor(x), { x, y, along: bx !== ax ? 0 : 1 });
+  });
+
   const drawGround = (d: number) => {
     const xLo = Math.max(0, d - map.height + 1, Math.floor(((bxMin * 2) / TW + d) / 2) - 1);
     const xHi = Math.min(map.width - 1, d, Math.ceil(((bxMax * 2) / TW + d) / 2) + 1);
@@ -517,6 +620,8 @@ export function renderWorld(ctx: CanvasRenderingContext2D, input: RenderInput): 
           }
         }
       });
+      const boat = boats.get(ti);
+      if (boat) ferry(rc, boat.x, boat.y, boat.along);
       placed.loose.get(ti)?.forEach((p, k) => drawPlaced({ ...p, x: p.x + k * 0.15, y: p.y + 0.2 }));
       placed.onRoad.get(ti)?.forEach(drawPlaced);
     }
@@ -656,7 +761,7 @@ function outlineFootprint(rc: RC, x: number, y: number, w: number, h: number) {
 function drawCityLabels(rc: RC, state: TycoonState, hits: HitTargets) {
   const { ctx, cam, map } = rc;
   const scale = Math.max(0.85, Math.min(1.25, cam.zoom * 0.6));
-  map.cities.forEach(city => {
+  [...map.cities, ...map.abroad].forEach(city => {
     if (cam.zoom < 0.7 && city.size === 'village') return;
     // Anchor at the town's front edge (straight down-screen from the centre)
     // so the label never sits on top of the venues.
@@ -664,13 +769,13 @@ function drawCityLabels(rc: RC, state: TycoonState, hits: HitTargets) {
     const [sx, sy0] = project(cam, city.x + 0.5 + edge, city.y + 0.5 + edge, groundZ(map, city.x, city.y));
     const sy = sy0 + 12;
     if (sx < -100 || sx > cam.w + 100 || sy < -40 || sy > cam.h + 40) return;
-    const name = city.name;
+    const name = city.abroad ? `${city.abroad.flag} ${city.name}` : city.name;
     const pop = city.population >= 1_000_000 ? `${(city.population / 1e6).toFixed(city.population >= 1e7 ? 0 : 1)}M` : `${Math.round(city.population / 1000)}k`;
     ctx.font = `700 ${Math.round(12 * scale)}px ui-rounded, system-ui, sans-serif`;
     const w = ctx.measureText(name).width + 34 * scale;
     const h = 18 * scale;
     const hasDepot = state.depots.some(d => d.cityId === city.id);
-    ctx.fillStyle = 'rgba(16,18,26,0.78)';
+    ctx.fillStyle = city.abroad ? 'rgba(52,44,70,0.78)' : 'rgba(16,18,26,0.78)';
     roundRect(ctx, sx - w / 2, sy - h / 2, w, h, 4 * scale);
     ctx.fill();
     if (hasDepot) {

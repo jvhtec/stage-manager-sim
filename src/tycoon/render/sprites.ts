@@ -700,3 +700,17 @@ export function vehicle(rc: RC, v: VehicleDraw): Pt {
   return [cx, (cy + sy) / 2];
 }
 
+
+/** A roll-on roll-off ferry: dark hull, white superstructure, a funnel; `along` = 0 sails +x, 1 sails +y. */
+export function ferry(rc: RC, x: number, y: number, along: 0 | 1) {
+  const L = 0.42;
+  const W = 0.16;
+  const [hx, hy] = along === 0 ? [L, W] : [W, L];
+  blobShadow(rc, x, y, 0, 0.3, 0.2);
+  prism(rc, { x0: x - hx, y0: y - hy, x1: x + hx, y1: y + hy, z0: 0, z1: 0.18 }, [38, 52, 84], [70, 84, 110]);
+  const [sx, sy] = along === 0 ? [hx * 0.6, hy * 0.75] : [hx * 0.75, hy * 0.6];
+  prism(rc, { x0: x - sx, y0: y - sy, x1: x + sx, y1: y + sy, z0: 0.18, z1: 0.36 }, [236, 238, 242], [250, 250, 252]);
+  const fx = along === 0 ? x + hx * 0.25 : x;
+  const fy = along === 0 ? y : y + hy * 0.25;
+  prism(rc, { x0: fx - 0.04, y0: fy - 0.04, x1: fx + 0.04, y1: fy + 0.04, z0: 0.36, z1: 0.5 }, [200, 40, 40], [220, 60, 60], false);
+}

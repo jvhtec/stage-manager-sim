@@ -1,3 +1,4 @@
+import { routeNotes, tripCharges } from '@/world/infra';
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
 import { buildDepot, buyOwnedVenue, buyVehicle, leaseVehicle, sellOwnedVenue, setVenueProgramme } from '@/world/actions';
@@ -86,6 +87,20 @@ export function CityWindow({ ctx, cityId }: { ctx: WinCtx; cityId: string }) {
           Show on map
         </button>
       </div>
+      {city.abroad && (
+        <Stat label="Abroad">
+          {city.abroad.flag} Over the border — shows only, no bases.{' '}
+          <span className="tt-dim">
+            {(() => {
+              const hq = state.company.hqCityId;
+              const n = routeNotes(world, hq, cityId);
+              const due = tripCharges(world, hq, cityId, 'truck');
+              const bits = [...n.ferries.map(f => `⛴ ${f}`), ...n.tunnels.map(t => `🚇 ${t}`), ...n.borders.map(b => `🛂 border (${b})`)];
+              return `${bits.length ? `${bits.join(' · ')} · ` : 'No border checks this year · '}${money(due.total)} tolls, fares & customs each way for a truck from HQ.`;
+            })()}
+          </span>
+        </Stat>
+      )}
       <Stat label="Population (metro)">
         {populationOf(state, city).toLocaleString('en-US')}
         {townGrowth(state, city.id) >= 1.02 && <span className="tt-good"> · +{Math.round((townGrowth(state, city.id) - 1) * 100)}% since you started</span>}
@@ -142,6 +157,7 @@ export function CityWindow({ ctx, cityId }: { ctx: WinCtx; cityId: string }) {
         )}
       </div>
       {!depot &&
+        !city.abroad &&
         (lotFree ? (
           <div className="tt-list" style={{ marginTop: 6 }}>
             {([

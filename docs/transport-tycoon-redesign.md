@@ -181,6 +181,32 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
   play there is regional circuits and the odd long haul (a smart-bot test company ends 9 years at
   roughly £5M value against £7–12M elsewhere). Saves from before the real maps are discarded (save v7).
 
+- **Roads, borders and crossings through the years** (`infra.ts`, `pathfinding.ts`, `geoParams.json`) — the
+  map is generated once per seed and country; each year gets an *era* view of it (cached per distinct era):
+  - **Motorways**: real corridors (M1, AP-7, the Autostrada del Sole, the A24 Hamburg–Berlin in 1982, I-10 finished in
+    1990…) with their opening years. Each gets its own direct road at generation; once open, its tiles cost 65% of an
+    ordinary road's time and are drawn wider with a central reservation. Tolls per km on Spain's autopistas and all
+    French and Italian motorways, and on German autobahns for lorries from 2005.
+  - **Crossings**: a road over water is a bridge if the land on both sides joins up anyway (an estuary, a ria) and a
+    ferry if it doesn't (another island or landmass): two hours to board plus a fare. Fixed links replace ferries in
+    their real year (the Channel Tunnel, 1994). Narrow straits the coarse mask would close (Messina, Dover) are carved
+    back open so islands stay islands; a Liverpool–Dublin lane crosses the Irish Sea. Ferries are drawn as dashed
+    lanes with a boat plying them; the tunnel as a faint line under the sea; borders as dashed lines (red for the
+    inner-German border while it stands).
+  - **Towns just over the border** (Lisboa, Porto, Toulouse; Dublin, Lille; Praha, Zürich, Strasbourg, Salzburg;
+    Bruxelles, Genève, Barcelona, Torino; Ljubljana, Zagreb, Lugano, Nice; Toronto, Montréal, Monterrey) with their
+    famous rooms (Pavilhão Atlântico from 1998, the Point Depot 1988–2008, Hallenstadion…). They offer shows at 45%
+    of a home town's rate and you can't open a base there.
+  - **Borders**: going to a town abroad costs the queue and, where customs apply, an agent's fee and carnet: customs
+    until the EU single market (1993) or always outside it (Switzerland, the North American borders, Britain after
+    Brexit), passport checks until both sides are in Schengen (never between Britain and Ireland), and the GDR's
+    transit checks into the East and Berlin until 1990. A road that merely skirts a neighbour between two home towns
+    doesn't count.
+  - Time costs (motorway speed, boarding, border queues, converted to distance at a lorry's pace) are part of every
+    route's length, so ETAs, planners, fuel and ranges all agree. Money costs (tolls, fares, customs) are charged as a
+    truck sets off and booked as "Tolls, ferries & customs". The show and town windows list what's on the road; the
+    run planner includes the charges.
+
 - **Start years** (1975, 1980, 1985, 1990, 2000, 2010) — the era sets which trucks, gear and
   desks exist (Bedford TK, Altec A4s, Yamaha PM1000 and Strand lanterns in 1975; no video kit
   until the mid-'80s), your starter rig (the cheapest kit a pub crowd of that year will accept),

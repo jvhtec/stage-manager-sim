@@ -530,7 +530,8 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
       x: cx,
       y: cy,
       population: seat.population,
-      size: seat.radius >= 3 ? 'city' : 'town',
+      // A million people is a city with an arena, even if it's drawn small.
+      size: seat.population >= 1_000_000 ? 'city' : 'town',
       radius: seat.radius,
       venues: [],
       buildings: [],

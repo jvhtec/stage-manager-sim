@@ -228,7 +228,7 @@ export const MapCanvas = forwardRef<MapHandle, Props>(function MapCanvas(
       const map = worldOf(s);
       const tile = pickTile(camRef.current, map, x, y);
       if (!tile) return null;
-      for (const city of map.cities) {
+      for (const city of [...map.cities, ...map.abroad]) {
         const venue = city.venues.find(v => tile.x >= v.x && tile.x < v.x + v.w && tile.y >= v.y && tile.y < v.y + v.h);
         if (venue) return { kind: 'venue', id: venue.id, cityId: city.id };
         const depot = s.depots.find(d => d.cityId === city.id);
