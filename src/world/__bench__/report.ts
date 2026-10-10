@@ -86,9 +86,9 @@ export function explain(r: BotReport): string[] {
   const rider = r.incidents.causes.rider ?? 0;
   const room = r.incidents.causes.room ?? 0;
   out.push(`Riders and rooms: ${r.bot.crossHires} cross-hires and ${r.bot.fixes} room fixes booked; ${rider} rider breach${rider === 1 ? '' : 'es'} and ${room} room problem${room === 1 ? '' : 's'} reached the stage.`);
-  const breakdowns = r.incidents.kinds.breakdown ?? 0;
   const faults = r.incidents.causes['brand-fault'] ?? 0;
-  out.push(`Kit and fleet: kit averaged ${r.kitCondition.average}% condition (${r.kitCondition.end}% at the end)${r.bot.refurbished ? `, ${r.bot.refurbished} lines refurbished` : ''}; ${breakdowns} breakdowns, ${faults} manufacturer fault${faults === 1 ? '' : 's'}.`);
+  out.push(`Kit and fleet: kit averaged ${r.kitCondition.average}% condition (${r.kitCondition.end}% at the end)${r.bot.refurbished ? `, ${r.bot.refurbished} lines refurbished` : ''}; ${faults} manufacturer fault${faults === 1 ? '' : 's'}.`);
+  out.push(`Road: ${Math.round(r.road.km / 1000).toLocaleString('en-US')}k km driven, ${r.road.breakdowns} roadside breakdown${r.road.breakdowns === 1 ? '' : 's'} — ${r.road.per100k} per 100,000 km (one every ${r.road.breakdowns ? `${Math.round(r.road.km / r.road.breakdowns / 1000)}k` : '–'} km) at ${r.road.reliability}% average reliability.`);
   // Rivals, under the same rules.
   const dec = Object.entries(r.rivals.declined).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
   out.push(`Rivals (same rules): ${r.rivals.alive} trading, ${r.rivals.gone} gone; ${r.rivals.shows} shows at ${pct(r.rivals.avgQuality)} average, ${r.rivals.failed} failed; ${r.rivals.crossHires} cross-hires and ${r.rivals.fixes} room fixes paid${dec.length ? `; turned work down for ${dec.map(([c, n]) => `${c} ×${n}`).join(', ')}` : ''}${r.rivals.cashNegative ? `; ${r.rivals.cashNegative} overdrawn` : ''}.`);

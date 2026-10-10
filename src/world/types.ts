@@ -359,6 +359,8 @@ export interface Vehicle {
   boughtHour: number;
   reliability: number;
   lastServiceHour: number;
+  /** Kilometres driven (player vehicles). */
+  km?: number;
   /** A service fell due and was put off because cash was short (consequences.ts). */
   serviceSkipped?: { hour: number; incidentId: string };
   status: VehicleStatus;
@@ -1029,7 +1031,7 @@ export interface TycoonState {
   artistRelations: Record<string, number>;
   negativeMonths: number;
   nextId: number;
-  stats: { showsPlayed: number; showsFailed: number; peakCash: number; rivalsBought?: number; /** Cash at the start, for the money invariant (invariants.ts). */ startCash?: number; /** Crew who quit, burnt out or were poached. */ crewLost?: number };
+  stats: { showsPlayed: number; showsFailed: number; peakCash: number; rivalsBought?: number; /** Cash at the start, for the money invariant (invariants.ts). */ startCash?: number; /** Crew who quit, burnt out or were poached. */ crewLost?: number; /** Kilometres the fleet has driven. */ fleetKm?: number; /** Roadside breakdowns. */ breakdowns?: number };
   /** Chosen at the start (scenario.ts). */
   difficulty?: Difficulty;
   goal?: GoalId;

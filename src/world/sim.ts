@@ -109,7 +109,7 @@ import { dailyIncidents, monthlyInsurance, rollWeather } from './incidents';
 import { dailyContracts, houseRigAt, monthlyContracts } from './contracts';
 import { dailyMarket, fuelMultiplier, marketNow, monthlyInterest } from './market';
 import { getRegion } from './content/world';
-import { getCityPath, roadDistance } from './pathfinding';
+import { KM_PER_UNIT, getCityPath, roadDistance } from './pathfinding';
 import { dailyDisruptions, monthlyWinter, tripCharges, yearlyDriversRules } from './infra';
 import { countTownShow, fadeTownShows } from './territory';
 import { returnFreight } from './freight';
@@ -121,6 +121,13 @@ import { findArtist } from './content/artists';
 const TIER_WEIGHT = [0, 1, 1.3, 1.7, 2.2];
 /** Playing pubs can only get you so far — each venue tier caps the reputation it can earn you. */
 const TIER_REP_CEILING = [0, 38, 68, 92, 100];
+
+/**
+ * Chance of a roadside breakdown per kilometre, from the truck's reliability: about one in 150,000 km
+ * for a sound modern truck (92%), one in 60,000 at 80%, one in 30,000 for a neglected one (60%).
+ */
+export const BREAKDOWN_PER_KM = 1 / 12_000;
+export const breakdownHazard = (reliability: number) => Math.max(0.05, 1 - reliability / 100) * BREAKDOWN_PER_KM;
 
 export function reputationAfterShow(rep: number, tier: number, quality: number): number {
   const delta = (quality - 0.6) * 3 * TIER_WEIGHT[tier];
@@ -370,10 +377,12 @@ function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
       if (v.owner === 'player') pushNews(s, `${v.name} is back on the road.`, 'info', { vehicleId: v.id });
       break;
     case 'driving':
-      if (rng.chance((1 - v.reliability / 100) * 0.035)) {
+      // Breakdowns happen per kilometre driven, likelier the more worn the truck (see breakdownHazard).
+      if (rng.chance(breakdownHazard(v.reliability) * vehicleSpeed(v, world) * KM_PER_UNIT)) {
         v.status = 'broken';
         v.brokenUntil = s.hour + 3 + rng.nextInt(6);
         if (v.owner === 'player') {
+          s.stats.breakdowns = (s.stats.breakdowns ?? 0) + 1;
           const inc = recordBreakdown(s, v, !!world.era?.winter);
           pushNews(s, `${v.name} has broken down! ${inc.causes[0].label}: ${inc.causes[0].detail}`, 'bad', { vehicleId: v.id });
           breakdownDilemma(s, v);
@@ -394,6 +403,9 @@ function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
   const speed = vehicleSpeed(v, world);
   route.progress += speed;
   if (v.owner === 'player') {
+    // The odometer, for the breakdown rate per kilometre (and the fleet's mileage).
+    v.km = (v.km ?? 0) + speed * KM_PER_UNIT;
+    s.stats.fleetKm = (s.stats.fleetKm ?? 0) + speed * KM_PER_UNIT;
     const fuel = speed * fuelPerTile(model) * fuelMultiplier(s);
     book(s, 'fuel', -fuel);
     v.profitThisYear -= fuel;

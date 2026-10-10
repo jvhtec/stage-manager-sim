@@ -10,7 +10,13 @@ import type { TycoonState } from '../types';
 const game = (): TycoonState => {
   let s = createTycoonGame({ companyName: 'S', color: '#f00', seed: 31, country: 'GB', startYear: 1995 });
   s = { ...s, company: { ...s.company, cash: 2_000_000, reputation: 40 } };
-  return advanceHours(s, 24 * 20); // let offers pile up
+  // Let offers pile up until there's something bookable near the first truck.
+  for (let d = 0; d < 60; d++) {
+    s = advanceHours(s, 24);
+    const v = s.vehicles.find(x => x.owner === 'player')!;
+    if (d >= 19 && suggestJobs(s, v, 1).length) break;
+  }
+  return s;
 };
 
 describe('suggested next jobs', () => {

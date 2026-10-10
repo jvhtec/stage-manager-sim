@@ -175,6 +175,8 @@ export interface BotReport {
   bans: number;
   /** Average condition of the kit, sampled monthly and at the end. */
   kitCondition: { average: number; end: number };
+  /** On the road: kilometres driven, roadside breakdowns, the rate per 100,000 km, average truck reliability (sampled monthly). */
+  road: { km: number; breakdowns: number; per100k: number; reliability: number };
   monthsOverdrawn: number;
   lowestCash: number;
   forecastWarnings: number;
@@ -226,12 +228,14 @@ export function runBot(run: BotRun): BotReport {
   let frozenUntil = -1;
   let learned = { kit: 0, shows: 0 };
   const conditions: number[] = [];
+  const reliabilities: number[] = [];
 
   for (let day = 0; day < 365 * years && !s.gameOver; day++) {
     s = advanceHours(s, 24);
     const today = dayOf(s.hour);
     lowestCash = Math.min(lowestCash, s.company.cash);
     if (day % 30 === 0) conditions.push(averageCondition(s, ownedStock(s)));
+    if (day % 30 === 0) s.vehicles.forEach((x: S) => x.owner === 'player' && reliabilities.push(x.reliability));
     if (day % 30 === 0) checkInvariants(s).forEach(v => violations.length < 200 && violations.push(`${v.kind}: ${v.message}`));
 
     // Decisions: the defaults, except where there's a clearly better answer.
@@ -448,6 +452,12 @@ export function runBot(run: BotRun): BotReport {
     incidents: s.incidentTally ?? { kinds: {}, causes: {}, main: {} },
     bans: Object.keys(s.blacklist ?? {}).length,
     kitCondition: { average: Math.round(conditions.reduce((a, b) => a + b, 0) / Math.max(1, conditions.length)), end: Math.round(averageCondition(s, ownedStock(s))) },
+    road: {
+      km: Math.round(s.stats.fleetKm ?? 0),
+      breakdowns: s.stats.breakdowns ?? 0,
+      per100k: Math.round(((s.stats.breakdowns ?? 0) / Math.max(1, s.stats.fleetKm ?? 0)) * 1e5 * 100) / 100,
+      reliability: Math.round(reliabilities.reduce((a, b) => a + b, 0) / Math.max(1, reliabilities.length)),
+    },
     monthsOverdrawn,
     lowestCash: Math.round(lowestCash),
     forecastWarnings,
