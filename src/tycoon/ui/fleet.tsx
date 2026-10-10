@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { bookAndAssign, retrofitVehicle, rehomeVehicle, sellVehicle, sendHome, serviceVehicle, setTeamDrivers, unassignVehicle } from '@/world/actions';
+import { freeBuses, busHireTier, busHireBlocker, hireNet, isBus } from '@/world/buses';
+import { hireOutBus, bookAndAssign, retrofitVehicle, rehomeVehicle, sellVehicle, sendHome, serviceVehicle, setTeamDrivers, unassignVehicle } from '@/world/actions';
 import { leaseReturnPenalty } from '@/world/finance';
 import { SERVICE_INTERVAL_DAYS, getModel } from '@/world/catalog';
 import { stockSize } from '@/world/loading';
 import { StockLines } from './gear';
 import { getTech } from '@/world/content/techs';
-import { TEAM_DRIVER_PER_HOUR, TEAM_PACE, formatDay, gigById, loadInHour, sellValue, vehicleAgeYears, vehicleSpeed } from '@/world/core';
+import { dayOf, TEAM_DRIVER_PER_HOUR, TEAM_PACE, formatDay, gigById, loadInHour, sellValue, vehicleAgeYears, vehicleSpeed } from '@/world/core';
 import { worldOf } from '@/world/mapgen';
 import { estimateArrival, suggestJobs, vehicleActivity } from '@/world/queries';
 import { roadDistance } from '@/world/pathfinding';
@@ -325,6 +326,8 @@ export function VehicleListWindow({ ctx }: { ctx: WinCtx }) {
         <div className="tt-good">All clear — everything booked is covered and the fleet is in shape.</div>
       )}
 
+      <BusHireSection ctx={ctx} />
+
       <h4>The fleet</h4>
       <div className="tt-tabs" style={{ marginBottom: 4 }}>
         {(['profit', 'busy', 'age', 'name'] as FleetSort[]).map(k => (
@@ -367,5 +370,66 @@ export function VehicleListWindow({ ctx }: { ctx: WinCtx }) {
         </div>
       )}
     </div>
+  );
+}
+
+/** Tour buses: contracts on offer, the buses out, and the button to send one. */
+function BusHireSection({ ctx }: { ctx: WinCtx }) {
+  const { state } = ctx;
+  const buses = state.vehicles.filter(v => v.owner === 'player' && isBus(v));
+  const offers = state.busHires.filter(h => h.status === 'offer');
+  const active = state.busHires.filter(h => h.status === 'active');
+  if (!buses.length && !offers.length && !active.length) return null;
+  const free = freeBuses(state);
+  const run = (fn: Parameters<WinCtx['dispatch']>[0]) => {
+    const r = ctx.dispatch(fn);
+    ctx.toast(r.message ?? '', r.ok);
+  };
+  return (
+    <>
+      <h4>Tour bus hire{active.length ? ` (${active.length} out)` : ''}</h4>
+      {active.map(h => {
+        const bus = state.vehicles.find(v => v.id === h.vehicleId);
+        const starts = h.startDay > dayOf(state.hour);
+        return (
+          <div key={h.id} className="tt-item">
+            <div className="grow">
+              <div style={{ fontWeight: 700 }}>{h.act}</div>
+              <div className="tt-dim">
+                {bus?.name} · {starts ? `leaves ${formatDay(state, h.startDay)}` : `back ${formatDay(state, h.startDay + h.days)}`} · {money(h.rate)}/day
+              </div>
+            </div>
+            <b className="tt-good">{h.earned ? money(h.earned) : ''}</b>
+          </div>
+        );
+      })}
+      {offers.length ? (
+        <div className="tt-list">
+          {offers.map(h => (
+            <div key={h.id} className="tt-item" style={{ flexWrap: 'wrap', gap: 6 }}>
+              <div className="grow">
+                <div style={{ fontWeight: 700 }}>
+                  {h.act} <span className="tt-dim">· {busHireTier(h)}</span>
+                </div>
+                <div className="tt-dim">
+                  {h.days} days from {formatDay(state, h.startDay)} · {money(h.rate)}/day · about {money(hireNet(h))} after the driver · decide by {formatDay(state, h.acceptByDay)}
+                </div>
+              </div>
+              {free.length ? (
+                free.slice(0, 3).map(v => (
+                  <button key={v.id} className="tt-btn sm primary" disabled={!!busHireBlocker(state, h, v)} title={busHireBlocker(state, h, v) ?? ''} onClick={() => run(s => hireOutBus(s, h.id, v.id))}>
+                    Send {v.name}
+                  </button>
+                ))
+              ) : (
+                <span className="tt-dim">{buses.length ? 'No bus free' : 'Buy a coach (Bases → Buy a vehicle)'}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="tt-dim">No tours are looking for a bus right now. They come more often as your name grows.</div>
+      )}
+    </>
   );
 }

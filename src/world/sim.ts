@@ -101,6 +101,7 @@ import { getCityPath, roadDistance } from './pathfinding';
 import { dailyDisruptions, monthlyWinter, tripCharges, yearlyDriversRules } from './infra';
 import { countTownShow, fadeTownShows } from './territory';
 import { returnFreight } from './freight';
+import { dailyBusHire, dailyBusOffers } from './buses';
 import { CURFEW_FINE, CURFEW_QUALITY, NOISE_HEADROOM, NOISE_QUALITY, UNION_CALL, traitsOf } from './venueTraits';
 import { DEPTS, type GearStock, type Gig, type TycoonState, type Vehicle, type WorldMap } from './types';
 import { findArtist } from './content/artists';
@@ -321,6 +322,9 @@ function arrive(s: TycoonState, world: WorldMap, v: Vehicle) {
 
 function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
   switch (v.status) {
+    case 'hired-out':
+      // Out on tour: buses.ts brings it home when the contract ends.
+      return;
     case 'servicing':
       if (s.hour >= (v.busyUntil ?? 0)) {
         v.status = 'parked';
@@ -672,6 +676,8 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   dailyOwnFestival(s, rng);
   dailyEvents(s, world, rng);
   dailyDisruptions(s, date);
+  dailyBusOffers(s, rng);
+  dailyBusHire(s, rng);
   dailyContracts(s, world);
   pruneGigs(s);
 

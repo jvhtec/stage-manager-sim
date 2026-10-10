@@ -501,6 +501,11 @@ export function HelpWindow() {
           Florida…) have no union houses while the north-east and west coast do. Spain has no stagehand unions at all.
         </li>
         <li>
+          <b>Tour bus hire</b> (Fleet window): touring acts want a bus and driver for weeks. Buy a coach (a Duple from 1975,
+          a Setra sleeper from 1985, the Skyliner from 1994) and hire it out at a day rate — the driver comes out of it, the
+          bus wears and can break down mid-tour, and contracts you leave on the table go to rivals.
+        </li>
+        <li>
           <b>Rehearsals are mandatory</b> for big jobs: arena shows, stadiums, broadcast events and tours can't be booked
           without a rehearsal stage of the right size (Base → Annexes), and an unrehearsed show suffers. Policies has an
           automatic option.

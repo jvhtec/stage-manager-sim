@@ -187,6 +187,7 @@ export type LedgerCategory =
   | 'travel'
   | 'fuel'
   | 'tolls'
+  | 'busHire'
   | 'subhire'
   | 'rental'
   | 'leasing'
@@ -228,6 +229,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   travel: 'Per diems & hotels',
   fuel: 'Fuel',
   tolls: 'Tolls, ferries & customs',
+  busHire: 'Tour bus hire',
   subhire: 'Sub-hired kit',
   rental: 'Kit rented out',
   leasing: 'Vehicle leases',
@@ -330,7 +332,9 @@ export type VehicleStatus =
   | 'driving'
   | 'on-site'
   | 'broken'
-  | 'servicing';
+  | 'servicing'
+  /** A tour bus out on hire to a touring act (buses.ts). */
+  | 'hired-out';
 
 export interface VehicleRoute {
   from: string;
@@ -850,6 +854,8 @@ export interface TycoonState {
   /** Manufacturer partnership per department (partners.ts). */
   /** Town size multipliers over the game (towns.ts). */
   townGrowth: Record<string, number>;
+  /** Touring acts wanting a bus and driver for weeks (buses.ts). */
+  busHires: BusHire[];
   /** Recent shows per town by who played them ('player' or a rival id), fading each year: market share. */
   townShows: Record<string, Record<string, number>>;
   /** Buzz and deals from trade shows (marketing.ts). */
@@ -927,4 +933,22 @@ export interface ActionResult {
 export interface ActionOutcome {
   state: TycoonState;
   result: ActionResult;
+}
+
+/** A tour's bus contract: an act wants a sleeper bus and driver for weeks. */
+export interface BusHire {
+  id: string;
+  act: string;
+  tier: number;
+  /** Days on tour. */
+  days: number;
+  /** Per day, driver included. */
+  rate: number;
+  startDay: number;
+  acceptByDay: number;
+  status: 'offer' | 'active' | 'done' | 'lost';
+  vehicleId?: string;
+  rivalId?: string;
+  /** Earned so far. */
+  earned?: number;
 }

@@ -45,6 +45,10 @@ export function vehicleActivity(state: TycoonState, v: Vehicle): string {
       return `Broken down near ${cityName(v.route?.to)}`;
     case 'servicing':
       return 'In the workshop';
+    case 'hired-out': {
+      const h = state.busHires.find(x => x.vehicleId === v.id && x.status === 'active');
+      return h ? `On tour with ${h.act}` : 'Out on hire';
+    }
     case 'on-site':
       return next ? `On site: ${world.venueById.get(next.venueId)?.name}` : 'On site';
     case 'scheduled':

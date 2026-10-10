@@ -2,6 +2,7 @@
  * Player commands. Each takes the current state and returns
  * `{ state, result }` — a new state on success, the untouched one on failure.
  */
+import { busHireBlocker } from './buses';
 import { dispatchFreight, freightLabel, freightQuote, type FreightMode } from './freight';
 import { gateBlocker, hypeLabel, rollGate } from './gate';
 import { retrofitBlocker, retrofitCost, vehicleClass } from './regulation';
@@ -299,6 +300,22 @@ export function serviceVehicle(state: TycoonState, vehicleId: string): ActionOut
   const s = cloneState(state);
   serviceNow(s, s.vehicles.find(v => v.id === vehicleId)!);
   return ok(s, `${v0.name} is in the workshop.`);
+}
+
+/** Hire a parked bus out to a touring act for the length of its tour. */
+export function hireOutBus(state: TycoonState, hireId: string, vehicleId: string): ActionOutcome {
+  const h0 = state.busHires.find(h => h.id === hireId);
+  const v0 = state.vehicles.find(v => v.id === vehicleId && v.owner === 'player');
+  if (!h0 || !v0) return fail(state, 'Unknown contract or bus.');
+  const why = busHireBlocker(state, h0, v0);
+  if (why) return fail(state, why);
+  const s = cloneState(state);
+  const h = s.busHires.find(x => x.id === hireId)!;
+  const v = s.vehicles.find(x => x.id === vehicleId)!;
+  h.status = 'active';
+  h.vehicleId = v.id;
+  v.status = 'hired-out'; // reserved from now: it leaves on the start date
+  return ok(s, `${v.name} goes out with ${h.act} on ${new Date(Date.UTC(s.startYear, 0, 1) + h.startDay * 86400000).toUTCString().slice(5, 11)}.`);
 }
 
 /** Send a booked show's kit from one of your bases by rail or air instead of a truck. */
