@@ -140,7 +140,7 @@ export function CityWindow({ ctx, cityId }: { ctx: WinCtx; cityId: string }) {
       ) : (
         <div className="tt-dim">No open offers right now.</div>
       )}
-      <h4>Warehouse lots ({city.lots.length})</h4>
+      {!city.abroad && <h4>Warehouse lots ({city.lots.length})</h4>}
       <div className="tt-list">
         {rivalsHere.map(r => (
           <div key={r.id} className="tt-item">

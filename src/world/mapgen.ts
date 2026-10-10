@@ -388,8 +388,11 @@ export function generateWorld(seed: number, countryCode: string = DEFAULT_COUNTR
         else if (min >= 3) t = Terrain.Rough;
         else if (forestNoise(x, y) > 0.62) t = Terrain.Forest;
         map.terrain[idx(x, y, width)] = t;
-        const mine = home[idx(x, y, cw)] + home[idx(x + 1, y, cw)] + home[idx(x + 1, y + 1, cw)] + home[idx(x, y + 1, cw)];
-        map.foreign[idx(x, y, width)] = t !== Terrain.Water && mine < 2 ? 1 : 0;
+        const corners = [idx(x, y, cw), idx(x + 1, y, cw), idx(x + 1, y + 1, cw), idx(x, y + 1, cw)];
+        const mine = corners.filter(k => home[k]).length;
+        // Foreign only if most of the land under it is someone else's (a coastal tile's sea corners don't count).
+        const theirs = corners.filter(k => land[k] && !home[k]).length;
+        map.foreign[idx(x, y, width)] = t !== Terrain.Water && theirs > mine ? 1 : 0;
       }
     }
   };

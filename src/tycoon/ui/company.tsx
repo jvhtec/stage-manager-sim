@@ -473,6 +473,27 @@ export function HelpWindow() {
           a waste on short hops. Vans can't take them.
         </li>
         <li>
+          <b>Drivers' hours</b> follow the rules of the day: loosely policed tachographs before 1986, the EU rules after,
+          digital tachographs from 2007 (and in America, tighter hours of service in 2004 and 2013 and electronic logs from
+          2017). Each tightening slows a solo driver; team drivers are unaffected.
+        </li>
+        <li>
+          <b>History happens on the road</b>: strikes, blockades, storms and the 2010 ash cloud slow the roads they cover,
+          push fuel up or ground air freight. The news warns a few days ahead and a show's window flags a disrupted road.
+        </li>
+        <li>
+          <b>Every room has quirks</b> (venue and show windows): stairs to load in (one more crew), a curfew (run late into
+          it and it's a fine and a cut show), a noise limit (an oversized PA gets limited) or a union house crew to pay.
+        </li>
+        <li>
+          <b>Freight</b>: a booked show's kit can go by rail (cheap, slower; towns and up) or air (dear, quick; cities)
+          from any base instead of a truck. Local freelancers crew it, and the kit comes home the same way.
+        </li>
+        <li>
+          <b>Map views</b> (layers button or O): your reputation by town, your market share, and whose patch each town
+          is — the company with the most shows there lately.
+        </li>
+        <li>
           <b>Rehearsals are mandatory</b> for big jobs: arena shows, stadiums, broadcast events and tours can't be booked
           without a rehearsal stage of the right size (Base → Annexes), and an unrehearsed show suffers. Policies has an
           automatic option.

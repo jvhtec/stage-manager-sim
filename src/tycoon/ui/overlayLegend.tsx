@@ -52,7 +52,7 @@ export function OverlayLegend({ overlay, state, onClose }: { overlay: MapOverlay
             ))}
         </div>
       )}
-      <div className="tt-dim">Press O to cycle views.</div>
+      <div className="tt-dim">The layers button (or O) switches views.</div>
     </div>
   );
 }

@@ -215,6 +215,23 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
   - **Readable map**: town tags are placed most-important-first (your bases, then by population) and skipped rather
     than overlapped; show markers are laid out first (your bookings, then the richest offers), stacked out of each
     other's way, and zoomed out (below 0.75) a town's shows share one marker ("3 offers · £4.2k") that opens the town.
+  - **Map views** (`render/renderer.ts` overlays, `territory.ts`): a Layers button (or O) cycles reputation by town,
+    your market share, and rival territory. Shows played per town are tallied for you and every rival and fade
+    each January (×0.6); towns get a tinted disc and their figure in a chip; markers step aside; a legend explains.
+  - **Drivers' hours** (`infra.driversRules`): a solo driver's pace follows the era — +8% before the 1986 EU rules,
+    baseline after, −10% with digital tachographs from 2007; in the US the 2004 and 2013 hours-of-service changes
+    and 2017 electronic logs tighten it step by step. Team drivers are unaffected. The news announces each change.
+  - **Historic disruptions** (`content/disruptions.ts`): about 25 real strikes, blockades, storms and the 2010 ash
+    cloud, each with dates, an area or the whole country, and effects: road slow-down, fuel premium (even on a
+    locked contract), extra border hours, or an air-freight rescue charge per booked show abroad. Part of the era
+    key, so routes and ETAs see them; warned a few days ahead in the news.
+  - **Venue character** (`venueTraits.ts`): stable per venue from its name, kind and country — load-in by dock,
+    street or stairs (stairs: +1 crew on offers), curfews (late into one: a fine per tier and −5% quality), noise
+    limits (strict in DE/CH/AT; audio beyond 1.4× the need trips the limiter: −4%), union houses (most US theatres
+    and arenas, some British theatres: a call per head per show).
+  - **Rail and air freight** (`freight.ts`): send a booked show's kit from a base by rail (terminals in towns and up)
+    or air (cities); it counts if it lands before load-in, local freelancers crew it, and it returns after
+    load-out as a transfer.
 
 - **Start years** (1975, 1980, 1985, 1990, 2000, 2010) — the era sets which trucks, gear and
   desks exist (Bedford TK, Altec A4s, Yamaha PM1000 and Strand lanterns in 1975; no video kit
