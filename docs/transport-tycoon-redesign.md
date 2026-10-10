@@ -821,3 +821,9 @@ From clubs and theatres up (`production.ts`), every venue has a house power supp
 ## Burnt bridges
 
 `blacklist.ts`. A show that falls apart isn't over when the reputation dips: the act won't book you for two years, and if you had no goodwill with the venue's promoter they close the door for a year (a promoter you've done right by keeps it open). Break the same act's technical rider twice in a year and they stop calling for a year. Banned acts and venues send no offers; the League window lists every ban with its end date, the venue window shows it, and the post-mortems say why. Pushy clients are also slower payers: their invoices run late 1.8× as often, easy-going clients' half as often.
+
+## Equipment ecosystems
+
+`ecosystem.ts`. A product line is supported for its first 10 years, legacy until 18 (spares slow: the workshop repairs it at 70% speed and refurbishing costs ×1.25) and end-of-life after that (35% speed, ×1.8). The warehouse window tags legacy and EOL lines.
+
+Standardising a department on one brand makes the workshop cheaper — up to 25% off for a department that's all one brand (one set of spares, techs who know it) — but concentrates the risk: each month, a brand you own four or more fragile units of (digital desks, moving lights, line arrays, LED, media servers, automation) has a 1.2% chance of a firmware bug, bad batch or recall that knocks 25% condition off every unit of its newest line you own. The warehouse window shows each department's brand share; the post-mortems log the fault and, if you'd gone all-in on the brand, say so.

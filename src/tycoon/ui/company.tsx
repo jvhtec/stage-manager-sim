@@ -581,6 +581,10 @@ export function HelpWindow() {
           before you book — but they may walk. Clients do cancel, and without a clause you get nothing.
         </li>
         <li>
+          <b>Ecosystems</b>: old lines go legacy, then end-of-life, and repairs slow down as spares dry up. Standardise a
+          department on one brand and the workshop gets cheaper — until that maker has a bad day.
+        </li>
+        <li>
           Buy bigger trucks and more gear, and win reputation to unlock arenas and stadiums. Every January the industry awards
           judge your year and the trade press prints its supplier table, the biggest tours and reviews of your best and worst
           shows. Or start from a <b>historic scenario</b> — Live Aid, Italia ’90, Barcelona ’92 — and win a lot of the night.
