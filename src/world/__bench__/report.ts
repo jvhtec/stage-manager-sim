@@ -102,6 +102,30 @@ const median = (xs: number[]) => {
   return a.length ? (a.length % 2 ? a[(a.length - 1) / 2] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2) : 0;
 };
 
+/**
+ * Is a gap between two strategies bigger than the spread within them? The same strategy on another
+ * seed can land millions apart (one lost stadium contract changes the next eight years), so a
+ * ranking inside that noise isn't a finding.
+ */
+function noiseNote(reports: BotReport[], strategies: Strategy[]): string[] {
+  const stats = strategies
+    .map(st => {
+      const vs = reports.filter(r => r.strategy === st.id).map(r => r.value);
+      return vs.length ? { st, med: median(vs), spread: Math.max(...vs) - Math.min(...vs) } : undefined;
+    })
+    .filter((x): x is { st: Strategy; med: number; spread: number } => !!x)
+    .sort((a, b) => b.med - a.med);
+  const out: string[] = [];
+  for (let i = 0; i + 1 < stats.length; i++) {
+    const a = stats[i];
+    const b = stats[i + 1];
+    const gap = a.med - b.med;
+    const noise = Math.max(a.spread, b.spread) / 2;
+    out.push(gap > noise ? `- **${a.st.label}** beats **${b.st.label}** by ${k(gap)} — more than the run-to-run spread (±${k(noise)}).` : `- ${a.st.label} vs ${b.st.label}: ${k(gap)} apart, inside the run-to-run spread (±${k(noise)}) — not a real difference on these runs.`);
+  }
+  return out.length ? ['**Is the ranking real?**', '', ...out, ''] : [];
+}
+
 export function renderReport(reports: BotReport[], strategies: Strategy[], meta: { years: number; runs: string }): string {
   const lines: string[] = [];
   lines.push('# Balance report');
@@ -110,17 +134,18 @@ export function renderReport(reports: BotReport[], strategies: Strategy[], meta:
   lines.push('');
   lines.push('## Strategies compared');
   lines.push('');
-  lines.push('| Strategy | Survived | Median value | Margin | Avg quality | Failed | Overdrawn months | Crew lost | Cancellations | Bans |');
-  lines.push('|---|---|---|---|---|---|---|---|---|---|');
+  lines.push('| Strategy | Survived | Median value | Range | Margin | Avg quality | Failed | Overdrawn months | Crew lost | Cancellations | Bans |');
+  lines.push('|---|---|---|---|---|---|---|---|---|---|---|');
   strategies.forEach(st => {
     const rs = reports.filter(r => r.strategy === st.id);
     if (!rs.length) return;
     const margin = median(rs.map(r => (r.revenue ? (r.revenue - r.costs) / r.revenue : 0)));
     lines.push(
-      `| ${st.label} | ${rs.filter(r => r.survived).length}/${rs.length} | ${k(median(rs.map(r => r.value)))} | ${pct(margin)} | ${pct(median(rs.map(r => r.avgQuality)))} | ${pct(median(rs.map(r => r.failed / Math.max(1, r.shows + r.failed))))} | ${median(rs.map(r => r.monthsOverdrawn))} | ${median(rs.map(r => r.crewLost))} | ${median(rs.map(r => r.incidents.causes['client-cancel'] ?? 0))} | ${median(rs.map(r => r.bans))} |`,
+      `| ${st.label} | ${rs.filter(r => r.survived).length}/${rs.length} | ${k(median(rs.map(r => r.value)))} | ${k(Math.min(...rs.map(r => r.value)))}–${k(Math.max(...rs.map(r => r.value)))} | ${pct(margin)} | ${pct(median(rs.map(r => r.avgQuality)))} | ${pct(median(rs.map(r => r.failed / Math.max(1, r.shows + r.failed))))} | ${median(rs.map(r => r.monthsOverdrawn))} | ${median(rs.map(r => r.crewLost))} | ${median(rs.map(r => r.incidents.causes['client-cancel'] ?? 0))} | ${median(rs.map(r => r.bans))} |`,
     );
   });
   lines.push('');
+  lines.push(...noiseNote(reports, strategies));
   strategies.forEach(st => {
     const rs = reports.filter(r => r.strategy === st.id);
     if (!rs.length) return;

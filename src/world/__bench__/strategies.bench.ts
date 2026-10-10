@@ -12,7 +12,7 @@ import type { CountryCode } from '../content/countries';
  *   REPORT_RUNS='[["GB",1995],["ES",1990]]' REPORT_SEEDS='[3,4]' REPORT_YEARS=8 REPORT_STRATEGIES=managed,lean npm run balance:report
  */
 const RUNS: [CountryCode, number][] = JSON.parse(process.env.REPORT_RUNS ?? '[["GB",1995],["ES",1990]]');
-const SEEDS: number[] = JSON.parse(process.env.REPORT_SEEDS ?? '[3,4]');
+const SEEDS: number[] = JSON.parse(process.env.REPORT_SEEDS ?? '[3,4,5,6]');
 const YEARS = Number(process.env.REPORT_YEARS ?? 8);
 const IDS = (process.env.REPORT_STRATEGIES ?? Object.keys(STRATEGIES).join(',')).split(',').filter(id => STRATEGIES[id]);
 const OUT = process.env.REPORT_OUT ?? 'docs/balance-report';
