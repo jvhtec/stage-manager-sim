@@ -750,7 +750,7 @@ export interface Policies {
 }
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
-export type GoalId = 'sandbox' | 'top' | 'empire' | 'worlds' | 'awards' | 'consolidator' | 'survivor';
+export type GoalId = 'sandbox' | 'top' | 'empire' | 'worlds' | 'awards' | 'consolidator' | 'survivor' | 'scenario';
 
 export type MarketingLevel = 'none' | 'local' | 'trade' | 'national';
 
@@ -921,6 +921,8 @@ export interface TycoonState {
   /** Chosen at the start (scenario.ts). */
   difficulty?: Difficulty;
   goal?: GoalId;
+  /** A historic scenario (scenarios.ts) this game started as. */
+  scenario?: string;
   goalResult?: { status: 'won' | 'missed'; day: number };
   gameOver?: { hour: number; reason: string };
 }

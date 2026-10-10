@@ -1,3 +1,4 @@
+import { getScenario } from './scenarios';
 import { TECH_WAVES } from './content/techWaves';
 import { DIFFICULTIES } from './scenario';
 import { createRandomSeed, createRng } from '@/lib/rng';
@@ -42,6 +43,7 @@ export interface NewGameOptions {
   startYear?: number;
   difficulty?: Difficulty;
   goal?: GoalId;
+  scenario?: string;
 }
 
 /**
@@ -107,13 +109,15 @@ export function makeVehicle(state: TycoonState, modelId: string, homeCityId: str
 
 export function createTycoonGame(options: NewGameOptions): TycoonState {
   const seed = options.seed ?? createRandomSeed();
-  const country = options.country ?? DEFAULT_COUNTRY;
-  const startYear = options.startYear ?? START_YEAR;
+  const sc = getScenario(options.scenario);
+  const country = sc?.country ?? options.country ?? DEFAULT_COUNTRY;
+  const startYear = sc?.startYear ?? options.startYear ?? START_YEAR;
   const world = getWorld(seed, country);
   const rng = createRng(seed ^ 0xa11ce);
 
   const hqCandidates = suggestedHqCities(seed, country);
   const hq =
+    (sc ? world.cities.find(c => c.name === sc.hq) : undefined) ??
     world.cityById.get(options.hqCityId ?? '') ??
     hqCandidates.find(c => c.size === 'town') ??
     world.cities[0];
@@ -127,8 +131,8 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     company: {
       name: options.companyName,
       color: options.color,
-      reputation: STARTING_REPUTATION,
-      cash: Math.round((STARTING_CASH * DIFFICULTIES[options.difficulty ?? 'normal'].startingCash) / 1000) * 1000,
+      reputation: sc?.reputation ?? STARTING_REPUTATION,
+      cash: Math.round((STARTING_CASH * (sc?.cash ?? 1) * DIFFICULTIES[options.difficulty ?? 'normal'].startingCash) / 1000) * 1000,
       loan: 0,
       hqCityId: hq.id,
     },
@@ -183,7 +187,8 @@ export function createTycoonGame(options: NewGameOptions): TycoonState {
     nextId: 0,
     stats: { showsPlayed: 0, showsFailed: 0, peakCash: Math.round((STARTING_CASH * DIFFICULTIES[options.difficulty ?? 'normal'].startingCash) / 1000) * 1000 },
     difficulty: options.difficulty ?? 'normal',
-    goal: options.goal ?? 'sandbox',
+    goal: sc ? 'scenario' : options.goal ?? 'sandbox',
+    scenario: sc?.id,
   };
 
   state.depots.push({

@@ -752,3 +752,7 @@ The retired dashboard build had systems that were ported to the map game like so
 7. **Town growth** — landmark venues now open and close in their real years and local fame
    steers offers; towns also grow over the decades (`towns.ts`).
 8. ~~Retire `/classic`~~ — done: the dashboard build and its code have been removed.
+
+## Historic scenarios
+
+The new-company form offers seven one-year scenarios (`scenarios.ts`): Live Aid 1985, The Wall in Berlin 1990, Italia ’90, Barcelona ’92, Expo ’92, Atlanta ’96 and London 2012. Each fixes the country, start year and home town, gives an established small firm (reputation and cash enough to bid), and sets one goal (`GoalId` `scenario`): win a lot of the event's production and deliver it at quality 50% or better before the year is out. The event tender is the ordinary special-events engine (`events.ts`), so rivals bid against you and the night carries its usual prestige and stakes.

@@ -20,6 +20,7 @@ import {
 } from '@/world/catalog';
 import { formatDay, formatHour, yearOf } from '@/world/core';
 import { MILESTONES } from '@/world/milestones';
+import { SCENARIOS, getScenario } from '@/world/scenarios';
 import { DIFFICULTIES, DIFFICULTY_IDS, GOALS, GOAL_IDS, goalDeadlineYear, legacyScore } from '@/world/scenario';
 import { worldOf } from '@/world/mapgen';
 import { companyValue } from '@/world/queries';
@@ -569,19 +570,23 @@ export function NewGameForm({
   onCancel,
 }: {
   onPreview: (seed: number, hqCityId?: string, country?: CountryCode) => void;
-  onStart: (opts: { companyName: string; color: string; seed: number; hqCityId: string; country: CountryCode; startYear: number; difficulty: Difficulty; goal: GoalId }) => void;
+  onStart: (opts: { companyName: string; color: string; seed: number; hqCityId: string; country: CountryCode; startYear: number; difficulty: Difficulty; goal: GoalId; scenario?: string }) => void;
   onCancel?: () => void;
 }) {
   const [name, setName] = useState('Roadcase & Rigging');
   const [color, setColor] = useState(COLORS[0]);
   const [seed, setSeed] = useState(() => createRandomSeed());
-  const [country, setCountry] = useState<CountryCode>(() => guessCountry());
-  const [startYear, setStartYear] = useState(1990);
+  const [pickedCountry, setCountry] = useState<CountryCode>(() => guessCountry());
+  const [pickedYear, setStartYear] = useState(1990);
+  const [scenarioId, setScenarioId] = useState('');
+  const sc = getScenario(scenarioId);
+  const country = sc?.country ?? pickedCountry;
+  const startYear = sc?.startYear ?? pickedYear;
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
   const [goal, setGoal] = useState<GoalId>('sandbox');
   const cities = useMemo(() => suggestedHqCities(seed, country), [seed, country]);
   const [hq, setHq] = useState<string>('');
-  const hqId = cities.find(c => c.id === hq)?.id ?? cities.find(c => c.size === 'town')?.id ?? cities[0]?.id;
+  const hqId = (sc ? cities.find(c => c.name === sc.hq)?.id : undefined) ?? cities.find(c => c.id === hq)?.id ?? cities.find(c => c.size === 'town')?.id ?? cities[0]?.id;
 
   useEffect(() => onPreview(seed, hqId, country), [seed, hqId, country, onPreview]);
 
@@ -608,6 +613,24 @@ export function NewGameForm({
       </div>
       <div>
         <div className="tt-dim" style={{ marginBottom: 3 }}>
+          Scenario
+        </div>
+        <select className="tt-input" value={scenarioId} onChange={e => setScenarioId(e.target.value)} aria-label="Scenario">
+          <option value="">Free play — pick your own country and year</option>
+          {SCENARIOS.map(x => (
+            <option key={x.id} value={x.id}>
+              {x.title}
+            </option>
+          ))}
+        </select>
+        {sc && (
+          <div className="tt-dim" style={{ marginTop: 3, fontSize: 11, whiteSpace: 'normal' }}>
+            {sc.blurb} Starts {sc.startYear} in {sc.hq}, with a name worth bidding on; you have {sc.years === 1 ? 'a year' : `${sc.years} years`}.
+          </div>
+        )}
+      </div>
+      <div style={{ display: sc ? 'none' : undefined }}>
+        <div className="tt-dim" style={{ marginBottom: 3 }}>
           Country
         </div>
         <div className="tt-countries">
@@ -627,7 +650,7 @@ export function NewGameForm({
           ))}
         </div>
       </div>
-      <div>
+      <div style={{ display: sc ? 'none' : undefined }}>
         <div className="tt-dim" style={{ marginBottom: 3 }}>
           Start year
         </div>
@@ -654,7 +677,7 @@ export function NewGameForm({
           {DIFFICULTIES[difficulty].blurb}
         </div>
       </div>
-      <div>
+      <div style={{ display: sc ? 'none' : undefined }}>
         <div className="tt-dim" style={{ marginBottom: 3 }}>
           Goal
         </div>
@@ -669,7 +692,7 @@ export function NewGameForm({
           {GOALS[goal].blurb}
         </div>
       </div>
-      <label>
+      <label style={{ display: sc ? 'none' : undefined }}>
         <div className="tt-dim" style={{ marginBottom: 3 }}>
           Home town
         </div>
@@ -694,7 +717,7 @@ export function NewGameForm({
           <button
             className="tt-btn primary"
             disabled={!name.trim() || !hqId}
-            onClick={() => onStart({ companyName: name.trim(), color, seed, hqCityId: hqId!, country, startYear, difficulty, goal })}
+            onClick={() => onStart({ companyName: name.trim(), color, seed, hqCityId: hqId!, country, startYear, difficulty, goal: sc ? 'scenario' : goal, scenario: sc?.id })}
           >
             Start company
           </button>
