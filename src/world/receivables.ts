@@ -4,6 +4,7 @@
  * wait for the money, sell your invoices to a factor for cash today (at a
  * discount), or insure them against default.
  */
+import { clientTemper } from './changes';
 import type { Rng } from '@/lib/rng';
 import { book, dayOf, formatMoney, newId, pushNews } from './core';
 import { marketNow } from './market';
@@ -16,6 +17,8 @@ export const FESTIVAL_EXTRA_DAYS = 15;
 /** Factors buy invoices at this discount. */
 /** Chance a promoter pays late, by tier. */
 export const LATE_RISK = [0, 0, 0.08, 0.12, 0.16];
+/** Pushy clients are slow payers too. */
+export const LATE_TEMPER = { easy: 0.5, fair: 1, pushy: 1.8 };
 export const FACTOR_DISCOUNT = 0.035;
 /** Credit insurance premium on each invoice. */
 export const INSURE_PREMIUM = 0.012;
@@ -72,7 +75,7 @@ export function dailyReceivables(s: TycoonState, rng: Rng) {
   s.receivables.forEach(inv => {
     if (inv.dueDay > today || inv.slipped || inv.insured) return;
     inv.slipped = true;
-    if (!rng.chance(LATE_RISK[Math.max(0, Math.min(4, inv.tier))])) return;
+    if (!rng.chance(LATE_RISK[Math.max(0, Math.min(4, inv.tier))] * LATE_TEMPER[clientTemper(inv.act)])) return;
     inv.dueDay = today + 10 + rng.nextInt(25);
     pushNews(s, `${inv.act}'s promoter is late paying your ${formatMoney(s, inv.amount)} invoice — they promise it within ${inv.dueDay - today} days.`, 'bad');
   });

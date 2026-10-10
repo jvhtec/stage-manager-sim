@@ -817,3 +817,7 @@ From clubs and theatres up (`production.ts`), every venue has a house power supp
 - **Ask for better terms** (once, on an offer): 30% up front and 75% if they cancel. Easy-going clients mostly agree; pushy ones mostly refuse, and might take the show elsewhere.
 - **Cancellations**: from 45 days to 2 days out, a client may pull a booked show — pushy clients more than twice as often as easy ones, and more in a downturn. You keep the deposit plus whatever the clause adds; with no clause there's nothing to claim, and money already spent on cross-hire and fixes is gone. Each cancellation goes in the post-mortem log.
 - The cash forecast counts deposits coming in and nets them off what's still to come.
+
+## Burnt bridges
+
+`blacklist.ts`. A show that falls apart isn't over when the reputation dips: the act won't book you for two years, and if you had no goodwill with the venue's promoter they close the door for a year (a promoter you've done right by keeps it open). Break the same act's technical rider twice in a year and they stop calling for a year. Banned acts and venues send no offers; the League window lists every ban with its end date, the venue window shows it, and the post-mortems say why. Pushy clients are also slower payers: their invoices run late 1.8× as often, easy-going clients' half as often.

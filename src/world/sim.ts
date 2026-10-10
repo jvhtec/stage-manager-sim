@@ -27,7 +27,7 @@ import { monthlySponsors } from './sponsors';
 import { UNREHEARSED_FAILURE, UNREHEARSED_QUALITY, dailyRehearsals, monthlyAnnexes, unrehearsed } from './annexes';
 import { monthlyRivalry } from './rivalry';
 import { dailyUtilisation } from './fleetReport';
-import { recordVenueNight } from './promoters';
+import { recordVenueNight, venueRelation } from './promoters';
 import { dailyAuctions, monthlyAuctions } from './auctions';
 import { annualReport, monthlyMilestones } from './milestones';
 import { yearEndCharts } from './charts';
@@ -79,6 +79,7 @@ import { GEAR_PRODUCTS, getProduct } from './content/gear';
 import { leftBehindChance, monthlyRent, monthlySalaries, prepFailureFactor, prepOf, prepRatio } from './facilities';
 import { breachPenalty, checkSpec } from './techRider';
 import { bondAfterShow } from './bonds';
+import { afterBreach, afterDisaster } from './blacklist';
 import { balanceDue, dailyTerms } from './terms';
 import { HANDLING_WINDOW, LOADERS, handlingHours, handlingOverrun, loadWeight, payloadOf } from './cargo';
 import { FIX_TEXT, problemEffects, productionProblems } from './production';
@@ -599,6 +600,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     s.cityRatings[gig.cityId] = Math.max(0, rating - 20);
     s.stats.showsFailed += 1;
     strike(s, gig.act, `the show at ${where} fell apart`);
+    afterDisaster(s, gig, where, venueRelation(s, gig.venueId));
     recordVenueNight(s, gig.venueId, quality, true);
     recordShow(s, yearOf(s, s.hour), quality, true, !!gig.festival);
     bondAfterShow(s, people, quality);
@@ -621,6 +623,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   if (breaches.length) {
     s.artistRelations[gig.act] = Math.max(0, (s.artistRelations[gig.act] ?? 0) - 2);
     strike(s, gig.act, 'the rig broke their technical rider');
+    afterBreach(s, gig);
   }
   collectOrInvoice(s, gig, balanceDue(gig, payout - withheld));
   learnMix(s, gig);

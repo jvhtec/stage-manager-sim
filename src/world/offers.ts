@@ -5,6 +5,7 @@
  */
 import { rollTechSpec } from './techRider';
 import { defaultTerms } from './terms';
+import { offerBlocked } from './blacklist';
 import { worldOf } from './mapgen';
 import { RIVAL_COMPANIES } from './content/companies';
 import { traitsOf } from './venueTraits';
@@ -221,7 +222,7 @@ export function dailyOffers(state: TycoonState, world: WorldMap, rng: Rng) {
     const chance = OFFER_RATE[city.size] * fiesta * demand * localFame(state, city.id) * townGrowth(state, city.id) * offerBuzz(state) * (1 + salesBoost(state, world, city.id));
     if (rng.chance(chance)) {
       const gig = generateOffer(state, world, city, rng);
-      if (gig) state.gigs.push(gig);
+      if (gig && !offerBlocked(state, gig)) state.gigs.push(gig);
     }
   });
   // Just over the border: promoters there call foreign crews less often — but they do call.
@@ -229,7 +230,7 @@ export function dailyOffers(state: TycoonState, world: WorldMap, rng: Rng) {
     const chance = OFFER_RATE[city.size] * ABROAD_OFFER_SHARE * demand * localFame(state, city.id) * offerBuzz(state);
     if (rng.chance(chance)) {
       const gig = generateOffer(state, world, city, rng, { minLeadDays: 9 });
-      if (gig) state.gigs.push(gig);
+      if (gig && !offerBlocked(state, gig)) state.gigs.push(gig);
     }
   });
 }

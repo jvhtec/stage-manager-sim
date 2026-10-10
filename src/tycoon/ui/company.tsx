@@ -21,6 +21,7 @@ import {
 import { formatDay, formatHour, yearOf } from '@/world/core';
 import { MILESTONES } from '@/world/milestones';
 import { forecastCash } from '@/world/cashflow';
+import { activeBans } from '@/world/blacklist';
 import { chainText, incidentsOf } from '@/world/consequences';
 import { SCENARIOS, getScenario } from '@/world/scenarios';
 import { DIFFICULTIES, DIFFICULTY_IDS, GOALS, GOAL_IDS, goalDeadlineYear, legacyScore } from '@/world/scenario';
@@ -1074,8 +1075,23 @@ function PressCharts({ state }: { state: TycoonState }) {
 /** The incident log: what went wrong, and the chain of conditions behind it. */
 function PostMortems({ state }: { state: TycoonState }) {
   const log = incidentsOf(state).slice(-8).reverse();
+  const bans = activeBans(state);
+  const world = worldOf(state);
   return (
     <>
+      {bans.length > 0 && (
+        <>
+          <h4>Won't work with you</h4>
+          <div className="tt-list">
+            {bans.map(b => (
+              <div key={b.key} className="tt-row">
+                <span>{b.key.startsWith('act:') ? b.key.slice(4) : `${world.venueById.get(b.key.slice(6))?.name ?? 'A venue'} (promoter)`}</span>
+                <span className="tt-dim">until {formatDay(state, b.until)}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
       <h4>Post-mortems</h4>
       {log.length ? (
         <div className="tt-list">

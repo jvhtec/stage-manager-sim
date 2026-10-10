@@ -1,5 +1,6 @@
 import { describeTraits, traitsOf } from '@/world/venueTraits';
 import { venueLimits } from '@/world/production';
+import { bannedUntil, venueBanned } from '@/world/blacklist';
 import { routeNotes, tripCharges } from '@/world/infra';
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
@@ -246,6 +247,7 @@ export function VenueWindow({ ctx, venueId }: { ctx: WinCtx; venueId: string }) 
           );
         })()}
       <Stat label="Promoter">
+        {venueBanned(state, venueId) && <span className="tt-bad">Won't book you until {formatDay(state, bannedUntil(state, `venue:${venueId}`))} · </span>}
         <b>{relationLabel(venueRelation(state, venueId))}</b>
         {venueRelation(state, venueId) > 0 && (
           <span className="tt-dim">

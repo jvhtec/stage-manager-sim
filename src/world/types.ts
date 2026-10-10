@@ -973,6 +973,10 @@ export interface TycoonState {
   incidents?: Incident[];
   /** Rapport between pairs of crew, −100..100, keyed by sorted id pair (bonds.ts). */
   bonds?: Record<string, number>;
+  /** Acts and venues that won't book you, until a day (blacklist.ts). Keys `act:Name`, `venue:id`. */
+  blacklist?: Record<string, number>;
+  /** Days you broke each act's rider. */
+  breachLog?: Record<string, number[]>;
   /** What you've taught each client about extras (changes.ts). */
   clients?: Record<string, { paid: number; absorbed: number; refused: number; declined: number }>;
   /** Maintenance you've put off because cash was short. */
