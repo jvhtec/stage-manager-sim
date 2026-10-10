@@ -4,6 +4,7 @@
  * geography *is* the demand curve. Rivals snap up offers they're close to.
  */
 import { worldOf } from './mapgen';
+import { RIVAL_COMPANIES } from './content/companies';
 import { traitsOf } from './venueTraits';
 import { FIESTA_OFFER_BOOST, councilBooked, isFiestaSeason, needsMeister, needsReliefCrew, ruleCountry } from './rules';
 import { priceWarFactor, warWinBonus } from './pricewars';
@@ -14,7 +15,7 @@ import { relationFeeBonus, relationOfferWeight } from './promoters';
 import { townGrowth } from './towns';
 import type { Rng } from '@/lib/rng';
 import { tierInfo } from './catalog';
-import { dateOfDay, dayOf, newId, pushNews, yearOf } from './core';
+import { TEAM_PACE, dateOfDay, dayOf, newId, pushNews, yearOf } from './core';
 import { VENUE_YEARS, closuresIn, openingsIn, reopeningsIn, venueOpenIn } from './content/venueYears';
 import { artistsTouringAt, homeWeight } from './content/artists';
 import { expectedQuality, productsAvailableIn } from './content/gear';
@@ -23,7 +24,7 @@ import { actReputationBar, reachWeight } from './standing';
 import { marketNow, marketOnDay } from './market';
 import { holdsContractAt } from './contracts';
 import { salesBoost } from './facilities';
-import type { City, CitySize, DeptCounts, Gig, Rider, TycoonState, Vehicle, Venue, WorldMap } from './types';
+import type { City, CitySize, DeptCounts, Gig, Rider, Rival, TycoonState, Vehicle, Venue, WorldMap } from './types';
 import { DEPTS } from './types';
 
 const ACT_ADJ = ['Velvet', 'Electric', 'Midnight', 'Neon', 'Broken', 'Golden', 'Silent', 'Wild', 'Paper', 'Crimson', 'Lunar', 'Static'];
@@ -268,6 +269,23 @@ function runnableTruck(state: TycoonState, world: WorldMap, rivalId: string, gig
   });
 }
 
+/** What a rival can do, by era and size: team drivers, freight between cities, work abroad. */
+export function rivalReach(state: TycoonState, world: WorldMap, rival: Rival, gig: Gig) {
+  const year = yearOf(state, state.hour);
+  const template = RIVAL_COMPANIES.find(t => t.id === rival.id);
+  const international = !!template?.countries.includes('*');
+  const big = international || rival.reputation >= 55 || rival.maxTier >= 3;
+  const hq = world.cityById.get(rival.hqCityId);
+  const town = world.cityById.get(gig.cityId);
+  const bigTowns = (c?: { size: string }) => c?.size === 'city' || c?.size === 'metropolis';
+  return {
+    international,
+    abroad: !!town?.abroad,
+    pace: big && year >= 1990 ? TEAM_PACE / (world.era?.soloPace ?? 1) : 1,
+    freight: big && year >= 1995 && bigTowns(hq) && bigTowns(town) && !town?.abroad,
+  };
+}
+
 /** Rivals bid on open offers near their HQ; the player's local standing makes them less likely to win. */
 export function rivalsTakeOffers(state: TycoonState, world: WorldMap, rng: Rng) {
   const today = dayOf(state.hour);
@@ -282,9 +300,14 @@ export function rivalsTakeOffers(state: TycoonState, world: WorldMap, rng: Rng) 
     const actBar = actReputationBar(state, gig.act, false);
     for (const rival of state.rivals) {
       if (rival.reputation < actBar - 5) continue; // the act's management wouldn't call them either
-      const dist = roadDistance(world, rival.hqCityId, gig.cityId);
-      if (!Number.isFinite(dist)) continue;
-      const proximity = dist < 14 ? 1.6 : dist < 32 ? 1 : 0.45;
+      const rawDist = roadDistance(world, rival.hqCityId, gig.cityId);
+      if (!Number.isFinite(rawDist)) continue;
+      // The bigger houses run team drivers on the long hauls (from 1990) and fly kit between the cities (from 1995).
+      const reach = rivalReach(state, world, rival, gig);
+      const dist = rawDist / reach.pace;
+      const proximity = Math.max(dist < 14 ? 1.6 : dist < 32 ? 1 : 0.45, reach.freight ? 0.9 : 0);
+      // Over the border only the international houses (and neighbours) have the contacts.
+      const abroadFactor = reach.abroad ? (reach.international ? 1.3 : rawDist < 30 ? 0.6 : 0.05) : 1;
       const fit = gig.tier >= rival.minTier && gig.tier <= rival.maxTier ? 1 : 0.05;
       const mainDept = DEPTS.reduce((a, b) => (gig.needs[b] > gig.needs[a] ? b : a));
       const specialty = mainDept === rival.specialty ? 1.3 : 1;
@@ -294,11 +317,16 @@ export function rivalsTakeOffers(state: TycoonState, world: WorldMap, rng: Rng) 
       // Already working the area? The next date there is easy money (a run, like yours).
       const nearby = rivalNearbyDates(state, world, rival.id, gig);
       const onARun = nearby.length ? RIVAL_RUN_BONUS * (nearby.length > 1 ? 1.15 : 1) : 1;
-      const chance = 0.05 * difficultyOf(state).rivals * warWinBonus(state, gig.cityId, rival.id) * intelFactor(state, rival.id) * crowding * proximity * fit * specialty * loyalty * onARun * (1.15 - (rating / 100) * 0.6);
+      const chance = 0.05 * difficultyOf(state).rivals * warWinBonus(state, gig.cityId, rival.id) * intelFactor(state, rival.id) * crowding * proximity * fit * specialty * loyalty * onARun * abroadFactor * (1.15 - (rating / 100) * 0.6);
       if (!rng.chance(chance)) continue;
 
       gig.status = 'rival';
       gig.rivalId = rival.id;
+      if (reach.freight && rawDist >= 32) {
+        // Flown or railed in: no truck on the road, just a line in the news.
+        pushNews(state, `${rival.name} is sending kit by ${yearOf(state, state.hour) >= 1995 && world.cityById.get(gig.cityId)?.size !== 'town' ? 'air' : 'rail'} freight for ${gig.act} at ${world.venueById.get(gig.venueId)?.name}, ${world.cityById.get(gig.cityId)?.name}.`, 'info', { cityId: gig.cityId, gigId: gig.id });
+        break;
+      }
       // The same truck takes it if the timing works; otherwise they send another.
       const sameTruck = nearby.length ? runnableTruck(state, world, rival.id, gig) : undefined;
       if (sameTruck) {
