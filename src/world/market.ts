@@ -4,6 +4,7 @@
  * what money costs reads from here, so the Market window shows exactly what
  * the sim uses.
  */
+import { disruptionsOn } from './content/disruptions';
 import { HOURS_PER_DAY } from './catalog';
 import { book, dateOfDay, dayOf, formatMoney, pushNews } from './core';
 import { SEASON, WAGE_SCHEMES, baseRate, climateAt, fuelIndexAt, type ClimatePeriod } from './content/economy';
@@ -61,8 +62,10 @@ export const FUEL_LOCK_MONTHS = [6, 12];
 /** What fuel costs you now: the pump price, or your locked price while the contract runs. */
 export function fuelMultiplier(state: Pick<TycoonState, 'fuelLock' | 'hour' | 'startYear' | 'country'>): number {
   const day = dayOf(state.hour);
-  if (state.fuelLock && state.fuelLock.untilDay > day) return state.fuelLock.price;
-  return marketOnDay(state, day).fuel;
+  // A strike or blockade on the pumps hits even a locked price: there's no diesel to be had at it.
+  const shortage = disruptionsOn(state.country ?? 'GB', dateOfDay(state, day)).reduce((m, d) => Math.max(m, d.fuel ?? 1), 1);
+  if (state.fuelLock && state.fuelLock.untilDay > day) return state.fuelLock.price * shortage;
+  return marketOnDay(state, day).fuel * shortage;
 }
 
 export function fuelLockBlocker(state: TycoonState): string | null {

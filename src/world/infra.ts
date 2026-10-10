@@ -13,8 +13,10 @@
  * sets off (tripCharges).
  */
 import type { Era, TycoonState, WorldMap } from './types';
-import { pushNews } from './core';
+import { book, dayOf, pushNews } from './core';
 import type { VehicleModel } from './catalog';
+import { projectionFor } from './content/geo';
+import { daysSinceEnd, daysUntil, DISRUPTIONS, type Disruption } from './content/disruptions';
 import {
   CROSS_BRIDGE,
   CROSS_FERRY,
@@ -110,20 +112,40 @@ export const isWinter = (date: Date) => [11, 0, 1, 2].includes(date.getUTCMonth(
 export const CHAINS_FEE = 40;
 
 /** The world as its roads were in `year` (and in winter, if it is). Cached per distinct era. */
-export function eraWorld(base: WorldMap, year: number, winter = false): WorldMap {
+export function eraWorld(base: WorldMap, year: number, winter = false, disruptions: Disruption[] = []): WorldMap {
   const home = base.country;
   const open = base.corridors.map(c => year >= c.opens);
   const links = base.crossings.map(c => (c.link && year >= c.link.opens ? 1 : 0));
-  const border = base.borderCountries.map(c => borderRegime(home, c, year));
+  const extraBorder = disruptions.reduce((h, d) => h + (d.borderHours ?? 0), 0);
+  const border = base.borderCountries.map(c => {
+    const b = borderRegime(home, c, year);
+    return extraBorder ? { ...b, hours: b.hours + extraBorder } : b;
+  });
   const zone = base.zones.map(z => (year < z.until ? ZONE_HOURS : 0));
   const tollYear = TOLLS[home] && year >= TOLLS[home].from ? 1 : 0;
   const snow = winter;
   const rules = driversRules(home, year);
-  const key = `${open.map(Number).join('')}|${links.join('')}|${border.map(b => `${b.hours}:${b.fee}`).join(',')}|${zone.join(',')}|${tollYear}|${snow ? 'w' : ''}|${rules.pace}`;
+  const key = `${open.map(Number).join('')}|${links.join('')}|${border.map(b => `${b.hours}:${b.fee}`).join(',')}|${zone.join(',')}|${tollYear}|${snow ? 'w' : ''}|${rules.pace}|${disruptions.map(d => d.id).join(',')}`;
   base.eras ??= new Map();
   const cached = base.eras.get(key);
   if (cached) return cached;
-  const era: Era = { year, key, border, zone, winter: snow, soloPace: rules.pace, driversRules: rules.label };
+  const era: Era = { year, key, border, zone, winter: snow, soloPace: rules.pace, driversRules: rules.label, disruptions: disruptions.map(d => d.title) };
+  // Strikes, blockades and storms slow the roads they cover.
+  let slow: Float32Array | undefined;
+  const roadHit = disruptions.filter(d => d.road && d.road > 1);
+  if (roadHit.length) {
+    slow = new Float32Array(base.width * base.height).fill(1);
+    const proj = projectionFor(home);
+    roadHit.forEach(d => {
+      const centre = d.area ? proj.toTile(d.area.at[0], d.area.at[1]) : null;
+      const reach = d.area ? d.area.km / base.kmPerTile : 0;
+      for (let k = 0; k < slow!.length; k++) {
+        if (!base.road[k] || base.foreign[k]) continue;
+        if (centre && Math.hypot((k % base.width) + 0.5 - centre.x, Math.floor(k / base.width) + 0.5 - centre.y) > reach) continue;
+        slow![k] = Math.max(slow![k], d.road!);
+      }
+    });
+  }
   const motorway = new Uint8Array(base.width * base.height);
   base.corridors.forEach((c, i) => {
     if (open[i]) c.tiles.forEach(k => (motorway[k] = c.toll && tollYear ? 2 : 1));
@@ -138,6 +160,7 @@ export function eraWorld(base: WorldMap, year: number, winter = false): WorldMap
     era,
     motorway,
     crossKind,
+    slow,
     pathCache: new Map(),
     distCache: new Map(),
     eras: undefined,
@@ -166,6 +189,8 @@ export interface RouteNotes {
   tollKm: number;
   /** Snowbound high road on the way (winter only). */
   snowKm: number;
+  /** Strikes, blockades or storms slowing this road right now. */
+  disrupted: string[];
 }
 
 const notesCache = new WeakMap<WorldMap, Map<string, RouteNotes>>();
@@ -180,7 +205,7 @@ export function routeNotes(world: WorldMap, from: string, to: string): RouteNote
   const key = `${from}|${to}`;
   const hit = byKey.get(key);
   if (hit) return hit;
-  const notes: RouteNotes = { ferries: [], tunnels: [], borders: [], motorwayKm: 0, tollKm: 0, snowKm: 0 };
+  const notes: RouteNotes = { ferries: [], tunnels: [], borders: [], motorwayKm: 0, tollKm: 0, snowKm: 0, disrupted: [] };
   const path = getCityPath(world, from, to);
   const km = unitsPerTile(world) * 18;
   const tolled = TOLLS[homeOf(world)];
@@ -191,6 +216,7 @@ export function routeNotes(world: WorldMap, from: string, to: string): RouteNote
     if (mw) notes.motorwayKm += km;
     if (mw === 2 || (mw && lorriesOnly)) notes.tollKm += km;
     if (world.era?.winter && world.snowy[k]) notes.snowKm += km;
+    if (world.slow && world.slow[k] > 1 && !notes.disrupted.length) notes.disrupted = [...(world.era?.disruptions ?? [])];
     if (i === 0) continue;
     const p = path[i - 1];
     const wa = world.crossingAt[p] >= 0;
@@ -243,4 +269,28 @@ export function yearlyDriversRules(s: TycoonState, year: number) {
   if (now.label === before.label) return;
   const change = now.pace < before.pace ? 'Solo drivers will average less; team drivers are unaffected.' : 'Solo drivers can cover more ground.';
   pushNews(s, `New drivers' hours rules: ${now.label}. ${change}`, 'info');
+}
+
+/** Daily: warn of strikes and storms a few days out, say when they start and end, rescue grounded freight. */
+export function dailyDisruptions(s: TycoonState, date: Date) {
+  const country = s.country ?? 'GB';
+  DISRUPTIONS.forEach(d => {
+    if (d.countries && !d.countries.includes(country as never)) return;
+    const until = daysUntil(d, date);
+    const lead = d.kind === 'storm' || d.kind === 'border' ? 1 : 3;
+    if (until === lead && d.kind !== 'ash') pushNews(s, `Warning — ${d.title} expected in ${lead === 1 ? 'a day' : `${lead} days`}: plan routes and fuel with slack.`, 'info');
+    if (until === 0) {
+      pushNews(s, `${d.title}: ${d.news}`, 'bad');
+      if (d.freightRescue) {
+        const today = Math.floor(date.getTime() / 86400000);
+        const end = today + daysSinceEnd(d, date) * -1;
+        const hit = s.gigs.filter(g => g.status === 'booked' && g.overseas && g.day >= dayOf(s.hour) && g.day <= dayOf(s.hour) + (end - today) + 2);
+        hit.forEach(g => {
+          book(s, 'freight', -d.freightRescue!);
+          pushNews(s, `${g.act}: the rig can't fly — trucking it and chartering what's left costs ${d.freightRescue!.toLocaleString('en-US')} more.`, 'bad', { gigId: g.id });
+        });
+      }
+    }
+    if (daysSinceEnd(d, date) === 1) pushNews(s, `${d.title} is over: the roads are back to normal.`, 'good');
+  });
 }

@@ -27,6 +27,7 @@ import { getCityPath } from './pathfinding';
 import { eraWorld } from './infra';
 import { dateOfDay, dayOf, yearOf } from './core';
 import { isWinter } from './infra';
+import { disruptionsOn } from './content/disruptions';
 import { DEFAULT_COUNTRY, getCountry } from './content/countries';
 import { geoAbroad, geoCities, geoExcluded, geoLanes, geoLinks, geoMotorways, geoStraits, geoZones, homeMask, insidePoly, sizeOfGeo, landMask, projectionFor, rangeLift } from './content/geo';
 
@@ -256,11 +257,13 @@ export function worldOf(state: { mapSeed: number; country?: string; startYear?: 
   const base = getWorld(state.mapSeed, state.country);
   if (state.startYear === undefined) return base;
   const year = yearOf({ startYear: state.startYear }, state.hour ?? 0);
-  const winter = isWinter(dateOfDay({ startYear: state.startYear }, dayOf(state.hour ?? 0)));
-  const key = `${state.mapSeed}:${state.country}:${year}:${winter}`;
+  const date = dateOfDay({ startYear: state.startYear }, dayOf(state.hour ?? 0));
+  const winter = isWinter(date);
+  const trouble = disruptionsOn(base.country, date);
+  const key = `${state.mapSeed}:${state.country}:${year}:${winter}:${trouble.map(d => d.id).join(',')}`;
   let world = byYear.get(key);
   if (!world) {
-    world = eraWorld(base, year, winter);
+    world = eraWorld(base, year, winter, trouble);
     if (byYear.size > 200) byYear.clear();
     byYear.set(key, world);
   }

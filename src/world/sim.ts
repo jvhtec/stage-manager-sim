@@ -98,7 +98,7 @@ import { dailyContracts, houseRigAt, monthlyContracts } from './contracts';
 import { dailyMarket, fuelMultiplier, marketNow, monthlyInterest } from './market';
 import { getRegion } from './content/world';
 import { getCityPath, roadDistance } from './pathfinding';
-import { monthlyWinter, tripCharges, yearlyDriversRules } from './infra';
+import { dailyDisruptions, monthlyWinter, tripCharges, yearlyDriversRules } from './infra';
 import { countTownShow, fadeTownShows } from './territory';
 import { DEPTS, type GearStock, type Gig, type TycoonState, type Vehicle, type WorldMap } from './types';
 import { findArtist } from './content/artists';
@@ -643,6 +643,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   dailyFestivals(s, world, rng);
   dailyOwnFestival(s, rng);
   dailyEvents(s, world, rng);
+  dailyDisruptions(s, date);
   dailyContracts(s, world);
   pruneGigs(s);
 

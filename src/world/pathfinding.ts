@@ -49,8 +49,9 @@ export function stepCost(map: WorldMap, a: number, b: number): number {
   const upt = unitsPerTile(map);
   const mw = map.motorway;
   const snow = map.era?.winter ? map.snowy : undefined;
-  const fa = (mw?.[a] ? MOTORWAY_FACTOR : 1) * (snow?.[a] ? SNOW_FACTOR : 1);
-  const fb = (mw?.[b] ? MOTORWAY_FACTOR : 1) * (snow?.[b] ? SNOW_FACTOR : 1);
+  const slow = map.slow;
+  const fa = (mw?.[a] ? MOTORWAY_FACTOR : 1) * (snow?.[a] ? SNOW_FACTOR : 1) * (slow ? slow[a] : 1);
+  const fb = (mw?.[b] ? MOTORWAY_FACTOR : 1) * (snow?.[b] ? SNOW_FACTOR : 1) * (slow ? slow[b] : 1);
   let c = (upt * (fa + fb)) / 2;
   const wa = isWaterRoad(map, a);
   const wb = isWaterRoad(map, b);

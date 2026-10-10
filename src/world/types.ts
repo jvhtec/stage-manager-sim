@@ -113,6 +113,8 @@ export interface Era {
   soloPace: number;
   /** Those rules, in a few words. */
   driversRules: string;
+  /** Strikes, blockades and storms under way (titles). */
+  disruptions: string[];
 }
 
 export interface WorldMap {
@@ -156,6 +158,8 @@ export interface WorldMap {
   motorway?: Uint8Array;
   /** Per crossing tile: 1 bridge, 2 ferry, 3 tunnel. */
   crossKind?: Uint8Array;
+  /** Per tile slow-down from a strike, blockade or storm under way (1 = normal). */
+  slow?: Float32Array;
   /** Era worlds derived from this one, by era key. */
   eras?: Map<string, WorldMap>;
 }

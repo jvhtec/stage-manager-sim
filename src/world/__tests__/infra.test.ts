@@ -170,3 +170,36 @@ describe("drivers' hours", () => {
     expect(travelHours(w2010, { ...solo, teamDrivers: true }, a, b)).toBeLessThan(travelHours(w2010, solo, a, b));
   });
 });
+
+describe('historic disruptions', () => {
+  it('the 1992 points-licence blockade slows French roads, and only while it lasts', async () => {
+    const { disruptionsOn } = await import('../content/disruptions');
+    const base = getWorld(7, 'FR');
+    const during = disruptionsOn('FR', new Date(Date.UTC(1992, 6, 2)));
+    expect(during.map(d => d.id)).toEqual(['fr-permis-1992']);
+    expect(disruptionsOn('FR', new Date(Date.UTC(1992, 7, 2)))).toEqual([]);
+    const a = town(base, 'Paris').id;
+    const b = town(base, 'Lyon').id;
+    const normal = roadDistance(eraWorld(base, 1992), a, b);
+    const blocked = eraWorld(base, 1992, false, during);
+    expect(roadDistance(blocked, a, b)).toBeGreaterThan(normal * 1.5);
+    expect(routeNotes(blocked, a, b).disrupted).toEqual(['Points-licence blockade']);
+  });
+
+  it('fuel protests push the price at the pump, even on a locked contract', async () => {
+    const { fuelMultiplier } = await import('../market');
+    const s = createTycoonGame({ companyName: 'F', color: '#f00', seed: 7, country: 'GB', startYear: 2000 });
+    const day = (Date.UTC(2000, 8, 10) - Date.UTC(2000, 0, 1)) / 86400000;
+    const before = fuelMultiplier({ ...s, hour: (day - 20) * 24 });
+    const during = fuelMultiplier({ ...s, hour: day * 24 });
+    expect(during).toBeGreaterThan(before * 1.5);
+  });
+
+  it('after 9/11 the US borders take most of a day', async () => {
+    const { disruptionsOn } = await import('../content/disruptions');
+    const base = getWorld(7, 'US');
+    const normal = eraWorld(base, 2001);
+    const locked = eraWorld(base, 2001, false, disruptionsOn('US', new Date(Date.UTC(2001, 8, 12))));
+    expect(locked.era!.border[0].hours).toBeGreaterThan(normal.era!.border[0].hours + 10);
+  });
+});

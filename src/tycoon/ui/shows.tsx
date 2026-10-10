@@ -44,6 +44,7 @@ function roadNotes(state: TycoonState, gig: Gig): string | null {
   const n = routeNotes(world, depot.cityId, gig.cityId);
   const due = tripCharges(world, depot.cityId, gig.cityId, 'truck');
   const bits = [
+    ...n.disrupted.map(d => `⚠ ${d}`),
     ...n.ferries.map(f => `⛴ ${f}`),
     ...n.tunnels.map(t => `🚇 ${t}`),
     ...n.borders.map(b => `🛂 ${b === 'the GDR' ? 'GDR transit' : `border (${b})`}`),
