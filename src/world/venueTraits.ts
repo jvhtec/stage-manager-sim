@@ -7,7 +7,7 @@
  *  - a union house (IATSE in American theatres and arenas, some British theatres): you pay their call.
  */
 import type { Venue, WorldMap } from './types';
-import { worldOf } from './mapgen';
+import { isRightToWork } from './rules';
 
 export interface VenueTraits {
   loadIn: 'dock' | 'street' | 'stairs';
@@ -37,32 +37,31 @@ const STRICT_NOISE = new Set(['DE', 'CH', 'AT']);
 
 /** Spain has no stagehands' unions calling extra hands, and never will. */
 const NO_STAGEHAND_UNIONS = new Set(['ES']);
-export const hasStagehandUnions = (country: string) => !NO_STAGEHAND_UNIONS.has(country);
+/** Union crews exist in a country, and in an American town unless it's in a right-to-work state. */
+export const hasStagehandUnions = (country: string, town?: string) =>
+  !NO_STAGEHAND_UNIONS.has(country) && !(country === 'US' && town !== undefined && isRightToWork(town));
 
-/** The country a show is played in (a town abroad keeps its own). */
-export function gigCountry(s: { country?: string; mapSeed: number; startYear: number; hour: number }, gig: { cityId: string }): string {
-  const city = worldOf(s).cityById.get(gig.cityId);
-  return city?.abroad?.country ?? s.country ?? 'GB';
-}
-
-export function venueTraits(venue: Pick<Venue, 'name' | 'kind'>, country: string): VenueTraits {
+export function venueTraits(venue: Pick<Venue, 'name' | 'kind'>, country: string, town?: string): VenueTraits {
   const r = (salt: string) => hash(`${venue.name}|${salt}`);
   const big = venue.kind === 'arena' || venue.kind === 'stadium';
   const loadIn: VenueTraits['loadIn'] = big ? 'dock' : venue.kind === 'theatre' ? (r('load') < 0.4 ? 'stairs' : r('load') < 0.8 ? 'street' : 'dock') : venue.kind === 'pub' ? 'street' : r('load') < 0.25 ? 'stairs' : 'street';
   const t: VenueTraits = { loadIn };
-  const curfewChance = country === 'GB' ? (big ? 0.8 : 0.45) : country === 'US' ? 0.35 : 0.25;
+  // Britain and Spain (municipal ordinances) are the strictest about finishing on time.
+  const curfewChance = country === 'GB' ? (big ? 0.8 : 0.45) : country === 'ES' ? (big ? 0.7 : 0.5) : country === 'US' ? 0.35 : 0.25;
   if (venue.kind !== 'pub' && r('curfew') < curfewChance) t.curfew = big && venue.kind === 'stadium' ? 22 : 23;
-  if (STRICT_NOISE.has(country) ? r('noise') < (big ? 0.7 : 0.4) : r('noise') < (big ? 0.15 : 0.1)) t.noiseDb = STRICT_NOISE.has(country) ? 99 : 102;
-  if (country === 'US' && (venue.kind === 'theatre' || big) && r('union') < 0.8) t.union = true;
-  // (Never in Spain — see NO_STAGEHAND_UNIONS.)
-  if (country === 'GB' && venue.kind === 'theatre' && r('union') < 0.4) t.union = true;
+  const noiseChance = STRICT_NOISE.has(country) ? (big ? 0.7 : 0.4) : country === 'ES' ? (big ? 0.35 : 0.3) : big ? 0.15 : 0.1;
+  if (r('noise') < noiseChance) t.noiseDb = STRICT_NOISE.has(country) ? 99 : country === 'ES' ? 100 : 102;
+  if (hasStagehandUnions(country, town)) {
+    if (country === 'US' && (venue.kind === 'theatre' || big) && r('union') < 0.8) t.union = true;
+    if (country === 'GB' && venue.kind === 'theatre' && r('union') < 0.4) t.union = true;
+  }
   return t;
 }
 
 /** The traits of a venue on this map (a town abroad uses its own country's habits). */
 export function traitsOf(world: Pick<WorldMap, 'country' | 'cityById'>, venue: Venue): VenueTraits {
   const city = world.cityById.get(venue.cityId);
-  return venueTraits(venue, city?.abroad?.country ?? world.country);
+  return venueTraits(venue, city?.abroad?.country ?? world.country, city?.name);
 }
 
 /** One line per quirk, for windows. */

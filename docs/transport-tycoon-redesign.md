@@ -232,6 +232,12 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
   - **Rail and air freight** (`freight.ts`): send a booked show's kit from a base by rail (terminals in towns and up)
     or air (cities); it counts if it lands before load-in, local freelancers crew it, and it returns after
     load-out as a transfer.
+  - **National rules** (`rules.ts`): Spain's fiesta season (Jul–Sep: small towns offer ×1.8 as often, council-booked
+    tier 1–2 shows pay 75 days late via the invoicing system, whatever your policy); France's intermittents (freelance
+    rate ×0.75, pool ×1.5); Germany's Meister (from 1995 tier 3+ shows need one more certified rigger); Britain's 1998
+    working-time rules (+1 relief crew on tier 3+ or multi-day shows); US right-to-work towns have no union houses
+    or union crises, and Spain has no stagehand unions at all. Spanish rooms are strict about curfews (50–70%) and noise
+    (30–35%). Rule flags live on the offer (`council`, `meister`, `relief`) and show in its window.
 
 - **Start years** (1975, 1980, 1985, 1990, 2000, 2010) — the era sets which trucks, gear and
   desks exist (Bedford TK, Altec A4s, Yamaha PM1000 and Strand lanterns in 1975; no video kit

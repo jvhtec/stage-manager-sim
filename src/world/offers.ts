@@ -3,7 +3,9 @@
  * population, so the metropolis is busy and villages are quiet — the map's
  * geography *is* the demand curve. Rivals snap up offers they're close to.
  */
+import { worldOf } from './mapgen';
 import { traitsOf } from './venueTraits';
+import { FIESTA_OFFER_BOOST, councilBooked, isFiestaSeason, needsMeister, needsReliefCrew, ruleCountry } from './rules';
 import { priceWarFactor, warWinBonus } from './pricewars';
 import { intelFactor } from './rivalry';
 import { difficultyOf } from './scenario';
@@ -120,6 +122,16 @@ export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
   const fee =
     Math.round((info.baseFee * marketOnDay(state, spec.day).fees * (0.85 + rng.next() * 0.4) * (0.9 + rating / 500) * star * loyalty * (spec.feeMultiplier ?? 1) * (COUNTRY_FEES[state.country ?? ''] ?? 1)) / 50) * 50;
 
+  // National rules (rules.ts): who books, who must be aboard, how many hands.
+  const world = worldOf(state);
+  const country = ruleCountry(state, world, spec.venue.cityId);
+  const town = world.cityById.get(spec.venue.cityId);
+  const showDate = dateOfDay(state, spec.day);
+  const council = !spec.festival && !spec.tourId && councilBooked(country, town?.size ?? 'city', showDate, tier);
+  const meister = needsMeister(country, year, tier);
+  const relief = needsReliefCrew(country, year, tier, spec.days ?? 1);
+  const baseCrew = Math.round((info.crew + rng.nextInt(tier)) * (spec.needsScale ?? 1));
+
   return {
     id: newId(state, 'gig'),
     act: spec.act,
@@ -129,7 +141,10 @@ export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
     day: spec.day,
     acceptByDay: spec.day - 3,
     needs,
-    crewNeeded: Math.round((info.crew + rng.nextInt(tier)) * (spec.needsScale ?? 1)),
+    crewNeeded: baseCrew + (relief ? 1 : 0),
+    council: council || undefined,
+    meister: meister || undefined,
+    relief: relief || undefined,
     fee,
     rider,
     asksForYou: asksForYou || undefined,
@@ -194,8 +209,10 @@ export function yearlyVenues(state: TycoonState, world: WorldMap, year: number) 
 
 export function dailyOffers(state: TycoonState, world: WorldMap, rng: Rng) {
   const { demand } = marketNow(state);
+  const season = isFiestaSeason(new Date(Date.UTC(state.startYear, 0, 1) + (dayOf(state.hour) + 10) * 86400000));
   world.cities.forEach(city => {
-    const chance = OFFER_RATE[city.size] * demand * localFame(state, city.id) * townGrowth(state, city.id) * offerBuzz(state) * (1 + salesBoost(state, world, city.id));
+    const fiesta = season && state.country === 'ES' && (city.size === 'village' || city.size === 'town') ? FIESTA_OFFER_BOOST : 1;
+    const chance = OFFER_RATE[city.size] * fiesta * demand * localFame(state, city.id) * townGrowth(state, city.id) * offerBuzz(state) * (1 + salesBoost(state, world, city.id));
     if (rng.chance(chance)) {
       const gig = generateOffer(state, world, city, rng);
       if (gig) state.gigs.push(gig);

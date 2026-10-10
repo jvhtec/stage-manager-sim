@@ -24,6 +24,7 @@ import { worldOf } from '@/world/mapgen';
 import { roadDistance } from '@/world/pathfinding';
 import { routeNotes, tripCharges } from '@/world/infra';
 import { describeTraits, traitsOf } from '@/world/venueTraits';
+import { ruleCountry, showRules } from '@/world/rules';
 import { estimateArrival, estimateJobCosts, projectCoverage } from '@/world/queries';
 import { DEPTS, type Gig, type TycoonState } from '@/world/types';
 import { Bar, Stat, TierChip } from './bits';
@@ -168,6 +169,13 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
         <Stat label="Book by">
           {formatDay(state, gig.acceptByDay)}{' '}
           <span className="tt-dim">· {distance(nearestDepotDistance(state, gig))} from your nearest depot</span>
+        </Stat>
+      )}
+      {showRules(ruleCountry(state, worldOf(state), gig.cityId), gig).length > 0 && (
+        <Stat label="Local rules">
+          <span className="tt-dim" style={{ whiteSpace: 'normal' }}>
+            {showRules(ruleCountry(state, worldOf(state), gig.cityId), gig).join(' · ')}
+          </span>
         </Stat>
       )}
       {!gig.overseas && !gig.festival && worldOf(state).venueById.get(gig.venueId) && (

@@ -7,7 +7,9 @@
  * Venue choices don't play out until the show: they're kept on the gig as
  * `mods` and folded into the night's quality, failure risk and weather.
  */
-import { gigCountry, hasStagehandUnions } from './venueTraits';
+import { worldOf } from './mapgen';
+import { ruleCountry } from './rules';
+import { hasStagehandUnions } from './venueTraits';
 import { resolveAudit } from './audits';
 import { resolveDispute } from './disputes';
 import { HEAT_FIGHT, HEAT_TRUCE, addHeat, answerTrick } from './rivalry';
@@ -101,7 +103,7 @@ export const MAKERS: Record<Exclude<DilemmaKind, 'breakdown' | 'raise' | 'burnou
           defaultOption: 'house',
         },
   union: (s, gig) =>
-    gig.tier < 3 || gig.overseas || !hasStagehandUnions(gigCountry(s, gig))
+    gig.tier < 3 || gig.overseas || !hasStagehandUnions(ruleCountry(s, worldOf(s), gig.cityId), worldOf(s).cityById.get(gig.cityId)?.name)
       ? null
       : {
           kind: 'union',

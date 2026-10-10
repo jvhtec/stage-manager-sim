@@ -494,6 +494,13 @@ export function HelpWindow() {
           is — the company with the most shows there lately.
         </li>
         <li>
+          <b>Each country has its own rules</b> (a show's "Local rules" line): in Spain the summer fiestas fill small towns with
+          council-booked shows that pay 75 days late; France's intermittents keep freelance crew cheap and plentiful; Germany
+          wants a certified Meister für Veranstaltungstechnik (one more rigger) on big shows from 1995; Britain's 1998
+          working-time rules add relief crew to big or multi-day shows; and America's right-to-work states (Texas, Georgia,
+          Florida…) have no union houses while the north-east and west coast do. Spain has no stagehand unions at all.
+        </li>
+        <li>
           <b>Rehearsals are mandatory</b> for big jobs: arena shows, stadiums, broadcast events and tours can't be booked
           without a rehearsal stage of the right size (Base → Annexes), and an unrehearsed show suffers. Policies has an
           automatic option.

@@ -448,6 +448,12 @@ export interface Rider {
 export interface Gig {
   id: string;
   act: string;
+  /** Booked by a Spanish town council in fiesta season: pays late (rules.ts). */
+  council?: boolean;
+  /** Germany: a Meister für Veranstaltungstechnik (extra certified rigger) must be on the crew. */
+  meister?: boolean;
+  /** Britain after 1998: relief crew under the working-time rules (already in crewNeeded). */
+  relief?: boolean;
   /** Kit sent by rail or air freight instead of (or as well as) a truck (freight.ts). */
   freight?: { mode: 'rail' | 'air'; fromDepotId: string; gear: GearStock; arrives: number; cost: number; hours: number; returned?: boolean };
   venueId: string;
