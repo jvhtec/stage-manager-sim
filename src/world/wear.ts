@@ -6,6 +6,8 @@
  * or pay to refurbish a line all at once.
  */
 import { benchRepair } from './annexes';
+import { deferWorkshop, workshopLapsed } from './consequences';
+import { REFURB_PRICE, REPAIR_SPEED, standardisationFactor, supportOf } from './ecosystem';
 import { techResaleFactor } from './content/techWaves';
 import type { Rng } from '@/lib/rng';
 import { GEAR_RESALE_RATE } from './catalog';
@@ -67,14 +69,17 @@ export function wearFromShow(s: TycoonState, delivered: GearStock, days: number,
 }
 
 export function dailyWorkshop(s: TycoonState) {
+  if (workshopLapsed(s)) return;
   const w = WORKSHOP[s.policies.workshop];
   const [bench, benchCap] = benchRepair(s);
   const repair = w.repairPerDay + bench;
   const cap = Math.max(w.cap, benchCap);
   if (!repair) return;
+  const year = yearOf(s, s.hour);
   for (const id in s.gearCondition) {
     const c = s.gearCondition[id];
-    if (c < cap) s.gearCondition[id] = Math.min(cap, c + repair);
+    // Old lines wait for spares (ecosystem.ts).
+    if (c < cap) s.gearCondition[id] = Math.min(cap, c + repair * REPAIR_SPEED[supportOf(id, year)]);
   }
 }
 
@@ -85,15 +90,17 @@ export function replacementValue(stock: GearStock): number {
 }
 
 export const monthlyWorkshopCost = (state: TycoonState, level = state.policies.workshop) =>
-  Math.round(replacementValue(ownedStock(state)) * WORKSHOP[level].monthlyRate);
+  Math.round(replacementValue(ownedStock(state)) * WORKSHOP[level].monthlyRate * standardisationFactor(ownedStock(state)));
 
 export function monthlyWorkshop(s: TycoonState) {
-  book(s, 'workshop', -monthlyWorkshopCost(s));
+  const cost = monthlyWorkshopCost(s);
+  if (deferWorkshop(s, cost)) return;
+  book(s, 'workshop', -cost);
 }
 
 export function refurbishCost(state: TycoonState, productId: string): number {
   const units = ownedStock(state)[productId] ?? 0;
-  return Math.round(getProduct(productId).price * units * REFURB_RATE * ((100 - condition(state, productId)) / 100));
+  return Math.round(getProduct(productId).price * units * REFURB_RATE * ((100 - condition(state, productId)) / 100) * REFURB_PRICE[supportOf(productId, yearOf(state, state.hour))]);
 }
 
 /** Resale value of one unit, which falls with condition. */

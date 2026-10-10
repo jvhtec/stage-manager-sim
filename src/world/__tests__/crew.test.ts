@@ -3,7 +3,7 @@ import { createTycoonGame } from '../state';
 import { advanceHours } from '../sim';
 import { hireCrew, setPolicy } from '../actions';
 import { HOURS_PER_DAY } from '../catalog';
-import { crewEffectiveness } from '../crew';
+import { crewEffectiveness, monthlyCrew } from '../crew';
 import { dailyPeopleFatigue, fatigueFactor, moveToVehicle, syncCrew } from '../people';
 import type { TycoonState } from '../types';
 
@@ -40,7 +40,8 @@ describe('crew', () => {
     let miserable = setPolicy({ ...base, crewMorale: 10 }, 'pay', 'low').state;
     miserable = hireCrew(miserable, miserable.depots[0].id, 15).state;
     const before = miserable.people.length;
-    miserable = advanceHours(miserable, 35 * HOURS_PER_DAY);
+    // The month closes with morale still on the floor: people walk (rng stubbed so the test isn't luck).
+    monthlyCrew(miserable, { chance: () => true, next: () => 0, pick: <T,>(a: T[]) => a[0] } as never);
     expect(miserable.people.length).toBeLessThan(before);
     expect(miserable.news.some(n => /crew gone/.test(n.text))).toBe(true);
   });

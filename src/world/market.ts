@@ -101,7 +101,11 @@ function cancelForShutdown(s: TycoonState) {
   s.gigs.forEach(g => {
     if ((g.status !== 'booked' && g.status !== 'offer' && g.status !== 'rival') || g.result) return;
     if (!marketOnDay(s, g.day).shutdown && g.day > today + 90) return;
-    if (g.status === 'booked') cancelled += 1;
+    if (g.status === 'booked') {
+      cancelled += 1;
+      // Force majeure: deposits go back.
+      if (g.depositPaid) book(s, 'shows', -g.depositPaid);
+    }
     g.status = 'expired';
   });
   s.tours.forEach(t => {

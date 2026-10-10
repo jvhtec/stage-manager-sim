@@ -238,6 +238,11 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
     working-time rules (+1 relief crew on tier 3+ or multi-day shows); US right-to-work towns have no union houses
     or union crises, and Spain has no stagehand unions at all. Spanish rooms are strict about curfews (50–70%) and noise
     (30–35%). Rule flags live on the offer (`council`, `meister`, `relief`) and show in its window.
+  - **Tour bus hire** (`buses.ts`): a business line independent of your shows. Touring acts post bus contracts
+    (10–50 days, a day rate that scales with tier, country fee premium and the market); you reserve a parked coach
+    (Duple 1975, Setra 1985, Skyliner 1994) and it leaves on the start date, earning the rate less a 30% driver share,
+    wearing 0.06 reliability a day and breaking down now and then (4% of the bus's price). Open contracts can be
+    taken by rivals (12%/day) or lapse. A finished tour raises the act's regard for you and your reputation a touch.
 
 - **Start years** (1975, 1980, 1985, 1990, 2000, 2010) — the era sets which trucks, gear and
   desks exist (Bedford TK, Altec A4s, Yamaha PM1000 and Strand lanterns in 1975; no video kit
@@ -747,3 +752,128 @@ The retired dashboard build had systems that were ported to the map game like so
 7. **Town growth** — landmark venues now open and close in their real years and local fame
    steers offers; towns also grow over the decades (`towns.ts`).
 8. ~~Retire `/classic`~~ — done: the dashboard build and its code have been removed.
+
+## Historic scenarios
+
+The new-company form offers seven one-year scenarios (`scenarios.ts`): Live Aid 1985, The Wall in Berlin 1990, Italia ’90, Barcelona ’92, Expo ’92, Atlanta ’96 and London 2012. Each fixes the country, start year and home town, gives an established small firm (reputation and cash enough to bid), and sets one goal (`GoalId` `scenario`): win a lot of the event's production and deliver it at quality 50% or better before the year is out. The event tender is the ordinary special-events engine (`events.ts`), so rivals bid against you and the night carries its usual prestige and stakes.
+
+## The trade press
+
+Every New Year (`charts.ts`) the press prints the supplier league table for the year just gone (your company rating against the rivals'), the year's biggest tours in your market (the acts at the top venue tier, with a ★ on any you carried) and reviews of your best and worst nights. A rave (quality 90%+) or a panning (a failed show, or under 55%) moves your reputation by 0.4, and each big tour you carried adds 0.3 (up to three). The latest charts sit in the League window under *Trade press*.
+
+## Consequences you can read back
+
+A set of systems that chain into each other, with the causes recorded so a failure can explain itself rather than read as random punishment.
+
+- **Late payers** (`receivables.ts`): some promoters (8–16% by tier) pay 10–35 days after the due date, with a news warning. Credit-insured invoices never slip.
+- **Deferred maintenance** (`consequences.ts`): a truck's service or the monthly workshop bill is put off when cash is under four times the bill. A truck past its service interval loses reliability twice as fast; a lapsed workshop stops repairing the kit. Each deferral is logged with *why* cash was short (invoices owed, how many are late, debt).
+- **Explained breakdowns**: a breakdown lists its causes by weight (service overdue, age, wear, winter — or "just unlucky" if the truck was sound) and links back to the deferral that set it up. The truck's shows are tagged with the breakdown.
+- **Post-mortems**: a failed or rough night gets an incident record naming its causes — late load-in, dead kit and the workshop lapse behind it, short or exhausted crew, left-behind cases, unpaid extras, venue limits — and the news line ends "Why: … It traces back: service deferred → …". The last eight are in the League window under *Post-mortems*. A failed or tired-crew night also dents crew morale, and a collapse costs goodwill with the act.
+- **Change orders** (`changes.ts`): at load-in a client may ask for an extra hour, extra kit or an earlier soundcheck. Each client has a hidden temper (easy-going, reasonable, always pushing) that you only learn from history. You can do it free (goodwill now, but they ask more often), quote for it (they pay or refuse, by temper and what you have taught them) or hold to the contract (goodwill lost; this is what happens if you don't answer). Overtime tires the crew and unpaid extras go into the post-mortem if the night goes badly. The offer window shows your history with the client.
+- **Cash forecast** (`cashflow.ts`): the Money window projects the next eight weeks from invoices (with default and late-payment risk), booked shows and the monthly bills, as an expected line with a range. The range is ±30% with no back office and narrows to ±8% with office staff. It warns when late invoices could leave you overdrawn, or too thin to pay for services.
+
+## Technical riders
+
+From club level up a show carries a technical rider (`techRider.ts`) with hard requirements, not just a brand preference:
+
+- **Inputs**: the FOH desk must take enough channels — 24 at clubs, 40 in theatres, 56 at stadiums, half as much again after 2000 and more after 2010. Analogue desks top out at 40–48 inputs, so the big digital desks earn their price. (Desk input counts are in `content/consoles.ts`.)
+- **Show file**: a real act at theatre size and up often brings its own engineer, whose show file runs on one digital console family (DiGiCo, Yamaha, Avid…).
+- **Approved PA**: bigger shows list the two or three PA brands they accept.
+
+Trucks load compliant kit first. The show window lists the rider and, once trucks are assigned, checks the kit going out; for each breach it offers **cross-hire** from a rental house (6% of the unit price a day, delivered to the venue). Break the rider and the engineer fights the kit all night (−8% quality per breach), the client withholds 12% of the fee per breach (up to 30%), the act's goodwill drops and the breach goes into the post-mortem. Owning one console family means fewer hires; mixing brands means hiring more often.
+
+## Can the room take the show?
+
+From clubs and theatres up (`production.ts`), every venue has a house power supply, a roof that takes so many tonnes (open-air stadiums: none) and, unless it has a loading dock, no access for artics. Every gear kind draws power and flies weight: a par-can rig drinks power that an LED rig doesn't, line arrays and video walls are heavy, and each staging unit brings 5 t of ground support for open-air shows.
+
+- **The offer** says if a typical rig for the show would overload the room, and roughly what the fix costs — some jobs aren't worth it.
+- **A booked show** checks the actual kit and trucks going out, with a button per problem: hire a generator, hire ground-support towers, or book local vans to shuttle the kit from where the artic can park.
+- **Left unfixed**: the house supply trips (twice the chance of kit failing, −4% quality), half the rig stays on the floor (−8%), or the artics are hand-balled in (+2 h on the load-in). Each goes into the post-mortem as "The production didn't fit the room".
+- The venue window lists each room's power, roof load and access. The old random "undersized power" crisis is gone: power is now something you can see coming.
+
+## Crew are people
+
+`bonds.ts`. Every pair of crew has a hidden chemistry. Each show they work together moves their rapport: a good night (+2), a bad one (−2), plus their chemistry — natural fits grow close fast, and pairs who clash grate, worse when both are exhausted.
+
+- **Trusted team** (rapport 40+): each trusted pair on a crew adds 5% effective crew (up to 15%) and cuts the chance of kit failing (to 0.85×). The loader prefers putting friends together. The crew window shows 🤝 for them.
+- **Feud** (−40): −3% show quality per feuding pair on a crew (up to −8%), and it goes into the post-mortem. Shown as ⚡.
+- **Won't work together** (−60): the loader won't put them on the same truck — one stays at base — unless you name them both for the show, which you can do and pay for in quality.
+- **Burnout**: each day on the road at 70%+ fatigue adds lasting burnout (it fades slowly with rest at base). From 40% they work below their level; from 70% they may leave the business, whatever the morale.
+- **Loyalty**: years with you make people harder for rivals to poach.
+
+## Kit is physical
+
+`cargo.ts`. Every gear unit has a weight and the man-hours it takes to get in: a line-array hang or an LED wall is heavy and slow, a desk is light and quick. Every vehicle has a payload (a splitter van 1.6 t, a 7.5-tonner 7 t, an artic 20 t, a Megaliner 24 t).
+
+- **Payload**: a truck stops loading when it can't carry the next case, even with room to spare. A 1985 stadium rig weighs about 54 t: three artics, though two would hold it by count. The vehicle window shows weight against payload.
+- **Load-in time**: man-hours over the hands on site (your crew, freelancers and any local loaders), ×1.25 from the street and ×1.6 up stairs. It has to fit in the 6 hours between the doors opening for the crew and soundcheck; anything over is late, with the usual penalties, and goes into the post-mortem as a slow load-in.
+- **The fix** is more hands: crew the truck fully, or book six local loaders for the load-in from the show window. Or send a lighter rig.
+
+## Contract terms
+
+`terms.ts`. Standalone shows from club level up carry terms set by the client's temper: easy-going clients pay a 25% deposit and owe 50% if they cancel; reasonable ones 10% and 25%; pushy ones nothing. Festivals, events and tours have their own contracts.
+
+- **The deposit** lands the day after you book — cash before a truck moves — and comes off the balance invoiced after the show. If the show fails, the client takes it back. A force-majeure shutdown refunds it too.
+- **Ask for better terms** (once, on an offer): 30% up front and 75% if they cancel. Easy-going clients mostly agree; pushy ones mostly refuse, and might take the show elsewhere.
+- **Cancellations**: from 45 days to 2 days out, a client may pull a booked show — pushy clients more than twice as often as easy ones, and more in a downturn. You keep the deposit plus whatever the clause adds; with no clause there's nothing to claim, and money already spent on cross-hire and fixes is gone. Each cancellation goes in the post-mortem log.
+- The cash forecast counts deposits coming in and nets them off what's still to come.
+
+## Burnt bridges
+
+`blacklist.ts`. A show that falls apart isn't over when the reputation dips: the act won't book you for two years, and if you had no goodwill with the venue's promoter they close the door for a year (a promoter you've done right by keeps it open). Break the same act's technical rider twice in a year and they stop calling for a year. Banned acts and venues send no offers; the League window lists every ban with its end date, the venue window shows it, and the post-mortems say why. Pushy clients are also slower payers: their invoices run late 1.8× as often, easy-going clients' half as often.
+
+## Equipment ecosystems
+
+`ecosystem.ts`. A product line is supported for its first 10 years, legacy until 18 (spares slow: the workshop repairs it at 70% speed and refurbishing costs ×1.25) and end-of-life after that (35% speed, ×1.8). The warehouse window tags legacy and EOL lines.
+
+Standardising a department on one brand makes the workshop cheaper — up to 25% off for a department that's all one brand (one set of spares, techs who know it) — but concentrates the risk: each month, a brand you own four or more fragile units of (digital desks, moving lights, line arrays, LED, media servers, automation) has a 1.2% chance of a firmware bug, bad batch or recall that knocks 25% condition off every unit of its newest line you own. The warehouse window shows each department's brand share; the post-mortems log the fault and, if you'd gone all-in on the brand, say so.
+
+## Department heads
+
+`management.ts`. Early on you advance every show yourself; later you can hire heads of department (Company policies) to do the routine work to your policy, each for a monthly salary:
+
+- **Production manager** (3,200/month): every day advances the shows 1–5 days out — cross-hires whatever the technical rider needs, and books generators, ground support, van shuttles and local loaders — as long as it all costs under the share of the fee you allow (10%, 20% or 35%) and the bank can stand it. Answers clients' change requests as they come in: quotes when the client is likely to pay, does a kit extra for free for an act you're close to, otherwise holds to the contract.
+- **Crew chief** (2,600/month): keeps people who are feuding (rapport −40 or worse, not just −60) off the same truck, and rotates the road crew so burnout builds a third slower.
+- **Finance director** (3,000/month): chases invoices so 40% fewer run late, and narrows the cash forecast by 8 points (to as little as ±5%).
+
+What they do is announced in the news, so you can see the system working; you can still do any of it by hand.
+
+## Rivals play by the same rules
+
+`rivalOps.ts`. Rivals used to win a show by a dice roll and always deliver it at 80%. Now each firm runs an operation: kit units per department at a rated quality, a desk family and its input count, the PA brands it owns, crew, trucks, cash and kit condition.
+
+- **Availability**: a rival can't take a show if its kit, crew or trucks are already committed on overlapping days.
+- **Riders**: it checks the technical rider against its desk and PA, and cross-hires what it lacks at the same rental prices you pay.
+- **The room**: it checks the venue against the rig it would bring and the truck it would send, and pays for the generator, ground support or shuttle.
+- **It passes** when the rider and room fixes would cost more than 20% of the fee, and records why.
+- This applies to standalone offers, tours (every date must stand up), festival stages and special-event tenders (only firms that could deliver the lot bid).
+- **The night**: shows are judged on its kit quality against the era's expectations and on its condition, so dated, worn kit plays worse and can fail. Its reputation moves with the result.
+- **Books**: it earns the payout, pays about a quarter of the fee to deliver each show, pays monthly overheads (crew retainer, trucks, kit upkeep), and a workshop restores condition while cash allows. Profit, losses and an overdraft feed its health, so badly run firms go under.
+- **Learning**: with a cash cushion it reinvests in whatever has turned the most work away — more kit, crew, a truck, a desk with more inputs, another PA brand — or brings its kit up to date when it has fallen behind.
+- **Contracts**: clients cancel rivals' shows on the same terms, and the rival keeps what the clause pays.
+
+## Invariants
+
+`invariants.ts` checks what must always hold in a running game; a violation is a simulation bug, not bad luck:
+
+- **Money**: cash − loan always equals the starting cash plus everything on the books (`book()`), so no money appears or vanishes outside the ledger; cash is finite, the loan isn't negative, invoices are positive.
+- **Equipment**: every stock (bases, trucks, house rigs, freight, cross-hire) is a whole, non-negative count of a real product; condition stays 0–100; a truck carries no more than it has room for.
+- **Vehicles**: a driving truck has a route and isn't parked in a town; a parked, on-site or servicing one is in a town; a broken one has a repair time; a bus out on hire has exactly one contract; every order points at a show that exists; rival trucks belong to firms that exist.
+- **Contracts**: terms are valid shares; no deposit exceeds the fee; a cancelled show is closed; no show that has been and gone was left unplayed — by you or by the rival that held it; no show is held by a firm that no longer exists; a booked tour's dates are all booked or played.
+- **Personnel**: everyone is in exactly one place (a base or a truck) that exists; base and truck headcounts match the people there; fatigue and burnout stay 0–100; nobody named for a show or chased by a poacher has already left.
+
+`invariants.test.ts` runs games in four countries and eras with a simple operator and checks every month; the balance bot checks every month of its nine-year runs and reports any violations. The check found one real hole: a firm that went bust or was bought left its booked shows held by nobody. Now a buyer takes them over, and otherwise they go back on the market (or lapse if it's too late to book them).
+
+## Balance bot, strategies and reports
+
+`src/world/__bench__/bot.ts` is a scripted company that plays through the same actions as a player, following a named strategy. It is deterministic for a given country, start year, seed and strategy. Beyond booking, buying and touring, it can:
+
+- **negotiate**: ask for a deposit and a cancellation clause on any show worth 5,000 or more;
+- **manage crew conflicts**: when two people who are feuding would share a crew, name the crew without one of them (until it has a crew chief);
+- **hire department heads**: a production manager at a dozen shows a month, a crew chief when feuds appear or the crew passes 16, a finance director when invoices pile up — once it has ten years' salary in the bank;
+- **act on the cash forecast**: weekly, and when late invoices could leave it overdrawn it factors invoices, freezes investment for a month and borrows if the expected line goes negative; it repays when the forecast is comfortable.
+
+Five strategies (`STRATEGIES`): **baseline** (books, buys, meets riders and fixes rooms, nothing more), **managed** (baseline plus terms, crew management, heads and the cash forecast), **premium** (managed with a full workshop, top pay, one brand per department and only shows worth having), **lean** (low pay, no workshop, insurance, training or heads) and **corner-cutter** (takes everything, never cross-hires or fixes a room, ignores the forecast).
+
+- `npm run balance` runs one strategy (`STRATEGY=managed`) for `BOT_RUNS` and prints a summary and an explanation per run.
+- `npm run balance:report` plays every strategy through the same countries, start years and seeds (`REPORT_RUNS`, `REPORT_SEEDS`, `REPORT_YEARS`) and writes `docs/balance-report.md` and `.json`: a comparison table (survival, median value, margin, quality, failures, months overdrawn, crew lost, cancellations, bans) and, for every run, why it went the way it did — revenue mix, cost structure as a share of revenue, utilisation, the main causes of bad nights and the root conditions behind them (from a full-history incident tally), cash stress, clients, crew, riders and rooms, fleet and kit faults, and how the rivals fared under the same rules — plus any invariant violations.

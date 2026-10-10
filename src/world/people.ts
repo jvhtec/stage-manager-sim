@@ -12,6 +12,7 @@
  * as cached summaries by `syncCrew`, so code that only needs headcounts keeps
  * reading them.
  */
+import { BURNOUT_QUIT, TRUSTED, burnoutFactor, dailyBurnout, loyaltyFactor, rapport, refusesWith, teamEffect } from './bonds';
 import { hasCert, requiredCerts, startingCerts } from './certs';
 import { loungeRest } from './annexes';
 import { createRng, type Rng } from '@/lib/rng';
@@ -169,10 +170,14 @@ export interface CrewEvaluation {
   bonus: number;
   /** Multiplier on the chance of kit failing on the night. */
   failureFactor: number;
+  /** Trusted pairs working together. */
+  trusted?: number;
+  /** Pairs at loggerheads. */
+  feuds?: string[];
 }
 
 /** Fill the show's department slots with the best-matched people; the rest lend a hand. */
-export function evaluateCrew(people: CrewMember[], gig: Gig): CrewEvaluation {
+export function evaluateCrew(people: CrewMember[], gig: Gig, rel: Pick<TycoonState, 'bonds'> = {}): CrewEvaluation {
   const slots = crewSlots(gig);
   const assigned = new Map<string, CrewDept>();
   const pairs: { m: CrewMember; d: CrewDept; skill: number }[] = [];
@@ -189,17 +194,21 @@ export function evaluateCrew(people: CrewMember[], gig: Gig): CrewEvaluation {
     const d = assigned.get(m.id) ?? m.primary;
     const skill = assigned.has(m.id) ? m.skills[d] : 0;
     const abroad = gig.overseas && m.trait === 'polyglot' ? 0.1 : 0;
-    effective += (skillFactor(skill) + abroad) * fatigueFactor(m.fatigue);
+    effective += (skillFactor(skill) + abroad) * fatigueFactor(m.fatigue) * burnoutFactor(m);
     matchSum += skillFactor(skill) / skillFactor(5);
   });
   const chief = people.some(m => m.trait === 'chief');
   const perfectionist = people.some(m => m.trait === 'perfectionist');
+  // Who works well with whom (bonds.ts).
+  const team = teamEffect(rel, people);
   return {
-    effective,
+    effective: effective + team.effective,
     match: people.length ? matchSum / people.length : 0,
     assigned,
-    bonus: chief ? 0.03 : 0,
-    failureFactor: perfectionist ? 0.85 : 1,
+    bonus: (chief ? 0.03 : 0) + team.quality,
+    failureFactor: (perfectionist ? 0.85 : 1) * team.failureFactor,
+    trusted: team.trusted,
+    feuds: team.feuds.map(f => `${f.a.name} and ${f.b.name}`),
   };
 }
 
@@ -215,6 +224,10 @@ export interface PickOptions {
   vehicleId?: string;
   /** Fatigue at which people sit the job out (pinned people still go). */
   restAt?: number;
+  /** Relationships: people who refuse to work together won't board together. */
+  bonds?: Record<string, number>;
+  /** Rapport at or below which two people are kept apart (a crew chief keeps feuds apart too). */
+  refuseAt?: number;
 }
 
 /** Whether `m` may board the truck being loaded. */
@@ -241,14 +254,18 @@ export function pickCrew(pool: CrewMember[], gig: Gig, seats: number, alreadyAbo
   while (picked.length < seats) {
     let best = -1;
     let bestScore = -Infinity;
+    const together = [...alreadyAboard, ...picked];
     pool.forEach((m, i) => {
       if (!mayBoard(m, opts)) return;
+      // Someone who refuses to work with a person already aboard stays behind — unless you named them.
+      if (opts.bonds && !opts.prefer?.has(m.id) && refusesWith({ bonds: opts.bonds }, m, together, opts.refuseAt)) return;
       const fit = Math.max(...CREW_DEPTS.map(d => (slots[d] > 0 ? m.skills[d] + 1 : m.skills[d] * 0.3)));
       const pinned = opts.vehicleId && m.pinnedVehicleId === opts.vehicleId ? 100 : 0;
       const named = opts.prefer?.has(m.id) ? 150 : 0;
       const need = requiredCerts(gig);
       const ticketed = (need.rigging && hasCert(m, 'rigging') ? 6 : 0) + (need.safety && hasCert(m, 'safety') ? 4 : 0);
-      const score = pinned + named + fit + ticketed - m.fatigue / 40;
+      const friends = opts.bonds ? together.filter(o => rapport({ bonds: opts.bonds }, m.id, o.id) >= TRUSTED).length * 1.5 : 0;
+      const score = pinned + named + fit + ticketed + friends - m.fatigue / 40;
       if (score > bestScore || (score === bestScore && best >= 0 && m.id < pool[best].id)) {
         best = i;
         bestScore = score;
@@ -319,6 +336,7 @@ export function dailyPeopleFatigue(s: TycoonState) {
     } else {
       m.fatigue = Math.max(0, m.fatigue - 10 - (m.depotId ? loungeRest(depotById.get(m.depotId) ?? {}) : 0));
     }
+    dailyBurnout(m, s.managers?.crew ? 2 / 3 : 1);
   });
 }
 
@@ -345,12 +363,24 @@ export const LOYALTY_DAYS = 365;
  * Leaving: below 40 morale people quit; below 50 rivals make offers to your
  * stars (3★ and up), which you can match. Only people at base leave.
  */
+/** Monthly: burnt-out people leave whatever the mood (only from base — nobody walks off mid-tour). */
+export function burnoutLeave(s: TycoonState, rng: Rng): number {
+  const gone = s.people.filter(m => m.depotId && (m.burnout ?? 0) >= BURNOUT_QUIT && rng.chance(0.12));
+  gone.forEach(m => pushNews(s, `${m.name} has burnt out after too long on the road, and is leaving the business.`, 'bad'));
+  if (!gone.length) return 0;
+  s.stats.crewLost = (s.stats.crewLost ?? 0) + gone.length;
+  const ids = new Set(gone.map(m => m.id));
+  s.people = s.people.filter(m => !ids.has(m.id));
+  s.poachBids = s.poachBids.filter(b => !ids.has(b.personId));
+  return gone.length;
+}
+
 export function peopleLeave(s: TycoonState, rng: Rng, morale: number) {
   const gone: string[] = [];
   s.people.forEach(m => {
     if (!m.depotId) return;
     const level = levelOf(m);
-    if (morale < 50 && level >= 3 && s.rivals.length && rng.chance(((50 - morale) / 150) * (level - 2) / 2)) {
+    if (morale < 50 && level >= 3 && s.rivals.length && rng.chance(((50 - morale) / 150) * (level - 2) / 2 * loyaltyFactor(m, s.hour))) {
       if ((m.loyalUntil ?? 0) > s.hour || s.poachBids.some(b => b.personId === m.id)) return;
       const rival = rng.pick(s.rivals);
       const raise = Math.round((0.15 + rng.next() * 0.25 + (level - 3) * 0.05) * 20) / 20;
@@ -362,6 +392,7 @@ export function peopleLeave(s: TycoonState, rng: Rng, morale: number) {
   });
   const quit = gone.length;
   if (!quit) return 0;
+  s.stats.crewLost = (s.stats.crewLost ?? 0) + quit;
   s.people = s.people.filter(m => !gone.includes(m.id));
   s.poachBids = s.poachBids.filter(b => !gone.includes(b.personId));
   return quit;
@@ -398,6 +429,7 @@ export function settlePoachBid(s: TycoonState, bidId: string, keep: boolean): st
     return `${m.name} will leave for ${bid.rivalName} once they’re back at base.`;
   }
   s.people = s.people.filter(p => p.id !== m.id);
+  s.stats.crewLost = (s.stats.crewLost ?? 0) + 1;
   return `${m.name} has joined ${bid.rivalName}. Good luck to them.`;
 }
 

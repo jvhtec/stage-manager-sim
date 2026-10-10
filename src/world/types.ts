@@ -187,6 +187,7 @@ export type LedgerCategory =
   | 'travel'
   | 'fuel'
   | 'tolls'
+  | 'busHire'
   | 'subhire'
   | 'rental'
   | 'leasing'
@@ -228,6 +229,7 @@ export const LEDGER_LABELS: Record<LedgerCategory, string> = {
   travel: 'Per diems & hotels',
   fuel: 'Fuel',
   tolls: 'Tolls, ferries & customs',
+  busHire: 'Tour bus hire',
   subhire: 'Sub-hired kit',
   rental: 'Kit rented out',
   leasing: 'Vehicle leases',
@@ -281,6 +283,8 @@ export interface CrewMember {
   certs?: CertId[];
   /** On a course until this day: unavailable for jobs. */
   course?: { cert: CertId; untilDay: number };
+  /** Lasting burnout from long stretches of exhaustion, 0-100 (bonds.ts). */
+  burnout?: number;
 }
 
 /** A rival trying to hire one of your people away: match it or lose them. */
@@ -330,7 +334,9 @@ export type VehicleStatus =
   | 'driving'
   | 'on-site'
   | 'broken'
-  | 'servicing';
+  | 'servicing'
+  /** A tour bus out on hire to a touring act (buses.ts). */
+  | 'hired-out';
 
 export interface VehicleRoute {
   from: string;
@@ -353,6 +359,8 @@ export interface Vehicle {
   boughtHour: number;
   reliability: number;
   lastServiceHour: number;
+  /** A service fell due and was put off because cash was short (consequences.ts). */
+  serviceSkipped?: { hour: number; incidentId: string };
   status: VehicleStatus;
   /** City the vehicle is sitting in (undefined while on the road). */
   cityId?: string;
@@ -445,6 +453,22 @@ export interface Rider {
   brand: string;
 }
 
+/** A booking's contract terms (terms.ts): shares of the fee. */
+export interface GigTerms {
+  deposit: number;
+  cancel: number;
+}
+
+/** A technical rider's hard requirements (techRider.ts). */
+export interface TechSpec {
+  /** Inputs the FOH desk must take. */
+  inputs: number;
+  /** The engineer's show file runs on this console brand. */
+  consoleFamily?: string;
+  /** Only these PA brands are approved. */
+  paBrands?: string[];
+}
+
 export interface Gig {
   id: string;
   act: string;
@@ -456,6 +480,8 @@ export interface Gig {
   relief?: boolean;
   /** Kit sent by rail or air freight instead of (or as well as) a truck (freight.ts). */
   freight?: { mode: 'rail' | 'air'; fromDepotId: string; gear: GearStock; arrives: number; cost: number; hours: number; returned?: boolean };
+  /** Conditions noted on the way to the night that will explain how it went (consequences.ts). */
+  trouble?: Cause[];
   venueId: string;
   cityId: string;
   tier: number;
@@ -466,6 +492,22 @@ export interface Gig {
   crewNeeded: number;
   fee: number;
   rider?: Rider;
+  /** Hard technical requirements (techRider.ts). */
+  techSpec?: TechSpec;
+  /** Deposit and cancellation clause (terms.ts). */
+  terms?: GigTerms;
+  /** You've already pushed for better terms. */
+  termsAsked?: boolean;
+  /** Deposit received. */
+  depositPaid?: number;
+  /** The client pulled the show. */
+  cancelled?: boolean;
+  /** What the production manager has spent advancing this show. */
+  pmSpent?: number;
+  /** Production fixes booked for the room (production.ts). */
+  fixes?: { generator?: boolean; groundSupport?: boolean; shuttle?: boolean; loaders?: boolean };
+  /** Kit cross-hired from a rental house straight to the venue: product id → units. */
+  crossHire?: GearStock;
   /** The act has worked with you before and asked for you by name. */
   asksForYou?: boolean;
   tourId?: string;
@@ -548,6 +590,8 @@ export type InvoicingPolicy = 'hold' | 'factor' | 'insure';
 /** Money a promoter owes you (receivables.ts). */
 export interface Invoice {
   id: string;
+  /** The promoter has already paid late once (consequences.ts). */
+  slipped?: boolean;
   gigId: string;
   act: string;
   amount: number;
@@ -642,7 +686,7 @@ export interface Run {
   bonus?: number;
 }
 
-export type DilemmaKind = 'audit' | 'dispute' | 'dirty' | 'sponsor' | 'charity' | 'venue' | 'ownfest' | 'shareholders' | 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
+export type DilemmaKind = 'change' | 'audit' | 'dispute' | 'dirty' | 'sponsor' | 'charity' | 'venue' | 'ownfest' | 'shareholders' | 'pricewar' | 'tradeshow' | 'raise' | 'burnout' | 'customs' | 'breakdown' | 'power' | 'union' | 'manager' | 'curfew' | 'injury' | 'storm';
 
 /** A problem that needs your call (dilemmas.ts). */
 export interface Dilemma {
@@ -682,6 +726,26 @@ export interface VenueContract {
   rivalId?: string;
 }
 
+/** A rival's operation (rivalOps.ts): what it owns, what it's doing, and its books. */
+export interface RivalOps {
+  cash: number;
+  /** Units per department. */
+  kit: DeptCounts;
+  /** Rated quality of its kit. */
+  quality: number;
+  /** Console family of its desks, and the most inputs any of them takes. */
+  desk?: string;
+  inputs: number;
+  /** PA brands it owns. */
+  pa: string[];
+  crew: number;
+  trucks: number;
+  /** Kit condition, 0-100. */
+  condition: number;
+  month: { income: number; costs: number };
+  record: { shows: number; failed: number; late?: number; kitFailures?: number; crossHires: number; fixes: number; cancelled: number; declined: Partial<Record<'kit' | 'crew' | 'trucks' | 'rider' | 'room', number>> };
+}
+
 export interface Rival {
   id: string;
   name: string;
@@ -698,6 +762,8 @@ export interface Rival {
   health?: number;
   /** showsPlayed at the last monthly check. */
   lastShows?: number;
+  /** Its operation: kit, crew, trucks, books (rivalOps.ts). */
+  ops?: RivalOps;
 }
 
 export type NewsTone = 'info' | 'good' | 'bad' | 'big';
@@ -746,7 +812,7 @@ export interface Policies {
 }
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
-export type GoalId = 'sandbox' | 'top' | 'empire' | 'worlds' | 'awards' | 'consolidator' | 'survivor';
+export type GoalId = 'sandbox' | 'top' | 'empire' | 'worlds' | 'awards' | 'consolidator' | 'survivor' | 'scenario';
 
 export type MarketingLevel = 'none' | 'local' | 'trade' | 'national';
 
@@ -774,6 +840,39 @@ export interface YearStats {
 }
 
 /** The year's books and standing (milestones.ts). */
+/** The trade press's year-end charts and reviews (charts.ts). */
+/** One reason something went wrong, with how much it contributed (0-1). */
+export interface Cause {
+  id: string;
+  label: string;
+  detail: string;
+  weight: number;
+  /** The earlier incident that set this up. */
+  link?: string;
+}
+
+/** A recorded problem and the chain of conditions that produced it (consequences.ts). */
+export interface Incident {
+  id: string;
+  hour: number;
+  kind: 'cash' | 'breakdown' | 'show' | 'client';
+  title: string;
+  gigId?: string;
+  vehicleId?: string;
+  causes: Cause[];
+  outcome: string;
+}
+
+export interface YearChart {
+  year: number;
+  rank: number;
+  firms: number;
+  table: { name: string; score: number; you?: boolean }[];
+  tours: { act: string; tier: number; yours?: boolean }[];
+  rave?: { act: string; quality: number; text: string };
+  pan?: { act: string; quality: number; text: string };
+}
+
 export interface AnnualReport {
   year: number;
   revenue: number;
@@ -850,6 +949,8 @@ export interface TycoonState {
   /** Manufacturer partnership per department (partners.ts). */
   /** Town size multipliers over the game (towns.ts). */
   townGrowth: Record<string, number>;
+  /** Touring acts wanting a bus and driver for weeks (buses.ts). */
+  busHires: BusHire[];
   /** Recent shows per town by who played them ('player' or a rival id), fading each year: market share. */
   townShows: Record<string, Record<string, number>>;
   /** Buzz and deals from trade shows (marketing.ts). */
@@ -891,6 +992,23 @@ export interface TycoonState {
   venueRelations: Record<string, number>;
   partners: Partial<Record<Dept, { brand: string; sinceDay: number; lapse: number }>>;
   reports: AnnualReport[];
+  charts?: YearChart[];
+  /** Every incident ever, counted by kind and by cause (consequences.ts). */
+  incidentTally?: { kinds: Record<string, number>; causes: Record<string, number>; main: Record<string, number> };
+  /** Why things went wrong: the recent incident log (consequences.ts). */
+  incidents?: Incident[];
+  /** Rapport between pairs of crew, −100..100, keyed by sorted id pair (bonds.ts). */
+  bonds?: Record<string, number>;
+  /** Department heads on the payroll (management.ts). */
+  managers?: { production?: boolean; crew?: boolean; finance?: boolean; spendLimit?: 0.1 | 0.2 | 0.35 };
+  /** Acts and venues that won't book you, until a day (blacklist.ts). Keys `act:Name`, `venue:id`. */
+  blacklist?: Record<string, number>;
+  /** Days you broke each act's rider. */
+  breachLog?: Record<string, number[]>;
+  /** What you've taught each client about extras (changes.ts). */
+  clients?: Record<string, { paid: number; absorbed: number; refused: number; declined: number }>;
+  /** Maintenance you've put off because cash was short. */
+  lapses?: { workshop?: { hour: number; incidentId: string } };
   /** Exclusive production deals with acts (deals.ts). */
   deals: { id: string; act: string; tier: number; monthly: number; startDay: number; endDay: number; strikes: number; status: 'offer' | 'active' | 'ended'; offerExpires: number }[];
   /** Your own products (encoded ids, see content/gear.ts ownProductId). */
@@ -911,10 +1029,12 @@ export interface TycoonState {
   artistRelations: Record<string, number>;
   negativeMonths: number;
   nextId: number;
-  stats: { showsPlayed: number; showsFailed: number; peakCash: number; rivalsBought?: number };
+  stats: { showsPlayed: number; showsFailed: number; peakCash: number; rivalsBought?: number; /** Cash at the start, for the money invariant (invariants.ts). */ startCash?: number; /** Crew who quit, burnt out or were poached. */ crewLost?: number };
   /** Chosen at the start (scenario.ts). */
   difficulty?: Difficulty;
   goal?: GoalId;
+  /** A historic scenario (scenarios.ts) this game started as. */
+  scenario?: string;
   goalResult?: { status: 'won' | 'missed'; day: number };
   gameOver?: { hour: number; reason: string };
 }
@@ -927,4 +1047,22 @@ export interface ActionResult {
 export interface ActionOutcome {
   state: TycoonState;
   result: ActionResult;
+}
+
+/** A tour's bus contract: an act wants a sleeper bus and driver for weeks. */
+export interface BusHire {
+  id: string;
+  act: string;
+  tier: number;
+  /** Days on tour. */
+  days: number;
+  /** Per day, driver included. */
+  rate: number;
+  startDay: number;
+  acceptByDay: number;
+  status: 'offer' | 'active' | 'done' | 'lost';
+  vehicleId?: string;
+  rivalId?: string;
+  /** Earned so far. */
+  earned?: number;
 }

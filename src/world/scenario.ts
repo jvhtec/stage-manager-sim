@@ -6,6 +6,7 @@
 import { NEGATIVE_MONTHS_GAME_OVER } from './catalog';
 import { dayOf, formatMoneyShort, pushNews, yearOf } from './core';
 import { companyValue } from './queries';
+import { getScenario, scenarioProgress } from './scenarios';
 import type { Difficulty, GoalId, TycoonState } from './types';
 
 export interface DifficultyInfo {
@@ -63,15 +64,26 @@ export const GOALS: Record<GoalId, GoalInfo> = {
     const n = s.stats.rivalsBought ?? 0;
     return ratio(n, 3, `${n} / 3 rivals bought`);
   } },
+  scenario: {
+    label: 'Historic scenario',
+    blurb: 'Win a lot of the night\'s production and deliver it.',
+    years: 1,
+    progress: s => {
+      const sc = getScenario(s.scenario);
+      const p = scenarioProgress(s);
+      return { fraction: p.won ? 1 : p.bid ? 0.5 : 0, text: sc ? `${sc.title}: ${p.text}` : p.text, done: p.won };
+    },
+  },
   survivor: { label: 'Built to last', blurb: 'Keep the company going for 30 years.', years: 30, progress: s => {
     const y = Math.floor(s.hour / (24 * 365));
     return ratio(y, 30, `${y} / 30 years`);
   } },
 };
-export const GOAL_IDS = Object.keys(GOALS) as GoalId[];
+/** Goals you can pick in free play (a scenario sets its own). */
+export const GOAL_IDS = (Object.keys(GOALS) as GoalId[]).filter(g => g !== 'scenario');
 
-export const goalDeadlineYear = (s: Pick<TycoonState, 'goal' | 'startYear'>): number | undefined => {
-  const years = GOALS[s.goal ?? 'sandbox'].years;
+export const goalDeadlineYear = (s: Pick<TycoonState, 'goal' | 'startYear' | 'scenario'>): number | undefined => {
+  const years = s.goal === 'scenario' ? getScenario(s.scenario)?.years : GOALS[s.goal ?? 'sandbox'].years;
   return years === undefined ? undefined : s.startYear + years;
 };
 

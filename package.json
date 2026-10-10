@@ -13,7 +13,8 @@
     "test": "vitest",
     "test:run": "vitest run",
     "budget:bundle": "node scripts/check-bundle-budget.mjs",
-    "balance": "vitest run --config vitest.balance.config.ts"
+    "balance": "vitest run --config vitest.balance.config.ts src/world/__bench__/smart.bench.ts",
+    "balance:report": "vitest run --config vitest.balance.config.ts src/world/__bench__/strategies.bench.ts"
   },
   "dependencies": {
     "lucide-react": "^0.462.0",

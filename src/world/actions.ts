@@ -2,6 +2,12 @@
  * Player commands. Each takes the current state and returns
  * `{ state, result }` — a new state on success, the untouched one on failure.
  */
+import { projectCoverage } from './queries';
+import { crossHire, crossHireCost } from './techRider';
+import { askForTerms, hasTerms } from './terms';
+import { MANAGERS, hireManager, type ManagerId, type SpendLimit } from './management';
+import { bookFix, type FixId } from './production';
+import { busHireBlocker } from './buses';
 import { dispatchFreight, freightLabel, freightQuote, type FreightMode } from './freight';
 import { gateBlocker, hypeLabel, rollGate } from './gate';
 import { retrofitBlocker, retrofitCost, vehicleClass } from './regulation';
@@ -301,6 +307,22 @@ export function serviceVehicle(state: TycoonState, vehicleId: string): ActionOut
   return ok(s, `${v0.name} is in the workshop.`);
 }
 
+/** Hire a parked bus out to a touring act for the length of its tour. */
+export function hireOutBus(state: TycoonState, hireId: string, vehicleId: string): ActionOutcome {
+  const h0 = state.busHires.find(h => h.id === hireId);
+  const v0 = state.vehicles.find(v => v.id === vehicleId && v.owner === 'player');
+  if (!h0 || !v0) return fail(state, 'Unknown contract or bus.');
+  const why = busHireBlocker(state, h0, v0);
+  if (why) return fail(state, why);
+  const s = cloneState(state);
+  const h = s.busHires.find(x => x.id === hireId)!;
+  const v = s.vehicles.find(x => x.id === vehicleId)!;
+  h.status = 'active';
+  h.vehicleId = v.id;
+  v.status = 'hired-out'; // reserved from now: it leaves on the start date
+  return ok(s, `${v.name} goes out with ${h.act} on ${new Date(Date.UTC(s.startYear, 0, 1) + h.startDay * 86400000).toUTCString().slice(5, 11)}.`);
+}
+
 /** Send a booked show's kit from one of your bases by rail or air instead of a truck. */
 export function sendFreight(state: TycoonState, gigId: string, depotId: string, mode: FreightMode): ActionOutcome {
   const g0 = state.gigs.find(g => g.id === gigId);
@@ -314,6 +336,28 @@ export function sendFreight(state: TycoonState, gigId: string, depotId: string, 
   const s = cloneState(state);
   dispatchFreight(s, s.gigs.find(g => g.id === gigId)!, s.depots.find(d => d.id === depotId)!, mode);
   return ok(s, `Sent by ${freightLabel(mode)}.`);
+}
+
+/** Cross-hire kit from a rental house, delivered to the venue, to meet a show's technical rider. */
+export function crossHireKit(state: TycoonState, gigId: string, productId: string, units: number): ActionOutcome {
+  const g0 = state.gigs.find(g => g.id === gigId);
+  if (!g0 || g0.status !== 'booked') return fail(state, 'Book the show first.');
+  if (units < 1) return fail(state, 'Nothing to hire.');
+  const cost = crossHireCost(productId, units, g0.days ?? 1);
+  if (state.company.cash < cost) return fail(state, 'Not enough cash for the hire.');
+  const s = cloneState(state);
+  return ok(s, crossHire(s, s.gigs.find(g => g.id === gigId)!, productId, units));
+}
+
+/** Book a production fix for a show's room: a generator, ground support, or vans to shuttle from the street. */
+export function fixProduction(state: TycoonState, gigId: string, fix: FixId): ActionOutcome {
+  const g0 = state.gigs.find(g => g.id === gigId);
+  if (!g0 || g0.status !== 'booked') return fail(state, 'Book the show first.');
+  const problem = projectCoverage(state, g0).production.find(p => p.id === fix);
+  if (!problem) return fail(state, 'Nothing to fix.');
+  if (state.company.cash < problem.fixCost) return fail(state, 'Not enough cash.');
+  const s = cloneState(state);
+  return ok(s, bookFix(s, s.gigs.find(g => g.id === gigId)!, problem));
 }
 
 /** Put a second driver in the cab (or take them off): quicker long hauls for a driver's pay while rolling. */
@@ -463,6 +507,36 @@ export function haggleGig(state: TycoonState, gigId: string): ActionOutcome {
   if (result === 'won') return ok(s, `${gig.act}'s promoter gives way: ${formatMoney(state, fee0)} → ${formatMoney(state, gig.fee)}.`);
   if (result === 'walked') return { state: s, result: { ok: false, message: `${gig.act}'s promoter walks away and books someone else.` } };
   return { state: s, result: { ok: false, message: `${gig.act}'s promoter won't budge — the fee stands at ${formatMoney(state, gig.fee)}.` } };
+}
+
+/** Hire or let go a department head. */
+export function setManager(state: TycoonState, id: ManagerId, on: boolean): ActionOutcome {
+  if (on && state.managers?.[id]) return fail(state, 'Already on the payroll.');
+  if (!on && !state.managers?.[id]) return fail(state, 'Nobody to let go.');
+  if (on && state.company.cash < MANAGERS[id].salary) return fail(state, 'Not enough cash for the first month.');
+  const s = cloneState(state);
+  return ok(s, hireManager(s, id, on));
+}
+
+/** How much of a show's fee the production manager may spend advancing it. */
+export function setSpendLimit(state: TycoonState, limit: SpendLimit): ActionOutcome {
+  const s = cloneState(state);
+  s.managers = { ...(s.managers ?? {}), spendLimit: limit };
+  return ok(s, `The production manager may now spend up to ${Math.round(limit * 100)}% of a show's fee advancing it.`);
+}
+
+/** Push for a deposit and a cancellation clause before booking. */
+export function negotiateTerms(state: TycoonState, gigId: string): ActionOutcome {
+  const gig0 = gigById(state, gigId);
+  if (!gig0 || gig0.status !== 'offer') return fail(state, 'That offer is no longer available.');
+  if (!hasTerms(gig0)) return fail(state, 'This booking comes on its own contract.');
+  if (gig0.termsAsked) return fail(state, 'You have already asked.');
+  const s = cloneState(state);
+  const gig = gigById(s, gigId)!;
+  const result = withRng(s, rng => askForTerms(s, gig, rng));
+  if (result === 'agreed') return ok(s, `${gig.act} agree: ${Math.round(gig.terms!.deposit * 100)}% deposit, ${Math.round(gig.terms!.cancel * 100)}% if they cancel.`);
+  if (result === 'walked') return { state: s, result: { ok: false, message: `${gig.act}'s people take the show elsewhere.` } };
+  return { state: s, result: { ok: false, message: `${gig.act} won't change the terms.` } };
 }
 
 /** Sign, switch or (with no brand) end a manufacturer partnership for a department. */
