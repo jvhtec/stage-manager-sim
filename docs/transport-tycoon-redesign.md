@@ -808,3 +808,12 @@ From clubs and theatres up (`production.ts`), every venue has a house power supp
 - **Payload**: a truck stops loading when it can't carry the next case, even with room to spare. A 1985 stadium rig weighs about 54 t: three artics, though two would hold it by count. The vehicle window shows weight against payload.
 - **Load-in time**: man-hours over the hands on site (your crew, freelancers and any local loaders), ×1.25 from the street and ×1.6 up stairs. It has to fit in the 6 hours between the doors opening for the crew and soundcheck; anything over is late, with the usual penalties, and goes into the post-mortem as a slow load-in.
 - **The fix** is more hands: crew the truck fully, or book six local loaders for the load-in from the show window. Or send a lighter rig.
+
+## Contract terms
+
+`terms.ts`. Standalone shows from club level up carry terms set by the client's temper: easy-going clients pay a 25% deposit and owe 50% if they cancel; reasonable ones 10% and 25%; pushy ones nothing. Festivals, events and tours have their own contracts.
+
+- **The deposit** lands the day after you book — cash before a truck moves — and comes off the balance invoiced after the show. If the show fails, the client takes it back. A force-majeure shutdown refunds it too.
+- **Ask for better terms** (once, on an offer): 30% up front and 75% if they cancel. Easy-going clients mostly agree; pushy ones mostly refuse, and might take the show elsewhere.
+- **Cancellations**: from 45 days to 2 days out, a client may pull a booked show — pushy clients more than twice as often as easy ones, and more in a downturn. You keep the deposit plus whatever the clause adds; with no clause there's nothing to claim, and money already spent on cross-hire and fixes is gone. Each cancellation goes in the post-mortem log.
+- The cash forecast counts deposits coming in and nets them off what's still to come.

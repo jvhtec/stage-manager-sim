@@ -79,6 +79,7 @@ import { GEAR_PRODUCTS, getProduct } from './content/gear';
 import { leftBehindChance, monthlyRent, monthlySalaries, prepFailureFactor, prepOf, prepRatio } from './facilities';
 import { breachPenalty, checkSpec } from './techRider';
 import { bondAfterShow } from './bonds';
+import { balanceDue, dailyTerms } from './terms';
 import { HANDLING_WINDOW, LOADERS, handlingHours, handlingOverrun, loadWeight, payloadOf } from './cargo';
 import { FIX_TEXT, problemEffects, productionProblems } from './production';
 import { canAfford, deferService, lastingConsequences, nightCauses, OVERDUE_DECAY, overdueDays, postMortem, recordBreakdown, serviceCleared } from './consequences';
@@ -591,6 +592,8 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     const penalty = Math.round(gig.fee * NO_SHOW_PENALTY_RATE);
     book(s, 'penalties', -penalty);
     gig.status = 'failed';
+    // The client wants their deposit back.
+    if (gig.depositPaid) book(s, 'shows', -gig.depositPaid);
     gig.result = { quality, payout: -penalty, lateHours, gearCoverage, crewCoverage, ...resultExtras };
     s.company.reputation = Math.max(0, s.company.reputation - 4 * tw + Math.min(0, stakes.reputation));
     s.cityRatings[gig.cityId] = Math.max(0, rating - 20);
@@ -619,7 +622,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     s.artistRelations[gig.act] = Math.max(0, (s.artistRelations[gig.act] ?? 0) - 2);
     strike(s, gig.act, 'the rig broke their technical rider');
   }
-  collectOrInvoice(s, gig, payout - withheld);
+  collectOrInvoice(s, gig, balanceDue(gig, payout - withheld));
   learnMix(s, gig);
   if (gig.overseas) {
     // Air freight for the rig and flights for the crew, there and back.
@@ -698,6 +701,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   dailyRehearsals(s);
   dailyCourses(s);
   dailyReceivables(s, sideRng(s, dayOf(s.hour) + 7006));
+  dailyTerms(s, sideRng(s, dayOf(s.hour) + 7008));
   dailyRentOut(s);
   dailyPeopleFatigue(s);
   dailyPoachBids(s);

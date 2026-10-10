@@ -1,6 +1,6 @@
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
-import { assignVehicle, bookGate, bookGig, crossHireKit, fixProduction, haggleGig, rehearseShow, sendFreight, unassignVehicle } from '@/world/actions';
+import { assignVehicle, bookGate, bookGig, crossHireKit, fixProduction, negotiateTerms, haggleGig, rehearseShow, sendFreight, unassignVehicle } from '@/world/actions';
 import { freightQuote } from '@/world/freight';
 import { certCount, requiredCerts } from '@/world/certs';
 import { expertiseBonus } from '@/world/expertise';
@@ -186,6 +186,21 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
             </Stat>
           ) : null;
         })()}
+      {gig.terms && (gig.status === 'offer' || gig.status === 'booked') && (
+        <Stat label="Terms">
+          {gig.terms.deposit ? `${Math.round(gig.terms.deposit * 100)}% deposit` : 'no deposit'} ·{' '}
+          {gig.terms.cancel ? `${Math.round(gig.terms.cancel * 100)}% if they cancel` : 'no cancellation fee'}
+          {gig.depositPaid ? <span className="tt-good"> · {money(gig.depositPaid)} received</span> : null}
+          {gig.status === 'offer' && !gig.termsAsked && (gig.terms.deposit < 0.3 || gig.terms.cancel < 0.75) && (
+            <>
+              {' '}
+              <button className="tt-btn sm" title="Ask for 30% up front and 75% if they cancel. They may refuse — or take the show elsewhere." onClick={() => act(s => negotiateTerms(s, gig.id))}>
+                Ask for better terms
+              </button>
+            </>
+          )}
+        </Stat>
+      )}
       {gig.status === 'offer' && !gig.event && !gig.festival && <Stat label="Client">{clientNote(state, gig.act)}</Stat>}
       {gig.status === 'offer' && (
         <Stat label="Book by">

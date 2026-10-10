@@ -453,6 +453,12 @@ export interface Rider {
   brand: string;
 }
 
+/** A booking's contract terms (terms.ts): shares of the fee. */
+export interface GigTerms {
+  deposit: number;
+  cancel: number;
+}
+
 /** A technical rider's hard requirements (techRider.ts). */
 export interface TechSpec {
   /** Inputs the FOH desk must take. */
@@ -488,6 +494,14 @@ export interface Gig {
   rider?: Rider;
   /** Hard technical requirements (techRider.ts). */
   techSpec?: TechSpec;
+  /** Deposit and cancellation clause (terms.ts). */
+  terms?: GigTerms;
+  /** You've already pushed for better terms. */
+  termsAsked?: boolean;
+  /** Deposit received. */
+  depositPaid?: number;
+  /** The client pulled the show. */
+  cancelled?: boolean;
   /** Production fixes booked for the room (production.ts). */
   fixes?: { generator?: boolean; groundSupport?: boolean; shuttle?: boolean; loaders?: boolean };
   /** Kit cross-hired from a rental house straight to the venue: product id → units. */

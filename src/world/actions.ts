@@ -4,6 +4,7 @@
  */
 import { projectCoverage } from './queries';
 import { crossHire, crossHireCost } from './techRider';
+import { askForTerms, hasTerms } from './terms';
 import { bookFix, type FixId } from './production';
 import { busHireBlocker } from './buses';
 import { dispatchFreight, freightLabel, freightQuote, type FreightMode } from './freight';
@@ -505,6 +506,20 @@ export function haggleGig(state: TycoonState, gigId: string): ActionOutcome {
   if (result === 'won') return ok(s, `${gig.act}'s promoter gives way: ${formatMoney(state, fee0)} → ${formatMoney(state, gig.fee)}.`);
   if (result === 'walked') return { state: s, result: { ok: false, message: `${gig.act}'s promoter walks away and books someone else.` } };
   return { state: s, result: { ok: false, message: `${gig.act}'s promoter won't budge — the fee stands at ${formatMoney(state, gig.fee)}.` } };
+}
+
+/** Push for a deposit and a cancellation clause before booking. */
+export function negotiateTerms(state: TycoonState, gigId: string): ActionOutcome {
+  const gig0 = gigById(state, gigId);
+  if (!gig0 || gig0.status !== 'offer') return fail(state, 'That offer is no longer available.');
+  if (!hasTerms(gig0)) return fail(state, 'This booking comes on its own contract.');
+  if (gig0.termsAsked) return fail(state, 'You have already asked.');
+  const s = cloneState(state);
+  const gig = gigById(s, gigId)!;
+  const result = withRng(s, rng => askForTerms(s, gig, rng));
+  if (result === 'agreed') return ok(s, `${gig.act} agree: ${Math.round(gig.terms!.deposit * 100)}% deposit, ${Math.round(gig.terms!.cancel * 100)}% if they cancel.`);
+  if (result === 'walked') return { state: s, result: { ok: false, message: `${gig.act}'s people take the show elsewhere.` } };
+  return { state: s, result: { ok: false, message: `${gig.act} won't change the terms.` } };
 }
 
 /** Sign, switch or (with no brand) end a manufacturer partnership for a department. */

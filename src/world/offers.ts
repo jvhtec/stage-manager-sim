@@ -4,6 +4,7 @@
  * geography *is* the demand curve. Rivals snap up offers they're close to.
  */
 import { rollTechSpec } from './techRider';
+import { defaultTerms } from './terms';
 import { worldOf } from './mapgen';
 import { RIVAL_COMPANIES } from './content/companies';
 import { traitsOf } from './venueTraits';
@@ -156,6 +157,7 @@ export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
     status: 'offer',
   };
   gig.techSpec = rollTechSpec(state.mapSeed, gig, year, spec.real);
+  gig.terms = defaultTerms(gig);
   return gig;
 }
 

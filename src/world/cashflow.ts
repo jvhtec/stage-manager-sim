@@ -14,6 +14,7 @@ import { defaultRisk, LATE_RISK, paymentDays } from './receivables';
 import { monthlyWorkshopCost } from './wear';
 import { PAY } from './crew';
 import { canAfford } from './consequences';
+import { depositOf } from './terms';
 import type { TycoonState, WorldMap } from './types';
 
 export const FORECAST_WEEKS = 8;
@@ -79,7 +80,10 @@ export function forecastCash(s: TycoonState, world: WorldMap, weeks = FORECAST_W
   s.gigs.filter(g => g.status === 'booked' && g.day >= today).forEach(g => {
     const wait = paymentDays(g);
     const day = g.day + 1 + wait;
-    add(day, g.fee * 0.9, g.fee * 0.5, g.fee);
+    // A deposit already in (or about to land) comes off the balance.
+    const dep = g.depositPaid ?? depositOf(g);
+    if (dep && g.depositPaid === undefined) add(today + 1, dep, dep, dep);
+    add(day, Math.max(0, g.fee * 0.9 - dep), Math.max(0, g.fee * 0.5 - dep), g.fee - dep);
   });
   // Bills.
   const bills: Bill[] = [];

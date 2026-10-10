@@ -576,6 +576,10 @@ export function HelpWindow() {
           crews, street load-ins and stairs make it slow. The show window estimates it and offers local loaders.
         </li>
         <li>
+          <b>Terms</b>: easy-going clients pay a deposit and agree a cancellation fee; pushy ones don't. Ask for better terms
+          before you book — but they may walk. Clients do cancel, and without a clause you get nothing.
+        </li>
+        <li>
           Buy bigger trucks and more gear, and win reputation to unlock arenas and stadiums. Every January the industry awards
           judge your year and the trade press prints its supplier table, the biggest tours and reviews of your best and worst
           shows. Or start from a <b>historic scenario</b> — Live Aid, Italia ’90, Barcelona ’92 — and win a lot of the night.
