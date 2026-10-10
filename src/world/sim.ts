@@ -77,6 +77,7 @@ import { worldOf } from './mapgen';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize } from './loading';
 import { GEAR_PRODUCTS, getProduct } from './content/gear';
 import { leftBehindChance, monthlyRent, monthlySalaries, prepFailureFactor, prepOf, prepRatio } from './facilities';
+import { breachPenalty, checkSpec } from './techRider';
 import { canAfford, deferService, lastingConsequences, nightCauses, OVERDUE_DECAY, overdueDays, postMortem, recordBreakdown, serviceCleared } from './consequences';
 import { monthlyTraining, PAY, freelancersFor, monthlyCrew, moraleBonus } from './crew';
 import { REST_AT, crewDirectives, aboard, atDepot, dailyPeopleFatigue, dailyPoachBids, dayRate, evaluateCrew, learnFromShow, moveToDepot, moveToVehicle, pickCrew, refreshCandidates, sideRng, syncCrew } from './people';
@@ -217,7 +218,7 @@ function loadVehicle(s: TycoonState, v: Vehicle, gig: Gig) {
     crewRemaining = Math.max(crewRemaining, g.crewNeeded - crewBrought);
   });
 
-  const picked = pickGear(depot.gear, remaining, model.gearCapacity - stockSize(v.cargo), gig.rider);
+  const picked = pickGear(depot.gear, remaining, model.gearCapacity - stockSize(v.cargo), gig.rider, gig.techSpec);
   addStock(v.cargo, picked);
   const directives = crewDirectives(s, gig);
   const here = atDepot(s, depot.id);
@@ -454,6 +455,11 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   if (hire.cost) onSite.forEach(v => (v.profitThisYear -= Math.round(hire.cost / onSite.length)));
   const working: GearStock = { ...delivered };
   addStock(working, hire.stock);
+  // Kit cross-hired from a rental house for this show is waiting at the venue.
+  if (present && gig.crossHire) addStock(working, gig.crossHire);
+  // The technical rider: inputs, show file, approved PA. Break it and the act's engineer won't have it.
+  const breaches = present ? checkSpec(gig.techSpec, working) : [];
+  const breach = breachPenalty(breaches);
   // Who's working the show, and how well their skills fit its departments.
   const people = onSite.flatMap(v => aboard(s, v.id));
   const crewEval = evaluateCrew(people, gig);
@@ -528,7 +534,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     0,
     Math.min(
       1,
-      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) + crewEval.bonus - (weather?.penalty ?? 0) + (gig.mods?.quality ?? 0) - (unrehearsed(s, gig) ? UNREHEARSED_QUALITY : 0) - tickets.quality - venueHit }) +
+      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) + crewEval.bonus - (weather?.penalty ?? 0) + (gig.mods?.quality ?? 0) - (unrehearsed(s, gig) ? UNREHEARSED_QUALITY : 0) - tickets.quality - venueHit - breach.quality }) +
         (rng.next() - 0.5) * 0.08,
     ),
   );
@@ -559,6 +565,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     unrehearsed: unrehearsed(s, gig),
     missingTickets: tickets.missing,
     venueNotes,
+    breaches: breaches.map(b => `${b.label}: ${b.detail}`),
     present,
     workshop: s.policies.workshop,
     noKit: !stockSize(delivered),
@@ -589,7 +596,11 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
 
   const specialist = expertiseBonus(s, gig);
   const payout = Math.round(showPayout(gig, quality) * (1 + specialist));
-  const withheld = maybeDisputeShow(s, gig, payout, quality);
+  const withheld = maybeDisputeShow(s, gig, payout, quality) + Math.round(payout * breach.withhold);
+  if (breaches.length) {
+    s.artistRelations[gig.act] = Math.max(0, (s.artistRelations[gig.act] ?? 0) - 2);
+    strike(s, gig.act, 'the rig broke their technical rider');
+  }
   collectOrInvoice(s, gig, payout - withheld);
   learnMix(s, gig);
   if (gig.overseas) {
@@ -627,7 +638,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const techNote = techIds.length ? ` ${techIds.map(id => getTech(id).name).join(' & ')} on the crew.` : '';
   const specialistNote = Math.abs(specialist) >= 0.015 ? ` (${specialist > 0 ? '+' : ''}${Math.round(specialist * 100)}% ${specialist > 0 ? 'specialist' : 'off-speciality'})` : '';
   const gateNote = gig.gate ? ` Tickets: ${hypeLabel(gig.gate.hype)} (gate deal).` : '';
-  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}${specialistNote}.${gateNote}${weather?.note ?? ''}${failureNote}${freelanceNote}${hire.units ? ` Sub-hired ${hire.units} unit${hire.units > 1 ? 's' : ''} from ${hire.from.join(' & ')}.` : ''}${stakes.note}${riderNote}${kitNote}${techNote}${venueNotes.length ? ` At the venue, ${venueNotes.join('; ')}.` : ''}${why}`, quality >= 0.7 ? 'good' : 'info', {
+  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}${specialistNote}.${gateNote}${weather?.note ?? ''}${failureNote}${freelanceNote}${hire.units ? ` Sub-hired ${hire.units} unit${hire.units > 1 ? 's' : ''} from ${hire.from.join(' & ')}.` : ''}${stakes.note}${riderNote}${kitNote}${techNote}${venueNotes.length ? ` At the venue, ${venueNotes.join('; ')}.` : ''}${breaches.length ? ` The rider was broken (${breaches.map(b => b.label.toLowerCase()).join(', ')}): the client held back ${formatMoney(s, Math.round(payout * breach.withhold))}.` : ''}${why}`, quality >= 0.7 ? 'good' : 'info', {
     cityId: gig.cityId,
     gigId: gig.id,
   });

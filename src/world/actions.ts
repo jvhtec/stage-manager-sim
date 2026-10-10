@@ -2,6 +2,7 @@
  * Player commands. Each takes the current state and returns
  * `{ state, result }` — a new state on success, the untouched one on failure.
  */
+import { crossHire, crossHireCost } from './techRider';
 import { busHireBlocker } from './buses';
 import { dispatchFreight, freightLabel, freightQuote, type FreightMode } from './freight';
 import { gateBlocker, hypeLabel, rollGate } from './gate';
@@ -331,6 +332,17 @@ export function sendFreight(state: TycoonState, gigId: string, depotId: string, 
   const s = cloneState(state);
   dispatchFreight(s, s.gigs.find(g => g.id === gigId)!, s.depots.find(d => d.id === depotId)!, mode);
   return ok(s, `Sent by ${freightLabel(mode)}.`);
+}
+
+/** Cross-hire kit from a rental house, delivered to the venue, to meet a show's technical rider. */
+export function crossHireKit(state: TycoonState, gigId: string, productId: string, units: number): ActionOutcome {
+  const g0 = state.gigs.find(g => g.id === gigId);
+  if (!g0 || g0.status !== 'booked') return fail(state, 'Book the show first.');
+  if (units < 1) return fail(state, 'Nothing to hire.');
+  const cost = crossHireCost(productId, units, g0.days ?? 1);
+  if (state.company.cash < cost) return fail(state, 'Not enough cash for the hire.');
+  const s = cloneState(state);
+  return ok(s, crossHire(s, s.gigs.find(g => g.id === gigId)!, productId, units));
 }
 
 /** Put a second driver in the cab (or take them off): quicker long hauls for a driver's pay while rolling. */

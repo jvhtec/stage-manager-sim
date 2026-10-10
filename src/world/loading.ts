@@ -4,8 +4,9 @@
  * the two can never disagree.
  */
 import { techQualityFactor } from './content/techWaves';
-import { expectedQuality, getProduct } from './content/gear';
-import { DEPTS, type DeptCounts, type Gig, type GearStock, type Rider } from './types';
+import { expectedQuality, getProduct, type GearProduct } from './content/gear';
+import { consoleInputs } from './content/consoles';
+import { DEPTS, type DeptCounts, type Gig, type GearStock, type Rider, type TechSpec } from './types';
 
 export function stockSize(stock: GearStock): number {
   let n = 0;
@@ -32,7 +33,14 @@ export function addStock(into: GearStock, from: GearStock) {
  * short. Within a department it takes the rider's brand first, then the
  * best kit available. Mutates `stock`; returns what was picked.
  */
-export function pickGear(stock: GearStock, remaining: DeptCounts, space: number, rider?: Rider): GearStock {
+const fitsSpec = (p: GearProduct, spec?: TechSpec) => {
+  if (!spec) return false;
+  if (p.dept === 'console') return consoleInputs(p) >= spec.inputs && (!spec.consoleFamily || p.brand === spec.consoleFamily);
+  if (p.dept === 'audio') return !!spec.paBrands?.includes(p.brand);
+  return false;
+};
+
+export function pickGear(stock: GearStock, remaining: DeptCounts, space: number, rider?: Rider, spec?: TechSpec): GearStock {
   const picked: GearStock = {};
   while (space > 0) {
     const options = DEPTS.filter(d => remaining[d] > 0 && Object.keys(stock).some(id => stock[id] > 0 && getProduct(id).dept === d));
@@ -43,9 +51,12 @@ export function pickGear(stock: GearStock, remaining: DeptCounts, space: number,
       .sort((a, b) => {
         const pa = getProduct(a);
         const pb = getProduct(b);
+        // The rider's hard requirements first (inputs, show file, approved PA), then its preferred brand.
+        const fa = fitsSpec(pa, spec) ? 1 : 0;
+        const fb = fitsSpec(pb, spec) ? 1 : 0;
         const ra = rider?.dept === dept && pa.brand === rider.brand ? 1 : 0;
         const rb = rider?.dept === dept && pb.brand === rider.brand ? 1 : 0;
-        return rb - ra || pb.quality - pa.quality || a.localeCompare(b);
+        return fb - fa || rb - ra || pb.quality - pa.quality || a.localeCompare(b);
       });
     const id = candidates[0];
     stock[id] -= 1;

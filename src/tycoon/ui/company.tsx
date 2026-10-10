@@ -558,6 +558,11 @@ export function HelpWindow() {
           window forecasts the next eight weeks.
         </li>
         <li>
+          <b>Technical riders</b>: bigger shows need a desk with enough inputs, sometimes a particular console family for the
+          engineer's show file, and a PA from the approved list. The show window checks your kit and offers cross-hire from a
+          rental house; break the rider and the client holds back part of the fee.
+        </li>
+        <li>
           Buy bigger trucks and more gear, and win reputation to unlock arenas and stadiums. Every January the industry awards
           judge your year and the trade press prints its supplier table, the biggest tours and reviews of your best and worst
           shows. Or start from a <b>historic scenario</b> — Live Aid, Italia ’90, Barcelona ’92 — and win a lot of the night.

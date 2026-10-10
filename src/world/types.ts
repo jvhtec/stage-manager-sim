@@ -451,6 +451,16 @@ export interface Rider {
   brand: string;
 }
 
+/** A technical rider's hard requirements (techRider.ts). */
+export interface TechSpec {
+  /** Inputs the FOH desk must take. */
+  inputs: number;
+  /** The engineer's show file runs on this console brand. */
+  consoleFamily?: string;
+  /** Only these PA brands are approved. */
+  paBrands?: string[];
+}
+
 export interface Gig {
   id: string;
   act: string;
@@ -474,6 +484,10 @@ export interface Gig {
   crewNeeded: number;
   fee: number;
   rider?: Rider;
+  /** Hard technical requirements (techRider.ts). */
+  techSpec?: TechSpec;
+  /** Kit cross-hired from a rental house straight to the venue: product id → units. */
+  crossHire?: GearStock;
   /** The act has worked with you before and asked for you by name. */
   asksForYou?: boolean;
   tourId?: string;

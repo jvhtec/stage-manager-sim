@@ -771,3 +771,13 @@ A set of systems that chain into each other, with the causes recorded so a failu
 - **Post-mortems**: a failed or rough night gets an incident record naming its causes — late load-in, dead kit and the workshop lapse behind it, short or exhausted crew, left-behind cases, unpaid extras, venue limits — and the news line ends "Why: … It traces back: service deferred → …". The last eight are in the League window under *Post-mortems*. A failed or tired-crew night also dents crew morale, and a collapse costs goodwill with the act.
 - **Change orders** (`changes.ts`): at load-in a client may ask for an extra hour, extra kit or an earlier soundcheck. Each client has a hidden temper (easy-going, reasonable, always pushing) that you only learn from history. You can do it free (goodwill now, but they ask more often), quote for it (they pay or refuse, by temper and what you have taught them) or hold to the contract (goodwill lost; this is what happens if you don't answer). Overtime tires the crew and unpaid extras go into the post-mortem if the night goes badly. The offer window shows your history with the client.
 - **Cash forecast** (`cashflow.ts`): the Money window projects the next eight weeks from invoices (with default and late-payment risk), booked shows and the monthly bills, as an expected line with a range. The range is ±30% with no back office and narrows to ±8% with office staff. It warns when late invoices could leave you overdrawn, or too thin to pay for services.
+
+## Technical riders
+
+From club level up a show carries a technical rider (`techRider.ts`) with hard requirements, not just a brand preference:
+
+- **Inputs**: the FOH desk must take enough channels — 24 at clubs, 40 in theatres, 56 at stadiums, half as much again after 2000 and more after 2010. Analogue desks top out at 40–48 inputs, so the big digital desks earn their price. (Desk input counts are in `content/consoles.ts`.)
+- **Show file**: a real act at theatre size and up often brings its own engineer, whose show file runs on one digital console family (DiGiCo, Yamaha, Avid…).
+- **Approved PA**: bigger shows list the two or three PA brands they accept.
+
+Trucks load compliant kit first. The show window lists the rider and, once trucks are assigned, checks the kit going out; for each breach it offers **cross-hire** from a rental house (6% of the unit price a day, delivered to the venue). Break the rider and the engineer fights the kit all night (−8% quality per breach), the client withholds 12% of the fee per breach (up to 30%), the act's goodwill drops and the breach goes into the post-mortem. Owning one console family means fewer hires; mixing brands means hiring more often.

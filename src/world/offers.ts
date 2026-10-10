@@ -3,6 +3,7 @@
  * population, so the metropolis is busy and villages are quiet — the map's
  * geography *is* the demand curve. Rivals snap up offers they're close to.
  */
+import { rollTechSpec } from './techRider';
 import { worldOf } from './mapgen';
 import { RIVAL_COMPANIES } from './content/companies';
 import { traitsOf } from './venueTraits';
@@ -133,7 +134,7 @@ export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
   const relief = needsReliefCrew(country, year, tier, spec.days ?? 1);
   const baseCrew = Math.round((info.crew + rng.nextInt(tier)) * (spec.needsScale ?? 1));
 
-  return {
+  const gig: Gig = {
     id: newId(state, 'gig'),
     act: spec.act,
     venueId: spec.venue.id,
@@ -154,6 +155,8 @@ export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
     festival: spec.festival,
     status: 'offer',
   };
+  gig.techSpec = rollTechSpec(state.mapSeed, gig, year, spec.real);
+  return gig;
 }
 
 /** Share of shows at each tier played by real touring acts (the rest are local bands). */

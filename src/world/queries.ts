@@ -1,4 +1,5 @@
 /** Read-only projections for the UI — nothing here mutates state. */
+import { breachPenalty, checkSpec, type Breach } from './techRider';
 import { fuelMultiplier } from './market';
 import { techResaleFactor } from './content/techWaves';
 import { zoneBill } from './regulation';
@@ -120,6 +121,8 @@ export function suggestJobs(state: TycoonState, v: Vehicle, limit = 3): JobSugge
 }
 
 export interface CoverageProjection {
+  /** Ways the kit going out would break the technical rider (techRider.ts). */
+  breaches: Breach[];
   gear: DeptCounts;
   crew: number;
   latestArrival: number;
@@ -169,7 +172,7 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
     const have = deptTotals(delivered);
     const remaining = emptyCounts();
     DEPTS.forEach(d => (remaining[d] = Math.max(0, gig.needs[d] - have[d])));
-    addStock(delivered, pickGear(depot.gear, remaining, model.gearCapacity, gig.rider));
+    addStock(delivered, pickGear(depot.gear, remaining, model.gearCapacity, gig.rider, gig.techSpec));
     const opts = { vehicleId: v.id, restAt: REST_AT[state.policies.rest], ...crewDirectives(state, gig) };
     const pinned = depot.people.filter(m => m.pinnedVehicleId === v.id || opts.prefer.has(m.id)).length;
     const seats = Math.min(model.crewSeats, Math.max(pinned, gig.crewNeeded - people.length), depot.people.filter(m => mayBoard(m, opts)).length);
@@ -182,6 +185,8 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
   const subhire = vehicles.length ? subHireFor(state, worldOf(state), gig, delivered) : { stock: {}, units: 0, cost: 0, from: [] };
   const withHire: GearStock = { ...delivered };
   addStock(withHire, subhire.stock);
+  if (gig.crossHire) addStock(withHire, gig.crossHire);
+  const breaches = vehicles.length || gig.freight ? checkSpec(gig.techSpec, withHire) : [];
   const evaluation = evaluateGear(withHire, gig, dateOfDay(state, gig.day).getUTCFullYear(), state.gearCondition);
   const freelance = vehicles.length ? freelancersFor(state, worldOf(state), gig, crew) : { count: 0, cost: 0, effectiveness: 0, local: false };
   effCrew += freelance.count * freelance.effectiveness;
@@ -203,10 +208,10 @@ export function projectCoverage(state: TycoonState, gig: Gig): CoverageProjectio
         lateHours: Math.max(0, latestArrival - loadInHour(gig)),
         gearQuality: evaluation.quality,
         riderMet: evaluation.riderMet,
-        bonus: techBonus(techIds, gig.act) + moraleBonus(state.crewMorale) + crewEval.bonus,
+        bonus: techBonus(techIds, gig.act) + moraleBonus(state.crewMorale) + crewEval.bonus - breachPenalty(breaches).quality,
       })
     : 0;
-  return { gear: evaluation.delivered, crew, latestArrival, onTime, vehicles, evaluation, expectedQuality, techIds, delivered, freelance, prep, subhire, people, crewEval };
+  return { breaches, gear: evaluation.delivered, crew, latestArrival, onTime, vehicles, evaluation, expectedQuality, techIds, delivered, freelance, prep, subhire, people, crewEval };
 }
 
 /** What a pile of kit would fetch, given its condition. */

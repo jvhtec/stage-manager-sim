@@ -1,6 +1,6 @@
 import { gigBookingBar } from '@/world/standing';
 import { useState } from 'react';
-import { assignVehicle, bookGate, bookGig, haggleGig, rehearseShow, sendFreight, unassignVehicle } from '@/world/actions';
+import { assignVehicle, bookGate, bookGig, crossHireKit, haggleGig, rehearseShow, sendFreight, unassignVehicle } from '@/world/actions';
 import { freightQuote } from '@/world/freight';
 import { certCount, requiredCerts } from '@/world/certs';
 import { expertiseBonus } from '@/world/expertise';
@@ -11,7 +11,7 @@ import { DEPT_COLORS, DEPT_LABELS, LOAD_IN_HOUR, SHOW_END_HOUR, SHOW_START_HOUR,
 import { dateOfDay, dayOf, formatDay, formatHour, loadInHour, loadOutDoneHour, sumCounts } from '@/world/core';
 import { getRegion } from '@/world/content/world';
 import { artistTierIn, findArtist } from '@/world/content/artists';
-import { expectedQuality } from '@/world/content/gear';
+import { expectedQuality, getProduct } from '@/world/content/gear';
 import { averageCondition, failureChance } from '@/world/wear';
 import { prepFailureFactor } from '@/world/facilities';
 import { levelOf } from '@/world/people';
@@ -29,6 +29,7 @@ import { estimateArrival, estimateJobCosts, projectCoverage } from '@/world/quer
 import { DEPTS, type Gig, type TycoonState } from '@/world/types';
 import { Bar, Stat, TierChip } from './bits';
 import { clientNote } from '@/world/changes';
+import { crossHireCost, crossHireOptions } from '@/world/techRider';
 import { BrandBadge } from './brands';
 import { distance, kmoney, money } from './format';
 import type { WinCtx } from './types';
@@ -164,6 +165,13 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
           <span style={{ display: 'inline-flex', gap: 6, alignItems: 'center' }}>
             <BrandBadge brand={gig.rider.brand} /> {DEPT_LABELS[gig.rider.dept].toLowerCase()}
           </span>
+        </Stat>
+      )}
+      {gig.techSpec && (
+        <Stat label="Technical rider">
+          {gig.techSpec.inputs} inputs
+          {gig.techSpec.consoleFamily ? ` · ${gig.techSpec.consoleFamily} show file` : ''}
+          {gig.techSpec.paBrands ? ` · PA: ${gig.techSpec.paBrands.join(' / ')} only` : ''}
         </Stat>
       )}
       {gig.status === 'offer' && !gig.event && !gig.festival && <Stat label="Client">{clientNote(state, gig.act)}</Stat>}
@@ -398,6 +406,37 @@ export function GigWindow({ ctx, gigId }: { ctx: WinCtx; gigId: string }) {
                   ) : (
                     <span className="tt-bad">✗ no {gig.rider.brand} loaded</span>
                   )}
+                </Stat>
+              )}
+              {gig.techSpec && projection.vehicles.length + (gig.freight ? 1 : 0) > 0 && (
+                <Stat label="Rider check">
+                  {projection.breaches.length ? (
+                    <span className="tt-bad">✗ {projection.breaches.map(b => b.label.toLowerCase()).join(', ')}</span>
+                  ) : (
+                    <span className="tt-good">✓ the kit going out meets the rider</span>
+                  )}
+                </Stat>
+              )}
+              {gig.techSpec &&
+                projection.breaches.map(b => (
+                  <div key={b.id} style={{ whiteSpace: 'normal', fontSize: 12, marginBottom: 4 }}>
+                    <span className="tt-dim">{b.detail} Cross-hire from a rental house: </span>
+                    {crossHireOptions(gig.techSpec!, b.id, gigYear).map(p => {
+                      const units = b.id === 'pa' ? Math.max(1, gig.needs.audio) : 1;
+                      return (
+                        <button key={p.id} className="tt-btn sm" style={{ margin: '2px 4px 0 0' }} onClick={() => act(s => crossHireKit(s, gig.id, p.id, units))}>
+                          {units > 1 ? `${units}× ` : ''}
+                          {p.brand} {p.name} · {money(crossHireCost(p.id, units, gig.days ?? 1))}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ))}
+              {gig.crossHire && (
+                <Stat label="Cross-hired">
+                  {Object.entries(gig.crossHire)
+                    .map(([id, n]) => `${n}× ${getProduct(id).brand} ${getProduct(id).name}`)
+                    .join(', ')}
                 </Stat>
               )}
               {projection.techIds.length > 0 && (

@@ -158,6 +158,7 @@ export interface NightFacts {
   unrehearsed: boolean;
   missingTickets: number;
   venueNotes: string[];
+  breaches?: string[];
   present: boolean;
   workshop: string;
   noKit: boolean;
@@ -188,6 +189,7 @@ export function nightCauses(s: TycoonState, gig: Gig, f: NightFacts): Cause[] {
   if (f.forgotten) causes.push({ id: 'prep', label: 'Kit left behind', detail: `${f.forgotten} case${f.forgotten === 1 ? '' : 's'} stayed on the warehouse floor: prep was too thin.`, weight: 0.3 });
   if (f.unrehearsed) causes.push({ id: 'unrehearsed', label: 'Not rehearsed', detail: 'A show this size should have had a rehearsal.', weight: 0.3 });
   if (f.missingTickets) causes.push({ id: 'tickets', label: 'Uncertified crew', detail: `${f.missingTickets} ticket${f.missingTickets === 1 ? '' : 's'} short, so the inspectors were not happy.`, weight: 0.25 });
+  (f.breaches ?? []).forEach((b, i) => causes.push({ id: `rider-${i}`, label: 'Rider broken', detail: b, weight: 0.55 }));
   f.venueNotes.forEach((n, i) => causes.push({ id: `venue-${i}`, label: 'The venue', detail: n.charAt(0).toUpperCase() + n.slice(1) + '.', weight: 0.25 }));
   return causes;
 }
