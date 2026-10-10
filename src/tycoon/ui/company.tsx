@@ -550,7 +550,8 @@ export function HelpWindow() {
         </li>
         <li>
           Buy bigger trucks and more gear, and win reputation to unlock arenas and stadiums. Every January the industry awards
-          judge your year.
+          judge your year and the trade press prints its supplier table, the biggest tours and reviews of your best and worst
+          shows. Or start from a <b>historic scenario</b> — Live Aid, Italia ’90, Barcelona ’92 — and win a lot of the night.
         </li>
       </ol>
       <p className="tt-dim" style={{ marginBottom: 0 }}>
@@ -964,6 +965,7 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
       ) : (
         <div className="tt-dim">Empty — for now.</div>
       )}
+      <PressCharts state={state} />
       <h4>
         Milestones ({state.milestones.length}/{MILESTONES.length})
       </h4>
@@ -981,5 +983,58 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
         })}
       </div>
     </div>
+  );
+}
+
+/** The trade press's latest year-end charts: the supplier table, the year's biggest tours and the reviews. */
+function PressCharts({ state }: { state: TycoonState }) {
+  const chart = state.charts?.[state.charts.length - 1];
+  if (!chart) {
+    return (
+      <>
+        <h4>Trade press</h4>
+        <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+          Every New Year the trade press prints the supplier table, the year's biggest tours and reviews of your best and worst nights.
+        </div>
+      </>
+    );
+  }
+  return (
+    <>
+      <h4>
+        Trade press, {chart.year} (you were {chart.rank} of {chart.firms})
+      </h4>
+      <div className="tt-list">
+        {chart.table.map((r, i) => (
+          <div key={r.name} className="tt-row" style={{ fontWeight: r.you ? 700 : undefined }}>
+            <span>
+              {i + 1}. {r.name}
+            </span>
+            <span className="tt-dim">{r.score}</span>
+          </div>
+        ))}
+      </div>
+      <div className="tt-dim" style={{ margin: '6px 0 2px' }}>
+        Biggest tours of {chart.year}
+      </div>
+      <div className="tt-list">
+        {chart.tours.map(t => (
+          <div key={t.act} className="tt-row">
+            <span>{t.act}</span>
+            <span className="tt-dim">{t.yours ? 'your rig ★' : tierInfo(t.tier).label}</span>
+          </div>
+        ))}
+      </div>
+      {chart.rave && (
+        <div style={{ whiteSpace: 'normal', marginTop: 6 }}>
+          ⭐ <b>{chart.rave.act}</b> — “{chart.rave.text}”
+        </div>
+      )}
+      {chart.pan && (
+        <div style={{ whiteSpace: 'normal', marginTop: 4 }}>
+          📰 <b>{chart.pan.act}</b> — “{chart.pan.text}”
+        </div>
+      )}
+    </>
   );
 }

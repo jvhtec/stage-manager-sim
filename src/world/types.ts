@@ -778,6 +778,17 @@ export interface YearStats {
 }
 
 /** The year's books and standing (milestones.ts). */
+/** The trade press's year-end charts and reviews (charts.ts). */
+export interface YearChart {
+  year: number;
+  rank: number;
+  firms: number;
+  table: { name: string; score: number; you?: boolean }[];
+  tours: { act: string; tier: number; yours?: boolean }[];
+  rave?: { act: string; quality: number; text: string };
+  pan?: { act: string; quality: number; text: string };
+}
+
 export interface AnnualReport {
   year: number;
   revenue: number;
@@ -897,6 +908,7 @@ export interface TycoonState {
   venueRelations: Record<string, number>;
   partners: Partial<Record<Dept, { brand: string; sinceDay: number; lapse: number }>>;
   reports: AnnualReport[];
+  charts?: YearChart[];
   /** Exclusive production deals with acts (deals.ts). */
   deals: { id: string; act: string; tier: number; monthly: number; startDay: number; endDay: number; strikes: number; status: 'offer' | 'active' | 'ended'; offerExpires: number }[];
   /** Your own products (encoded ids, see content/gear.ts ownProductId). */

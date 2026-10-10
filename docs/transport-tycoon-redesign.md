@@ -756,3 +756,7 @@ The retired dashboard build had systems that were ported to the map game like so
 ## Historic scenarios
 
 The new-company form offers seven one-year scenarios (`scenarios.ts`): Live Aid 1985, The Wall in Berlin 1990, Italia ’90, Barcelona ’92, Expo ’92, Atlanta ’96 and London 2012. Each fixes the country, start year and home town, gives an established small firm (reputation and cash enough to bid), and sets one goal (`GoalId` `scenario`): win a lot of the event's production and deliver it at quality 50% or better before the year is out. The event tender is the ordinary special-events engine (`events.ts`), so rivals bid against you and the night carries its usual prestige and stakes.
+
+## The trade press
+
+Every New Year (`charts.ts`) the press prints the supplier league table for the year just gone (your company rating against the rivals'), the year's biggest tours in your market (the acts at the top venue tier, with a ★ on any you carried) and reviews of your best and worst nights. A rave (quality 90%+) or a panning (a failed show, or under 55%) moves your reputation by 0.4, and each big tour you carried adds 0.3 (up to three). The latest charts sit in the League window under *Trade press*.

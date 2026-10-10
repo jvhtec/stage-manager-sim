@@ -30,6 +30,7 @@ import { dailyUtilisation } from './fleetReport';
 import { recordVenueNight } from './promoters';
 import { dailyAuctions, monthlyAuctions } from './auctions';
 import { annualReport, monthlyMilestones } from './milestones';
+import { yearEndCharts } from './charts';
 import { monthlyPartners } from './partners';
 import { monthlyTowns } from './towns';
 import { breakdownDilemma, dailyCrewDilemmas, hourlyCrises } from './dilemmas';
@@ -624,6 +625,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     if (s.hour > HOURS_PER_DAY) awardsNight(s, date.getUTCFullYear() - 1);
     yearlyVenues(s, world, date.getUTCFullYear());
     annualReport(s, date.getUTCFullYear() - 1);
+    yearEndCharts(s, date.getUTCFullYear() - 1);
     yearlyZones(s, date.getUTCFullYear());
   }
   if (isLastDayOfYear(s)) yearEndTax(s);
