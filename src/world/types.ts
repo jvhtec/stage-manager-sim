@@ -564,6 +564,11 @@ export interface Gig {
   crewPicks?: string[];
   status: GigStatus;
   rivalId?: string;
+  /**
+   * When a rival takes it: the departments it doesn't supply itself (supply.ts) — from a partner
+   * firm (`from`) or hired on the open market.
+   */
+  supply?: { dept: Dept; units: number; from?: string }[];
   result?: GigResult;
   /** What your on-the-day decisions did to the show (dilemmas.ts). */
   mods?: ShowMods;
@@ -784,7 +789,11 @@ export interface RivalOps {
   owed?: { day: number; amount: number; cityId?: string }[];
   /** Trucks off the road after a recall, until a day (industry.ts). */
   down?: { until: number; trucks: number };
-  record: { shows: number; failed: number; late?: number; kitFailures?: number; crossHires: number; fixes: number; cancelled: number; declined: Partial<Record<'kit' | 'crew' | 'trucks' | 'rider' | 'room', number>> };
+  /** Trust in each firm it subcontracts departments to (supply.ts), 0-10. */
+  partners?: Record<string, number>;
+  /** Units it couldn't supply itself, by department, since it last reinvested (supply.ts). */
+  short?: Partial<Record<Dept, number>>;
+  record: { shows: number; failed: number; late?: number; kitFailures?: number; crossHires: number; fixes: number; cancelled: number; declined: Partial<Record<'kit' | 'crew' | 'trucks' | 'rider' | 'room' | 'lines', number>>; subcontracted?: number; partnered?: number };
 }
 
 export interface Rival {
@@ -803,10 +812,14 @@ export interface Rival {
   health?: number;
   /** showsPlayed at the last monthly check. */
   lastShows?: number;
+  /** Partner jobs (supply.ts) at the last monthly check. */
+  lastPartnered?: number;
   /** Its operation: kit, crew, trucks, books (rivalOps.ts). */
   ops?: RivalOps;
-  /** Name of the boss we last announced (leaders.ts), to spot a change at the top. */
+  /** Who we last reported running it (content/people.ts), to spot a change at the top. */
   boss?: string;
+  /** Start year of the operating era last applied (content/actors), to spot a change of business. */
+  era?: number;
 }
 
 export type NewsTone = 'info' | 'good' | 'bad' | 'big';
@@ -1072,6 +1085,10 @@ export interface TycoonState {
   ownProducts: string[];
   /** Rivals that went bust or were bought out — they don't come back. */
   goneRivals: string[];
+  /** The historical firms this game draws on (content/marketRegions.ts pools), fixed at the start. */
+  marketRoster?: string[];
+  /** Historical company events already applied (roster.ts), by key. */
+  companyEventsApplied?: string[];
   /** Kit on its way between your bases by courier (transfers.ts). */
   transfers: { id: string; fromDepotId: string; toDepotId: string; stock: GearStock; arriveHour: number }[];
   yearStats: Record<number, YearStats>;
