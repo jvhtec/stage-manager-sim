@@ -4,44 +4,39 @@ The rival rental houses in `src/world/content/companies.ts` are real firms. This
 
 **Confidence:** **C** confirmed by a primary or trade source, **L** likely (one source, or sources disagree slightly), **U** uncertain or not found.
 
-**What the game models.** The game puts a firm on the map from the year it had a base in the country and bid for local work. US and British houses toured Europe with their acts long before that, but touring work isn't modelled. A leader's *style* is our reading of how the firm was run, taken from trade-press profiles and interviews. It is not a judgement of the person.
+**What the game models.** Since PR #24 the firms are content in `src/world/content/actors/` (presence, name and operating eras, company events), with documented people in `content/people.ts` and game-tuning strategy eras in `src/world/strategies.ts`. The architecture is in docs/research/historical-market-architecture.md, and the Spanish research is in docs/research/spain-live-production-market.md.
 
-## Leader styles
+A firm is on the map from the year it had a *local base* in that country. A foreign house that only came with its acts' tours never gets a warehouse. A strategy (how a firm plays) belongs to a company and an era, together with the documented behaviour it is read from. It is never a judgement of a person.
 
-| Style | Drawn from | In play (`leaders.ts`) |
+## Strategies (game tuning)
+
+| Strategy | Drawn from | In play (`strategies.ts`) |
 |---|---|---|
 | Pioneer | Engineer-founders who built their own systems or were first with a new technology | Reinvests early, aims above the era's kit, stretches further to meet a rider, grows a tier more readily, rarely starts price wars |
 | Perfectionist | "Only as good as the last show"; firms run on service and artist relationships | Pickier about offers, never short on a rider, very rarely fights on price, holds few grudges |
 | Expansionist | New offices, new countries, buying their way in | Chases more work, reinvests sooner, starts more price wars, buys more firms, grows fastest |
-| Dealmaker | Consolidators who grew by acquisition | First in line to buy a struggling rival |
+| Consolidator | Firms that grew by acquisition | First in line to buy a struggling rival |
 | Prudent | Family firms and independents that grew organically | Keeps 4½ months of overhead in the bank before spending, takes slightly less work, avoids fights |
-| Hustler | (Only for some start-ups) | Cheap and everywhere: takes the most work, spends least on riders, starts most price wars, holds grudges |
+| Hustler | Volume and price (NicLen's dry hire; some start-ups) | Cheap and everywhere: takes the most work, spends least on riders, starts most price wars, holds grudges |
+| Specialist | Firms that stay in one department (Valladar, Tri i Talfis, Cinelux, Efectes) | Never takes on new departments; others subcontract to it |
+| Regional | Firms living off their own patch (Megafer, Soinua, Swing) | Rarely goes for work far from home |
+| Integrator | Firms that subcontracted first and then brought departments in-house (Fluge, EMSAC) | Most likely to buy into a department it keeps hiring in |
 
-A firm with no named leader for the year plays "steady", with no nudges. A new boss takes over in the news.
+A firm without a strategy era plays "steady", with no nudges. A documented change of leadership makes the news, but it doesn't change how the firm plays.
 
 ## International houses: when they set up in each country
 
 | Firm | US | Britain | Spain | Germany | France / Italy |
 |---|---|---|---|---|---|
-| Clair Brothers → ClairShowco (2000) → Clair Global (2008) | 1966 (C) | 2008, buying Concert Sound (C) | none found (U) | 2022, Black Box Music → BBM \| Clair (C) | none found |
-| Harris Production Services (1983) → PRG (1995) | 1983 (C) | via Light & Sound Design, which joined PRG in 1998 (C) | 2011, buying EML, which had been in Madrid since 1998 (C) | not modelled | not modelled |
-| Solotech (Montreal, 1977) | 2007, Las Vegas office (C) | 2018, buying SSE Audio Group (C) | none found (U) | not modelled | not modelled |
+| Clair Brothers → ClairShowco (2000) → Clair Global (2008) | 1966 (C) | 2008, buying Concert Sound (C) | none found | through Black Box Music, 2022: that firm carries on as BBM \| Clair (C) | none found |
+| Harris Production Services (1983) → PRG (1995) | 1983 (C) | through Light & Sound Design, PRG from 1998 (C) | through EML Spain: Madrid 2006, bought into PRG 2011, renamed 2012 (A) | through Procon: bought 2009, PRG from 2010 (C) | none found |
+| Solotech (Montreal, 1977) | 2007, Las Vegas office (C) | through SSE Audio Group: bought 2018, Solotech UK from 2020 (C) | none found | not modelled | not modelled |
 
-**Spain.** The big US and Canadian houses came very late or not at all. PRG arrived in 2011 by buying EML; no Spanish base has been found for Clair or Solotech. The firms that did come in were mostly European neighbours:
-- **EML** (Belgium), with Vari-Lite Production Services, opened in Madrid in 1998. Xavier Theys co-founded it, and the firm became PRG Spain in 2011 (C).
-- **Dushow** (France) opened in Barcelona in 2005. It was renamed Dushow Spain in 2021 and moved to Madrid, then became Novelty Spain in December 2023 (C).
-- **CT** opened CT Spain in 2007 in L'Hospitalet (registered 15/11/2007; when CT took control is L).
-- **Alfasom** (Portugal) owned the Spanish firms Aysav and Congress Rental Ibérica before 2007 (C; not modelled).
+Acquisitions are continuity events. The bought firm keeps its base, kit, crew and clients, and only its owner and later its name change.
 
-Sources:
-- https://en.wikipedia.org/wiki/Clair_Global
-- https://www.installation-international.com/technology/audio/from-cottage-industry-to-corporate-giants
-- https://www.prg.com/en/about/history
-- https://www.prg.com/en-gb/global/spain
-- https://lsionline.co.uk/news/prg-acquires-eml-productions-in-europe-lelnwb
-- https://solotech.com/en-us/about-us/history/
-- https://www.novelty-group.com/news/corporate/dushow-spain-changes-its-name-and-becomes-novelty-spain-4449
-- https://www.einforma.com/informacion-empresa/action-servicios-audiovisuales
+**Spain.** No big American house set up in Spain. The first permanent foreign-linked technical company is EML Sound and Light Productions SL, constituted in Madrid in 2006 as a subsidiary of Belgium's EML. PRG bought EML's parent in January 2011, and the Spanish company took the PRG name in 2012 (A, PR #24 research). Dushow's Barcelona arm, formed in 2004 and trading from 2005, is the other early foreign group (B). Before that, foreign participation came in other layers: tours bringing their own suppliers, Euphon's 60% of Sono around 2001, and Live Nation buying Gamerco in 2006.
+
+Corrections to the first research pass: EML's Spanish company dates from 2006, not 1998. CT's Spanish structure is from 2021, not 2007, so CT has no Spanish base in the game.
 
 ## Britain
 
@@ -106,41 +101,35 @@ Sources:
 
 ## Spain
 
-| Firm | Founded | Base | Notes | Leaders (style) | Conf. |
-|---|---|---|---|---|---|
-| Milán Acústica | 1976 (the firm's own date; registered 1981) | Madrid | — | not found | C |
-| Stonex | 1980 | Madrid | Stage engineering and theatre lighting. Bought by Quercus Equity with Alfasom in 2007 | Domingo Latorre (dealmaker) | C |
-| Berenice | 1982 | Madrid | Named by the player-designer; not in the company registries | — | U |
-| Sorter | 1986 (Sorter SA) | Madrid, now Alcorcón | L-Acoustics since 1997; Serrat & Sabina, Mad Cool | not found | C |
-| Pronorte Sonido | 1987 | Gijón | EAW from the start; Bilbao Live, Azkena Rock, Noroeste Pop Rock | José Javier García Osorio (prudent) | C |
-| Cinelux | 1988 | Madrid (Fuenlabrada) | Lighting for TV, theatre and events | — | L |
-| Twin Cam Audio | 1990 (registered) | Barcelona | Long-time Primavera Sound supplier | Rafael Campos (pioneer: each new L-Acoustics generation) | C |
-| Fluge Audiovisuales | 1990 | Madrid (Arganda del Rey) | 7 Spanish and 5 overseas offices; Alejandro Sanz tours | Luis Berlanga (expansionist) | C |
-| Sonido Tole | ? | Sevilla | HK Audio Cohedra (2007–08) | Bartolomé "Tole" López (pioneer) | year U |
-| EML Productions | 1998 | Madrid | Became PRG Spain in 2011 | Xavier Theys | C |
-| Dushow Barcelona | 2005 | Barcelona | Dushow Spain 2021, Novelty Spain 2023 | — | C |
+Full sources and confidence are in docs/research/spain-live-production-market.md. This is what the game uses.
 
-Removed or changed after research:
-- **"LIL Service" (1979)** as Twin Cam's earlier name. Neither the name nor the "first Meyer importer" claim could be found. Meyer Sound España was set up in Sevilla around 1998.
-- **Apogee (Sevilla).** No sound company of that name was found.
-- **Pronorte.** Moved from Oviedo to Gijón.
-- **Sonido Tole.** Moved from Málaga to Sevilla.
+**Always in the roster:**
 
-Not found: who supplied Rock & Ríos (1982), Mecano, Héroes del Silencio, or Expo '92 / Barcelona '92.
+| Firm | Base (map town) | Lines | From | Notes |
+|---|---|---|---|---|
+| Milán Acústica | Madrid | sound, later installation | 1976 (firm's own date; SA 1981) | |
+| Escenarios Valladar | Madrid | staging, rigging | 1980 | |
+| LIL Service → Twin Cam Audio | Barcelona | sound | 1979 lineage (C); Twin Cam companies 1990 (A) | Rafael Campos MD (documented 1994) |
+| Arcoiris Lighting Systems | Barcelona | lighting, later sound | 1983 | Toni Juncosa |
+| Pronorte | Gijón | sound, lighting | 1985 | José Javier García "Boby" |
+| Berenice Concert Systems | Madrid | sound | SA 1986; last accounts 1995 | exact operating end not established; no scripted closure |
+| Sorter | Madrid | sound | SA 1986 | |
+| Fluge Audiovisuales | Madrid | sound in 1990; lighting and video later | 1990 | Luis Berlanga; used outside lighting firms at first |
+| EML Productions Spain → PRG | Madrid | sound, lighting, video | 2006 | PRG ownership 2011, name 2012 |
 
-Sources:
-- https://www.iberinform.es/empresa/819397/milan-acustica
-- https://www.milanacustica.com/quienes-somos/
-- https://www.axesor.es/Informes-Empresas/229857/SORTER_SA.html
-- https://www.isp-audio.com/en/installation-case-studies/audio-event-stage/4805-l-acoustics-at-madrid-s-famous-sala-la-riviera
-- https://fluge.es/wp-content/uploads/2025/10/Portfolio-Fluge-2025.pdf
-- https://www.fast-and-wide.com/faw-news/fast-news/2362-express-delivery-on-alejandro-sanz-tour
-- https://www.axesor.es/Informes-Empresas/429489/PRONORTE_SONIDO_SL.html
-- https://www.lsionline.co.uk/news/pronorte-reports-hectic-summer-clqf2f
-- https://lsionline.co.uk/news/sonido-tole-adds-to-cohedra-stock-4ecvrx
-- https://lsionline.co.uk/news/quercus-acquires-stonex-and-alfasom-jgqq63
-- https://www.nazca.es/en/?p=1390
-- https://www.prosoundweb.com/twin-cam-audio-supplies-l-acoustics-for-five-stages-at-primavera-festival-in-spain/
+**Regional pools** (each game draws some, by map seed):
+
+| Region | Firms |
+|---|---|
+| Central | Espiral (live hire from the early 1980s), Tri i Talfis (1995), Cinelux (1988) |
+| Catalonia | Sono (corporate AV, 1972; Euphon 60% around 2001), Dushow Barcelona (2005) |
+| Andalucía | Apogee Servicios (1993), Sonorock (by 1992), TCM Audiovisión (by 1994), Audiovisual Ojeda (1992), Sonido Tole (by 2007) |
+| Galicia | EMSAC (1993), Megafer (1980; family succession 1995) |
+| Castilla y León | Use Sonido (about 1993), Swing Electroshow (1985–87), Real Audio Systems (by 2008; wound up 2018) |
+| Basque Country | Soinua (1990; turns to distribution 2015), Ingunza Audiovisual (by 2008) |
+| Balearics | Efectes (lighting, 1981), Balear Acustic (1990) |
+
+Removed after research: Stonex, a stage-machinery engineer that belongs in the supplier layer rather than among the rental rivals. Firms that are documented but too thin to give stats are not in the game yet, such as Daniel Sonido, Alacrán and the Valencian firms.
 
 ## France
 
@@ -161,6 +150,10 @@ Sources:
 
 | Firm | Founded | Base | Events | Leaders (style) | Conf. |
 |---|---|---|---|---|---|
+| Lightpower | 1978 (as Proppe & Hövelkröger; Lightpower 1987) | Paderborn (Dortmund on the map) | Rental house for touring acts, later a distributor | Ralph-Jörg Wezorke | C |
+| Gahrens + Battermann | 1983/84 | Bergisch Gladbach (Köln on the map) | Video, then full service; its own academy | Kurt-Werner Gahrens, Jürgen Battermann | C |
+| Procon | 1988 | Hamburg | Computer-controlled lighting; listed 1999; PRG 2009, PRG name 2010 | Morten Carlsson | C |
+| Amptown System Company | 1990 | Hamburg | Musicals (CATS), theatres, cruise ships; insolvency filing 2022 (outcome not found) | Peter Matthes, Ulrich Müller | C |
 | Neumann&Müller | 1981 | Düsseldorf (not Dresden) | Outdoor PA for WDR radio; more than 20 branches | Jürgen Neumann and Eberhard Müller (prudent) | C |
 | Black Box Music | ? | Berlin | To Clair Global in 2022 as BBM \| Clair | Thilo Goos (perfectionist: one campus for a whole tour) | year U |
 | NicLen | 1992 | Dortmund | Dry hire; Invision took a stake in 2018 | — | L |
