@@ -969,3 +969,32 @@ The Company window shows the overdraft, how far down this road you are, and the 
 **Two growth profiles** in the balance bot test the danger:
 - the **expansionist** grows as fast as leases and loans allow and never builds the office;
 - the **ambitious** company grows as fast but hires office staff and department heads as it goes.
+
+## Concentration risk and a moving industry
+
+A big company should face risks a small one doesn't, and have tools a small one doesn't need. This round adds no new layer of operations; it makes size itself something to manage.
+
+**Exposure** (`risk.ts`, the Company window's Concentration risk panel):
+- how much of the fleet is one truck model;
+- the biggest client's share of your work (this year, last year and what's booked);
+- how much of your work is in one area (towns within 15 tiles of each other);
+- who owes you what, and how much of it is uninsured.
+
+**Industry events** (`industry.ts`), rolled each month:
+- **Manufacturer recalls.** The monthly odds are 0.12% per truck of the model on the road, so a fleet of 20 identical trucks is recalled about one year in four. Fewer than three of a model is beneath a maker's notice. A recall grounds every truck of the model for 12 days.
+- **Big accounts out to tender.** Only a client worth 100,000 or more over two years is reviewed at all, which is what makes this a big-company risk. The odds rise with its share of your work above 15%. If it walks, its booked shows are cancelled on their terms and it won't book you for two years.
+- **A regional promoter going under.** About once every 14 years somewhere in the country, weighted towards where the market's busy. It takes its area's unpaid invoices and its arena and stadium dates for the next two months. What that costs depends on how much of your work is in that area and whether the invoices were insured.
+- **Late-payment waves** across the industry, now and then.
+- **Rivals** live through the same recalls (losing trucks for the duration) and the same promoter collapses (losing the fees owed to them there).
+
+**Tools** (Policies and the Concentration risk panel):
+- **a mixed fleet**: no model is ever recalled across the whole company;
+- **a fleet service contract** (0.2% of each truck's price a month): recalls turned round in 3 days instead of 12;
+- **standby hire** (a monthly retainer per truck, plus a day rate per stand-in): recalled trucks' shows go out anyway;
+- **framework agreements**: a client worth at least a tenth of your work commits it to you for two years at 5% off, and is a fifth as likely to walk;
+- **credit insurance on invoices** (already there): a collapsed promoter's invoices are paid;
+- **bases in more than one area**: spreads the work so no single promoter's patch holds too much of it.
+
+Damages for a failed show are now capped at the fee (more on cutthroat), as contracts cap liability.
+
+**What the bot shows.** The ambitious company (fast growth on leases, building its office) now hedges: it puts no more than half its fleet on one model, takes the service contract and standby hire as the fleet grows, signs frameworks with its biggest clients and insures a big invoice book. Its unhedged twin does none of that. Both growth bots stop adding trucks while the office can't cope and move to bigger premises first. Results are in docs/balance-report.md (*Concentration and industry events*) and docs/balance-adverse-growth.md.
