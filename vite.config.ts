@@ -14,6 +14,15 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
   },
   plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        // The static game content (real artists, gear, venues, historical firms and people) in its
+        // own chunk, loaded with the game: it changes on its own schedule and keeps the code chunk lean.
+        manualChunks: (id: string) => (id.includes("/src/world/content/") ? "content" : undefined),
+      },
+    },
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
