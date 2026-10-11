@@ -1030,7 +1030,7 @@ The research in PR #24 (docs/research/) showed the old rival model was wrong in 
 - **Continuity.** An acquisition keeps the company: the absorbed firm's kit, crew, trucks, receivables, booked shows and patch go to the buyer. That applies to historical takeovers (Wigwam and Capital into SSE, Showco into Clair, XL Video into PRG) and to the simulation's own mergers. Pivots (Soinua into distribution, Martin Audio into manufacturing) and voluntary closures are not bankruptcies.
 - **The League** shows what each rival runs, who leads it, who owns it, and how it plays, labelled as our reading.
 
-`npm run balance:history` builds the market up layer by layer on the same seeds and reports what each layer changes (docs/balance-history.md). It uses the baseline company, ES 1990 and GB 1995, four seeds, eight years:
+`npm run balance:history` builds the market up layer by layer on the same seeds and reports what each layer changes. CI runs it twice byte-for-byte to prove determinism and publishes the fresh `balance-history` artifact; local runs write `docs/balance-history.{md,json}` for inspection without treating generated output as source. It uses the baseline company, ES 1990 and GB 1995, four seeds, eight years:
 - **Player.** All 32 runs survive. The full model is within run-to-run noise of chronology only: median value 3.0M against 3.2M (ES), 3.9M against 3.7M (GB).
 - **Specialisation.** Rivals now subcontract part of about half their shows in Spain and 70% in Britain, mostly to partners: around 2,000 partner jobs per Spanish run and 3,000 per British run.
 - **Local competition.** It gives back the work that national crowding was taking from rivals in the provinces.
