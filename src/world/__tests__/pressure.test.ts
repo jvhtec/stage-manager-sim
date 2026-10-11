@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest';
 import { createTycoonGame } from '../state';
 import { OVERHEAD, monthlyOverheads } from '../facilities';
 import { PAYMENT_DAYS, factorDiscount } from '../receivables';
-import { monthlyRivalOps, opsOf, playRivalShow, rivalOverhead } from '../rivalOps';
-import { styleOf } from '../leaders';
+import { DRY_HIRE_IDLE, monthlyRivalOps, opsOf, playRivalShow, rivalOverhead } from '../rivalOps';
+import { rivalDryHireIncome } from '../hire';
+import { styleOf } from '../strategies';
 import type { Gig, TycoonState } from '../types';
 
 const game = (): TycoonState => createTycoonGame({ companyName: 'P', color: '#f00', seed: 5, country: 'GB', startYear: 1995 });
@@ -40,8 +41,10 @@ describe('financial pressure', () => {
     const mid = ops.cash;
     const fee = ops.owed![0].amount;
     const overhead = rivalOverhead(ops);
+    // Idle kit earns a little on dry hire each month too (hire.ts).
+    const dry = rivalDryHireIncome(s, ops, r.maxTier, DRY_HIRE_IDLE);
     monthlyRivalOps(s, r, rng(false));
     expect(ops.owed?.length).toBe(0);
-    expect(ops.cash).toBe(mid + fee - overhead);
+    expect(ops.cash).toBe(mid + fee - overhead + dry);
   });
 });
