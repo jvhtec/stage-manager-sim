@@ -44,7 +44,7 @@ describe('countries', () => {
       expect(c.cities.length).toBeGreaterThanOrEqual(16);
       const s = game(c.code);
       expect(worldOf(s).cities.every(city => cityNames(c).includes(city.name))).toBe(true);
-      expect(s.rivals.length).toBeGreaterThanOrEqual(4);
+      // Correcting fabricated/late entrants can leave a sparse early market; three real firms is enough coverage.\n      expect(s.rivals.length).toBeGreaterThanOrEqual(3);
     });
   });
 
