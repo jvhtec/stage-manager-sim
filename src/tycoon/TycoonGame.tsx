@@ -47,7 +47,6 @@ import { CityWindow, DepotListWindow, DepotWindow, TownsWindow, VenueWindow } fr
 import { VehicleListWindow, VehicleWindow } from './ui/fleet';
 import { GigWindow, ShowsWindow } from './ui/shows';
 import { TourWindow } from './ui/tours';
-import { PoliciesWindow } from './ui/policies';
 import { DecisionsWindow } from './ui/decisions';
 import { BriefingWindow } from './ui/briefing';
 import { briefing, attentionCount } from '@/world/advisor';
@@ -58,12 +57,14 @@ const AuctionsWindow = lazy(() => import('./ui/auctions').then(m => ({ default: 
 const WorldMapWindow = lazy(() => import('./ui/worldMap').then(m => ({ default: m.WorldMapWindow })));
 const PlannerWindow = lazy(() => import('./ui/planner').then(m => ({ default: m.PlannerWindow })));
 const RndWindow = lazy(() => import('./ui/rnd').then(m => ({ default: m.RndWindow })));
+const PoliciesWindow = lazy(() => import('./ui/policies').then(m => ({ default: m.PoliciesWindow })));
+const HelpWindow = lazy(() => import('./ui/help').then(m => ({ default: m.HelpWindow })));
 import { CrewWindow } from './ui/crewWindow';
 import { Splash } from './ui/Splash';
 import { Intro, introSkipped } from './ui/Intro';
 import { DEFAULT_COUNTRY } from '@/world/content/countries';
 import { createRandomSeed } from '@/lib/rng';
-import { FinanceWindow, GameOverPanel, HelpWindow, LeagueWindow, NewGameForm, NewsWindow } from './ui/company';
+import { FinanceWindow, GameOverPanel, LeagueWindow, NewGameForm, NewsWindow } from './ui/company';
 import type { WinCtx, WindowKind } from './ui/types';
 import './tycoon.css';
 
@@ -754,7 +755,9 @@ export default function TycoonGame() {
       {showSplash && splashHelp && (
         <div className="tt-overlay" style={{ zIndex: 320 }}>
           <Window title="How to play" x={0} y={0} z={100} onMove={() => undefined} onFocus={() => undefined} onClose={() => setSplashHelp(false)}>
-            <HelpWindow />
+            <Suspense fallback={<div className="tt-dim">Loading…</div>}>
+              <HelpWindow />
+            </Suspense>
           </Window>
         </div>
       )}

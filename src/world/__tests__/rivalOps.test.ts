@@ -5,6 +5,7 @@ import { HOURS_PER_DAY } from '../catalog';
 import { worldOf } from '../mapgen';
 import { monthlyRivalOps, opsOf, playRivalShow, rivalOverhead, rivalQuote, rivalTryTake } from '../rivalOps';
 import { createRng } from '@/lib/rng';
+import { styleOf } from '../leaders';
 import type { Gig, TycoonState } from '../types';
 
 const game = (year = 2005): TycoonState => createTycoonGame({ companyName: 'R', color: '#f00', seed: 7, country: 'GB', startYear: year });
@@ -79,7 +80,7 @@ describe('rivals run the same business', () => {
 
   it('overheads come out every month, and rivals reinvest in what keeps costing them work', () => {
     const s = game();
-    const r = s.rivals[0];
+    const r = s.rivals.find(x => styleOf(x, 2005).label === 'Steady')!;
     const ops = opsOf(s, r);
     ops.cash = 10_000_000;
     ops.record.declined = { trucks: 9 };

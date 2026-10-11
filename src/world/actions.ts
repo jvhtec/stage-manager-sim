@@ -3,6 +3,7 @@
  * `{ state, result }` — a new state on success, the untouched one on failure.
  */
 import { bridgeOffer, takeBridge } from './liquidity';
+import { frameworkBlocker, signFramework } from './risk';
 import { projectCoverage } from './queries';
 import { crossHire, crossHireCost } from './techRider';
 import { askForTerms, hasTerms } from './terms';
@@ -207,7 +208,7 @@ export function assignVehicle(state: TycoonState, vehicleId: string, gigId: stri
   if (gig0.status !== 'booked') return fail(state, 'Book the show first.');
   if (v0.orders.includes(gigId)) return fail(state, `${v0.name} is already on that job.`);
   if (state.hour >= showEndHour(gig0)) return fail(state, 'That show is already over.');
-  if ((v0.recalledUntil ?? 0) > gig0.day * 24) return fail(state, `${v0.name} is recalled by the maker until ${formatDay(state, Math.ceil(v0.recalledUntil! / 24))}.`);
+  if ((v0.recalledUntil ?? 0) > gig0.day * 24 && state.policies.standby !== 'on') return fail(state, `${v0.name} is recalled by the maker until ${formatDay(state, Math.ceil(v0.recalledUntil! / 24))}.`);
   const world = worldOf(state);
   if (!Number.isFinite(roadDistance(world, v0.homeCityId, gig0.cityId))) {
     return fail(state, 'There is no road from this vehicle’s depot to that venue.');
@@ -820,6 +821,15 @@ export function borrow(state: TycoonState): ActionOutcome {
   s.company.loan += step;
   s.company.cash += step;
   return ok(s);
+}
+
+/** A framework agreement with a big client: two years of their work, at a small discount (risk.ts). */
+export function frameworkAgreement(state: TycoonState, act: string): ActionOutcome {
+  const why = frameworkBlocker(state, act);
+  if (why) return fail(state, why);
+  const s = cloneState(state);
+  signFramework(s, act);
+  return ok(s, `Framework agreement signed with ${act}.`);
 }
 
 /** Bridging finance when you're over the overdraft limit: expensive, and once a year (liquidity.ts). */

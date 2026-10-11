@@ -12,6 +12,7 @@ import {
   bookTour,
   borrow,
   bridgingLoan,
+  frameworkAgreement,
   buildAnnex,
   buyGear,
   buyVehicle,
@@ -52,6 +53,8 @@ import { averageCondition, monthlyWorkshopCost, ownedStock, refurbishCost } from
 import { relationOf, rapport } from '../bonds';
 import { checkInvariants } from '../invariants';
 import { officeStretch } from '../office';
+import { exposureOf, fleetExposure, topClient, underFramework } from '../risk';
+import { owed } from '../receivables';
 import { facilitySpec } from '../facilities';
 import { MANAGERS } from '../management';
 import { applyShock, recalled, type ShockKind } from '../shocks';
@@ -81,7 +84,8 @@ export type Feature =
   | 'learn' // read its own post-mortems and fix the biggest recurring cause
   | 'replan' // move shows off trucks that are off the road for days
   | 'maintain' // refurbish worn product lines
-  | 'office'; // hire office staff when the work outgrows the office
+  | 'office' // hire office staff when the work outgrows the office
+  | 'hedge'; // manage concentration: mix the fleet, cover recalls, tie in big clients, insure invoices
 
 export interface Strategy {
   id: string;
@@ -115,7 +119,7 @@ export const STRATEGIES: Record<string, Strategy> = {
     id: 'managed',
     label: 'Managed company',
     blurb: 'The baseline, run properly: pushes for deposits and cancellation clauses on big shows (or any show when cash is at risk), keeps feuding crew apart, hires department heads as it grows, acts on the cash forecast, and reads its own post-mortems to fix what keeps going wrong.',
-    features: [...CORE, 'riders', 'terms', 'crew', 'heads', 'cash', 'learn'],
+    features: [...CORE, 'riders', 'terms', 'crew', 'heads', 'cash', 'learn', 'hedge'],
     fixLimit: 0.2,
     minFee: 800,
     policies: { insurance: 'basic', training: 'courses' },
@@ -124,7 +128,7 @@ export const STRATEGIES: Record<string, Strategy> = {
     id: 'premium',
     label: 'Premium house',
     blurb: 'Managed, plus a full workshop, top pay, one brand per department, and only shows worth having.',
-    features: [...CORE, 'riders', 'terms', 'crew', 'heads', 'cash', 'standardise', 'learn'],
+    features: [...CORE, 'riders', 'terms', 'crew', 'heads', 'cash', 'standardise', 'learn', 'hedge'],
     fixLimit: 0.3,
     minFee: 2500,
     policies: { insurance: 'full', training: 'courses', workshop: 'full', pay: 'high' },
@@ -143,6 +147,16 @@ export const STRATEGIES: Record<string, Strategy> = {
     id: 'ambitious',
     label: 'Ambitious',
     blurb: 'Grows as fast as the expansionist — borrowing and leasing a truck whenever every truck is busy — but builds the office and hires department heads as it goes.',
+    features: ['gear', 'invest', 'tours', 'merch', 'annex', 'train', 'invoice', 'sponsor', 'haggle', 'maintain', 'replan', 'office', 'riders', 'terms', 'crew', 'heads', 'cash', 'learn', 'hedge'],
+    fixLimit: 0.2,
+    minFee: 800,
+    policies: { insurance: 'basic', training: 'courses' },
+    growth: { cashMultiple: 1.2, borrow: true, lease: true, maxFleet: 30 },
+  },
+  unhedged: {
+    id: 'unhedged',
+    label: 'Ambitious, unhedged',
+    blurb: 'The ambitious company without any of the concentration tools: one truck model, no service contract or standby hire, no framework agreements, invoices uninsured.',
     features: ['gear', 'invest', 'tours', 'merch', 'annex', 'train', 'invoice', 'sponsor', 'haggle', 'maintain', 'replan', 'office', 'riders', 'terms', 'crew', 'heads', 'cash', 'learn'],
     fixLimit: 0.2,
     minFee: 800,
@@ -227,6 +241,9 @@ export interface BotReport {
   kitCondition: { average: number; end: number };
   /** Nights by outcome band, and what clients docked (shaky or bad nights, late doors) or claimed in damages (failed shows). */
   contracts: { outcomes: Partial<Record<string, number>>; docked: number; damages: number };
+  /** Industry events that hit the company (industry.ts), and its concentration at the end (risk.ts). */
+  industry: { recalls: number; trucksRecalled: number; clientWalks: number; collapses: number; lostInvoices: number; lostBookings: number; waves: number };
+  exposure: { fleetShare: number; fleetCount: number; clientShare: number; areaShare: number; covered: string[] };
   /** How far the work outgrew the office (office.ts): average and worst monthly stretch, and office staff at the end. */
   office: { stretch: number; peak: number; staff: number };
   /** The overdraft over the run (liquidity.ts): days in it, days over the limit, how often the bank demanded its money or withdrew the overdraft. */
@@ -236,7 +253,7 @@ export interface BotReport {
   monthsOverdrawn: number;
   lowestCash: number;
   forecastWarnings: number;
-  bot: { termsAsked: number; termsWon: number; crossHires: number; fixes: number; crewSplits: number; heads: string[]; lessons: string[]; refurbished: number; borrowed: number; factoredMonths: number; frozenMonths: number; replanned: number; bridged: number; soldTrucks: number };
+  bot: { termsAsked: number; termsWon: number; crossHires: number; fixes: number; crewSplits: number; heads: string[]; lessons: string[]; refurbished: number; borrowed: number; factoredMonths: number; frozenMonths: number; replanned: number; bridged: number; soldTrucks: number; frameworks: number };
   rivals: { alive: number; gone: number; shows: number; failed: number; avgQuality: number; crossHires: number; fixes: number; declined: Record<string, number>; cashNegative: number };
   invariantViolations: string[];
   /** The company month by month. */
@@ -280,7 +297,7 @@ export function runBot(run: BotRun): BotReport {
   const world = worldOf(s);
   for (const [k, v] of Object.entries(strategy.policies)) s = ok(s, setPolicy(s, k as S, v as S));
   s = ok(s, setPolicy(s, 'rehearsal', 'auto'));
-  const bot = { termsAsked: 0, termsWon: 0, crossHires: 0, fixes: 0, crewSplits: 0, heads: [] as string[], lessons: [] as string[], refurbished: 0, borrowed: 0, factoredMonths: 0, frozenMonths: 0, replanned: 0, bridged: 0, soldTrucks: 0 };
+  const bot = { termsAsked: 0, termsWon: 0, crossHires: 0, fixes: 0, crewSplits: 0, heads: [] as string[], lessons: [] as string[], refurbished: 0, borrowed: 0, factoredMonths: 0, frozenMonths: 0, replanned: 0, bridged: 0, soldTrucks: 0, frameworks: 0 };
   const violations: string[] = [];
   let monthsOverdrawn = 0;
   let lowestCash = Infinity;
@@ -299,7 +316,7 @@ export function runBot(run: BotRun): BotReport {
     const today = dayOf(s.hour);
     lowestCash = Math.min(lowestCash, s.company.cash);
     for (const sh of shocks) if (sh.day === day) shockLog.push({ kind: sh.kind, day, what: applyShock(s, sh.kind) });
-    if (day % 30 === 0) series.push({ day, year: yearOf(s, s.hour), cash: Math.round(s.company.cash), value: companyValue(s), reputation: Math.round(s.company.reputation * 10) / 10, shows: s.stats.showsPlayed, income: Math.round(Object.values(s.ledger).reduce((n: number, y: S) => n + (y.shows ?? 0), 0)) });
+    if (day % 30 === 0) series.push({ day, year: yearOf(s, s.hour), cash: Math.round(s.company.cash), value: companyValue(s), reputation: Math.round(s.company.reputation * 10) / 10, shows: s.stats.showsPlayed, income: Math.round(Object.values(s.ledger).reduce<number>((n, y: S) => n + Number(y.shows ?? 0), 0)) });
     if (day % 30 === 0) conditions.push(averageCondition(s, ownedStock(s)));
     if (day % 30 === 0) stretches.push(officeStretch(s));
     if (day % 30 === 0) s.vehicles.forEach((x: S) => x.owner === 'player' && reliabilities.push(x.reliability));
@@ -452,7 +469,7 @@ export function runBot(run: BotRun): BotReport {
           if (s.company.loan > before) bot.borrowed += s.company.loan - before;
         }
       } else {
-        if (s.policies.invoicing === 'factor') s = ok(s, setPolicy(s, 'invoicing', 'hold'));
+        if (s.policies.invoicing === 'factor') s = ok(s, setPolicy(s, 'invoicing', on('hedge') && owed(s) > 60000 ? 'insure' : 'hold'));
         if (s.company.loan > 0 && f.lowest.low > s.company.loan * 2) s = ok(s, repay(s));
       }
     }
@@ -468,9 +485,18 @@ export function runBot(run: BotRun): BotReport {
       if (on('invest') && !frozen) {
         const busy = mine.filter((x: S) => x.orders.length > 0).length;
         const year = yearOf(s, s.hour);
-        const model = VEHICLE_MODELS.filter(m => m.introYear <= year && m.kind !== 'bus' && m.kind !== 'semi').sort((a, b) => b.gearCapacity - a.gearCapacity)[0];
+        const models = VEHICLE_MODELS.filter(m => m.introYear <= year && m.kind !== 'bus' && m.kind !== 'semi').sort((a, b) => b.gearCapacity - a.gearCapacity);
+        // A hedger doesn't put more than half the fleet on one model.
+        const fx = fleetExposure(s);
+        const model = on('hedge') && fx.size >= 4 && fx.share >= 0.5 ? (models.find(m => m.id !== fx.modelId) ?? models[0]) : models[0];
         const growth = strategy.growth ?? STEADY_GROWTH;
-        if (model && busy >= mine.length && mine.length < growth.maxFleet) {
+        // Someone building the office doesn't add trucks faster than it can run them: it moves to bigger premises first.
+        const officeFull = on('office') && officeStretch(s) > 0.25;
+        if (officeFull) {
+          const next = nextUpgrade(depot);
+          if (next && s.company.cash > next.cost * 1.5) s = ok(s, upgradeDepot(s, depot.id));
+        }
+        if (model && !officeFull && busy >= mine.length && mine.length < growth.maxFleet) {
           if (s.company.cash > model.price * growth.cashMultiple) s = ok(s, buyVehicle(s, depot.id, model.id));
           else if (growth.lease) s = ok(s, leaseVehicle(s, depot.id, model.id));
           else if (growth.borrow && s.company.cash < model.price * growth.cashMultiple) {
@@ -481,9 +507,12 @@ export function runBot(run: BotRun): BotReport {
         const fleetNow = s.vehicles.filter((x: S) => x.owner === 'player').length;
         if (s.people.length < fleetNow * 2 && s.company.cash > 20000) s = ok(s, hireCrew(s, depot.id, 2));
         // The office: one more pair of hands whenever the work has outgrown it.
-        if (on('office') && officeStretch(s) > 0) {
+        for (let i = 0; i < 3 && on('office') && officeStretch(s) > 0; i++) {
           const room = s.depots.find((d: S) => d.staff.office < facilitySpec(d).maxStaff.office);
-          if (room) s = ok(s, hireStaff(s, room.id, 'office'));
+          if (!room) break;
+          const before = s;
+          s = ok(s, hireStaff(s, room.id, 'office'));
+          if (s === before) break;
         }
         const next = nextUpgrade(depot);
         if (next && s.company.cash > next.cost * 2.5 && rep >= next.spec.minReputation) s = ok(s, upgradeDepot(s, depot.id));
@@ -527,6 +556,19 @@ export function runBot(run: BotRun): BotReport {
         }
       }
       if (on('invoice') && !on('cash')) s = ok(s, setPolicy(s, 'invoicing', s.company.cash < 60000 ? 'factor' : 'hold'));
+      // Concentration: cover a big single-model fleet, tie in a big client, insure a big book of invoices.
+      if (on('hedge')) {
+        const fx = fleetExposure(s);
+        if (fx.count >= 6 && s.policies.fleetCover !== 'priority') s = ok(s, setPolicy(s, 'fleetCover', 'priority'));
+        if (fx.size >= 10 && s.policies.standby !== 'on') s = ok(s, setPolicy(s, 'standby', 'on'));
+        const top = topClient(s);
+        if (top && top.share >= 0.2 && !underFramework(s, top.act)) {
+          const before = s;
+          s = ok(s, frameworkAgreement(s, top.act));
+          if (s !== before) bot.frameworks++;
+        }
+        if (s.policies.invoicing === 'hold' && owed(s) > 60000) s = ok(s, setPolicy(s, 'invoicing', 'insure'));
+      }
       // Department heads, once the business can carry them (a year's salary in the bank, ten times over).
       if (on('heads') && !frozen) {
         const showsPerMonth = s.stats.showsPlayed / Math.max(1, day / 30);
@@ -585,6 +627,12 @@ export function runBot(run: BotRun): BotReport {
     incidents: s.incidentTally ?? { kinds: {}, causes: {}, main: {} },
     bans: Object.keys(s.blacklist ?? {}).length,
     kitCondition: { average: Math.round(conditions.reduce((a, b) => a + b, 0) / Math.max(1, conditions.length)), end: Math.round(averageCondition(s, ownedStock(s))) },
+    industry: { ...(s.stats.industry ?? { recalls: 0, trucksRecalled: 0, clientWalks: 0, collapses: 0, lostInvoices: 0, lostBookings: 0, waves: 0 }) },
+    exposure: (() => {
+      const e = exposureOf(s, world);
+      const covered = [s.policies.fleetCover === 'priority' ? 'service contract' : '', s.policies.standby === 'on' ? 'standby' : '', s.policies.invoicing === 'insure' ? 'credit insurance' : '', bot.frameworks ? `${bot.frameworks} framework${bot.frameworks === 1 ? '' : 's'}` : ''].filter(Boolean);
+      return { fleetShare: Math.round(e.fleet.share * 100) / 100, fleetCount: e.fleet.count, clientShare: Math.round(e.client.share * 100) / 100, areaShare: Math.round(e.area.share * 100) / 100, covered };
+    })(),
     office: {
       stretch: Math.round((stretches.reduce((a, b) => a + b, 0) / Math.max(1, stretches.length)) * 100) / 100,
       peak: Math.round(Math.max(0, ...stretches) * 100) / 100,

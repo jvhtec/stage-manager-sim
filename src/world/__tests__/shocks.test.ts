@@ -36,7 +36,7 @@ describe('shocks', () => {
       for (let i = 0; i < 200; i++) {
         const s = game();
         if (wave) startShock(s, 'late-payers');
-        s.receivables.push({ id: 'i', gigId: 'g', act: 'X', amount: 1000, dueDay: dayOf(s.hour), tier: 3 });
+        s.receivables.push({ id: 'i', gigId: 'g', act: 'X', amount: 1000, dueDay: dayOf(s.hour), tier: 3, insured: false });
         const r = { next: () => 0.5, chance: (p: number) => (i + 0.5) / 200 < p, nextInt: () => 0, pick: <T,>(a: T[]) => a[0], nextRange: (a: number) => a } as never;
         dailyReceivables(s, r);
         if (s.receivables.length) late++;

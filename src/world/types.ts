@@ -633,6 +633,8 @@ export interface Invoice {
   dueDay: number;
   tier: number;
   insured: boolean;
+  /** Where the show was (for a regional promoter going under, industry.ts). */
+  cityId?: string;
 }
 
 export type MerchLevel = 'small' | 'medium' | 'large';
@@ -779,7 +781,9 @@ export interface RivalOps {
   condition: number;
   month: { income: number; costs: number };
   /** Invoices promoters haven't paid yet. */
-  owed?: { day: number; amount: number }[];
+  owed?: { day: number; amount: number; cityId?: string }[];
+  /** Trucks off the road after a recall, until a day (industry.ts). */
+  down?: { until: number; trucks: number };
   record: { shows: number; failed: number; late?: number; kitFailures?: number; crossHires: number; fixes: number; cancelled: number; declined: Partial<Record<'kit' | 'crew' | 'trucks' | 'rider' | 'room', number>> };
 }
 
@@ -801,6 +805,8 @@ export interface Rival {
   lastShows?: number;
   /** Its operation: kit, crew, trucks, books (rivalOps.ts). */
   ops?: RivalOps;
+  /** Name of the boss we last announced (leaders.ts), to spot a change at the top. */
+  boss?: string;
 }
 
 export type NewsTone = 'info' | 'good' | 'bad' | 'big';
@@ -846,6 +852,10 @@ export interface Policies {
   rehearsal: 'manual' | 'auto';
   /** What to do with promoters' invoices (receivables.ts). */
   invoicing: InvoicingPolicy;
+  /** Fleet service contract: recalls turned round in days (risk.ts). */
+  fleetCover: 'none' | 'priority';
+  /** Standby hire: stand-in trucks when yours are grounded (risk.ts). */
+  standby: 'off' | 'on';
 }
 
 export type Difficulty = 'easy' | 'normal' | 'hard';
@@ -1044,6 +1054,8 @@ export interface TycoonState {
   clientFees?: Record<number, Record<string, number>>;
   /** The last day you did good work at each venue tier (reputation.ts). */
   lastGoodTier?: Record<number, number>;
+  /** Clients under a framework agreement, until a day (risk.ts). */
+  frameworks?: Record<string, number>;
   /** Downturns and late-payment waves running now or later (shocks.ts). */
   shocks?: Shock[];
   /** Days you broke each act's rider. */
@@ -1074,7 +1086,7 @@ export interface TycoonState {
   artistRelations: Record<string, number>;
   negativeMonths: number;
   nextId: number;
-  stats: { showsPlayed: number; showsFailed: number; peakCash: number; rivalsBought?: number; /** Cash at the start, for the money invariant (invariants.ts). */ startCash?: number; /** Crew who quit, burnt out or were poached. */ crewLost?: number; /** Kilometres the fleet has driven. */ fleetKm?: number; /** Roadside breakdowns. */ breakdowns?: number; /** Nights by outcome band, and what clients docked or claimed under contracts (outcomes.ts). */ outcomes?: Partial<Record<'triumph' | 'solid' | 'shaky' | 'bad' | 'failed', number>>; docked?: number; damages?: number };
+  stats: { showsPlayed: number; showsFailed: number; peakCash: number; rivalsBought?: number; /** Cash at the start, for the money invariant (invariants.ts). */ startCash?: number; /** Crew who quit, burnt out or were poached. */ crewLost?: number; /** Kilometres the fleet has driven. */ fleetKm?: number; /** Roadside breakdowns. */ breakdowns?: number; /** Industry events that hit you (industry.ts). */ industry?: { recalls: number; trucksRecalled: number; clientWalks: number; collapses: number; lostInvoices: number; lostBookings: number; waves: number }; /** Nights by outcome band, and what clients docked or claimed under contracts (outcomes.ts). */ outcomes?: Partial<Record<'triumph' | 'solid' | 'shaky' | 'bad' | 'failed', number>>; docked?: number; damages?: number };
   /** Chosen at the start (scenario.ts). */
   difficulty?: Difficulty;
   goal?: GoalId;

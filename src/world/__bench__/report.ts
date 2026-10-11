@@ -113,6 +113,9 @@ export function explain(r: BotReport): string[] {
   const nights = Object.values(o).reduce((a: number, b) => a + (b ?? 0), 0) || 1;
   out.push(`Nights: ${pct((o.triumph ?? 0) / nights)} triumphs, ${pct((o.solid ?? 0) / nights)} solid, ${pct((o.shaky ?? 0) / nights)} shaky, ${pct((o.bad ?? 0) / nights)} bad, ${pct((o.failed ?? 0) / nights)} failed; clients docked ${k(r.contracts.docked)} and claimed ${k(r.contracts.damages)} in damages (${pct((r.contracts.docked + r.contracts.damages) / Math.max(1, r.revenue))} of revenue).`);
   if (r.office.peak > 0) out.push(`Office: ${r.office.staff} office staff at the end; the work outgrew the office by ${pct(r.office.stretch)} on average and ${pct(r.office.peak)} at worst.`);
+  const ind = r.industry;
+  if (ind && (ind.recalls || ind.clientWalks || ind.lostInvoices || ind.lostBookings || ind.waves))
+    out.push(`Industry: ${ind.recalls} recall${ind.recalls === 1 ? '' : 's'} grounding ${ind.trucksRecalled} truck${ind.trucksRecalled === 1 ? '' : 's'}, ${ind.clientWalks} big account${ind.clientWalks === 1 ? '' : 's'} lost, ${k(ind.lostInvoices)} of invoices and ${k(ind.lostBookings)} of bookings lost to promoters going under, ${ind.waves} late-payment wave${ind.waves === 1 ? '' : 's'}; ended with ${pct(r.exposure.fleetShare)} of the fleet on one model and ${pct(r.exposure.clientShare)} of the work from one client${r.exposure.covered.length ? ` (${r.exposure.covered.join(', ')})` : ''}.`);
   const lq = r.liquidity;
   if (lq.daysOverdrawn) out.push(`Overdraft: ${lq.daysOverdrawn} days in it, ${lq.daysInBreach} over the limit (${lq.breaches} time${lq.breaches === 1 ? '' : 's'})${lq.demands ? `, ${lq.demands} demand${lq.demands === 1 ? '' : 's'} from the bank` : ''}${lq.withdrawn ? `, cut ${lq.withdrawn}×` : ''}${lq.bridges ? `, ${lq.bridges} bridging loan${lq.bridges === 1 ? '' : 's'}` : ''}${r.bot.soldTrucks ? `, sold ${r.bot.soldTrucks} truck${r.bot.soldTrucks === 1 ? '' : 's'} to raise cash` : ''}.`);
   // Why nights went wrong.
@@ -173,6 +176,26 @@ function crisisTable(reports: BotReport[], strategies: Strategy[]): string[] {
     const l = r.liquidity;
     const outcome = !r.survived ? `went under after ${r.yearsRun} years` : l.endOverLimit ? 'still over the limit at the end' : l.breaches ? 'recovered: back inside the limit' : 'no crisis';
     lines.push(`| ${label(r.strategy)} | ${r.seed} | ${l.breaches} | ${l.daysInBreach} | ${l.breaches ? Math.round(l.daysInBreach / l.breaches) : 0} days | ${l.demands} | ${l.withdrawn} | ${l.bridges} | ${r.bot.soldTrucks} | ${outcome} |`);
+  });
+  return [...lines, ''];
+}
+
+/** Exposure at the end of each run and the industry events that hit it (risk.ts, industry.ts). */
+function concentrationTable(reports: BotReport[], strategies: Strategy[]): string[] {
+  const lines = [
+    '**Concentration and industry events** (medians; events summed over the runs)',
+    '',
+    '| Strategy | Fleet on one model | Biggest client | Busiest area | Recalls (trucks grounded) | Big accounts lost | Promoter collapses that hit | Lost to events | Cover at the end |',
+    '|---|---|---|---|---|---|---|---|---|',
+  ];
+  strategies.forEach(st => {
+    const rs = reports.filter(r => r.strategy === st.id && r.industry);
+    if (!rs.length) return;
+    const sum = (f: (r: BotReport) => number) => rs.reduce((a, r) => a + f(r), 0);
+    const covers = [...new Set(rs.flatMap(r => r.exposure.covered.map(c => c.replace(/^\d+ frameworks?$/, 'frameworks'))))];
+    lines.push(
+      `| ${st.label} | ${pct(median(rs.map(r => r.exposure.fleetShare)))} (${median(rs.map(r => r.exposure.fleetCount))} trucks) | ${pct(median(rs.map(r => r.exposure.clientShare)))} | ${pct(median(rs.map(r => r.exposure.areaShare)))} | ${sum(r => r.industry.recalls)} (${sum(r => r.industry.trucksRecalled)}) | ${sum(r => r.industry.clientWalks)} | ${rs.filter(r => r.industry.lostInvoices + r.industry.lostBookings > 0).length} of ${rs.length} runs | ${pct(median(rs.map(r => (r.industry.lostInvoices + r.industry.lostBookings) / Math.max(1, r.revenue))))} | ${covers.join(', ') || 'none'} |`,
+    );
   });
   return [...lines, ''];
 }
@@ -239,6 +262,7 @@ export function renderReport(reports: BotReport[], strategies: Strategy[], meta:
     lines.push('');
     lines.push(...strategyTable(cohort, strategies, k));
     lines.push(...crisisTable(cohort, strategies));
+    lines.push(...concentrationTable(cohort, strategies));
     lines.push(...noiseNote(cohort, strategies, k));
   });
   lines.push('## Why each run went the way it did');

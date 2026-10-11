@@ -15,6 +15,8 @@ import { expectedQuality, productsAvailableIn } from './content/gear';
 import { dateOfDay, dayOf, yearOf } from './core';
 import { shockFactors } from './market';
 import { OVERHEAD } from './facilities';
+import { rivalTrucksToday } from './industry';
+import { styleOf } from './leaders';
 import { DEFAULT_RISK, LATE_RISK, LATE_SLIP_MIN, LATE_SLIP_SPREAD, paymentDays } from './receivables';
 import { showPayout } from './gate';
 import { contractDock, damagesFor, outcomeOf } from './outcomes';
@@ -96,10 +98,11 @@ export function rivalQuote(s: TycoonState, world: WorldMap, r: Rival, gig: Gig):
     if (gig.needs[d] && held + gig.needs[d] > ops.kit[d]) return { ok: false, reason: 'kit', cost: 0, crossHires: 0, fixes: 0 };
   }
   if (busy.reduce((n, g) => n + g.crewNeeded, 0) + gig.crewNeeded > ops.crew) return { ok: false, reason: 'crew', cost: 0, crossHires: 0, fixes: 0 };
-  if (busy.length + 1 > ops.trucks) return { ok: false, reason: 'trucks', cost: 0, crossHires: 0, fixes: 0 };
+  if (busy.length + 1 > rivalTrucksToday(s, ops)) return { ok: false, reason: 'trucks', cost: 0, crossHires: 0, fixes: 0 };
   const year = dateOfDay(s, gig.day).getUTCFullYear();
   let cost = 0;
   let crossHires = 0;
+  const limit = gig.fee * RIVAL_FIX_LIMIT * styleOf(r, year).fix;
   // The rider: a desk with the inputs, the show-file family, an approved PA — or cross-hire them.
   const spec = gig.techSpec;
   if (spec) {
@@ -117,12 +120,12 @@ export function rivalQuote(s: TycoonState, world: WorldMap, r: Rival, gig: Gig):
       crossHires += 1;
     }
   }
-  if (cost > gig.fee * RIVAL_FIX_LIMIT) return { ok: false, reason: 'rider', cost, crossHires, fixes: 0 };
+  if (cost > limit) return { ok: false, reason: 'rider', cost, crossHires, fixes: 0 };
   // The room: the rig they'd bring, in the truck they'd send.
   const truck = gig.tier >= 4 ? 'artic-40' : gig.tier === 3 ? 'rigid-7t' : 'luton-box';
   const problems = productionProblems(world, gig, typicalKit(gig, year), [{ modelId: truck }]);
   const fixCost = problems.reduce((n, p) => n + p.fixCost, 0);
-  if (cost + fixCost > gig.fee * RIVAL_FIX_LIMIT) return { ok: false, reason: 'room', cost: cost + fixCost, crossHires, fixes: problems.length };
+  if (cost + fixCost > limit) return { ok: false, reason: 'room', cost: cost + fixCost, crossHires, fixes: problems.length };
   return { ok: true, cost: cost + fixCost, crossHires, fixes: problems.length };
 }
 
@@ -177,7 +180,7 @@ export function playRivalShow(s: TycoonState, r: Rival, gig: Gig, rng: Rng): num
     const tier = Math.max(0, Math.min(4, gig.tier));
     const wave = shockFactors(s, gig.day).late;
     const slip = rng.chance(Math.min(0.9, LATE_RISK[tier] * wave)) ? LATE_SLIP_MIN + rng.nextInt(Math.round(LATE_SLIP_SPREAD * Math.min(2, wave)) + 1) : 0;
-    if (!rng.chance(DEFAULT_RISK[tier])) (ops.owed ??= []).push({ day: gig.day + wait + slip, amount: payout });
+    if (!rng.chance(DEFAULT_RISK[tier])) (ops.owed ??= []).push({ day: gig.day + wait + slip, amount: payout, cityId: gig.cityId });
     ops.cash -= cost;
   } else ops.cash += payout - cost;
   ops.month.income += Math.max(0, payout);
@@ -232,10 +235,11 @@ export function monthlyRivalOps(s: TycoonState, r: Rival, rng: Rng): number {
   const profit = ops.month.income - ops.month.costs;
   ops.month = { income: 0, costs: 0 };
   // Reinvest when there's a cushion: in what turned work away most, else in keeping the kit current.
-  if (ops.cash > overhead * 3) {
+  const style = styleOf(r, year);
+  if (ops.cash > overhead * style.reinvest) {
     const reasons = Object.entries(ops.record.declined).sort((a, b) => b[1] - a[1]);
     const top = reasons[0]?.[0] as DeclineReason | undefined;
-    const target = expectedQuality(r.maxTier, year);
+    const target = expectedQuality(r.maxTier, year) + style.quality;
     let spend = 0;
     if (ops.quality < target - 1) {
       spend = DEPTS.reduce((n, d) => n + ops.kit[d], 0) * 900;

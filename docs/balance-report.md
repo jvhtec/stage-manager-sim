@@ -8,66 +8,94 @@ Each country is reported on its own, in its own money: a British company is valu
 
 | Strategy | Survived | Median value | Range | Margin | Avg quality | Failed shows | Bad nights | Docked | Damages | Days in overdraft | Days over the limit | Office stretch (avg / peak) | Breakdowns /100k km | Crew lost |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Baseline operator | 4/4 | £5.3M | £5.1M – £5.8M | 26% | 96% | 0% | 0% | 1% | 0% | 0 | 0 | 1% / 20% | 1.35 | 0 |
-| Managed company | 4/4 | £5.6M | £5.2M – £6.8M | 27% | 98% | 0% | 0% | 1% | 0% | 0 | 0 | 1% / 15% | 1.28 | 0 |
-| Premium house | 4/4 | £4.4M | £3.5M – £5.2M | 21% | 95% | 0% | 0% | 1% | 0% | 0 | 0 | 1% / 30% | 1.24 | 0 |
-| Expansionist | 0/4 | -£327k | -£353k – -£259k | -20% | 56% | 1% | 5% | 11% | 1% | 136 | 135.5 | 330% / 488% | 1.29 | 2.5 |
-| Ambitious | 4/4 | £8.8M | £6.0M – £12M | 20% | 96% | 0% | 0% | 2% | 0% | 0 | 0 | 39% / 211% | 1.34 | 0 |
-| Lean operator | 3/4 | -£17k | -£86k – £182k | -8% | 57% | 1% | 12% | 11% | 1% | 53.5 | 53.5 | 61% / 150% | 1.67 | 26.5 |
-| Corner-cutter | 3/4 | £154k | £148k – £285k | 0% | 59% | 1% | 9% | 11% | 1% | 144.5 | 0 | 45% / 129% | 1.95 | 6.5 |
+| Baseline operator | 4/4 | £4.2M | £3.2M – £6.3M | 23% | 98% | 1% | 0% | 1% | 0% | 0 | 0 | 1% / 30% | 1.33 | 0 |
+| Managed company | 4/4 | £6.0M | £5.2M – £6.1M | 26% | 98% | 0% | 0% | 1% | 0% | 0 | 0 | 1% / 30% | 1.99 | 0 |
+| Premium house | 4/4 | £4.8M | £4.7M – £5.4M | 24% | 97% | 0% | 0% | 0% | 0% | 0 | 0 | 1% / 33% | 1.71 | 0 |
+| Expansionist | 0/4 | -£355k | -£384k – -£306k | -21% | 58% | 1% | 5% | 11% | 1% | 145.5 | 145.5 | 321% / 488% | 1.27 | 4 |
+| Ambitious | 4/4 | £11M | £10M – £14M | 25% | 97% | 0% | 0% | 1% | 0% | 0 | 0 | 11% / 36% | 1.77 | 0 |
+| Ambitious, unhedged | 4/4 | £3.7M | £1.7M – £7.3M | 9% | 96% | 1% | 0% | 1% | 0% | 0 | 0 | 10% / 36% | 1.50 | 0 |
+| Lean operator | 3/4 | £160k | -£184k – £267k | -1% | 61% | 1% | 7% | 10% | 1% | 0 | 0 | 48% / 132% | 1.19 | 7 |
+| Corner-cutter | 3/4 | £177k | £149k – £259k | 1% | 64% | 0% | 9% | 9% | 0% | 0 | 0 | 24% / 94% | 2.20 | 8 |
 
-**Crises and recovery.** 6 of 28 runs went under; 7 went over the overdraft limit at least once.
+**Crises and recovery.** 6 of 32 runs went under; 6 went over the overdraft limit at least once.
 
 | Strategy | Seed | Over-limit crises | Days over the limit | Average crisis | Bank demands | Overdraft cut | Bridging loans | Trucks sold | Outcome |
 |---|---|---|---|---|---|---|---|---|---|
-| Expansionist | 3 | 3 | 108 | 36 days | 3 | 1 | 1 | 7 | went under after 4.5 years |
+| Expansionist | 3 | 5 | 151 | 30 days | 4 | 1 | 1 | 8 | went under after 3.6 years |
 | Expansionist | 4 | 3 | 109 | 36 days | 3 | 1 | 1 | 7 | went under after 3.4 years |
-| Expansionist | 5 | 7 | 175 | 25 days | 5 | 1 | 1 | 13 | went under after 3.7 years |
-| Expansionist | 6 | 9 | 162 | 18 days | 4 | 1 | 2 | 10 | went under after 3.2 years |
-| Lean operator | 3 | 20 | 145 | 7 days | 2 | 1 | 2 | 2 | recovered: back inside the limit |
-| Lean operator | 4 | 4 | 107 | 27 days | 3 | 1 | 1 | 2 | went under after 6.5 years |
-| Corner-cutter | 4 | 1 | 44 | 44 days | 1 | 2 | 0 | 0 | went under after 6.3 years |
+| Expansionist | 5 | 7 | 200 | 29 days | 6 | 1 | 1 | 13 | went under after 3.8 years |
+| Expansionist | 6 | 5 | 140 | 28 days | 4 | 1 | 1 | 14 | went under after 3 years |
+| Lean operator | 4 | 12 | 253 | 21 days | 6 | 2 | 2 | 5 | went under after 7.6 years |
+| Corner-cutter | 4 | 1 | 44 | 44 days | 1 | 1 | 0 | 0 | went under after 6.2 years |
+
+**Concentration and industry events** (medians; events summed over the runs)
+
+| Strategy | Fleet on one model | Biggest client | Busiest area | Recalls (trucks grounded) | Big accounts lost | Promoter collapses that hit | Lost to events | Cover at the end |
+|---|---|---|---|---|---|---|---|---|
+| Baseline operator | 83% (10 trucks) | 18% | 88% | 3 (30) | 2 | 1 of 4 runs | 0% | none |
+| Managed company | 50% (6 trucks) | 28% | 89% | 7 (34) | 1 | 0 of 4 runs | 0% | service contract, standby, credit insurance, frameworks |
+| Premium house | 50% (6 trucks) | 19% | 87% | 7 (34) | 1 | 1 of 4 runs | 0% | service contract, standby, credit insurance, frameworks |
+| Expansionist | 80% (3.5 trucks) | 33% | 81% | 1 (14) | 3 | 0 of 4 runs | 0% | none |
+| Ambitious | 50% (15 trucks) | 20% | 88% | 13 (179) | 0 | 2 of 4 runs | 0% | service contract, standby, credit insurance, frameworks |
+| Ambitious, unhedged | 93% (28 trucks) | 19% | 87% | 10 (251) | 3 | 3 of 4 runs | 1% | none |
+| Lean operator | 55% (2 trucks) | 14% | 82% | 1 (5) | 4 | 0 of 4 runs | 0% | none |
+| Corner-cutter | 60% (3 trucks) | 12% | 82% | 0 (0) | 3 | 1 of 4 runs | 0% | none |
 
 **Is the ranking real?**
 
-- **Ambitious** beats **Managed company** by £3.2M — more than the run-to-run spread (±£3.1M).
-- Managed company vs Baseline operator: £273k apart, inside the run-to-run spread (±£774k) — not a real difference on these runs.
-- **Baseline operator** beats **Premium house** by £991k — more than the run-to-run spread (±£871k).
-- **Premium house** beats **Corner-cutter** by £4.2M — more than the run-to-run spread (±£871k).
-- **Corner-cutter** beats **Lean operator** by £171k — more than the run-to-run spread (±£134k).
-- **Lean operator** beats **Expansionist** by £310k — more than the run-to-run spread (±£134k).
+- **Ambitious** beats **Managed company** by £5.2M — more than the run-to-run spread (±£1.8M).
+- **Managed company** beats **Premium house** by £1.2M — more than the run-to-run spread (±£457k).
+- Premium house vs Baseline operator: £587k apart, inside the run-to-run spread (±£1.6M) — not a real difference on these runs.
+- Baseline operator vs Ambitious, unhedged: £493k apart, inside the run-to-run spread (±£2.8M) — not a real difference on these runs.
+- **Ambitious, unhedged** beats **Corner-cutter** by £3.5M — more than the run-to-run spread (±£2.8M).
+- Corner-cutter vs Lean operator: £17k apart, inside the run-to-run spread (±£226k) — not a real difference on these runs.
+- **Lean operator** beats **Expansionist** by £515k — more than the run-to-run spread (±£226k).
 
 ## Spain from 1990 — money in pts (game units ×166.386; the euro arrives in 2002)
 
 | Strategy | Survived | Median value | Range | Margin | Avg quality | Failed shows | Bad nights | Docked | Damages | Days in overdraft | Days over the limit | Office stretch (avg / peak) | Breakdowns /100k km | Crew lost |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| Baseline operator | 4/4 | 513M pts | 233M pts – 698M pts | 21% | 96% | 0% | 0% | 1% | 0% | 4.5 | 0 | 1% / 30% | 1.49 | 0 |
-| Managed company | 4/4 | 408M pts | 101M pts – 823M pts | 20% | 97% | 0% | 0% | 1% | 0% | 0 | 0 | 1% / 30% | 1.63 | 0 |
-| Premium house | 4/4 | 86M pts | 45M pts – 247M pts | 1% | 91% | 0% | 0% | 0% | 0% | 1 | 0 | 0% / 2% | 2.11 | 0 |
-| Expansionist | 0/4 | -40M pts | -52M pts – -20M pts | -21% | 69% | 1% | 5% | 11% | 1% | 105.5 | 105.5 | 268% / 413% | 1.67 | 2 |
-| Ambitious | 4/4 | 1668M pts | 1468M pts – 1879M pts | 24% | 96% | 0% | 0% | 1% | 0% | 0 | 0 | 41% / 178% | 1.52 | 0 |
-| Lean operator | 4/4 | 20M pts | -179k pts – 26M pts | 1% | 61% | 0% | 5% | 8% | 0% | 0 | 0 | 0% / 0% | 1.74 | 1 |
-| Corner-cutter | 2/4 | 7.9M pts | -3.3M pts – 20M pts | -4% | 31% | 1% | 4% | 7% | 1% | 302 | 22 | 0% / 0% | 1.90 | 1.5 |
+| Baseline operator | 4/4 | 335M pts | 234M pts – 543M pts | 18% | 95% | 0% | 0% | 1% | 0% | 3 | 0 | 1% / 30% | 1.86 | 0 |
+| Managed company | 4/4 | 263M pts | 245M pts – 881M pts | 15% | 94% | 0% | 0% | 0% | 0% | 0 | 0 | 1% / 30% | 2.08 | 0 |
+| Premium house | 4/4 | 150M pts | 32M pts – 245M pts | 4% | 91% | 0% | 0% | 0% | 0% | 0 | 0 | 1% / 30% | 2.17 | 0 |
+| Expansionist | 0/4 | -35M pts | -53M pts – -17M pts | -19% | 64% | 1% | 5% | 11% | 1% | 92.5 | 92.5 | 268% / 413% | 1.62 | 0.5 |
+| Ambitious | 4/4 | 1643M pts | 1483M pts – 1746M pts | 24% | 95% | 0% | 0% | 1% | 0% | 0 | 0 | 10% / 36% | 1.87 | 0 |
+| Ambitious, unhedged | 4/4 | 761M pts | 562M pts – 1248M pts | 13% | 97% | 1% | 0% | 0% | 1% | 0 | 0 | 9% / 36% | 1.46 | 0 |
+| Lean operator | 4/4 | 20M pts | 8.7M pts – 30M pts | 1% | 67% | 1% | 4% | 6% | 0% | 0 | 0 | 0% / 0% | 2.06 | 0.5 |
+| Corner-cutter | 3/4 | 8.7M pts | 4.8M pts – 20M pts | -3% | 60% | 0% | 5% | 8% | 1% | 344.5 | 0 | 0% / 0% | 2.10 | 2 |
 
-**Crises and recovery.** 6 of 28 runs went under; 6 went over the overdraft limit at least once.
+**Crises and recovery.** 5 of 32 runs went under; 5 went over the overdraft limit at least once.
 
 | Strategy | Seed | Over-limit crises | Days over the limit | Average crisis | Bank demands | Overdraft cut | Bridging loans | Trucks sold | Outcome |
 |---|---|---|---|---|---|---|---|---|---|
-| Expansionist | 3 | 5 | 110 | 22 days | 3 | 1 | 1 | 10 | went under after 3.3 years |
-| Expansionist | 4 | 8 | 101 | 13 days | 2 | 0 | 1 | 3 | went under after 2.5 years |
-| Expansionist | 5 | 3 | 118 | 39 days | 3 | 1 | 1 | 10 | went under after 3.7 years |
+| Expansionist | 3 | 5 | 113 | 23 days | 3 | 1 | 1 | 9 | went under after 3.4 years |
+| Expansionist | 4 | 5 | 53 | 11 days | 1 | 0 | 1 | 0 | went under after 2.4 years |
+| Expansionist | 5 | 4 | 110 | 28 days | 3 | 1 | 1 | 10 | went under after 3.6 years |
 | Expansionist | 6 | 3 | 75 | 25 days | 2 | 1 | 1 | 2 | went under after 3.7 years |
-| Corner-cutter | 3 | 1 | 44 | 44 days | 1 | 1 | 0 | 0 | went under after 7.5 years |
-| Corner-cutter | 5 | 1 | 44 | 44 days | 1 | 3 | 0 | 0 | went under after 6.5 years |
+| Corner-cutter | 3 | 3 | 47 | 16 days | 1 | 4 | 0 | 0 | went under after 6.8 years |
+
+**Concentration and industry events** (medians; events summed over the runs)
+
+| Strategy | Fleet on one model | Biggest client | Busiest area | Recalls (trucks grounded) | Big accounts lost | Promoter collapses that hit | Lost to events | Cover at the end |
+|---|---|---|---|---|---|---|---|---|
+| Baseline operator | 83% (10 trucks) | 25% | 30% | 1 (6) | 0 | 1 of 4 runs | 0% | none |
+| Managed company | 50% (6 trucks) | 21% | 32% | 3 (14) | 0 | 1 of 4 runs | 0% | service contract, standby, credit insurance, frameworks |
+| Premium house | 50% (5.5 trucks) | 19% | 30% | 0 (0) | 0 | 0 of 4 runs | 0% | credit insurance, frameworks, service contract, standby |
+| Expansionist | 68% (4.5 trucks) | 30% | 29% | 1 (10) | 1 | 0 of 4 runs | 0% | none |
+| Ambitious | 50% (15 trucks) | 12% | 29% | 13 (158) | 0 | 0 of 4 runs | 0% | service contract, standby, credit insurance, frameworks |
+| Ambitious, unhedged | 93% (28 trucks) | 9% | 28% | 8 (178) | 0 | 0 of 4 runs | 0% | none |
+| Lean operator | 50% (1 trucks) | 23% | 33% | 0 (0) | 2 | 0 of 4 runs | 0% | none |
+| Corner-cutter | 50% (1 trucks) | 21% | 32% | 0 (0) | 2 | 0 of 4 runs | 0% | none |
 
 **Is the ranking real?**
 
-- **Ambitious** beats **Baseline operator** by 1155M pts — more than the run-to-run spread (±232M pts).
-- Baseline operator vs Managed company: 106M pts apart, inside the run-to-run spread (±361M pts) — not a real difference on these runs.
-- Managed company vs Premium house: 322M pts apart, inside the run-to-run spread (±361M pts) — not a real difference on these runs.
-- Premium house vs Lean operator: 65M pts apart, inside the run-to-run spread (±101M pts) — not a real difference on these runs.
-- Lean operator vs Corner-cutter: 13M pts apart, inside the run-to-run spread (±13M pts) — not a real difference on these runs.
-- **Corner-cutter** beats **Expansionist** by 48M pts — more than the run-to-run spread (±16M pts).
+- **Ambitious** beats **Ambitious, unhedged** by 881M pts — more than the run-to-run spread (±343M pts).
+- **Ambitious, unhedged** beats **Baseline operator** by 426M pts — more than the run-to-run spread (±343M pts).
+- Baseline operator vs Managed company: 72M pts apart, inside the run-to-run spread (±318M pts) — not a real difference on these runs.
+- Managed company vs Premium house: 113M pts apart, inside the run-to-run spread (±318M pts) — not a real difference on these runs.
+- **Premium house** beats **Lean operator** by 130M pts — more than the run-to-run spread (±106M pts).
+- **Lean operator** beats **Corner-cutter** by 11M pts — more than the run-to-run spread (±11M pts).
+- **Corner-cutter** beats **Expansionist** by 44M pts — more than the run-to-run spread (±18M pts).
 
 ## Why each run went the way it did
 
@@ -77,149 +105,157 @@ Books what it can reach, buys the kit and trucks it needs, meets riders and fixe
 
 #### GB from 1995, seed 3
 
-- Survived 8 years, worth £5.5M (reputation 98).
-- Earned £18M: show income 98%, maker sponsorship 2%, merchandise 0%.
-- Operating margin 26%. Biggest costs as a share of revenue: crew wages 17%, sub-hired kit 12%, annexes & stages 7%, corporation tax 6%.
-- Ran 12 vehicles at 18.2 shows per vehicle-year; 1746 shows at 96% average, 2 failed (0%).
-- Nights: 91% triumphs, 9% solid, 1% shaky, 0% bad, 0% failed; clients docked £128k and claimed £9.0k in damages (1% of revenue).
-- Office: 6 office staff at the end; the work outgrew the office by 0% on average and 9% at worst.
-- Bad nights were mostly down to short-handed crews (20), broken technical riders (14), kit dying on stage (6).
-- Root conditions in the incident log: kit dying on stage ×6, manufacturer faults ×4.
+- Survived 8 years, worth £3.2M (reputation 83).
+- Earned £13M: show income 97%, maker sponsorship 3%.
+- Operating margin 19%. Biggest costs as a share of revenue: crew wages 21%, sub-hired kit 10%, annexes & stages 7%, new vehicles & gear 7%.
+- Ran 12 vehicles at 17.5 shows per vehicle-year; 1684 shows at 98% average, 9 failed (1%).
+- Nights: 91% triumphs, 8% solid, 1% shaky, 0% bad, 1% failed; clients docked £91k and claimed £40k in damages (1% of revenue).
+- Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
+- Industry: 1 recall grounding 10 trucks, 1 big account lost, £63k of invoices and £154k of bookings lost to promoters going under, 1 late-payment wave; ended with 83% of the fleet on one model and 18% of the work from one client.
+- Bad nights were mostly down to short-handed crews (21), broken technical riders (11), nobody arriving (9).
+- Root conditions in the incident log: kit dying on stage ×9, manufacturer faults ×3.
 - Cash never got tight (lowest £42k).
-- Clients: 8 cancellations (2 with nothing to claim), 5 bans.
-- Crew: 25 on the books, 0 lost along the way, burnout 0%, 20 trusted pairs and 2 feuds.
-- Riders and rooms: 112 cross-hires and 164 room fixes booked; 15 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 82% condition (80% at the end), 51 lines refurbished; 4 manufacturer faults.
-- Road: 720k km driven, 8 roadside breakdowns — 1.11 per 100,000 km (one every 90k km) at 80% average reliability.
-- Rivals (same rules): 9 trading, 9 gone; 3604 shows at 73% average, 0 failed; 19 cross-hires and 227 room fixes paid; turned work down for rider ×5, kit ×1, crew ×1.
+- Clients: 10 cancellations (7 with nothing to claim), 7 bans.
+- Crew: 25 on the books, 0 lost along the way, burnout 0%, 19 trusted pairs and 1 feuds.
+- Riders and rooms: 78 cross-hires and 144 room fixes booked; 12 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 81% condition (81% at the end), 80 lines refurbished; 3 manufacturer faults.
+- Road: 686k km driven, 10 roadside breakdowns — 1.46 per 100,000 km (one every 69k km) at 80% average reliability.
+- Rivals (same rules): 8 trading, 7 gone; 4220 shows at 68% average, 0 failed; 24 cross-hires and 210 room fixes paid; turned work down for rider ×5, crew ×3; 2 overdrawn.
 
 #### GB from 1995, seed 4
 
-- Survived 8 years, worth £5.8M (reputation 92).
-- Earned £19M: show income 98%, maker sponsorship 2%, merchandise 0%.
-- Operating margin 27%. Biggest costs as a share of revenue: crew wages 17%, sub-hired kit 12%, corporation tax 6%, annexes & stages 6%.
-- Ran 12 vehicles at 20.5 shows per vehicle-year; 1971 shows at 96% average, 4 failed (0%).
-- Nights: 91% triumphs, 7% solid, 1% shaky, 0% bad, 0% failed; clients docked £296k and claimed £15k in damages (2% of revenue).
+- Survived 8 years, worth £6.3M (reputation 93).
+- Earned £20M: show income 98%, maker sponsorship 2%, merchandise 0%.
+- Operating margin 28%. Biggest costs as a share of revenue: crew wages 16%, sub-hired kit 13%, corporation tax 8%, annexes & stages 6%.
+- Ran 12 vehicles at 20.4 shows per vehicle-year; 1961 shows at 97% average, 3 failed (0%).
+- Nights: 91% triumphs, 8% solid, 1% shaky, 0% bad, 0% failed; clients docked £402k and claimed £15k in damages (2% of revenue).
 - Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
-- Bad nights were mostly down to short-handed crews (23), broken technical riders (19), kit dying on stage (11).
-- Root conditions in the incident log: kit dying on stage ×13.
+- Bad nights were mostly down to broken technical riders (23), short-handed crews (22), an office stretched too thin (6).
+- Root conditions in the incident log: kit dying on stage ×3.
 - Cash never got tight (lowest £31k).
-- Clients: 2 cancellations (1 with nothing to claim), 12 bans.
-- Crew: 25 on the books, 0 lost along the way, burnout 0%, 26 trusted pairs and 0 feuds.
-- Riders and rooms: 102 cross-hires and 172 room fixes booked; 26 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 81% condition (78% at the end), 69 lines refurbished; 0 manufacturer faults.
-- Road: 781k km driven, 13 roadside breakdowns — 1.66 per 100,000 km (one every 60k km) at 80% average reliability.
-- Rivals (same rules): 9 trading, 7 gone; 3790 shows at 68% average, 0 failed; 129 cross-hires and 197 room fixes paid; turned work down for rider ×17, crew ×5, kit ×1; 4 overdrawn.
+- Clients: 4 cancellations (2 with nothing to claim), 13 bans.
+- Crew: 25 on the books, 0 lost along the way, burnout 0%, 22 trusted pairs and 0 feuds.
+- Riders and rooms: 122 cross-hires and 147 room fixes booked; 30 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 81% condition (79% at the end), 67 lines refurbished; 0 manufacturer faults.
+- Road: 774k km driven, 16 roadside breakdowns — 2.07 per 100,000 km (one every 48k km) at 80% average reliability.
+- Rivals (same rules): 9 trading, 8 gone; 3989 shows at 67% average, 1 failed; 86 cross-hires and 218 room fixes paid; turned work down for crew ×1; 1 overdrawn.
 
 #### GB from 1995, seed 5
 
-- Survived 8 years, worth £5.1M (reputation 94).
-- Earned £16M: show income 97%, maker sponsorship 3%, merchandise 0%.
-- Operating margin 26%. Biggest costs as a share of revenue: crew wages 18%, sub-hired kit 11%, annexes & stages 6%, new vehicles & gear 6%.
-- Ran 12 vehicles at 18.4 shows per vehicle-year; 1766 shows at 95% average, 3 failed (0%).
-- Nights: 89% triumphs, 10% solid, 1% shaky, 0% bad, 0% failed; clients docked £151k and claimed £19k in damages (1% of revenue).
-- Bad nights were mostly down to short-handed crews (20), broken technical riders (14), kit dying on stage (6).
+- Survived 8 years, worth £3.9M (reputation 81).
+- Earned £15M: show income 97%, maker sponsorship 3%, merchandise 0%.
+- Operating margin 23%. Biggest costs as a share of revenue: crew wages 20%, sub-hired kit 9%, annexes & stages 7%, corporation tax 6%.
+- Ran 12 vehicles at 18.1 shows per vehicle-year; 1739 shows at 94% average, 9 failed (1%).
+- Nights: 87% triumphs, 12% solid, 1% shaky, 0% bad, 1% failed; clients docked £104k and claimed £20k in damages (1% of revenue).
+- Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
+- Industry: 1 recall grounding 10 trucks, 0 big accounts lost, £0.0k of invoices and £0.0k of bookings lost to promoters going under, 1 late-payment wave; ended with 83% of the fleet on one model and 18% of the work from one client.
+- Bad nights were mostly down to short-handed crews (21), broken technical riders (12), nobody arriving (9).
 - Root conditions in the incident log: kit dying on stage ×6.
-- Cash never got tight (lowest £26k).
-- Clients: 5 cancellations (1 with nothing to claim), 7 bans.
-- Crew: 25 on the books, 0 lost along the way, burnout 0%, 22 trusted pairs and 1 feuds.
-- Riders and rooms: 99 cross-hires and 138 room fixes booked; 15 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 81% condition (79% at the end), 74 lines refurbished; 0 manufacturer faults.
-- Road: 684k km driven, 5 roadside breakdowns — 0.73 per 100,000 km (one every 137k km) at 80% average reliability.
-- Rivals (same rules): 9 trading, 8 gone; 4117 shows at 70% average, 1 failed; 56 cross-hires and 182 room fixes paid; turned work down for rider ×41, kit ×16, crew ×7; 2 overdrawn.
+- Cash never got tight (lowest £22k).
+- Clients: 6 cancellations (3 with nothing to claim), 10 bans.
+- Crew: 25 on the books, 0 lost along the way, burnout 0%, 21 trusted pairs and 0 feuds.
+- Riders and rooms: 97 cross-hires and 143 room fixes booked; 13 rider breaches and 1 room problem reached the stage.
+- Kit and fleet: kit averaged 81% condition (74% at the end), 51 lines refurbished; 0 manufacturer faults.
+- Road: 693k km driven, 6 roadside breakdowns — 0.87 per 100,000 km (one every 116k km) at 80% average reliability.
+- Rivals (same rules): 10 trading, 7 gone; 4075 shows at 70% average, 0 failed; 61 cross-hires and 184 room fixes paid; turned work down for rider ×32, kit ×3, crew ×3; 4 overdrawn.
 
 #### GB from 1995, seed 6
 
-- Survived 8 years, worth £5.1M (reputation 92).
-- Earned £17M: show income 97%, maker sponsorship 3%, merchandise 0%.
-- Operating margin 25%. Biggest costs as a share of revenue: crew wages 18%, sub-hired kit 12%, corporation tax 7%, annexes & stages 6%.
-- Ran 12 vehicles at 19.6 shows per vehicle-year; 1886 shows at 97% average, 2 failed (0%).
-- Nights: 89% triumphs, 10% solid, 1% shaky, 0% bad, 0% failed; clients docked £208k and claimed £8.0k in damages (1% of revenue).
-- Office: 6 office staff at the end; the work outgrew the office by 2% on average and 53% at worst.
-- Bad nights were mostly down to short-handed crews (24), broken technical riders (19), late load-ins (7).
-- Root conditions in the incident log: kit dying on stage ×2, manufacturer faults ×2.
+- Survived 8 years, worth £4.5M (reputation 87).
+- Earned £16M: show income 97%, maker sponsorship 3%, merchandise 0%.
+- Operating margin 23%. Biggest costs as a share of revenue: crew wages 17%, sub-hired kit 14%, corporation tax 7%, annexes & stages 7%.
+- Ran 12 vehicles at 17.4 shows per vehicle-year; 1671 shows at 98% average, 9 failed (1%).
+- Nights: 90% triumphs, 9% solid, 1% shaky, 0% bad, 1% failed; clients docked £281k and claimed £23k in damages (2% of revenue).
+- Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
+- Industry: 1 recall grounding 10 trucks, 1 big account lost, £0.0k of invoices and £0.0k of bookings lost to promoters going under, 1 late-payment wave; ended with 83% of the fleet on one model and 17% of the work from one client.
+- Bad nights were mostly down to short-handed crews (24), broken technical riders (13), nobody arriving (9).
+- Root conditions in the incident log: kit dying on stage ×6, manufacturer faults ×2.
 - Cash never got tight (lowest £19k).
-- Clients: 10 cancellations (3 with nothing to claim), 11 bans.
-- Crew: 25 on the books, 0 lost along the way, burnout 0%, 28 trusted pairs and 2 feuds.
-- Riders and rooms: 81 cross-hires and 178 room fixes booked; 24 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 82% condition (79% at the end), 67 lines refurbished; 2 manufacturer faults.
-- Road: 755k km driven, 12 roadside breakdowns — 1.59 per 100,000 km (one every 63k km) at 80% average reliability.
-- Rivals (same rules): 9 trading, 12 gone; 3522 shows at 70% average, 0 failed; 90 cross-hires and 246 room fixes paid; turned work down for crew ×1; 1 overdrawn.
+- Clients: 3 cancellations (1 with nothing to claim), 14 bans.
+- Crew: 25 on the books, 0 lost along the way, burnout 0%, 22 trusted pairs and 0 feuds.
+- Riders and rooms: 112 cross-hires and 146 room fixes booked; 18 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 82% condition (80% at the end), 32 lines refurbished; 2 manufacturer faults.
+- Road: 666k km driven, 8 roadside breakdowns — 1.2 per 100,000 km (one every 83k km) at 80% average reliability.
+- Rivals (same rules): 11 trading, 9 gone; 3930 shows at 71% average, 0 failed; 154 cross-hires and 207 room fixes paid; turned work down for kit ×61, rider ×17, crew ×10; 5 overdrawn.
 
 #### ES from 1990, seed 3
 
-- Survived 8 years, worth 579M pts (reputation 92).
-- Earned 1815M pts: show income 98%, maker sponsorship 2%, merchandise 0%.
-- Operating margin 23%. Biggest costs as a share of revenue: crew wages 19%, sub-hired kit 9%, annexes & stages 8%, new vehicles & gear 7%.
-- Ran 12 vehicles at 12.7 shows per vehicle-year; 1222 shows at 97% average, 1 failed (0%).
-- Nights: 79% triumphs, 20% solid, 1% shaky, 0% bad, 0% failed; clients docked 13M pts and claimed 89k pts in damages (1% of revenue).
-- Office: 6 office staff at the end; the work outgrew the office by 2% on average and 36% at worst.
-- Overdraft: 8 days in it, 0 over the limit (0 times).
-- Bad nights were mostly down to short-handed crews (31), late load-ins (10), an office stretched too thin (9).
-- Root conditions in the incident log: services put off ×1, money tied up in unpaid invoices ×1, kit dying on stage ×3.
-- Cash: 1 month overdrawn, lowest balance -640k pts, 1 bill deferred, 0 forecast warnings, borrowed 8.3M pts, factored invoices 23 months.
-- Clients: 3 cancellations (0 with nothing to claim), 1 ban.
-- Crew: 25 on the books, 0 lost along the way, burnout 0%, 18 trusted pairs and 0 feuds.
-- Riders and rooms: 101 cross-hires and 29 room fixes booked; 4 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 83% condition (79% at the end), 22 lines refurbished; 0 manufacturer faults.
-- Road: 1,361k km driven, 12 roadside breakdowns — 0.88 per 100,000 km (one every 113k km) at 80% average reliability.
-- Rivals (same rules): 7 trading, 7 gone; 2946 shows at 69% average, 0 failed; 69 cross-hires and 13 room fixes paid; turned work down for rider ×23.
+- Survived 8 years, worth 293M pts (reputation 67).
+- Earned 1068M pts: show income 98%, maker sponsorship 2%.
+- Operating margin 17%. Biggest costs as a share of revenue: crew wages 23%, new vehicles & gear 11%, sub-hired kit 10%, annexes & stages 6%.
+- Ran 12 vehicles at 8.2 shows per vehicle-year; 789 shows at 96% average, 4 failed (1%).
+- Nights: 74% triumphs, 24% solid, 1% shaky, 1% bad, 1% failed; clients docked 5.6M pts and claimed 900k pts in damages (1% of revenue).
+- Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
+- Industry: 0 recalls grounding 0 trucks, 0 big accounts lost, 3.9M pts of invoices and 0.0k pts of bookings lost to promoters going under, 0 late-payment waves; ended with 83% of the fleet on one model and 24% of the work from one client.
+- Overdraft: 3 days in it, 0 over the limit (0 times).
+- Bad nights were mostly down to short-handed crews (16), nobody arriving (4), an office stretched too thin (3).
+- Root conditions in the incident log: services put off ×1, kit dying on stage ×3.
+- Cash never got tight (lowest -227k pts).
+- Clients: 3 cancellations (2 with nothing to claim), 4 bans.
+- Crew: 25 on the books, 0 lost along the way, burnout 1%, 14 trusted pairs and 1 feuds.
+- Riders and rooms: 88 cross-hires and 9 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 84% condition (78% at the end), 10 lines refurbished; 0 manufacturer faults.
+- Road: 885k km driven, 13 roadside breakdowns — 1.47 per 100,000 km (one every 68k km) at 79% average reliability.
+- Rivals (same rules): 6 trading, 6 gone; 2230 shows at 67% average, 0 failed; 29 cross-hires and 14 room fixes paid; turned work down for rider ×93, crew ×1; 2 overdrawn.
 
 #### ES from 1990, seed 4
 
-- Survived 8 years, worth 233M pts (reputation 72).
-- Earned 937M pts: show income 97%, maker sponsorship 2%, merchandise 0%.
-- Operating margin 12%. Biggest costs as a share of revenue: crew wages 24%, new vehicles & gear 13%, sub-hired kit 10%, annexes & stages 7%.
-- Ran 12 vehicles at 7.5 shows per vehicle-year; 719 shows at 97% average, 3 failed (0%).
-- Nights: 82% triumphs, 16% solid, 1% shaky, 0% bad, 0% failed; clients docked 4.5M pts and claimed 869k pts in damages (1% of revenue).
+- Survived 8 years, worth 234M pts (reputation 72).
+- Earned 931M pts: show income 97%, maker sponsorship 3%.
+- Operating margin 11%. Biggest costs as a share of revenue: crew wages 24%, new vehicles & gear 12%, sub-hired kit 10%, annexes & stages 7%.
+- Ran 12 vehicles at 7.4 shows per vehicle-year; 714 shows at 93% average, 3 failed (0%).
+- Nights: 82% triumphs, 17% solid, 1% shaky, 0% bad, 0% failed; clients docked 4.7M pts and claimed 869k pts in damages (1% of revenue).
 - Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
 - Overdraft: 3 days in it, 0 over the limit (0 times).
-- Bad nights were mostly down to short-handed crews (19), nobody arriving (3), an office stretched too thin (3).
+- Bad nights were mostly down to short-handed crews (19), nobody arriving (3), late load-ins (3).
 - Root conditions in the incident log: services put off ×1.
 - Cash: 1 month overdrawn, lowest balance -117k pts, 0 bills deferred, 0 forecast warnings, borrowed 3.3M pts, factored invoices 31 months.
 - Clients: 3 cancellations (3 with nothing to claim), 4 bans.
 - Crew: 25 on the books, 0 lost along the way, burnout 0%, 11 trusted pairs and 0 feuds.
-- Riders and rooms: 59 cross-hires and 16 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
+- Riders and rooms: 61 cross-hires and 17 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
 - Kit and fleet: kit averaged 85% condition (77% at the end), 14 lines refurbished; 0 manufacturer faults.
-- Road: 785k km driven, 15 roadside breakdowns — 1.91 per 100,000 km (one every 52k km) at 79% average reliability.
-- Rivals (same rules): 9 trading, 7 gone; 2888 shows at 80% average, 0 failed; 26 cross-hires and 11 room fixes paid; turned work down for rider ×3, crew ×2, kit ×1.
+- Road: 783k km driven, 15 roadside breakdowns — 1.92 per 100,000 km (one every 52k km) at 79% average reliability.
+- Rivals (same rules): 9 trading, 7 gone; 2884 shows at 74% average, 0 failed; 26 cross-hires and 11 room fixes paid; turned work down for rider ×1, kit ×1, crew ×1.
 
 #### ES from 1990, seed 5
 
-- Survived 8 years, worth 698M pts (reputation 76).
-- Earned 2014M pts: show income 97%, maker sponsorship 3%, merchandise 0%.
-- Operating margin 28%. Biggest costs as a share of revenue: crew wages 20%, sub-hired kit 7%, new vehicles & gear 7%, per diems & hotels 5%.
-- Ran 12 vehicles at 14.6 shows per vehicle-year; 1400 shows at 94% average, 4 failed (0%).
-- Nights: 83% triumphs, 16% solid, 0% shaky, 0% bad, 0% failed; clients docked 3.6M pts and claimed 2.4M pts in damages (0% of revenue).
-- Office: 6 office staff at the end; the work outgrew the office by 0% on average and 19% at worst.
-- Bad nights were mostly down to short-handed crews (25), nobody arriving (4), kit dying on stage (3).
-- Root conditions in the incident log: kit dying on stage ×3.
-- Cash never got tight (lowest 1.9M pts).
-- Clients: 4 cancellations (1 with nothing to claim), 4 bans.
-- Crew: 25 on the books, 0 lost along the way, burnout 0%, 16 trusted pairs and 0 feuds.
-- Riders and rooms: 65 cross-hires and 32 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 82% condition (75% at the end), 27 lines refurbished; 0 manufacturer faults.
-- Road: 1,688k km driven, 18 roadside breakdowns — 1.07 per 100,000 km (one every 94k km) at 80% average reliability.
-- Rivals (same rules): 8 trading, 6 gone; 3363 shows at 74% average, 0 failed; 47 cross-hires and 18 room fixes paid; turned work down for rider ×33, crew ×5; 3 overdrawn.
+- Survived 8 years, worth 378M pts (reputation 76).
+- Earned 1152M pts: show income 97%, maker sponsorship 3%, merchandise 0%.
+- Operating margin 20%. Biggest costs as a share of revenue: crew wages 22%, new vehicles & gear 11%, sub-hired kit 9%, per diems & hotels 6%.
+- Ran 12 vehicles at 8.6 shows per vehicle-year; 830 shows at 95% average, 1 failed (0%).
+- Nights: 82% triumphs, 17% solid, 1% shaky, 0% bad, 0% failed; clients docked 3.8M pts and claimed 437k pts in damages (0% of revenue).
+- Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
+- Industry: 0 recalls grounding 0 trucks, 0 big accounts lost, 0.0k pts of invoices and 0.0k pts of bookings lost to promoters going under, 1 late-payment wave; ended with 83% of the fleet on one model and 25% of the work from one client.
+- Overdraft: 1 days in it, 0 over the limit (0 times).
+- Bad nights were mostly down to short-handed crews (21), late load-ins (2), an office stretched too thin (2).
+- Root conditions in the incident log: services put off ×2.
+- Cash never got tight (lowest -123k pts).
+- Clients: 1 cancellation (0 with nothing to claim), 1 ban.
+- Crew: 25 on the books, 0 lost along the way, burnout 0%, 14 trusted pairs and 0 feuds.
+- Riders and rooms: 60 cross-hires and 18 room fixes booked; 1 rider breach and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 83% condition (75% at the end), 8 lines refurbished; 0 manufacturer faults.
+- Road: 999k km driven, 18 roadside breakdowns — 1.8 per 100,000 km (one every 55k km) at 80% average reliability.
+- Rivals (same rules): 8 trading, 6 gone; 3497 shows at 69% average, 0 failed; 25 cross-hires and 18 room fixes paid; turned work down for rider ×10, crew ×1.
 
 #### ES from 1990, seed 6
 
-- Survived 8 years, worth 447M pts (reputation 75).
-- Earned 1557M pts: show income 97%, maker sponsorship 3%, merchandise 0%.
-- Operating margin 20%. Biggest costs as a share of revenue: crew wages 19%, annexes & stages 9%, sub-hired kit 9%, new vehicles & gear 8%.
-- Ran 12 vehicles at 11 shows per vehicle-year; 1055 shows at 94% average, 2 failed (0%).
-- Nights: 81% triumphs, 17% solid, 1% shaky, 0% bad, 0% failed; clients docked 14M pts and claimed 2.5M pts in damages (1% of revenue).
+- Survived 8 years, worth 543M pts (reputation 78).
+- Earned 1531M pts: show income 97%, maker sponsorship 3%, merchandise 0%.
+- Operating margin 27%. Biggest costs as a share of revenue: crew wages 20%, new vehicles & gear 8%, sub-hired kit 8%, annexes & stages 6%.
+- Ran 12 vehicles at 11 shows per vehicle-year; 1055 shows at 94% average, 3 failed (0%).
+- Nights: 81% triumphs, 17% solid, 2% shaky, 0% bad, 0% failed; clients docked 9.2M pts and claimed 692k pts in damages (1% of revenue).
 - Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
+- Industry: 1 recall grounding 6 trucks, 0 big accounts lost, 0.0k pts of invoices and 0.0k pts of bookings lost to promoters going under, 0 late-payment waves; ended with 83% of the fleet on one model and 25% of the work from one client.
 - Overdraft: 6 days in it, 0 over the limit (0 times).
-- Bad nights were mostly down to short-handed crews (26), late load-ins (6), kit dying on stage (2).
-- Root conditions in the incident log: services put off ×1, kit dying on stage ×2.
-- Cash: 1 month overdrawn, lowest balance -311k pts, 0 bills deferred, 0 forecast warnings, borrowed 3.3M pts, factored invoices 25 months.
-- Clients: 5 cancellations (0 with nothing to claim), 1 ban.
+- Bad nights were mostly down to short-handed crews (28), late load-ins (4), nobody arriving (3).
+- Root conditions in the incident log: services put off ×1, kit dying on stage ×3.
+- Cash: 1 month overdrawn, lowest balance -311k pts, 0 bills deferred, 0 forecast warnings, borrowed 3.3M pts, factored invoices 24 months.
+- Clients: 2 cancellations (0 with nothing to claim), 1 ban.
 - Crew: 25 on the books, 0 lost along the way, burnout 0%, 13 trusted pairs and 2 feuds.
-- Riders and rooms: 82 cross-hires and 29 room fixes booked; 2 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 83% condition (78% at the end), 22 lines refurbished; 0 manufacturer faults.
-- Road: 1,112k km driven, 24 roadside breakdowns — 2.16 per 100,000 km (one every 46k km) at 80% average reliability.
-- Rivals (same rules): 7 trading, 7 gone; 2961 shows at 68% average, 0 failed; 28 cross-hires and 13 room fixes paid; 1 overdrawn.
+- Riders and rooms: 82 cross-hires and 23 room fixes booked; 2 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 83% condition (75% at the end), 18 lines refurbished; 0 manufacturer faults.
+- Road: 1,108k km driven, 23 roadside breakdowns — 2.08 per 100,000 km (one every 48k km) at 80% average reliability.
+- Rivals (same rules): 6 trading, 7 gone; 2986 shows at 69% average, 0 failed; 25 cross-hires and 11 room fixes paid; turned work down for rider ×8, crew ×2.
 
 ### Managed company
 
@@ -227,152 +263,157 @@ The baseline, run properly: pushes for deposits and cancellation clauses on big 
 
 #### GB from 1995, seed 3
 
-- Survived 8 years, worth £5.8M (reputation 92).
-- Earned £18M: show income 98%, maker sponsorship 2%, merchandise 0%.
-- Operating margin 27%. Biggest costs as a share of revenue: crew wages 16%, sub-hired kit 12%, annexes & stages 6%, corporation tax 6%.
-- Ran 12 vehicles at 17.4 shows per vehicle-year; 1674 shows at 98% average, 5 failed (0%).
-- Nights: 93% triumphs, 6% solid, 0% shaky, 0% bad, 0% failed; clients docked £70k and claimed £14k in damages (0% of revenue).
-- Bad nights were mostly down to broken technical riders (22), short-handed crews (21), nobody arriving (5).
-- Root conditions in the incident log: money tied up in unpaid invoices ×1, kit dying on stage ×4, manufacturer faults ×4.
-- Cash: 0 months overdrawn, lowest balance £8.1k, 1 bill deferred, 8 forecast warnings, factored invoices 1 months.
-- Clients: 7 cancellations (1 with nothing to claim), 17 bans; asked for better terms 118 times, won 61.
-- Crew: 25 on the books, 0 lost along the way, burnout 0%, 24 trusted pairs and 0 feuds; hired crew@1999, finance@1999, production@2000.
-- Riders and rooms: 17 cross-hires and 47 room fixes booked; 27 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 89% condition (100% at the end), 11 lines refurbished; 4 manufacturer faults.
-- Road: 683k km driven, 9 roadside breakdowns — 1.32 per 100,000 km (one every 76k km) at 80% average reliability.
-- Rivals (same rules): 9 trading, 7 gone; 4353 shows at 68% average, 1 failed; 38 cross-hires and 237 room fixes paid; turned work down for kit ×1; 2 overdrawn.
-- Learned from its post-mortems: workshop→full@2000.
+- Survived 8 years, worth £5.9M (reputation 93).
+- Earned £19M: show income 98%, maker sponsorship 2%, merchandise 0%.
+- Operating margin 27%. Biggest costs as a share of revenue: crew wages 16%, sub-hired kit 12%, corporation tax 7%, annexes & stages 6%.
+- Ran 12 vehicles at 20 shows per vehicle-year; 1924 shows at 97% average, 3 failed (0%).
+- Nights: 90% triumphs, 10% solid, 0% shaky, 0% bad, 0% failed; clients docked £50k and claimed £5.5k in damages (0% of revenue).
+- Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
+- Industry: 3 recalls grounding 14 trucks, 0 big accounts lost, £0.0k of invoices and £0.0k of bookings lost to promoters going under, 1 late-payment wave; ended with 50% of the fleet on one model and 25% of the work from one client (service contract, standby, credit insurance, 4 frameworks).
+- Bad nights were mostly down to short-handed crews (29), broken technical riders (12), nobody arriving (3).
+- Root conditions in the incident log: manufacturer faults ×1.
+- Cash: 0 months overdrawn, lowest balance £0.4k, 0 bills deferred, 4 forecast warnings, factored invoices 1 months.
+- Clients: 11 cancellations (4 with nothing to claim), 6 bans; asked for better terms 73 times, won 35.
+- Crew: 25 on the books, 0 lost along the way, burnout 0%, 25 trusted pairs and 3 feuds; hired crew@1998, finance@1998, production@1999.
+- Riders and rooms: 13 cross-hires and 19 room fixes booked; 13 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 91% condition (99% at the end), 29 lines refurbished; 1 manufacturer fault.
+- Road: 759k km driven, 11 roadside breakdowns — 1.45 per 100,000 km (one every 69k km) at 77% average reliability.
+- Rivals (same rules): 8 trading, 7 gone; 4691 shows at 68% average, 0 failed; 23 cross-hires and 328 room fixes paid; turned work down for kit ×1; 1 overdrawn.
+- Learned from its post-mortems: workshop→full@1998.
 
 #### GB from 1995, seed 4
 
-- Survived 8 years, worth £6.8M (reputation 92).
-- Earned £21M: show income 98%, maker sponsorship 2%.
-- Operating margin 29%. Biggest costs as a share of revenue: crew wages 16%, sub-hired kit 10%, corporation tax 7%, annexes & stages 6%.
-- Ran 12 vehicles at 21 shows per vehicle-year; 2013 shows at 98% average, 4 failed (0%).
-- Nights: 93% triumphs, 7% solid, 0% shaky, 0% bad, 0% failed; clients docked £164k and claimed £23k in damages (1% of revenue).
+- Survived 8 years, worth £6.1M (reputation 92).
+- Earned £20M: show income 98%, maker sponsorship 2%, merchandise 0%.
+- Operating margin 27%. Biggest costs as a share of revenue: crew wages 16%, sub-hired kit 11%, corporation tax 7%, full-time staff 6%.
+- Ran 12 vehicles at 21.3 shows per vehicle-year; 2046 shows at 96% average, 1 failed (0%).
+- Nights: 94% triumphs, 6% solid, 0% shaky, 0% bad, 0% failed; clients docked £307k and claimed £1.3k in damages (2% of revenue).
 - Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
-- Bad nights were mostly down to short-handed crews (27), broken technical riders (18), late load-ins (8).
-- Root conditions in the incident log: kit dying on stage ×2.
-- Cash: 0 months overdrawn, lowest balance £17k, 0 bills deferred, 1 forecast warning.
-- Clients: 4 cancellations (0 with nothing to claim), 8 bans; asked for better terms 113 times, won 62.
-- Crew: 25 on the books, 0 lost along the way, burnout 0%, 26 trusted pairs and 3 feuds; hired crew@1998, finance@1998, production@1998.
-- Riders and rooms: 19 cross-hires and 18 room fixes booked; 19 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 92% condition (99% at the end), 27 lines refurbished; 0 manufacturer faults.
-- Road: 793k km driven, 12 roadside breakdowns — 1.51 per 100,000 km (one every 66k km) at 80% average reliability.
-- Rivals (same rules): 9 trading, 7 gone; 4495 shows at 67% average, 1 failed; 49 cross-hires and 263 room fixes paid; turned work down for kit ×7, rider ×2, crew ×1; 2 overdrawn.
+- Bad nights were mostly down to short-handed crews (18), broken technical riders (16), late load-ins (2).
+- Cash never got tight (lowest £5.1k).
+- Clients: 6 cancellations (3 with nothing to claim), 9 bans; asked for better terms 78 times, won 38.
+- Crew: 25 on the books, 0 lost along the way, burnout 0%, 27 trusted pairs and 2 feuds; hired crew@1998, finance@1998, production@1998.
+- Riders and rooms: 14 cross-hires and 19 room fixes booked; 21 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 92% condition (100% at the end), 12 lines refurbished; 0 manufacturer faults.
+- Road: 809k km driven, 16 roadside breakdowns — 1.98 per 100,000 km (one every 51k km) at 77% average reliability.
+- Rivals (same rules): 8 trading, 7 gone; 4638 shows at 67% average, 0 failed; 58 cross-hires and 296 room fixes paid; turned work down for kit ×9, rider ×1; 4 overdrawn.
 - Learned from its post-mortems: workshop→full@1998.
 
 #### GB from 1995, seed 5
 
-- Survived 8 years, worth £5.2M (reputation 93).
-- Earned £17M: show income 97%, maker sponsorship 3%, merchandise 0%.
-- Operating margin 26%. Biggest costs as a share of revenue: crew wages 16%, sub-hired kit 12%, annexes & stages 7%, corporation tax 6%.
-- Ran 12 vehicles at 17.8 shows per vehicle-year; 1705 shows at 96% average, 1 failed (0%).
-- Nights: 92% triumphs, 8% solid, 0% shaky, 0% bad, 0% failed; clients docked £166k and claimed £6.4k in damages (1% of revenue).
+- Survived 8 years, worth £6.0M (reputation 95).
+- Earned £20M: show income 97%, maker sponsorship 3%, merchandise 0%.
+- Operating margin 26%. Biggest costs as a share of revenue: crew wages 17%, sub-hired kit 12%, corporation tax 7%, annexes & stages 6%.
+- Ran 12 vehicles at 21.1 shows per vehicle-year; 2027 shows at 98% average, 3 failed (0%).
+- Nights: 90% triumphs, 9% solid, 0% shaky, 0% bad, 0% failed; clients docked £173k and claimed £8.5k in damages (1% of revenue).
 - Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
-- Bad nights were mostly down to short-handed crews (18), broken technical riders (10), an office stretched too thin (4).
+- Industry: 2 recalls grounding 10 trucks, 1 big account lost, £0.0k of invoices and £0.0k of bookings lost to promoters going under, 0 late-payment waves; ended with 50% of the fleet on one model and 16% of the work from one client (service contract, standby, credit insurance, 4 frameworks).
+- Bad nights were mostly down to short-handed crews (27), broken technical riders (22), an office stretched too thin (3).
 - Root conditions in the incident log: kit dying on stage ×2, manufacturer faults ×1.
-- Cash: 0 months overdrawn, lowest balance £14k, 0 bills deferred, 5 forecast warnings, factored invoices 1 months.
-- Clients: 5 cancellations (0 with nothing to claim), 4 bans; asked for better terms 85 times, won 45.
-- Crew: 25 on the books, 0 lost along the way, burnout 0%, 24 trusted pairs and 0 feuds; hired crew@1999, finance@1999, production@2000.
-- Riders and rooms: 19 cross-hires and 34 room fixes booked; 12 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 90% condition (100% at the end), 13 lines refurbished; 1 manufacturer fault.
-- Road: 674k km driven, 5 roadside breakdowns — 0.74 per 100,000 km (one every 135k km) at 80% average reliability.
-- Rivals (same rules): 11 trading, 7 gone; 4267 shows at 72% average, 0 failed; 59 cross-hires and 242 room fixes paid; turned work down for rider ×21, crew ×2; 1 overdrawn.
-- Learned from its post-mortems: workshop→full@1999.
+- Cash: 0 months overdrawn, lowest balance £14k, 0 bills deferred, 10 forecast warnings, factored invoices 3 months.
+- Clients: 8 cancellations (2 with nothing to claim), 12 bans; asked for better terms 114 times, won 79.
+- Crew: 25 on the books, 0 lost along the way, burnout 0%, 24 trusted pairs and 3 feuds; hired crew@1998, finance@1998, production@1998.
+- Riders and rooms: 22 cross-hires and 13 room fixes booked; 27 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 92% condition (100% at the end), 20 lines refurbished; 1 manufacturer fault.
+- Road: 798k km driven, 16 roadside breakdowns — 2 per 100,000 km (one every 50k km) at 77% average reliability.
+- Rivals (same rules): 9 trading, 8 gone; 4164 shows at 69% average, 0 failed; 61 cross-hires and 200 room fixes paid; turned work down for crew ×22, rider ×20, kit ×4; 2 overdrawn.
+- Learned from its post-mortems: workshop→full@1998.
 
 #### GB from 1995, seed 6
 
-- Survived 8 years, worth £5.5M (reputation 94).
-- Earned £18M: show income 97%, maker sponsorship 3%, merchandise 0%.
-- Operating margin 26%. Biggest costs as a share of revenue: crew wages 15%, sub-hired kit 12%, corporation tax 8%, annexes & stages 6%.
-- Ran 12 vehicles at 17.2 shows per vehicle-year; 1647 shows at 98% average, 2 failed (0%).
-- Nights: 93% triumphs, 6% solid, 0% shaky, 0% bad, 0% failed; clients docked £220k and claimed £5.3k in damages (1% of revenue).
-- Bad nights were mostly down to short-handed crews (29), broken technical riders (19), kit dying on stage (3).
-- Root conditions in the incident log: kit dying on stage ×4, manufacturer faults ×2.
-- Cash: 0 months overdrawn, lowest balance £14k, 0 bills deferred, 9 forecast warnings, borrowed £20k, factored invoices 3 months.
-- Clients: 9 cancellations (2 with nothing to claim), 11 bans; asked for better terms 98 times, won 64.
-- Crew: 25 on the books, 0 lost along the way, burnout 0%, 22 trusted pairs and 1 feuds; hired crew@1999, finance@1999, production@2000.
-- Riders and rooms: 18 cross-hires and 41 room fixes booked; 24 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 97% condition (99% at the end), 1 lines refurbished; 2 manufacturer faults.
-- Road: 647k km driven, 8 roadside breakdowns — 1.24 per 100,000 km (one every 81k km) at 80% average reliability.
-- Rivals (same rules): 10 trading, 8 gone; 4413 shows at 70% average, 0 failed; 55 cross-hires and 262 room fixes paid; 1 overdrawn.
+- Survived 8 years, worth £5.2M (reputation 92).
+- Earned £18M: show income 98%, maker sponsorship 2%, merchandise 0%.
+- Operating margin 26%. Biggest costs as a share of revenue: crew wages 15%, sub-hired kit 13%, corporation tax 7%, annexes & stages 6%.
+- Ran 12 vehicles at 17.3 shows per vehicle-year; 1661 shows at 98% average, 0 failed (0%).
+- Nights: 94% triumphs, 5% solid, 0% shaky, 0% bad, 0% failed; clients docked £243k and claimed £0.0k in damages (1% of revenue).
+- Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
+- Industry: 2 recalls grounding 10 trucks, 0 big accounts lost, £0.0k of invoices and £0.0k of bookings lost to promoters going under, 0 late-payment waves; ended with 50% of the fleet on one model and 30% of the work from one client (service contract, standby, credit insurance, 5 frameworks).
+- Bad nights were mostly down to short-handed crews (21), broken technical riders (11), an office stretched too thin (5).
+- Root conditions in the incident log: services put off ×1, money tied up in unpaid invoices ×1, kit dying on stage ×1, manufacturer faults ×2.
+- Cash: 0 months overdrawn, lowest balance -£0.9k, 1 bill deferred, 8 forecast warnings, borrowed £70k, factored invoices 2 months.
+- Clients: 10 cancellations (2 with nothing to claim), 7 bans; asked for better terms 77 times, won 46.
+- Crew: 25 on the books, 0 lost along the way, burnout 0%, 18 trusted pairs and 1 feuds; hired crew@1999, finance@1999, production@2000.
+- Riders and rooms: 17 cross-hires and 55 room fixes booked; 17 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 96% condition (99% at the end), 3 lines refurbished; 2 manufacturer faults.
+- Road: 669k km driven, 19 roadside breakdowns — 2.84 per 100,000 km (one every 35k km) at 77% average reliability.
+- Rivals (same rules): 11 trading, 10 gone; 4442 shows at 70% average, 0 failed; 88 cross-hires and 311 room fixes paid; turned work down for rider ×10, crew ×4, kit ×1; 3 overdrawn.
 - Learned from its post-mortems: workshop→full@1996.
 
 #### ES from 1990, seed 3
 
-- Survived 8 years, worth 101M pts (reputation 70).
-- Earned 727M pts: show income 97%, maker sponsorship 3%, merchandise 0%.
-- Operating margin 2%. Biggest costs as a share of revenue: crew wages 28%, new vehicles & gear 13%, sub-hired kit 12%, annexes & stages 8%.
-- Ran 10 vehicles at 7.4 shows per vehicle-year; 589 shows at 97% average, 1 failed (0%).
-- Nights: 79% triumphs, 18% solid, 2% shaky, 1% bad, 0% failed; clients docked 5.9M pts and claimed 975k pts in damages (1% of revenue).
-- Office: 4 office staff at the end; the work outgrew the office by 0% on average and 9% at worst.
-- Bad nights were mostly down to short-handed crews (30), nobody arriving (1), an office stretched too thin (1).
-- Root conditions in the incident log: services put off ×1.
-- Cash: 0 months overdrawn, lowest balance 1.4M pts, 0 bills deferred, 26 forecast warnings, borrowed 12M pts, factored invoices 7 months.
-- Clients: 3 cancellations (1 with nothing to claim), 1 ban; asked for better terms 6 times, won 4.
-- Crew: 21 on the books, 0 lost along the way, burnout 0%, 10 trusted pairs and 0 feuds.
-- Riders and rooms: 37 cross-hires and 2 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 84% condition (77% at the end), 5 lines refurbished; 0 manufacturer faults.
-- Road: 678k km driven, 8 roadside breakdowns — 1.18 per 100,000 km (one every 85k km) at 79% average reliability.
-- Rivals (same rules): 9 trading, 7 gone; 2844 shows at 77% average, 0 failed; 34 cross-hires and 14 room fixes paid; turned work down for rider ×42, crew ×11; 1 overdrawn.
+- Survived 8 years, worth 266M pts (reputation 71).
+- Earned 1059M pts: show income 98%, maker sponsorship 2%, merchandise 0%.
+- Operating margin 16%. Biggest costs as a share of revenue: crew wages 24%, new vehicles & gear 10%, sub-hired kit 10%, annexes & stages 6%.
+- Ran 12 vehicles at 8.7 shows per vehicle-year; 840 shows at 94% average, 1 failed (0%).
+- Nights: 83% triumphs, 15% solid, 1% shaky, 1% bad, 0% failed; clients docked 10M pts and claimed 225k pts in damages (1% of revenue).
+- Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
+- Industry: 1 recall grounding 4 trucks, 0 big accounts lost, 0.0k pts of invoices and 0.0k pts of bookings lost to promoters going under, 0 late-payment waves; ended with 50% of the fleet on one model and 21% of the work from one client (service contract, standby, credit insurance, 7 frameworks).
+- Bad nights were mostly down to short-handed crews (22), late load-ins (3), nobody arriving (1).
+- Root conditions in the incident log: services put off ×2, kit dying on stage ×2.
+- Cash: 0 months overdrawn, lowest balance 707k pts, 0 bills deferred, 23 forecast warnings, borrowed 22M pts, factored invoices 5 months.
+- Clients: 3 cancellations (0 with nothing to claim), 1 ban; asked for better terms 13 times, won 10.
+- Crew: 25 on the books, 0 lost along the way, burnout 0%, 9 trusted pairs and 1 feuds; hired crew@1997, finance@1997.
+- Riders and rooms: 64 cross-hires and 7 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 83% condition (74% at the end), 9 lines refurbished; 0 manufacturer faults.
+- Road: 921k km driven, 11 roadside breakdowns — 1.19 per 100,000 km (one every 84k km) at 78% average reliability.
+- Rivals (same rules): 6 trading, 8 gone; 2310 shows at 68% average, 0 failed; 63 cross-hires and 10 room fixes paid; turned work down for rider ×62, crew ×1; 2 overdrawn.
 
 #### ES from 1990, seed 4
 
-- Survived 8 years, worth 298M pts (reputation 74).
-- Earned 1010M pts: show income 98%, maker sponsorship 2%, merchandise 0%.
-- Operating margin 16%. Biggest costs as a share of revenue: crew wages 23%, new vehicles & gear 12%, sub-hired kit 10%, annexes & stages 7%.
-- Ran 12 vehicles at 7.6 shows per vehicle-year; 728 shows at 92% average, 4 failed (1%).
-- Nights: 78% triumphs, 20% solid, 2% shaky, 0% bad, 1% failed; clients docked 6.5M pts and claimed 1.2M pts in damages (1% of revenue).
-- Office: 4 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
-- Bad nights were mostly down to short-handed crews (23), late load-ins (5), nobody arriving (4).
-- Root conditions in the incident log: services put off ×1, kit dying on stage ×3.
-- Cash: 0 months overdrawn, lowest balance 583k pts, 0 bills deferred, 37 forecast warnings, borrowed 18M pts, factored invoices 10 months.
-- Clients: 4 cancellations (4 with nothing to claim), 5 bans; asked for better terms 34 times, won 23.
-- Crew: 25 on the books, 0 lost along the way, burnout 0%, 10 trusted pairs and 0 feuds; hired crew@1997, finance@1997.
-- Riders and rooms: 98 cross-hires and 17 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 84% condition (91% at the end), 9 lines refurbished; 0 manufacturer faults.
-- Road: 785k km driven, 18 roadside breakdowns — 2.29 per 100,000 km (one every 44k km) at 79% average reliability.
-- Rivals (same rules): 8 trading, 7 gone; 3087 shows at 71% average, 0 failed; 35 cross-hires and 15 room fixes paid; turned work down for rider ×13.
-- Learned from its post-mortems: workshop→full@1997.
+- Survived 8 years, worth 245M pts (reputation 73).
+- Earned 982M pts: show income 98%, maker sponsorship 2%.
+- Operating margin 14%. Biggest costs as a share of revenue: crew wages 23%, sub-hired kit 11%, new vehicles & gear 11%, annexes & stages 7%.
+- Ran 12 vehicles at 7.7 shows per vehicle-year; 736 shows at 92% average, 0 failed (0%).
+- Nights: 83% triumphs, 16% solid, 1% shaky, 0% bad, 0% failed; clients docked 5.1M pts and claimed 0.0k pts in damages (1% of revenue).
+- Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
+- Overdraft: 3 days in it, 0 over the limit (0 times).
+- Bad nights were mostly down to short-handed crews (22), kit dying on stage (3), late load-ins (3).
+- Root conditions in the incident log: kit dying on stage ×4.
+- Cash: 0 months overdrawn, lowest balance -3.2M pts, 0 bills deferred, 22 forecast warnings, borrowed 12M pts, factored invoices 6 months.
+- Clients: 2 cancellations (1 with nothing to claim), 0 bans; asked for better terms 20 times, won 9.
+- Crew: 25 on the books, 0 lost along the way, burnout 0%, 14 trusted pairs and 0 feuds; hired crew@1997, finance@1997.
+- Riders and rooms: 79 cross-hires and 14 room fixes booked; 1 rider breach and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 84% condition (75% at the end), 13 lines refurbished; 0 manufacturer faults.
+- Road: 783k km driven, 16 roadside breakdowns — 2.04 per 100,000 km (one every 49k km) at 78% average reliability.
+- Rivals (same rules): 6 trading, 8 gone; 3002 shows at 64% average, 5 failed; 62 cross-hires and 18 room fixes paid; turned work down for rider ×8, crew ×2; 1 overdrawn.
 
 #### ES from 1990, seed 5
 
-- Survived 8 years, worth 517M pts (reputation 70).
-- Earned 1647M pts: show income 97%, maker sponsorship 3%, merchandise 0%.
-- Operating margin 25%. Biggest costs as a share of revenue: crew wages 20%, sub-hired kit 9%, new vehicles & gear 8%, annexes & stages 6%.
-- Ran 12 vehicles at 11.7 shows per vehicle-year; 1122 shows at 97% average, 7 failed (1%).
-- Nights: 81% triumphs, 18% solid, 1% shaky, 0% bad, 1% failed; clients docked 4.1M pts and claimed 9.1M pts in damages (1% of revenue).
-- Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
-- Bad nights were mostly down to short-handed crews (19), nobody arriving (7), late load-ins (7).
-- Root conditions in the incident log: services put off ×2, kit dying on stage ×1.
-- Cash: 0 months overdrawn, lowest balance 2.4M pts, 0 bills deferred, 19 forecast warnings, borrowed 3.3M pts, factored invoices 3 months.
-- Clients: 2 cancellations (0 with nothing to claim), 6 bans; asked for better terms 62 times, won 37.
-- Crew: 25 on the books, 0 lost along the way, burnout 0%, 17 trusted pairs and 1 feuds; hired crew@1996, finance@1996.
-- Riders and rooms: 98 cross-hires and 26 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 84% condition (100% at the end), 22 lines refurbished; 0 manufacturer faults.
-- Road: 1,372k km driven, 16 roadside breakdowns — 1.17 per 100,000 km (one every 86k km) at 80% average reliability.
-- Rivals (same rules): 8 trading, 5 gone; 2957 shows at 75% average, 0 failed; 11 cross-hires and 15 room fixes paid; turned work down for rider ×35, crew ×8, kit ×1; 1 overdrawn.
-- Learned from its post-mortems: workshop→full@1997.
+- Survived 8 years, worth 881M pts (reputation 86).
+- Earned 2777M pts: show income 97%, maker sponsorship 3%, merchandise 0%.
+- Operating margin 28%. Biggest costs as a share of revenue: crew wages 18%, sub-hired kit 8%, annexes & stages 6%, full-time staff 5%.
+- Ran 12 vehicles at 18.2 shows per vehicle-year; 1750 shows at 96% average, 6 failed (0%).
+- Nights: 89% triumphs, 11% solid, 0% shaky, 0% bad, 0% failed; clients docked 6.9M pts and claimed 3.6M pts in damages (0% of revenue).
+- Office: 6 office staff at the end; the work outgrew the office by 2% on average and 36% at worst.
+- Industry: 2 recalls grounding 10 trucks, 0 big accounts lost, 2.7M pts of invoices and 0.0k pts of bookings lost to promoters going under, 0 late-payment waves; ended with 50% of the fleet on one model and 14% of the work from one client (service contract, standby, credit insurance, 4 frameworks).
+- Bad nights were mostly down to short-handed crews (29), broken technical riders (10), nobody arriving (6).
+- Root conditions in the incident log: kit dying on stage ×1.
+- Cash: 0 months overdrawn, lowest balance 2.2M pts, 0 bills deferred, 12 forecast warnings, borrowed 3.3M pts, factored invoices 3 months.
+- Clients: 2 cancellations (1 with nothing to claim), 9 bans; asked for better terms 97 times, won 43.
+- Crew: 25 on the books, 0 lost along the way, burnout 0%, 26 trusted pairs and 2 feuds; split feuding crews 18 times; hired production@1995, crew@1995, finance@1995.
+- Riders and rooms: 38 cross-hires and 7 room fixes booked; 12 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 91% condition (100% at the end), 6 lines refurbished; 0 manufacturer faults.
+- Road: 2,163k km driven, 46 roadside breakdowns — 2.13 per 100,000 km (one every 47k km) at 77% average reliability.
+- Rivals (same rules): 7 trading, 7 gone; 3172 shows at 70% average, 0 failed; 25 cross-hires and 20 room fixes paid; turned work down for rider ×21; 2 overdrawn.
+- Learned from its post-mortems: workshop→full@1994.
 
 #### ES from 1990, seed 6
 
-- Survived 8 years, worth 823M pts (reputation 93).
-- Earned 2358M pts: show income 97%, maker sponsorship 3%, merchandise 0%.
-- Operating margin 29%. Biggest costs as a share of revenue: crew wages 17%, sub-hired kit 8%, annexes & stages 7%, new vehicles & gear 6%.
-- Ran 12 vehicles at 15.5 shows per vehicle-year; 1485 shows at 97% average, 1 failed (0%).
-- Nights: 86% triumphs, 13% solid, 0% shaky, 0% bad, 0% failed; clients docked 14M pts and claimed 313k pts in damages (1% of revenue).
-- Office: 5 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
-- Bad nights were mostly down to short-handed crews (13), broken technical riders (12), an office stretched too thin (5).
-- Root conditions in the incident log: services put off ×2, kit dying on stage ×2, exhausted crews ×1.
-- Cash: 0 months overdrawn, lowest balance 1.7M pts, 0 bills deferred, 22 forecast warnings, borrowed 6.7M pts, factored invoices 3 months.
-- Clients: 7 cancellations (0 with nothing to claim), 5 bans; asked for better terms 77 times, won 46.
-- Crew: 25 on the books, 0 lost along the way, burnout 0%, 16 trusted pairs and 2 feuds; hired crew@1995, finance@1995, production@1996.
-- Riders and rooms: 76 cross-hires and 24 room fixes booked; 14 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 88% condition (100% at the end), 16 lines refurbished; 0 manufacturer faults.
-- Road: 1,501k km driven, 31 roadside breakdowns — 2.07 per 100,000 km (one every 48k km) at 80% average reliability.
-- Rivals (same rules): 8 trading, 9 gone; 3072 shows at 74% average, 0 failed; 21 cross-hires and 12 room fixes paid; turned work down for rider ×4, crew ×2.
-- Learned from its post-mortems: workshop→full@1995.
+- Survived 8 years, worth 261M pts (reputation 70).
+- Earned 996M pts: show income 98%, maker sponsorship 2%.
+- Operating margin 12%. Biggest costs as a share of revenue: crew wages 23%, new vehicles & gear 11%, sub-hired kit 11%, annexes & stages 7%.
+- Ran 12 vehicles at 7.9 shows per vehicle-year; 759 shows at 93% average, 6 failed (1%).
+- Nights: 77% triumphs, 22% solid, 1% shaky, 0% bad, 1% failed; clients docked 1.8M pts and claimed 2.0M pts in damages (0% of revenue).
+- Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
+- Bad nights were mostly down to short-handed crews (11), nobody arriving (6), late load-ins (3).
+- Cash: 0 months overdrawn, lowest balance 471k pts, 0 bills deferred, 16 forecast warnings, borrowed 6.7M pts, factored invoices 3 months.
+- Clients: 4 cancellations (1 with nothing to claim), 6 bans; asked for better terms 19 times, won 11.
+- Crew: 25 on the books, 0 lost along the way, burnout 0%, 13 trusted pairs and 0 feuds; hired crew@1997, finance@1997.
+- Riders and rooms: 71 cross-hires and 4 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 85% condition (92% at the end), 6 lines refurbished; 0 manufacturer faults.
+- Road: 820k km driven, 19 roadside breakdowns — 2.32 per 100,000 km (one every 43k km) at 78% average reliability.
+- Rivals (same rules): 8 trading, 5 gone; 2884 shows at 69% average, 0 failed; 15 cross-hires and 16 room fixes paid; turned work down for rider ×43, crew ×3; 1 overdrawn.
+- Learned from its post-mortems: workshop→full@1997.
 
 ### Premium house
 
@@ -380,145 +421,149 @@ Managed, plus a full workshop, top pay, one brand per department, and only shows
 
 #### GB from 1995, seed 3
 
-- Survived 8 years, worth £5.2M (reputation 93).
-- Earned £20M: show income 96%, maker sponsorship 2%, insurance 1%.
-- Operating margin 23%. Biggest costs as a share of revenue: crew wages 21%, sub-hired kit 13%, full-time staff 7%, annexes & stages 6%.
-- Ran 12 vehicles at 19.7 shows per vehicle-year; 1887 shows at 91% average, 5 failed (0%).
-- Nights: 88% triumphs, 11% solid, 1% shaky, 0% bad, 0% failed; clients docked £141k and claimed £11k in damages (1% of revenue).
-- Office: 6 office staff at the end; the work outgrew the office by 2% on average and 30% at worst.
-- Bad nights were mostly down to short-handed crews (26), broken technical riders (13), late load-ins (9).
-- Root conditions in the incident log: kit dying on stage ×1.
-- Cash: 0 months overdrawn, lowest balance £8.3k, 0 bills deferred, 8 forecast warnings, factored invoices 1 months.
-- Clients: 9 cancellations (1 with nothing to claim), 7 bans; asked for better terms 112 times, won 85.
-- Crew: 25 on the books, 0 lost along the way, burnout 0%, 21 trusted pairs and 1 feuds; hired crew@1998, finance@1998, production@1998.
-- Riders and rooms: 18 cross-hires and 10 room fixes booked; 18 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 99% condition (99% at the end), 3 lines refurbished; 0 manufacturer faults.
-- Road: 761k km driven, 5 roadside breakdowns — 0.66 per 100,000 km (one every 152k km) at 80% average reliability.
-- Rivals (same rules): 8 trading, 7 gone; 4059 shows at 67% average, 0 failed; 25 cross-hires and 211 room fixes paid; turned work down for rider ×56, crew ×5, kit ×1; 5 overdrawn.
+- Survived 8 years, worth £4.8M (reputation 92).
+- Earned £18M: show income 98%, maker sponsorship 2%, merchandise 0%.
+- Operating margin 24%. Biggest costs as a share of revenue: crew wages 19%, sub-hired kit 13%, annexes & stages 7%, full-time staff 6%.
+- Ran 12 vehicles at 16.9 shows per vehicle-year; 1624 shows at 97% average, 1 failed (0%).
+- Nights: 88% triumphs, 11% solid, 0% shaky, 0% bad, 0% failed; clients docked £78k and claimed £37k in damages (1% of revenue).
+- Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
+- Industry: 3 recalls grounding 14 trucks, 0 big accounts lost, £0.0k of invoices and £137k of bookings lost to promoters going under, 0 late-payment waves; ended with 50% of the fleet on one model and 30% of the work from one client (service contract, standby, credit insurance, 4 frameworks).
+- Bad nights were mostly down to short-handed crews (22), broken technical riders (16), late load-ins (4).
+- Root conditions in the incident log: money tied up in unpaid invoices ×1, kit dying on stage ×2.
+- Cash: 0 months overdrawn, lowest balance -£1.5k, 1 bill deferred, 6 forecast warnings, factored invoices 1 months.
+- Clients: 8 cancellations (2 with nothing to claim), 9 bans; asked for better terms 78 times, won 52.
+- Crew: 25 on the books, 0 lost along the way, burnout 0%, 20 trusted pairs and 2 feuds; hired crew@1999, finance@1999, production@2000.
+- Riders and rooms: 25 cross-hires and 10 room fixes booked; 23 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 98% condition (100% at the end), 2 lines refurbished; 0 manufacturer faults.
+- Road: 672k km driven, 11 roadside breakdowns — 1.64 per 100,000 km (one every 61k km) at 77% average reliability.
+- Rivals (same rules): 7 trading, 7 gone; 4664 shows at 68% average, 1 failed; 52 cross-hires and 323 room fixes paid; turned work down for crew ×1; 2 overdrawn.
 
 #### GB from 1995, seed 4
 
-- Survived 8 years, worth £3.5M (reputation 87).
-- Earned £13M: show income 98%, maker sponsorship 2%, insurance 0%.
-- Operating margin 20%. Biggest costs as a share of revenue: crew wages 22%, sub-hired kit 10%, annexes & stages 7%, new vehicles & gear 7%.
-- Ran 12 vehicles at 14.7 shows per vehicle-year; 1416 shows at 97% average, 2 failed (0%).
-- Nights: 89% triumphs, 10% solid, 0% shaky, 0% bad, 0% failed; clients docked £26k and claimed £6.4k in damages (0% of revenue).
-- Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
-- Bad nights were mostly down to short-handed crews (15), broken technical riders (8), an office stretched too thin (4).
+- Survived 8 years, worth £4.7M (reputation 93).
+- Earned £18M: show income 98%, maker sponsorship 2%, merchandise 0%.
+- Operating margin 22%. Biggest costs as a share of revenue: crew wages 21%, sub-hired kit 13%, full-time staff 7%, annexes & stages 6%.
+- Ran 12 vehicles at 19 shows per vehicle-year; 1825 shows at 94% average, 5 failed (0%).
+- Nights: 91% triumphs, 8% solid, 0% shaky, 0% bad, 0% failed; clients docked £158k and claimed £16k in damages (1% of revenue).
+- Office: 6 office staff at the end; the work outgrew the office by 2% on average and 36% at worst.
+- Bad nights were mostly down to short-handed crews (16), broken technical riders (14), nobody arriving (5).
 - Root conditions in the incident log: kit dying on stage ×1.
-- Cash: 0 months overdrawn, lowest balance £16k, 0 bills deferred, 66 forecast warnings, borrowed £40k, factored invoices 15 months.
-- Clients: 5 cancellations (1 with nothing to claim), 4 bans; asked for better terms 61 times, won 45.
-- Crew: 25 on the books, 0 lost along the way, burnout 0%, 17 trusted pairs and 0 feuds; hired crew@2000, finance@2000, production@2001.
-- Riders and rooms: 34 cross-hires and 12 room fixes booked; 10 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 98% condition (100% at the end), 2 lines refurbished; 0 manufacturer faults.
-- Road: 592k km driven, 7 roadside breakdowns — 1.18 per 100,000 km (one every 85k km) at 80% average reliability.
-- Rivals (same rules): 7 trading, 7 gone; 4346 shows at 65% average, 0 failed; 84 cross-hires and 260 room fixes paid.
+- Cash: 0 months overdrawn, lowest balance £9.3k, 0 bills deferred, 25 forecast warnings, borrowed £20k, factored invoices 7 months.
+- Clients: 3 cancellations (0 with nothing to claim), 12 bans; asked for better terms 95 times, won 69.
+- Crew: 25 on the books, 0 lost along the way, burnout 0%, 24 trusted pairs and 0 feuds; hired crew@1999, finance@1999, production@1999.
+- Riders and rooms: 16 cross-hires and 5 room fixes booked; 18 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 97% condition (98% at the end), 4 lines refurbished; 0 manufacturer faults.
+- Road: 729k km driven, 13 roadside breakdowns — 1.78 per 100,000 km (one every 56k km) at 77% average reliability.
+- Rivals (same rules): 9 trading, 8 gone; 3900 shows at 72% average, 2 failed; 89 cross-hires and 201 room fixes paid; turned work down for rider ×23, crew ×11, kit ×2; 3 overdrawn.
 
 #### GB from 1995, seed 5
 
-- Survived 8 years, worth £5.0M (reputation 93).
-- Earned £18M: show income 96%, maker sponsorship 3%, insurance 1%.
-- Operating margin 24%. Biggest costs as a share of revenue: crew wages 20%, sub-hired kit 12%, full-time staff 6%, annexes & stages 6%.
-- Ran 12 vehicles at 18 shows per vehicle-year; 1728 shows at 92% average, 3 failed (0%).
-- Nights: 89% triumphs, 10% solid, 1% shaky, 0% bad, 0% failed; clients docked £179k and claimed £11k in damages (1% of revenue).
-- Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
-- Bad nights were mostly down to short-handed crews (21), broken technical riders (12), late load-ins (6).
-- Root conditions in the incident log: kit dying on stage ×1.
-- Cash: 0 months overdrawn, lowest balance £10k, 0 bills deferred, 23 forecast warnings, borrowed £20k, factored invoices 5 months.
-- Clients: 3 cancellations (0 with nothing to claim), 8 bans; asked for better terms 92 times, won 54.
-- Crew: 25 on the books, 0 lost along the way, burnout 0%, 27 trusted pairs and 2 feuds; hired crew@1999, finance@1999, production@2000.
-- Riders and rooms: 19 cross-hires and 8 room fixes booked; 15 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 99% condition (100% at the end); 0 manufacturer faults.
-- Road: 694k km driven, 9 roadside breakdowns — 1.3 per 100,000 km (one every 77k km) at 80% average reliability.
-- Rivals (same rules): 7 trading, 9 gone; 3834 shows at 64% average, 1 failed; 47 cross-hires and 190 room fixes paid; turned work down for crew ×7, rider ×5, kit ×1; 2 overdrawn.
+- Survived 8 years, worth £4.8M (reputation 97).
+- Earned £17M: show income 97%, maker sponsorship 3%, insurance 0%.
+- Operating margin 24%. Biggest costs as a share of revenue: crew wages 21%, sub-hired kit 13%, full-time staff 6%, annexes & stages 6%.
+- Ran 12 vehicles at 18.2 shows per vehicle-year; 1751 shows at 97% average, 3 failed (0%).
+- Nights: 88% triumphs, 11% solid, 0% shaky, 0% bad, 0% failed; clients docked £76k and claimed £9.6k in damages (0% of revenue).
+- Office: 6 office staff at the end; the work outgrew the office by 1% on average and 36% at worst.
+- Industry: 2 recalls grounding 10 trucks, 0 big accounts lost, £0.0k of invoices and £0.0k of bookings lost to promoters going under, 0 late-payment waves; ended with 50% of the fleet on one model and 14% of the work from one client (service contract, standby, credit insurance, 3 frameworks).
+- Bad nights were mostly down to short-handed crews (25), broken technical riders (20), nobody arriving (3).
+- Root conditions in the incident log: kit dying on stage ×2.
+- Cash: 0 months overdrawn, lowest balance £21k, 0 bills deferred, 30 forecast warnings, borrowed £90k, factored invoices 4 months.
+- Clients: 5 cancellations (2 with nothing to claim), 7 bans; asked for better terms 93 times, won 42.
+- Crew: 25 on the books, 0 lost along the way, burnout 0%, 27 trusted pairs and 1 feuds; hired crew@1999, finance@2000, production@2000.
+- Riders and rooms: 18 cross-hires and 1 room fixes booked; 21 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 98% condition (98% at the end), 3 lines refurbished; 0 manufacturer faults.
+- Road: 686k km driven, 17 roadside breakdowns — 2.48 per 100,000 km (one every 40k km) at 77% average reliability.
+- Rivals (same rules): 7 trading, 8 gone; 4464 shows at 66% average, 0 failed; 47 cross-hires and 223 room fixes paid; turned work down for rider ×13; 1 overdrawn.
 
 #### GB from 1995, seed 6
 
-- Survived 8 years, worth £3.8M (reputation 88).
-- Earned £16M: show income 97%, maker sponsorship 3%, merchandise 0%.
-- Operating margin 19%. Biggest costs as a share of revenue: crew wages 23%, sub-hired kit 12%, full-time staff 7%, annexes & stages 6%.
-- Ran 12 vehicles at 17.9 shows per vehicle-year; 1715 shows at 98% average, 5 failed (0%).
-- Nights: 85% triumphs, 15% solid, 0% shaky, 0% bad, 0% failed; clients docked £49k and claimed £56k in damages (1% of revenue).
-- Overdraft: 2 days in it, 0 over the limit (0 times).
-- Bad nights were mostly down to short-handed crews (16), broken technical riders (11), nobody arriving (5).
-- Root conditions in the incident log: money tied up in unpaid invoices ×1, kit dying on stage ×3, manufacturer faults ×1.
-- Cash: 0 months overdrawn, lowest balance -£4.1k, 1 bill deferred, 19 forecast warnings, borrowed £40k, factored invoices 4 months.
-- Clients: 8 cancellations (0 with nothing to claim), 5 bans; asked for better terms 100 times, won 62.
-- Crew: 25 on the books, 0 lost along the way, burnout 0%, 27 trusted pairs and 0 feuds; hired crew@1999, finance@1999, production@2000.
-- Riders and rooms: 19 cross-hires and 6 room fixes booked; 12 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 96% condition (100% at the end); 1 manufacturer fault.
-- Road: 683k km driven, 9 roadside breakdowns — 1.32 per 100,000 km (one every 76k km) at 80% average reliability.
-- Rivals (same rules): 9 trading, 9 gone; 3934 shows at 67% average, 1 failed; 68 cross-hires and 255 room fixes paid; turned work down for rider ×31, crew ×14, kit ×11; 4 overdrawn.
+- Survived 8 years, worth £5.4M (reputation 93).
+- Earned £18M: show income 98%, maker sponsorship 2%, merchandise 0%.
+- Operating margin 26%. Biggest costs as a share of revenue: crew wages 18%, sub-hired kit 13%, annexes & stages 6%, corporation tax 6%.
+- Ran 12 vehicles at 17.1 shows per vehicle-year; 1643 shows at 97% average, 0 failed (0%).
+- Nights: 91% triumphs, 9% solid, 0% shaky, 0% bad, 0% failed; clients docked £71k and claimed £0.0k in damages (0% of revenue).
+- Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
+- Industry: 2 recalls grounding 10 trucks, 1 big account lost, £0.0k of invoices and £0.0k of bookings lost to promoters going under, 0 late-payment waves; ended with 50% of the fleet on one model and 22% of the work from one client (service contract, standby, credit insurance, 6 frameworks).
+- Bad nights were mostly down to short-handed crews (17), broken technical riders (13), an office stretched too thin (3).
+- Cash: 0 months overdrawn, lowest balance £16k, 0 bills deferred, 22 forecast warnings, borrowed £40k, factored invoices 6 months.
+- Clients: 8 cancellations (0 with nothing to claim), 8 bans; asked for better terms 111 times, won 71.
+- Crew: 25 on the books, 0 lost along the way, burnout 0%, 23 trusted pairs and 0 feuds; hired crew@1999, finance@1999, production@2000.
+- Riders and rooms: 23 cross-hires and 7 room fixes booked; 18 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 99% condition (100% at the end), 1 lines refurbished; 0 manufacturer faults.
+- Road: 667k km driven, 9 roadside breakdowns — 1.35 per 100,000 km (one every 74k km) at 77% average reliability.
+- Rivals (same rules): 8 trading, 7 gone; 4529 shows at 67% average, 1 failed; 86 cross-hires and 305 room fixes paid; turned work down for crew ×1; 2 overdrawn.
 
 #### ES from 1990, seed 3
 
-- Survived 8 years, worth 85M pts (reputation 76).
-- Earned 680M pts: show income 98%, maker sponsorship 2%.
-- Operating margin 0%. Biggest costs as a share of revenue: crew wages 34%, sub-hired kit 13%, new vehicles & gear 11%, office, admin & cover 6%.
-- Ran 8 vehicles at 8.2 shows per vehicle-year; 528 shows at 92% average, 0 failed (0%).
-- Nights: 82% triumphs, 17% solid, 1% shaky, 0% bad, 0% failed; clients docked 873k pts and claimed 0.0k pts in damages (0% of revenue).
-- Overdraft: 5 days in it, 0 over the limit (0 times).
-- Bad nights were mostly down to short-handed crews (9).
-- Root conditions in the incident log: services put off ×2.
-- Cash: 0 months overdrawn, lowest balance -363k pts, 0 bills deferred, 82 forecast warnings, borrowed 42M pts, factored invoices 20 months.
-- Clients: 2 cancellations (0 with nothing to claim), 0 bans; asked for better terms 13 times, won 12.
-- Crew: 17 on the books, 0 lost along the way, burnout 0%, 10 trusted pairs and 1 feuds.
-- Riders and rooms: 46 cross-hires and 2 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
+- Survived 8 years, worth 32M pts (reputation 71).
+- Earned 584M pts: show income 98%, maker sponsorship 2%.
+- Operating margin -4%. Biggest costs as a share of revenue: crew wages 38%, sub-hired kit 13%, new vehicles & gear 8%, office, admin & cover 7%.
+- Ran 6 vehicles at 10.5 shows per vehicle-year; 505 shows at 89% average, 2 failed (0%).
+- Nights: 82% triumphs, 17% solid, 1% shaky, 0% bad, 0% failed; clients docked 1.8M pts and claimed 820k pts in damages (0% of revenue).
+- Bad nights were mostly down to short-handed crews (7), nobody arriving (2), uncertified crew (1).
+- Root conditions in the incident log: services put off ×1.
+- Cash: 0 months overdrawn, lowest balance 1.5M pts, 0 bills deferred, 116 forecast warnings, borrowed 43M pts, factored invoices 28 months.
+- Clients: 2 cancellations (0 with nothing to claim), 2 bans; asked for better terms 1 times, won 1.
+- Crew: 13 on the books, 0 lost along the way, burnout 0%, 10 trusted pairs and 0 feuds.
+- Riders and rooms: 33 cross-hires and 0 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
 - Kit and fleet: kit averaged 100% condition (100% at the end); 0 manufacturer faults.
-- Road: 596k km driven, 13 roadside breakdowns — 2.18 per 100,000 km (one every 46k km) at 79% average reliability.
-- Rivals (same rules): 9 trading, 7 gone; 2464 shows at 73% average, 0 failed; 14 cross-hires and 9 room fixes paid; turned work down for rider ×33, kit ×1; 1 overdrawn.
+- Road: 596k km driven, 14 roadside breakdowns — 2.35 per 100,000 km (one every 43k km) at 78% average reliability.
+- Rivals (same rules): 7 trading, 10 gone; 2456 shows at 73% average, 0 failed; 10 cross-hires and 15 room fixes paid; turned work down for rider ×71, crew ×9, kit ×2, trucks ×1; 2 overdrawn.
 
 #### ES from 1990, seed 4
 
-- Survived 8 years, worth 45M pts (reputation 72).
-- Earned 698M pts: show income 97%, maker sponsorship 3%.
-- Operating margin -3%. Biggest costs as a share of revenue: crew wages 34%, sub-hired kit 11%, new vehicles & gear 10%, annexes & stages 7%.
-- Ran 8 vehicles at 8.5 shows per vehicle-year; 546 shows at 94% average, 3 failed (1%).
-- Nights: 86% triumphs, 12% solid, 1% shaky, 0% bad, 1% failed; clients docked 2.9M pts and claimed 1.1M pts in damages (1% of revenue).
-- Office: 4 office staff at the end; the work outgrew the office by 0% on average and 3% at worst.
-- Bad nights were mostly down to short-handed crews (12), nobody arriving (3).
-- Root conditions in the incident log: services put off ×2.
-- Cash: 0 months overdrawn, lowest balance 270k pts, 0 bills deferred, 166 forecast warnings, borrowed 38M pts, factored invoices 36 months.
-- Clients: 3 cancellations (2 with nothing to claim), 3 bans; asked for better terms 15 times, won 9.
-- Crew: 17 on the books, 0 lost along the way, burnout 0%, 10 trusted pairs and 0 feuds.
-- Riders and rooms: 37 cross-hires and 3 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
+- Survived 8 years, worth 210M pts (reputation 77).
+- Earned 1197M pts: show income 98%, maker sponsorship 2%, merchandise 0%.
+- Operating margin 7%. Biggest costs as a share of revenue: crew wages 26%, annexes & stages 10%, sub-hired kit 10%, new vehicles & gear 9%.
+- Ran 12 vehicles at 8.8 shows per vehicle-year; 843 shows at 90% average, 1 failed (0%).
+- Nights: 85% triumphs, 15% solid, 0% shaky, 0% bad, 0% failed; clients docked 2.8M pts and claimed 2.4M pts in damages (0% of revenue).
+- Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
+- Bad nights were mostly down to short-handed crews (14), an office stretched too thin (1), late load-ins (1).
+- Root conditions in the incident log: services put off ×1.
+- Cash: 0 months overdrawn, lowest balance 3.1M pts, 0 bills deferred, 51 forecast warnings, borrowed 25M pts, factored invoices 15 months.
+- Clients: 0 cancellations (0 with nothing to claim), 1 ban; asked for better terms 31 times, won 19.
+- Crew: 25 on the books, 0 lost along the way, burnout 1%, 11 trusted pairs and 0 feuds; hired crew@1997, finance@1997.
+- Riders and rooms: 55 cross-hires and 8 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
 - Kit and fleet: kit averaged 100% condition (100% at the end); 0 manufacturer faults.
-- Road: 605k km driven, 16 roadside breakdowns — 2.64 per 100,000 km (one every 38k km) at 78% average reliability.
-- Rivals (same rules): 6 trading, 6 gone; 2902 shows at 67% average, 0 failed; 5 cross-hires and 10 room fixes paid; turned work down for rider ×8, crew ×4.
+- Road: 905k km driven, 18 roadside breakdowns — 1.99 per 100,000 km (one every 50k km) at 78% average reliability.
+- Rivals (same rules): 8 trading, 6 gone; 2946 shows at 71% average, 0 failed; 20 cross-hires and 10 room fixes paid; turned work down for rider ×10, crew ×1.
 
 #### ES from 1990, seed 5
 
-- Survived 8 years, worth 86M pts (reputation 69).
-- Earned 662M pts: show income 97%, maker sponsorship 3%, merchandise 0%.
-- Operating margin 2%. Biggest costs as a share of revenue: crew wages 34%, sub-hired kit 14%, new vehicles & gear 8%, per diems & hotels 7%.
-- Ran 6 vehicles at 10.7 shows per vehicle-year; 515 shows at 89% average, 1 failed (0%).
-- Nights: 77% triumphs, 22% solid, 0% shaky, 0% bad, 0% failed; clients docked 721k pts and claimed 261k pts in damages (0% of revenue).
-- Bad nights were mostly down to short-handed crews (12), nobody arriving (1).
-- Cash: 0 months overdrawn, lowest balance 2.3M pts, 0 bills deferred, 40 forecast warnings, borrowed 12M pts, factored invoices 11 months.
-- Clients: 0 cancellations (0 with nothing to claim), 1 ban; asked for better terms 8 times, won 1.
-- Crew: 13 on the books, 0 lost along the way, burnout 0%, 10 trusted pairs and 0 feuds.
-- Riders and rooms: 55 cross-hires and 4 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
+- Survived 8 years, worth 90M pts (reputation 68).
+- Earned 787M pts: show income 96%, maker sponsorship 3%, merchandise 0%.
+- Operating margin 1%. Biggest costs as a share of revenue: crew wages 33%, sub-hired kit 12%, new vehicles & gear 10%, per diems & hotels 7%.
+- Ran 10 vehicles at 7.5 shows per vehicle-year; 604 shows at 92% average, 4 failed (1%).
+- Nights: 79% triumphs, 19% solid, 1% shaky, 0% bad, 1% failed; clients docked 2.8M pts and claimed 674k pts in damages (0% of revenue).
+- Office: 5 office staff at the end; the work outgrew the office by 1% on average and 36% at worst.
+- Industry: 0 recalls grounding 0 trucks, 0 big accounts lost, 0.0k pts of invoices and 0.0k pts of bookings lost to promoters going under, 1 late-payment wave; ended with 50% of the fleet on one model and 22% of the work from one client (standby, 6 frameworks).
+- Overdraft: 1 days in it, 0 over the limit (0 times).
+- Bad nights were mostly down to short-handed crews (16), late load-ins (7), nobody arriving (4).
+- Root conditions in the incident log: kit dying on stage ×2.
+- Cash: 0 months overdrawn, lowest balance -76k pts, 0 bills deferred, 33 forecast warnings, borrowed 18M pts, factored invoices 9 months.
+- Clients: 0 cancellations (0 with nothing to claim), 5 bans; asked for better terms 7 times, won 5.
+- Crew: 21 on the books, 0 lost along the way, burnout 0%, 11 trusted pairs and 0 feuds.
+- Riders and rooms: 57 cross-hires and 5 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
 - Kit and fleet: kit averaged 100% condition (100% at the end); 0 manufacturer faults.
-- Road: 685k km driven, 14 roadside breakdowns — 2.04 per 100,000 km (one every 49k km) at 79% average reliability.
-- Rivals (same rules): 7 trading, 6 gone; 2741 shows at 70% average, 0 failed; 4 cross-hires and 20 room fixes paid; turned work down for rider ×13, crew ×3; 1 overdrawn.
+- Road: 765k km driven, 13 roadside breakdowns — 1.7 per 100,000 km (one every 59k km) at 78% average reliability.
+- Rivals (same rules): 8 trading, 7 gone; 3163 shows at 73% average, 0 failed; 27 cross-hires and 21 room fixes paid; turned work down for rider ×6, crew ×2.
 
 #### ES from 1990, seed 6
 
-- Survived 8 years, worth 247M pts (reputation 76).
-- Earned 1125M pts: show income 97%, maker sponsorship 3%, merchandise 0%.
-- Operating margin 8%. Biggest costs as a share of revenue: crew wages 28%, sub-hired kit 11%, new vehicles & gear 11%, annexes & stages 7%.
-- Ran 12 vehicles at 8.3 shows per vehicle-year; 800 shows at 88% average, 4 failed (0%).
-- Nights: 81% triumphs, 18% solid, 0% shaky, 0% bad, 0% failed; clients docked 3.0M pts and claimed 1.2M pts in damages (0% of revenue).
-- Office: 6 office staff at the end; the work outgrew the office by 0% on average and 20% at worst.
-- Overdraft: 2 days in it, 0 over the limit (0 times).
-- Bad nights were mostly down to short-handed crews (13), an office stretched too thin (5), nobody arriving (4).
-- Cash: 0 months overdrawn, lowest balance -425k pts, 0 bills deferred, 55 forecast warnings, borrowed 25M pts, factored invoices 13 months.
-- Clients: 3 cancellations (1 with nothing to claim), 4 bans; asked for better terms 40 times, won 21.
-- Crew: 25 on the books, 0 lost along the way, burnout 0%, 13 trusted pairs and 2 feuds; split feuding crews 27 times; hired crew@1997, finance@1997.
-- Riders and rooms: 80 cross-hires and 13 room fixes booked; 1 rider breach and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 100% condition (99% at the end); 0 manufacturer faults.
-- Road: 859k km driven, 14 roadside breakdowns — 1.63 per 100,000 km (one every 61k km) at 80% average reliability.
-- Rivals (same rules): 7 trading, 7 gone; 2695 shows at 67% average, 0 failed; 26 cross-hires and 9 room fixes paid; turned work down for rider ×18, kit ×1, crew ×1; 1 overdrawn.
+- Survived 8 years, worth 245M pts (reputation 77).
+- Earned 1126M pts: show income 98%, maker sponsorship 2%, merchandise 0%.
+- Operating margin 12%. Biggest costs as a share of revenue: crew wages 28%, sub-hired kit 10%, new vehicles & gear 9%, annexes & stages 6%.
+- Ran 12 vehicles at 8.8 shows per vehicle-year; 845 shows at 93% average, 0 failed (0%).
+- Nights: 80% triumphs, 19% solid, 1% shaky, 0% bad, 0% failed; clients docked 4.0M pts and claimed 0.0k pts in damages (0% of revenue).
+- Office: 6 office staff at the end; the work outgrew the office by 1% on average and 30% at worst.
+- Bad nights were mostly down to short-handed crews (22), an office stretched too thin (3), broken technical riders (1).
+- Cash: 0 months overdrawn, lowest balance 2.5M pts, 0 bills deferred, 39 forecast warnings, borrowed 23M pts, factored invoices 11 months.
+- Clients: 5 cancellations (2 with nothing to claim), 0 bans; asked for better terms 18 times, won 8.
+- Crew: 25 on the books, 0 lost along the way, burnout 0%, 12 trusted pairs and 0 feuds; hired crew@1997, finance@1997.
+- Riders and rooms: 44 cross-hires and 10 room fixes booked; 1 rider breach and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 100% condition (100% at the end); 0 manufacturer faults.
+- Road: 868k km driven, 25 roadside breakdowns — 2.88 per 100,000 km (one every 35k km) at 78% average reliability.
+- Rivals (same rules): 8 trading, 6 gone; 3084 shows at 70% average, 0 failed; 33 cross-hires and 19 room fixes paid; turned work down for rider ×85, crew ×1; 3 overdrawn.
 
 ### Expansionist
 
@@ -526,22 +571,23 @@ A competent operator in a hurry: meets riders, fixes rooms, keeps kit up and wat
 
 #### GB from 1995, seed 3
 
-- Went under after 4.5 years: Bot stayed £74,519 over its overdraft limit after the bank's demand, and the administrators have been appointed.
-- Earned £6.1M: show income 96%, maker sponsorship 3%, merchandise 0%.
-- Operating margin -14%. Biggest costs as a share of revenue: crew wages 44%, new vehicles & gear 13%, office, admin & cover 9%, vehicle running costs 9%.
-- Ran 12 vehicles at 26.4 shows per vehicle-year; 1408 shows at 60% average, 14 failed (1%).
-- Nights: 47% triumphs, 33% solid, 17% shaky, 3% bad, 1% failed; clients docked £660k and claimed £100k in damages (13% of revenue).
-- Office: 0 office staff at the end; the work outgrew the office by 408% on average and 619% at worst.
-- Overdraft: 108 days in it, 108 over the limit (3 times), 3 demands from the bank, cut 1×, 1 bridging loan, sold 7 trucks to raise cash.
-- Bad nights were mostly down to late load-ins (606), an office stretched too thin (175), kit dying on stage (82).
-- Root conditions in the incident log: services put off ×1, kit dying on stage ×96.
-- Cash: 3 months overdrawn, lowest balance -£92k, 31 bills deferred, 178 forecast warnings, borrowed £450k, factored invoices 39 months.
-- Clients: 4 cancellations (1 with nothing to claim), 16 bans; asked for better terms 98 times, won 52.
-- Crew: 36 on the books, 2 lost along the way, burnout 0%, 10 trusted pairs and 0 feuds.
-- Riders and rooms: 12 cross-hires and 23 room fixes booked; 2 rider breaches and 1 room problem reached the stage.
-- Kit and fleet: kit averaged 72% condition (43% at the end), 29 lines refurbished; 0 manufacturer faults.
-- Road: 613k km driven, 6 roadside breakdowns — 0.98 per 100,000 km (one every 102k km) at 81% average reliability.
-- Rivals (same rules): 7 trading, 8 gone; 1778 shows at 68% average, 0 failed; 13 cross-hires and 48 room fixes paid; turned work down for rider ×92, crew ×9, kit ×4; 3 overdrawn.
+- Went under after 3.6 years: Bot stayed £99,729 over its overdraft limit after the bank's demand, and the administrators have been appointed.
+- Earned £4.0M: show income 95%, maker sponsorship 5%, merchandise 0%.
+- Operating margin -20%. Biggest costs as a share of revenue: crew wages 46%, new vehicles & gear 16%, office, admin & cover 9%, vehicle running costs 9%.
+- Ran 8 vehicles at 33 shows per vehicle-year; 954 shows at 67% average, 20 failed (2%).
+- Nights: 51% triumphs, 30% solid, 16% shaky, 2% bad, 2% failed; clients docked £392k and claimed £59k in damages (11% of revenue).
+- Office: 0 office staff at the end; the work outgrew the office by 334% on average and 506% at worst.
+- Industry: 1 recall grounding 14 trucks, 1 big account lost, £0.0k of invoices and £0.0k of bookings lost to promoters going under, 0 late-payment waves; ended with 88% of the fleet on one model and 27% of the work from one client.
+- Overdraft: 151 days in it, 151 over the limit (5 times), 4 demands from the bank, cut 1×, 1 bridging loan, sold 8 trucks to raise cash.
+- Bad nights were mostly down to late load-ins (433), an office stretched too thin (123), kit dying on stage (12).
+- Root conditions in the incident log: kit dying on stage ×23.
+- Cash: 6 months overdrawn, lowest balance -£101k, 40 bills deferred, 141 forecast warnings, borrowed £380k, factored invoices 31 months.
+- Clients: 1 cancellation (1 with nothing to claim), 19 bans; asked for better terms 34 times, won 23.
+- Crew: 28 on the books, 5 lost along the way, burnout 0%, 9 trusted pairs and 0 feuds.
+- Riders and rooms: 6 cross-hires and 12 room fixes booked; 1 rider breach and 1 room problem reached the stage.
+- Kit and fleet: kit averaged 77% condition (55% at the end), 23 lines refurbished; 0 manufacturer faults.
+- Road: 414k km driven, 4 roadside breakdowns — 0.97 per 100,000 km (one every 103k km) at 81% average reliability.
+- Rivals (same rules): 7 trading, 7 gone; 1319 shows at 71% average, 0 failed; 6 cross-hires and 17 room fixes paid; turned work down for rider ×39, crew ×15, kit ×2; 3 overdrawn.
 
 #### GB from 1995, seed 4
 
@@ -564,98 +610,102 @@ A competent operator in a hurry: meets riders, fixes rooms, keeps kit up and wat
 
 #### GB from 1995, seed 5
 
-- Went under after 3.7 years: Bot stayed £45,418 over its overdraft limit after the bank's demand, and the administrators have been appointed.
+- Went under after 3.8 years: Bot stayed £77,322 over its overdraft limit after the bank's demand, and the administrators have been appointed.
 - Earned £4.3M: show income 97%, maker sponsorship 2%, merchandise 0%.
-- Operating margin -19%. Biggest costs as a share of revenue: crew wages 47%, new vehicles & gear 14%, office, admin & cover 9%, vehicle running costs 9%.
-- Ran 4 vehicles at 70.3 shows per vehicle-year; 1041 shows at 53% average, 15 failed (1%).
-- Nights: 43% triumphs, 34% solid, 17% shaky, 5% bad, 1% failed; clients docked £483k and claimed £46k in damages (12% of revenue).
-- Office: 0 office staff at the end; the work outgrew the office by 352% on average and 544% at worst.
-- Overdraft: 175 days in it, 175 over the limit (7 times), 5 demands from the bank, cut 1×, 1 bridging loan, sold 13 trucks to raise cash.
-- Bad nights were mostly down to late load-ins (476), an office stretched too thin (131), kit dying on stage (30).
-- Root conditions in the incident log: services put off ×1, kit dying on stage ×43.
-- Cash: 7 months overdrawn, lowest balance -£91k, 39 bills deferred, 160 forecast warnings, borrowed £390k, factored invoices 37 months.
+- Operating margin -20%. Biggest costs as a share of revenue: crew wages 47%, new vehicles & gear 14%, office, admin & cover 9%, vehicle running costs 9%.
+- Ran 4 vehicles at 69.7 shows per vehicle-year; 1058 shows at 58% average, 14 failed (1%).
+- Nights: 42% triumphs, 33% solid, 18% shaky, 6% bad, 1% failed; clients docked £498k and claimed £47k in damages (13% of revenue).
+- Office: 0 office staff at the end; the work outgrew the office by 348% on average and 544% at worst.
+- Industry: 0 recalls grounding 0 trucks, 0 big accounts lost, £0.0k of invoices and £0.0k of bookings lost to promoters going under, 1 late-payment wave; ended with 50% of the fleet on one model and 27% of the work from one client.
+- Overdraft: 200 days in it, 200 over the limit (7 times), 6 demands from the bank, cut 1×, 1 bridging loan, sold 13 trucks to raise cash.
+- Bad nights were mostly down to late load-ins (492), an office stretched too thin (137), kit dying on stage (31).
+- Root conditions in the incident log: services put off ×1, kit dying on stage ×44.
+- Cash: 7 months overdrawn, lowest balance -£78k, 47 bills deferred, 165 forecast warnings, borrowed £390k, factored invoices 38 months.
 - Clients: 0 cancellations (0 with nothing to claim), 18 bans; asked for better terms 98 times, won 58.
-- Crew: 32 on the books, 2 lost along the way, burnout 0%, 6 trusted pairs and 1 feuds.
-- Riders and rooms: 4 cross-hires and 3 room fixes booked; 1 rider breach and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 73% condition (43% at the end), 20 lines refurbished; 0 manufacturer faults.
-- Road: 440k km driven, 7 roadside breakdowns — 1.59 per 100,000 km (one every 63k km) at 81% average reliability.
-- Rivals (same rules): 9 trading, 5 gone; 1618 shows at 70% average, 0 failed; 16 cross-hires and 16 room fixes paid; turned work down for rider ×33, kit ×7, crew ×2; 4 overdrawn.
+- Crew: 19 on the books, 12 lost along the way, burnout 0%, 6 trusted pairs and 2 feuds.
+- Riders and rooms: 5 cross-hires and 3 room fixes booked; 1 rider breach and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 73% condition (40% at the end), 20 lines refurbished; 0 manufacturer faults.
+- Road: 448k km driven, 7 roadside breakdowns — 1.56 per 100,000 km (one every 64k km) at 81% average reliability.
+- Rivals (same rules): 9 trading, 6 gone; 1560 shows at 65% average, 0 failed; 16 cross-hires and 16 room fixes paid; turned work down for rider ×30, kit ×9, crew ×2; 4 overdrawn.
 
 #### GB from 1995, seed 6
 
-- Went under after 3.2 years: Bot stayed £25,710 over its overdraft limit after the bank's demand, and the administrators have been appointed.
-- Earned £3.1M: show income 98%, maker sponsorship 2%, merchandise 0%.
-- Operating margin -23%. Biggest costs as a share of revenue: crew wages 47%, new vehicles & gear 16%, office, admin & cover 9%, vehicle running costs 9%.
-- Ran 3 vehicles at 77.8 shows per vehicle-year; 755 shows at 55% average, 11 failed (1%).
-- Nights: 40% triumphs, 34% solid, 19% shaky, 5% bad, 1% failed; clients docked £314k and claimed £153k in damages (15% of revenue).
-- Office: 0 office staff at the end; the work outgrew the office by 274% on average and 394% at worst.
-- Overdraft: 163 days in it, 162 over the limit (9 times), 4 demands from the bank, cut 1×, 2 bridging loans, sold 10 trucks to raise cash.
-- Bad nights were mostly down to late load-ins (317), an office stretched too thin (98), kit dying on stage (54).
-- Root conditions in the incident log: money tied up in unpaid invoices ×5, kit dying on stage ×66.
-- Cash: 5 months overdrawn, lowest balance -£71k, 38 bills deferred, 132 forecast warnings, borrowed £340k, factored invoices 29 months.
-- Clients: 3 cancellations (0 with nothing to claim), 9 bans; asked for better terms 54 times, won 27.
-- Crew: 23 on the books, 3 lost along the way, burnout 0%, 5 trusted pairs and 1 feuds.
-- Riders and rooms: 19 cross-hires and 6 room fixes booked; 1 rider breach and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 72% condition (51% at the end), 15 lines refurbished; 0 manufacturer faults.
-- Road: 313k km driven, 2 roadside breakdowns — 0.64 per 100,000 km (one every 157k km) at 80% average reliability.
-- Rivals (same rules): 7 trading, 6 gone; 1292 shows at 72% average, 0 failed; 20 cross-hires and 15 room fixes paid; turned work down for rider ×26, crew ×9; 4 overdrawn.
+- Went under after 3 years: Bot stayed £18,111 over its overdraft limit after the bank's demand, and the administrators have been appointed.
+- Earned £2.7M: show income 98%, maker sponsorship 2%, merchandise 0%.
+- Operating margin -31%. Biggest costs as a share of revenue: crew wages 52%, new vehicles & gear 22%, office, admin & cover 10%, vehicle running costs 10%.
+- Ran 1 vehicles at 226.1 shows per vehicle-year; 687 shows at 54% average, 8 failed (1%).
+- Nights: 39% triumphs, 38% solid, 17% shaky, 5% bad, 1% failed; clients docked £229k and claimed £25k in damages (9% of revenue).
+- Office: 0 office staff at the end; the work outgrew the office by 289% on average and 469% at worst.
+- Industry: 0 recalls grounding 0 trucks, 2 big accounts lost, £0.0k of invoices and £0.0k of bookings lost to promoters going under, 0 late-payment waves; ended with 100% of the fleet on one model and 40% of the work from one client.
+- Overdraft: 140 days in it, 140 over the limit (5 times), 4 demands from the bank, cut 1×, 1 bridging loan, sold 14 trucks to raise cash.
+- Bad nights were mostly down to late load-ins (288), an office stretched too thin (70), kit dying on stage (32).
+- Root conditions in the incident log: kit dying on stage ×38.
+- Cash: 6 months overdrawn, lowest balance -£83k, 36 bills deferred, 136 forecast warnings, borrowed £390k, factored invoices 30 months.
+- Clients: 12 cancellations (8 with nothing to claim), 12 bans; asked for better terms 48 times, won 27.
+- Crew: 27 on the books, 2 lost along the way, burnout 0%, 4 trusted pairs and 1 feuds.
+- Riders and rooms: 14 cross-hires and 12 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 73% condition (52% at the end), 22 lines refurbished; 0 manufacturer faults.
+- Road: 289k km driven, 1 roadside breakdown — 0.35 per 100,000 km (one every 289k km) at 80% average reliability.
+- Rivals (same rules): 9 trading, 5 gone; 1140 shows at 69% average, 0 failed; 13 cross-hires and 12 room fixes paid; turned work down for rider ×31, crew ×1; 3 overdrawn.
 
 #### ES from 1990, seed 3
 
-- Went under after 3.3 years: Bot stayed 10,224,879 pts over its overdraft limit after the bank's demand, and the administrators have been appointed.
-- Earned 511M pts: show income 96%, maker sponsorship 4%, merchandise 0%.
-- Operating margin -22%. Biggest costs as a share of revenue: crew wages 44%, new vehicles & gear 15%, per diems & hotels 11%, office, admin & cover 9%.
-- Ran 2 vehicles at 105.3 shows per vehicle-year; 692 shows at 72% average, 9 failed (1%).
-- Nights: 37% triumphs, 36% solid, 20% shaky, 7% bad, 1% failed; clients docked 54M pts and claimed 3.5M pts in damages (11% of revenue).
+- Went under after 3.4 years: Bot stayed 10,094,869 pts over its overdraft limit after the bank's demand, and the administrators have been appointed.
+- Earned 523M pts: show income 96%, maker sponsorship 4%, merchandise 0%.
+- Operating margin -22%. Biggest costs as a share of revenue: crew wages 44%, new vehicles & gear 14%, per diems & hotels 11%, office, admin & cover 9%.
+- Ran 3 vehicles at 69.5 shows per vehicle-year; 703 shows at 65% average, 10 failed (1%).
+- Nights: 36% triumphs, 38% solid, 19% shaky, 6% bad, 1% failed; clients docked 53M pts and claimed 3.2M pts in damages (11% of revenue).
 - Office: 0 office staff at the end; the work outgrew the office by 251% on average and 356% at worst.
-- Overdraft: 110 days in it, 110 over the limit (5 times), 3 demands from the bank, cut 1×, 1 bridging loan, sold 10 trucks to raise cash.
-- Bad nights were mostly down to late load-ins (283), an office stretched too thin (84), short-handed crews (28).
-- Root conditions in the incident log: services put off ×1, kit dying on stage ×13.
-- Cash: 4 months overdrawn, lowest balance -13M pts, 28 bills deferred, 152 forecast warnings, borrowed 55M pts, factored invoices 37 months.
-- Clients: 1 cancellation (0 with nothing to claim), 8 bans; asked for better terms 159 times, won 97.
-- Crew: 22 on the books, 2 lost along the way, burnout 0%, 7 trusted pairs and 0 feuds.
-- Riders and rooms: 72 cross-hires and 4 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 77% condition (71% at the end), 5 lines refurbished; 0 manufacturer faults.
-- Road: 871k km driven, 15 roadside breakdowns — 1.72 per 100,000 km (one every 58k km) at 80% average reliability.
-- Rivals (same rules): 7 trading, 3 gone; 1219 shows at 76% average, 0 failed; 36 cross-hires and 10 room fixes paid; 1 overdrawn.
+- Industry: 1 recall grounding 10 trucks, 0 big accounts lost, 0.0k pts of invoices and 0.0k pts of bookings lost to promoters going under, 0 late-payment waves; ended with 33% of the fleet on one model and 39% of the work from one client.
+- Overdraft: 113 days in it, 113 over the limit (5 times), 3 demands from the bank, cut 1×, 1 bridging loan, sold 9 trucks to raise cash.
+- Bad nights were mostly down to late load-ins (291), an office stretched too thin (78), short-handed crews (28).
+- Root conditions in the incident log: services put off ×1, kit dying on stage ×16.
+- Cash: 5 months overdrawn, lowest balance -12M pts, 21 bills deferred, 157 forecast warnings, borrowed 55M pts, factored invoices 38 months.
+- Clients: 1 cancellation (0 with nothing to claim), 10 bans; asked for better terms 164 times, won 102.
+- Crew: 22 on the books, 1 lost along the way, burnout 0%, 7 trusted pairs and 0 feuds.
+- Riders and rooms: 71 cross-hires and 4 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 76% condition (58% at the end), 5 lines refurbished; 0 manufacturer faults.
+- Road: 886k km driven, 14 roadside breakdowns — 1.58 per 100,000 km (one every 63k km) at 80% average reliability.
+- Rivals (same rules): 7 trading, 3 gone; 1219 shows at 78% average, 0 failed; 37 cross-hires and 10 room fixes paid; turned work down for rider ×4; 1 overdrawn.
 
 #### ES from 1990, seed 4
 
-- Went under after 2.5 years: Bot stayed 12,792,057 pts over its overdraft limit after the bank's demand, and the administrators have been appointed.
-- Earned 347M pts: show income 97%, maker sponsorship 3%, merchandise 0%.
-- Operating margin -23%. Biggest costs as a share of revenue: crew wages 43%, new vehicles & gear 14%, per diems & hotels 11%, office, admin & cover 9%.
-- Ran 8 vehicles at 24.7 shows per vehicle-year; 484 shows at 75% average, 10 failed (2%).
-- Nights: 48% triumphs, 33% solid, 15% shaky, 3% bad, 2% failed; clients docked 29M pts and claimed 5.1M pts in damages (10% of revenue).
-- Office: 0 office staff at the end; the work outgrew the office by 206% on average and 319% at worst.
-- Overdraft: 101 days in it, 101 over the limit (8 times), 2 demands from the bank, 1 bridging loan, sold 3 trucks to raise cash.
-- Bad nights were mostly down to late load-ins (174), an office stretched too thin (67), short-handed crews (12).
-- Root conditions in the incident log: services put off ×2, kit dying on stage ×14, exhausted crews ×2.
-- Cash: 4 months overdrawn, lowest balance -14M pts, 30 bills deferred, 109 forecast warnings, borrowed 45M pts, factored invoices 27 months.
-- Clients: 0 cancellations (0 with nothing to claim), 12 bans; asked for better terms 89 times, won 47.
-- Crew: 23 on the books, 0 lost along the way, burnout 0%, 2 trusted pairs and 0 feuds.
-- Riders and rooms: 41 cross-hires and 7 room fixes booked; 1 rider breach and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 80% condition (64% at the end), 7 lines refurbished; 0 manufacturer faults.
-- Road: 639k km driven, 15 roadside breakdowns — 2.35 per 100,000 km (one every 43k km) at 80% average reliability.
-- Rivals (same rules): 7 trading, 4 gone; 769 shows at 78% average, 0 failed; 17 cross-hires and 7 room fixes paid; turned work down for rider ×11, kit ×1; 1 overdrawn.
+- Went under after 2.4 years: Bot stayed 6,464,228 pts over its overdraft limit after the bank's demand, and the administrators have been appointed.
+- Earned 289M pts: show income 97%, maker sponsorship 3%, merchandise 0%.
+- Operating margin -19%. Biggest costs as a share of revenue: crew wages 42%, per diems & hotels 13%, new vehicles & gear 11%, office, admin & cover 9%.
+- Ran 8 vehicles at 24.9 shows per vehicle-year; 473 shows at 62% average, 7 failed (1%).
+- Nights: 34% triumphs, 38% solid, 21% shaky, 6% bad, 1% failed; clients docked 33M pts and claimed 3.1M pts in damages (12% of revenue).
+- Office: 0 office staff at the end; the work outgrew the office by 159% on average and 206% at worst.
+- Overdraft: 53 days in it, 53 over the limit (5 times), 1 demand from the bank, 1 bridging loan.
+- Bad nights were mostly down to late load-ins (172), an office stretched too thin (63), kit dying on stage (31).
+- Root conditions in the incident log: kit dying on stage ×33, exhausted crews ×1.
+- Cash: 2 months overdrawn, lowest balance -7.3M pts, 16 bills deferred, 107 forecast warnings, borrowed 40M pts, factored invoices 26 months.
+- Clients: 0 cancellations (0 with nothing to claim), 9 bans; asked for better terms 79 times, won 44.
+- Crew: 17 on the books, 0 lost along the way, burnout 0%, 2 trusted pairs and 0 feuds.
+- Riders and rooms: 43 cross-hires and 4 room fixes booked; 1 rider breach and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 69% condition (33% at the end), 2 lines refurbished; 0 manufacturer faults.
+- Road: 600k km driven, 12 roadside breakdowns — 2 per 100,000 km (one every 50k km) at 80% average reliability.
+- Rivals (same rules): 7 trading, 3 gone; 894 shows at 74% average, 0 failed; 8 cross-hires and 10 room fixes paid; turned work down for rider ×4; 1 overdrawn.
 
 #### ES from 1990, seed 5
 
-- Went under after 3.7 years: Bot stayed 14,534,118 pts over its overdraft limit after the bank's demand, and the administrators have been appointed.
-- Earned 686M pts: show income 96%, maker sponsorship 4%, merchandise 0%.
-- Operating margin -19%. Biggest costs as a share of revenue: crew wages 43%, new vehicles & gear 15%, per diems & hotels 11%, office, admin & cover 9%.
-- Ran 5 vehicles at 51.4 shows per vehicle-year; 947 shows at 65% average, 9 failed (1%).
-- Nights: 42% triumphs, 33% solid, 18% shaky, 5% bad, 1% failed; clients docked 75M pts and claimed 3.2M pts in damages (11% of revenue).
-- Office: 0 office staff at the end; the work outgrew the office by 293% on average and 469% at worst.
-- Overdraft: 118 days in it, 118 over the limit (3 times), 3 demands from the bank, cut 1×, 1 bridging loan, sold 10 trucks to raise cash.
-- Bad nights were mostly down to late load-ins (389), an office stretched too thin (123), kit dying on stage (39).
-- Root conditions in the incident log: services put off ×2, kit dying on stage ×49, exhausted crews ×2.
-- Cash: 4 months overdrawn, lowest balance -15M pts, 28 bills deferred, 174 forecast warnings, borrowed 63M pts, factored invoices 39 months.
-- Clients: 1 cancellation (0 with nothing to claim), 10 bans; asked for better terms 161 times, won 97.
-- Crew: 26 on the books, 4 lost along the way, burnout 0%, 7 trusted pairs and 1 feuds.
-- Riders and rooms: 55 cross-hires and 12 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 76% condition (62% at the end), 9 lines refurbished; 0 manufacturer faults.
-- Road: 1,232k km driven, 20 roadside breakdowns — 1.62 per 100,000 km (one every 62k km) at 81% average reliability.
-- Rivals (same rules): 7 trading, 4 gone; 1364 shows at 70% average, 0 failed; 59 cross-hires and 10 room fixes paid; turned work down for rider ×28; 3 overdrawn.
+- Went under after 3.6 years: Bot stayed 4,935,181 pts over its overdraft limit after the bank's demand, and the administrators have been appointed.
+- Earned 657M pts: show income 96%, maker sponsorship 4%, merchandise 0%.
+- Operating margin -20%. Biggest costs as a share of revenue: crew wages 43%, new vehicles & gear 15%, per diems & hotels 11%, office, admin & cover 8%.
+- Ran 5 vehicles at 50.4 shows per vehicle-year; 901 shows at 65% average, 9 failed (1%).
+- Nights: 43% triumphs, 35% solid, 16% shaky, 5% bad, 1% failed; clients docked 71M pts and claimed 4.7M pts in damages (11% of revenue).
+- Office: 0 office staff at the end; the work outgrew the office by 288% on average and 469% at worst.
+- Industry: 0 recalls grounding 0 trucks, 1 big account lost, 0.0k pts of invoices and 0.0k pts of bookings lost to promoters going under, 1 late-payment wave; ended with 60% of the fleet on one model and 26% of the work from one client.
+- Overdraft: 110 days in it, 110 over the limit (4 times), 3 demands from the bank, cut 1×, 1 bridging loan, sold 10 trucks to raise cash.
+- Bad nights were mostly down to late load-ins (378), an office stretched too thin (117), short-handed crews (22).
+- Root conditions in the incident log: services put off ×1, kit dying on stage ×20, exhausted crews ×1.
+- Cash: 5 months overdrawn, lowest balance -13M pts, 32 bills deferred, 168 forecast warnings, borrowed 63M pts, factored invoices 37 months.
+- Clients: 6 cancellations (5 with nothing to claim), 11 bans; asked for better terms 162 times, won 100.
+- Crew: 31 on the books, 0 lost along the way, burnout 0%, 7 trusted pairs and 2 feuds.
+- Riders and rooms: 51 cross-hires and 12 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 77% condition (68% at the end), 9 lines refurbished; 0 manufacturer faults.
+- Road: 1,204k km driven, 20 roadside breakdowns — 1.66 per 100,000 km (one every 60k km) at 81% average reliability.
+- Rivals (same rules): 9 trading, 2 gone; 1417 shows at 73% average, 0 failed; 65 cross-hires and 10 room fixes paid; turned work down for rider ×43; 3 overdrawn.
 
 #### ES from 1990, seed 6
 
@@ -682,155 +732,329 @@ Grows as fast as the expansionist — borrowing and leasing a truck whenever eve
 
 #### GB from 1995, seed 3
 
-- Survived 8 years, worth £6.0M (reputation 100).
-- Earned £33M: show income 99%, maker sponsorship 1%, merchandise 0%.
-- Operating margin 15%. Biggest costs as a share of revenue: crew wages 26%, sub-hired kit 10%, corporation tax 6%, office, admin & cover 5%.
-- Ran 30 vehicles at 16.3 shows per vehicle-year; 3901 shows at 96% average, 9 failed (0%).
-- Nights: 85% triumphs, 14% solid, 1% shaky, 0% bad, 0% failed; clients docked £690k and claimed £23k in damages (2% of revenue).
-- Office: 10 office staff at the end; the work outgrew the office by 43% on average and 219% at worst.
-- Bad nights were mostly down to late load-ins (265), an office stretched too thin (185), broken technical riders (60).
+- Survived 8 years, worth £14M (reputation 100).
+- Earned £46M: show income 99%, maker sponsorship 1%, merchandise 0%.
+- Operating margin 27%. Biggest costs as a share of revenue: crew wages 19%, corporation tax 10%, sub-hired kit 10%, office, admin & cover 4%.
+- Ran 30 vehicles at 19.6 shows per vehicle-year; 4707 shows at 97% average, 4 failed (0%).
+- Nights: 91% triumphs, 9% solid, 0% shaky, 0% bad, 0% failed; clients docked £431k and claimed £21k in damages (1% of revenue).
+- Office: 10 office staff at the end; the work outgrew the office by 11% on average and 36% at worst.
+- Industry: 6 recalls grounding 80 trucks, 0 big accounts lost, £0.0k of invoices and £41k of bookings lost to promoters going under, 0 late-payment waves; ended with 50% of the fleet on one model and 24% of the work from one client (service contract, standby, credit insurance, 4 frameworks).
+- Bad nights were mostly down to an office stretched too thin (78), late load-ins (76), broken technical riders (56).
 - Root conditions in the incident log: services put off ×1, kit dying on stage ×4, manufacturer faults ×3.
-- Cash: 0 months overdrawn, lowest balance £20k, 0 bills deferred, 48 forecast warnings, borrowed £180k, factored invoices 6 months.
-- Clients: 11 cancellations (2 with nothing to claim), 26 bans; asked for better terms 174 times, won 116.
-- Crew: 61 on the books, 0 lost along the way, burnout 0%, 42 trusted pairs and 2 feuds; hired production@1997, crew@1997, finance@1997.
-- Riders and rooms: 17 cross-hires and 12 room fixes booked; 72 rider breaches and 1 room problem reached the stage.
-- Kit and fleet: kit averaged 95% condition (98% at the end), 34 lines refurbished; 3 manufacturer faults.
-- Road: 1,576k km driven, 21 roadside breakdowns — 1.33 per 100,000 km (one every 75k km) at 81% average reliability.
-- Rivals (same rules): 9 trading, 8 gone; 4180 shows at 64% average, 0 failed; 52 cross-hires and 240 room fixes paid; turned work down for rider ×108, kit ×22, crew ×11; 7 overdrawn.
+- Cash: 0 months overdrawn, lowest balance £25k, 0 bills deferred, 12 forecast warnings, borrowed £110k, factored invoices 2 months.
+- Clients: 18 cancellations (1 with nothing to claim), 25 bans; asked for better terms 215 times, won 150.
+- Crew: 61 on the books, 0 lost along the way, burnout 0%, 55 trusted pairs and 2 feuds; hired production@1997, crew@1997, finance@1997.
+- Riders and rooms: 9 cross-hires and 17 room fixes booked; 65 rider breaches and 1 room problem reached the stage.
+- Kit and fleet: kit averaged 95% condition (98% at the end), 30 lines refurbished; 3 manufacturer faults.
+- Road: 1,851k km driven, 29 roadside breakdowns — 1.57 per 100,000 km (one every 64k km) at 76% average reliability.
+- Rivals (same rules): 5 trading, 11 gone; 4286 shows at 64% average, 0 failed; 21 cross-hires and 347 room fixes paid; 1 overdrawn.
 - Learned from its post-mortems: workshop→full@1995.
 
 #### GB from 1995, seed 4
 
-- Survived 8 years, worth £9.4M (reputation 96).
-- Earned £39M: show income 99%, maker sponsorship 1%, merchandise 0%.
-- Operating margin 21%. Biggest costs as a share of revenue: crew wages 22%, sub-hired kit 10%, corporation tax 8%, office, admin & cover 5%.
-- Ran 30 vehicles at 16.9 shows per vehicle-year; 4047 shows at 95% average, 7 failed (0%).
-- Nights: 90% triumphs, 9% solid, 1% shaky, 0% bad, 0% failed; clients docked £986k and claimed £15k in damages (3% of revenue).
-- Office: 10 office staff at the end; the work outgrew the office by 32% on average and 203% at worst.
-- Bad nights were mostly down to late load-ins (213), an office stretched too thin (116), broken technical riders (71).
-- Root conditions in the incident log: kit dying on stage ×5, manufacturer faults ×1.
-- Cash: 0 months overdrawn, lowest balance £11k, 0 bills deferred, 20 forecast warnings, borrowed £120k, factored invoices 3 months.
-- Clients: 10 cancellations (2 with nothing to claim), 27 bans; asked for better terms 252 times, won 157.
-- Crew: 61 on the books, 0 lost along the way, burnout 0%, 37 trusted pairs and 4 feuds; split feuding crews 13 times; hired crew@1997, finance@1997, production@1997.
-- Riders and rooms: 65 cross-hires and 40 room fixes booked; 85 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 96% condition (98% at the end), 26 lines refurbished; 1 manufacturer fault.
-- Road: 1,560k km driven, 21 roadside breakdowns — 1.35 per 100,000 km (one every 74k km) at 81% average reliability.
-- Rivals (same rules): 6 trading, 9 gone; 3868 shows at 64% average, 0 failed; 42 cross-hires and 249 room fixes paid; turned work down for rider ×23, kit ×4, crew ×4, trucks ×1; 2 overdrawn.
+- Survived 8 years, worth £10M (reputation 98).
+- Earned £40M: show income 99%, maker sponsorship 1%, merchandise 0%.
+- Operating margin 24%. Biggest costs as a share of revenue: crew wages 20%, sub-hired kit 11%, corporation tax 8%, full-time staff 5%.
+- Ran 30 vehicles at 16.1 shows per vehicle-year; 3869 shows at 97% average, 9 failed (0%).
+- Nights: 93% triumphs, 7% solid, 0% shaky, 0% bad, 0% failed; clients docked £318k and claimed £23k in damages (1% of revenue).
+- Office: 10 office staff at the end; the work outgrew the office by 10% on average and 42% at worst.
+- Industry: 1 recall grounding 15 trucks, 0 big accounts lost, £0.0k of invoices and £0.0k of bookings lost to promoters going under, 0 late-payment waves; ended with 50% of the fleet on one model and 14% of the work from one client (service contract, standby, credit insurance, 2 frameworks).
+- Bad nights were mostly down to broken technical riders (68), late load-ins (64), an office stretched too thin (47).
+- Root conditions in the incident log: services put off ×2, kit dying on stage ×3, manufacturer faults ×1.
+- Cash: 0 months overdrawn, lowest balance -£0.0k, 0 bills deferred, 28 forecast warnings, borrowed £160k, factored invoices 2 months.
+- Clients: 9 cancellations (4 with nothing to claim), 31 bans; asked for better terms 261 times, won 185.
+- Crew: 61 on the books, 0 lost along the way, burnout 0%, 41 trusted pairs and 7 feuds; hired crew@1997, finance@1997, production@1998.
+- Riders and rooms: 46 cross-hires and 17 room fixes booked; 77 rider breaches and 2 room problems reached the stage.
+- Kit and fleet: kit averaged 97% condition (99% at the end), 41 lines refurbished; 1 manufacturer fault.
+- Road: 1,508k km driven, 36 roadside breakdowns — 2.39 per 100,000 km (one every 42k km) at 76% average reliability.
+- Rivals (same rules): 7 trading, 10 gone; 3996 shows at 65% average, 0 failed; 74 cross-hires and 259 room fixes paid; turned work down for rider ×23, kit ×19, crew ×1; 4 overdrawn.
 - Learned from its post-mortems: workshop→full@1995.
 
 #### GB from 1995, seed 5
 
-- Survived 8 years, worth £12M (reputation 100).
-- Earned £43M: show income 99%, maker sponsorship 1%, merchandise 0%.
-- Operating margin 25%. Biggest costs as a share of revenue: crew wages 21%, sub-hired kit 9%, corporation tax 9%, office, admin & cover 4%.
-- Ran 30 vehicles at 18.5 shows per vehicle-year; 4432 shows at 96% average, 7 failed (0%).
-- Nights: 89% triumphs, 10% solid, 1% shaky, 0% bad, 0% failed; clients docked £1.0M and claimed £13k in damages (2% of revenue).
-- Office: 10 office staff at the end; the work outgrew the office by 37% on average and 242% at worst.
-- Bad nights were mostly down to late load-ins (264), an office stretched too thin (187), broken technical riders (64).
-- Root conditions in the incident log: services put off ×2, money tied up in unpaid invoices ×1, kit dying on stage ×11.
-- Cash: 0 months overdrawn, lowest balance £6.3k, 1 bill deferred, 25 forecast warnings, borrowed £90k, factored invoices 2 months.
-- Clients: 9 cancellations (1 with nothing to claim), 28 bans; asked for better terms 246 times, won 157.
-- Crew: 61 on the books, 0 lost along the way, burnout 0%, 47 trusted pairs and 4 feuds; split feuding crews 4 times; hired crew@1997, finance@1997, production@1997.
-- Riders and rooms: 38 cross-hires and 23 room fixes booked; 77 rider breaches and 1 room problem reached the stage.
-- Kit and fleet: kit averaged 94% condition (96% at the end), 25 lines refurbished; 0 manufacturer faults.
-- Road: 1,689k km driven, 20 roadside breakdowns — 1.18 per 100,000 km (one every 84k km) at 81% average reliability.
-- Rivals (same rules): 8 trading, 12 gone; 4434 shows at 65% average, 1 failed; 47 cross-hires and 304 room fixes paid; turned work down for rider ×47, crew ×8, kit ×3; 5 overdrawn.
+- Survived 8 years, worth £10M (reputation 100).
+- Earned £41M: show income 98%, maker sponsorship 1%, merchandise 0%.
+- Operating margin 22%. Biggest costs as a share of revenue: crew wages 21%, sub-hired kit 10%, corporation tax 8%, full-time staff 5%.
+- Ran 30 vehicles at 18.1 shows per vehicle-year; 4347 shows at 93% average, 6 failed (0%).
+- Nights: 91% triumphs, 8% solid, 1% shaky, 0% bad, 0% failed; clients docked £725k and claimed £415k in damages (3% of revenue).
+- Office: 10 office staff at the end; the work outgrew the office by 11% on average and 36% at worst.
+- Industry: 4 recalls grounding 56 trucks, 0 big accounts lost, £0.0k of invoices and £0.0k of bookings lost to promoters going under, 1 late-payment wave; ended with 50% of the fleet on one model and 16% of the work from one client (service contract, standby, credit insurance, 4 frameworks).
+- Overdraft: 7 days in it, 0 over the limit (0 times).
+- Bad nights were mostly down to an office stretched too thin (87), late load-ins (78), broken technical riders (62).
+- Root conditions in the incident log: kit dying on stage ×5.
+- Cash: 0 months overdrawn, lowest balance -£22k, 0 bills deferred, 21 forecast warnings, borrowed £200k, factored invoices 5 months.
+- Clients: 12 cancellations (3 with nothing to claim), 24 bans; asked for better terms 260 times, won 175.
+- Crew: 61 on the books, 0 lost along the way, burnout 0%, 45 trusted pairs and 4 feuds; hired crew@1996, production@1997, finance@1997.
+- Riders and rooms: 34 cross-hires and 18 room fixes booked; 77 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 95% condition (99% at the end), 23 lines refurbished; 0 manufacturer faults.
+- Road: 1,666k km driven, 26 roadside breakdowns — 1.56 per 100,000 km (one every 64k km) at 76% average reliability.
+- Rivals (same rules): 7 trading, 9 gone; 4255 shows at 66% average, 0 failed; 61 cross-hires and 247 room fixes paid; turned work down for rider ×44, crew ×3; 2 overdrawn.
 - Learned from its post-mortems: workshop→full@1995.
 
 #### GB from 1995, seed 6
 
-- Survived 8 years, worth £8.2M (reputation 100).
-- Earned £36M: show income 98%, maker sponsorship 2%, merchandise 0%.
-- Operating margin 19%. Biggest costs as a share of revenue: crew wages 23%, sub-hired kit 10%, corporation tax 6%, new vehicles & gear 5%.
-- Ran 30 vehicles at 17 shows per vehicle-year; 4091 shows at 96% average, 3 failed (0%).
-- Nights: 89% triumphs, 9% solid, 1% shaky, 0% bad, 0% failed; clients docked £629k and claimed £2.3k in damages (2% of revenue).
-- Office: 10 office staff at the end; the work outgrew the office by 40% on average and 164% at worst.
-- Bad nights were mostly down to late load-ins (282), an office stretched too thin (214), broken technical riders (73).
-- Root conditions in the incident log: services put off ×1, money tied up in unpaid invoices ×1, kit dying on stage ×11, exhausted crews ×2, manufacturer faults ×2.
-- Cash: 0 months overdrawn, lowest balance £0.8k, 1 bill deferred, 49 forecast warnings, borrowed £290k, factored invoices 11 months.
-- Clients: 12 cancellations (4 with nothing to claim), 26 bans; asked for better terms 261 times, won 161.
-- Crew: 61 on the books, 0 lost along the way, burnout 0%, 39 trusted pairs and 5 feuds; hired crew@1998, production@1998, finance@1998.
-- Riders and rooms: 40 cross-hires and 13 room fixes booked; 85 rider breaches and 2 room problems reached the stage.
-- Kit and fleet: kit averaged 95% condition (99% at the end), 24 lines refurbished; 2 manufacturer faults.
-- Road: 1,596k km driven, 28 roadside breakdowns — 1.75 per 100,000 km (one every 57k km) at 81% average reliability.
-- Rivals (same rules): 5 trading, 11 gone; 3696 shows at 66% average, 0 failed; 51 cross-hires and 227 room fixes paid; turned work down for rider ×28, crew ×4, kit ×1; 3 overdrawn.
+- Survived 8 years, worth £12M (reputation 100).
+- Earned £43M: show income 99%, maker sponsorship 1%, merchandise 0%.
+- Operating margin 26%. Biggest costs as a share of revenue: crew wages 20%, sub-hired kit 10%, corporation tax 9%, full-time staff 4%.
+- Ran 30 vehicles at 18 shows per vehicle-year; 4329 shows at 96% average, 3 failed (0%).
+- Nights: 93% triumphs, 7% solid, 0% shaky, 0% bad, 0% failed; clients docked £578k and claimed £8.6k in damages (1% of revenue).
+- Office: 10 office staff at the end; the work outgrew the office by 12% on average and 31% at worst.
+- Industry: 2 recalls grounding 28 trucks, 0 big accounts lost, £0.0k of invoices and £99k of bookings lost to promoters going under, 0 late-payment waves; ended with 50% of the fleet on one model and 30% of the work from one client (service contract, standby, credit insurance, 4 frameworks).
+- Bad nights were mostly down to late load-ins (81), an office stretched too thin (76), broken technical riders (38).
+- Root conditions in the incident log: kit dying on stage ×5, manufacturer faults ×2.
+- Cash: 0 months overdrawn, lowest balance £18k, 0 bills deferred, 32 forecast warnings, borrowed £130k, factored invoices 7 months.
+- Clients: 12 cancellations (2 with nothing to claim), 19 bans; asked for better terms 228 times, won 156.
+- Crew: 61 on the books, 0 lost along the way, burnout 0%, 37 trusted pairs and 9 feuds; split feuding crews 4 times; hired crew@1997, production@1997, finance@1997.
+- Riders and rooms: 19 cross-hires and 7 room fixes booked; 47 rider breaches and 1 room problem reached the stage.
+- Kit and fleet: kit averaged 96% condition (99% at the end), 12 lines refurbished; 2 manufacturer faults.
+- Road: 1,671k km driven, 33 roadside breakdowns — 1.97 per 100,000 km (one every 51k km) at 76% average reliability.
+- Rivals (same rules): 6 trading, 14 gone; 4268 shows at 65% average, 1 failed; 72 cross-hires and 323 room fixes paid; turned work down for rider ×37, crew ×11; 4 overdrawn.
 - Learned from its post-mortems: workshop→full@1995.
 
 #### ES from 1990, seed 3
 
-- Survived 8 years, worth 1879M pts (reputation 100).
-- Earned 6343M pts: show income 99%, maker sponsorship 1%, merchandise 0%.
-- Operating margin 26%. Biggest costs as a share of revenue: crew wages 21%, sub-hired kit 7%, corporation tax 7%, per diems & hotels 5%.
-- Ran 30 vehicles at 17.3 shows per vehicle-year; 4160 shows at 95% average, 8 failed (0%).
-- Nights: 84% triumphs, 14% solid, 2% shaky, 0% bad, 0% failed; clients docked 103M pts and claimed 9.1M pts in damages (2% of revenue).
-- Office: 10 office staff at the end; the work outgrew the office by 39% on average and 186% at worst.
-- Bad nights were mostly down to late load-ins (275), an office stretched too thin (161), broken technical riders (65).
-- Root conditions in the incident log: services put off ×3, kit dying on stage ×12, exhausted crews ×5.
-- Cash: 0 months overdrawn, lowest balance 1.2M pts, 0 bills deferred, 68 forecast warnings, borrowed 57M pts, factored invoices 14 months.
-- Clients: 9 cancellations (3 with nothing to claim), 24 bans; asked for better terms 369 times, won 172.
-- Crew: 61 on the books, 0 lost along the way, burnout 0%, 47 trusted pairs and 0 feuds; hired crew@1993, production@1993, finance@1993.
-- Riders and rooms: 103 cross-hires and 15 room fixes booked; 67 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 92% condition (99% at the end), 13 lines refurbished; 0 manufacturer faults.
-- Road: 4,372k km driven, 62 roadside breakdowns — 1.42 per 100,000 km (one every 71k km) at 81% average reliability.
-- Rivals (same rules): 5 trading, 9 gone; 3635 shows at 68% average, 0 failed; 7 cross-hires and 17 room fixes paid.
-- Learned from its post-mortems: workshop→full@1992.
+- Survived 8 years, worth 1483M pts (reputation 86).
+- Earned 5781M pts: show income 99%, maker sponsorship 1%, merchandise 0%.
+- Operating margin 23%. Biggest costs as a share of revenue: crew wages 22%, sub-hired kit 8%, corporation tax 7%, full-time staff 5%.
+- Ran 30 vehicles at 15.1 shows per vehicle-year; 3625 shows at 94% average, 15 failed (0%).
+- Nights: 86% triumphs, 12% solid, 1% shaky, 0% bad, 0% failed; clients docked 31M pts and claimed 13M pts in damages (1% of revenue).
+- Office: 10 office staff at the end; the work outgrew the office by 8% on average and 36% at worst.
+- Industry: 6 recalls grounding 74 trucks, 0 big accounts lost, 0.0k pts of invoices and 0.0k pts of bookings lost to promoters going under, 0 late-payment waves; ended with 50% of the fleet on one model and 11% of the work from one client (service contract, standby, credit insurance, 3 frameworks).
+- Bad nights were mostly down to short-handed crews (74), broken technical riders (70), late load-ins (40).
+- Root conditions in the incident log: services put off ×6, kit dying on stage ×6, manufacturer faults ×1.
+- Cash: 0 months overdrawn, lowest balance 2.2M pts, 0 bills deferred, 37 forecast warnings, borrowed 47M pts, factored invoices 8 months.
+- Clients: 8 cancellations (3 with nothing to claim), 29 bans; asked for better terms 334 times, won 166.
+- Crew: 61 on the books, 0 lost along the way, burnout 0%, 48 trusted pairs and 2 feuds; split feuding crews 24 times; hired production@1992, crew@1992, finance@1992.
+- Riders and rooms: 105 cross-hires and 6 room fixes booked; 73 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 94% condition (99% at the end), 16 lines refurbished; 1 manufacturer fault.
+- Road: 3,882k km driven, 66 roadside breakdowns — 1.7 per 100,000 km (one every 59k km) at 76% average reliability.
+- Rivals (same rules): 7 trading, 7 gone; 3281 shows at 68% average, 0 failed; 20 cross-hires and 20 room fixes paid; turned work down for rider ×35; 3 overdrawn.
+- Learned from its post-mortems: workshop→full@1991.
 
 #### ES from 1990, seed 4
 
-- Survived 8 years, worth 1625M pts (reputation 98).
-- Earned 6171M pts: show income 99%, maker sponsorship 1%, merchandise 0%.
-- Operating margin 23%. Biggest costs as a share of revenue: crew wages 23%, sub-hired kit 6%, corporation tax 6%, office, admin & cover 5%.
-- Ran 30 vehicles at 17.3 shows per vehicle-year; 4155 shows at 95% average, 9 failed (0%).
-- Nights: 85% triumphs, 13% solid, 2% shaky, 0% bad, 0% failed; clients docked 101M pts and claimed 4.3M pts in damages (2% of revenue).
-- Office: 10 office staff at the end; the work outgrew the office by 46% on average and 169% at worst.
-- Bad nights were mostly down to late load-ins (321), an office stretched too thin (231), broken technical riders (53).
-- Root conditions in the incident log: services put off ×3, kit dying on stage ×15, exhausted crews ×19.
-- Cash: 0 months overdrawn, lowest balance 1.6M pts, 0 bills deferred, 62 forecast warnings, borrowed 37M pts, factored invoices 13 months.
-- Clients: 13 cancellations (10 with nothing to claim), 23 bans; asked for better terms 337 times, won 171.
-- Crew: 61 on the books, 0 lost along the way, burnout 0%, 45 trusted pairs and 6 feuds; split feuding crews 1 times; hired crew@1993, finance@1993, production@1993.
-- Riders and rooms: 165 cross-hires and 31 room fixes booked; 56 rider breaches and 1 room problem reached the stage.
-- Kit and fleet: kit averaged 94% condition (99% at the end), 10 lines refurbished; 0 manufacturer faults.
-- Road: 4,131k km driven, 81 roadside breakdowns — 1.96 per 100,000 km (one every 51k km) at 81% average reliability.
-- Rivals (same rules): 3 trading, 9 gone; 3372 shows at 68% average, 0 failed; 21 cross-hires and 17 room fixes paid; turned work down for rider ×43, crew ×4; 1 overdrawn.
-- Learned from its post-mortems: workshop→full@1991.
+- Survived 8 years, worth 1673M pts (reputation 100).
+- Earned 6021M pts: show income 99%, maker sponsorship 1%, merchandise 0%.
+- Operating margin 24%. Biggest costs as a share of revenue: crew wages 21%, sub-hired kit 7%, corporation tax 7%, full-time staff 5%.
+- Ran 30 vehicles at 16.6 shows per vehicle-year; 3987 shows at 96% average, 12 failed (0%).
+- Nights: 89% triumphs, 10% solid, 1% shaky, 0% bad, 0% failed; clients docked 41M pts and claimed 29M pts in damages (1% of revenue).
+- Office: 10 office staff at the end; the work outgrew the office by 10% on average and 36% at worst.
+- Industry: 2 recalls grounding 28 trucks, 0 big accounts lost, 0.0k pts of invoices and 0.0k pts of bookings lost to promoters going under, 0 late-payment waves; ended with 50% of the fleet on one model and 12% of the work from one client (service contract, standby, credit insurance, 6 frameworks).
+- Bad nights were mostly down to late load-ins (64), broken technical riders (54), an office stretched too thin (52).
+- Root conditions in the incident log: services put off ×5, kit dying on stage ×3, exhausted crews ×3.
+- Cash: 0 months overdrawn, lowest balance 1.5M pts, 0 bills deferred, 49 forecast warnings, borrowed 42M pts, factored invoices 10 months.
+- Clients: 6 cancellations (5 with nothing to claim), 25 bans; asked for better terms 329 times, won 188.
+- Crew: 60 on the books, 1 lost along the way, burnout 0%, 45 trusted pairs and 3 feuds; hired production@1992, crew@1992, finance@1992.
+- Riders and rooms: 83 cross-hires and 18 room fixes booked; 58 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 93% condition (100% at the end), 20 lines refurbished; 0 manufacturer faults.
+- Road: 3,925k km driven, 91 roadside breakdowns — 2.32 per 100,000 km (one every 43k km) at 76% average reliability.
+- Rivals (same rules): 5 trading, 6 gone; 3896 shows at 70% average, 0 failed; 14 cross-hires and 21 room fixes paid; turned work down for rider ×3.
+- Learned from its post-mortems: workshop→full@1992.
 
 #### ES from 1990, seed 5
 
-- Survived 8 years, worth 1468M pts (reputation 94).
-- Earned 5724M pts: show income 99%, maker sponsorship 1%, merchandise 0%.
-- Operating margin 22%. Biggest costs as a share of revenue: crew wages 22%, sub-hired kit 7%, corporation tax 7%, new vehicles & gear 5%.
-- Ran 30 vehicles at 14.6 shows per vehicle-year; 3508 shows at 96% average, 11 failed (0%).
-- Nights: 86% triumphs, 13% solid, 1% shaky, 0% bad, 0% failed; clients docked 49M pts and claimed 3.3M pts in damages (1% of revenue).
-- Office: 10 office staff at the end; the work outgrew the office by 25% on average and 119% at worst.
-- Bad nights were mostly down to late load-ins (124), an office stretched too thin (112), broken technical riders (42).
-- Root conditions in the incident log: services put off ×2, kit dying on stage ×8, exhausted crews ×2.
-- Cash: 0 months overdrawn, lowest balance 1.4M pts, 0 bills deferred, 73 forecast warnings, borrowed 60M pts, factored invoices 15 months.
-- Clients: 8 cancellations (3 with nothing to claim), 20 bans; asked for better terms 316 times, won 164.
-- Crew: 61 on the books, 0 lost along the way, burnout 0%, 39 trusted pairs and 6 feuds; split feuding crews 1 times; hired production@1992, crew@1992, finance@1992.
-- Riders and rooms: 88 cross-hires and 15 room fixes booked; 44 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 92% condition (100% at the end), 17 lines refurbished; 0 manufacturer faults.
-- Road: 4,100k km driven, 45 roadside breakdowns — 1.1 per 100,000 km (one every 91k km) at 81% average reliability.
-- Rivals (same rules): 5 trading, 7 gone; 2854 shows at 68% average, 1 failed; 11 cross-hires and 16 room fixes paid; turned work down for rider ×4, crew ×2; 2 overdrawn.
+- Survived 8 years, worth 1746M pts (reputation 100).
+- Earned 5795M pts: show income 98%, maker sponsorship 2%, merchandise 0%.
+- Operating margin 26%. Biggest costs as a share of revenue: crew wages 20%, sub-hired kit 7%, corporation tax 6%, per diems & hotels 5%.
+- Ran 30 vehicles at 15.4 shows per vehicle-year; 3689 shows at 95% average, 11 failed (0%).
+- Nights: 87% triumphs, 12% solid, 1% shaky, 0% bad, 0% failed; clients docked 20M pts and claimed 5.3M pts in damages (0% of revenue).
+- Office: 10 office staff at the end; the work outgrew the office by 10% on average and 36% at worst.
+- Industry: 3 recalls grounding 28 trucks, 0 big accounts lost, 0.0k pts of invoices and 0.0k pts of bookings lost to promoters going under, 0 late-payment waves; ended with 50% of the fleet on one model and 15% of the work from one client (service contract, standby, credit insurance, 4 frameworks).
+- Bad nights were mostly down to late load-ins (55), an office stretched too thin (49), broken technical riders (42).
+- Root conditions in the incident log: services put off ×1, kit dying on stage ×12, exhausted crews ×2.
+- Cash: 0 months overdrawn, lowest balance 4.4M pts, 0 bills deferred, 61 forecast warnings, borrowed 42M pts, factored invoices 15 months.
+- Clients: 12 cancellations (8 with nothing to claim), 23 bans; asked for better terms 305 times, won 173.
+- Crew: 61 on the books, 0 lost along the way, burnout 0%, 45 trusted pairs and 1 feuds; hired crew@1993, finance@1993, production@1993.
+- Riders and rooms: 108 cross-hires and 7 room fixes booked; 44 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 92% condition (100% at the end), 16 lines refurbished; 0 manufacturer faults.
+- Road: 4,250k km driven, 81 roadside breakdowns — 1.91 per 100,000 km (one every 52k km) at 76% average reliability.
+- Rivals (same rules): 7 trading, 6 gone; 3479 shows at 68% average, 0 failed; 31 cross-hires and 15 room fixes paid; turned work down for rider ×6, crew ×1.
 - Learned from its post-mortems: workshop→full@1992.
 
 #### ES from 1990, seed 6
 
-- Survived 8 years, worth 1711M pts (reputation 100).
-- Earned 6072M pts: show income 99%, maker sponsorship 1%, merchandise 0%.
-- Operating margin 25%. Biggest costs as a share of revenue: crew wages 22%, corporation tax 7%, sub-hired kit 7%, office, admin & cover 5%.
-- Ran 30 vehicles at 16.7 shows per vehicle-year; 4012 shows at 96% average, 4 failed (0%).
-- Nights: 82% triumphs, 15% solid, 2% shaky, 0% bad, 0% failed; clients docked 61M pts and claimed 1.4M pts in damages (1% of revenue).
-- Office: 10 office staff at the end; the work outgrew the office by 43% on average and 203% at worst.
-- Bad nights were mostly down to late load-ins (303), an office stretched too thin (174), broken technical riders (56).
-- Root conditions in the incident log: services put off ×1, kit dying on stage ×7, exhausted crews ×13, manufacturer faults ×1.
-- Cash: 0 months overdrawn, lowest balance 3.3M pts, 0 bills deferred, 68 forecast warnings, borrowed 70M pts, factored invoices 12 months.
-- Clients: 7 cancellations (2 with nothing to claim), 18 bans; asked for better terms 363 times, won 217.
-- Crew: 61 on the books, 0 lost along the way, burnout 0%, 39 trusted pairs and 1 feuds; split feuding crews 20 times; hired production@1993, crew@1993, finance@1993.
-- Riders and rooms: 90 cross-hires and 13 room fixes booked; 58 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 93% condition (97% at the end), 21 lines refurbished; 1 manufacturer fault.
-- Road: 4,040k km driven, 66 roadside breakdowns — 1.63 per 100,000 km (one every 61k km) at 81% average reliability.
-- Rivals (same rules): 6 trading, 6 gone; 3567 shows at 66% average, 0 failed; 29 cross-hires and 13 room fixes paid; turned work down for rider ×4, crew ×2.
+- Survived 8 years, worth 1613M pts (reputation 94).
+- Earned 6038M pts: show income 98%, maker sponsorship 1%, merchandise 0%.
+- Operating margin 24%. Biggest costs as a share of revenue: crew wages 22%, sub-hired kit 8%, corporation tax 6%, full-time staff 5%.
+- Ran 30 vehicles at 15.7 shows per vehicle-year; 3762 shows at 94% average, 14 failed (0%).
+- Nights: 86% triumphs, 12% solid, 1% shaky, 0% bad, 0% failed; clients docked 43M pts and claimed 26M pts in damages (1% of revenue).
+- Office: 10 office staff at the end; the work outgrew the office by 9% on average and 36% at worst.
+- Industry: 2 recalls grounding 28 trucks, 0 big accounts lost, 0.0k pts of invoices and 0.0k pts of bookings lost to promoters going under, 0 late-payment waves; ended with 50% of the fleet on one model and 11% of the work from one client (service contract, standby, credit insurance, 3 frameworks).
+- Bad nights were mostly down to broken technical riders (66), an office stretched too thin (56), late load-ins (49).
+- Root conditions in the incident log: services put off ×1, kit dying on stage ×4, exhausted crews ×4, manufacturer faults ×1.
+- Cash: 0 months overdrawn, lowest balance 1.9M pts, 0 bills deferred, 28 forecast warnings, borrowed 17M pts, factored invoices 8 months.
+- Clients: 10 cancellations (1 with nothing to claim), 28 bans; asked for better terms 315 times, won 183.
+- Crew: 61 on the books, 0 lost along the way, burnout 0%, 49 trusted pairs and 3 feuds; split feuding crews 10 times; hired production@1992, crew@1992, finance@1992.
+- Riders and rooms: 70 cross-hires and 19 room fixes booked; 69 rider breaches and 2 room problems reached the stage.
+- Kit and fleet: kit averaged 93% condition (100% at the end), 22 lines refurbished; 1 manufacturer fault.
+- Road: 3,877k km driven, 71 roadside breakdowns — 1.83 per 100,000 km (one every 55k km) at 76% average reliability.
+- Rivals (same rules): 6 trading, 8 gone; 3383 shows at 69% average, 0 failed; 27 cross-hires and 15 room fixes paid; turned work down for rider ×38, crew ×2; 2 overdrawn.
 - Learned from its post-mortems: workshop→full@1992.
+
+### Ambitious, unhedged
+
+The ambitious company without any of the concentration tools: one truck model, no service contract or standby hire, no framework agreements, invoices uninsured.
+
+#### GB from 1995, seed 3
+
+- Survived 8 years, worth £2.3M (reputation 89).
+- Earned £23M: show income 98%, maker sponsorship 1%, merchandise 0%.
+- Operating margin 5%. Biggest costs as a share of revenue: crew wages 30%, full-time staff 8%, sub-hired kit 7%, new vehicles & gear 7%.
+- Ran 28 vehicles at 13.8 shows per vehicle-year; 3100 shows at 96% average, 47 failed (1%).
+- Nights: 93% triumphs, 5% solid, 0% shaky, 0% bad, 1% failed; clients docked £119k and claimed £550k in damages (3% of revenue).
+- Office: 10 office staff at the end; the work outgrew the office by 6% on average and 36% at worst.
+- Industry: 3 recalls grounding 61 trucks, 1 big account lost, £422k of invoices and £40k of bookings lost to promoters going under, 0 late-payment waves; ended with 93% of the fleet on one model and 15% of the work from one client.
+- Overdraft: 12 days in it, 0 over the limit (0 times).
+- Bad nights were mostly down to nobody arriving (47), an office stretched too thin (30), short-handed crews (29).
+- Root conditions in the incident log: money tied up in unpaid invoices ×5, kit dying on stage ×1, manufacturer faults ×4.
+- Cash: 0 months overdrawn, lowest balance -£250k, 5 bills deferred, 98 forecast warnings, borrowed £870k, factored invoices 20 months.
+- Clients: 5 cancellations (0 with nothing to claim), 27 bans; asked for better terms 158 times, won 102.
+- Crew: 57 on the books, 0 lost along the way, burnout 0%, 39 trusted pairs and 2 feuds; split feuding crews 1 times; hired production@1997, crew@1997, finance@1997.
+- Riders and rooms: 13 cross-hires and 14 room fixes booked; 17 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 96% condition (97% at the end), 20 lines refurbished; 4 manufacturer faults.
+- Road: 1,248k km driven, 15 roadside breakdowns — 1.2 per 100,000 km (one every 83k km) at 81% average reliability.
+- Rivals (same rules): 5 trading, 12 gone; 3563 shows at 65% average, 0 failed; 25 cross-hires and 224 room fixes paid; turned work down for rider ×80, crew ×30, kit ×10, trucks ×2; 2 overdrawn.
+- Learned from its post-mortems: workshop→full@1995.
+
+#### GB from 1995, seed 4
+
+- Survived 8 years, worth £5.1M (reputation 79).
+- Earned £32M: show income 98%, maker sponsorship 2%, merchandise 0%.
+- Operating margin 13%. Biggest costs as a share of revenue: crew wages 26%, sub-hired kit 8%, corporation tax 8%, full-time staff 6%.
+- Ran 30 vehicles at 15.4 shows per vehicle-year; 3705 shows at 97% average, 32 failed (1%).
+- Nights: 93% triumphs, 6% solid, 0% shaky, 0% bad, 1% failed; clients docked £357k and claimed £115k in damages (1% of revenue).
+- Office: 10 office staff at the end; the work outgrew the office by 9% on average and 36% at worst.
+- Industry: 2 recalls grounding 50 trucks, 1 big account lost, £201k of invoices and £0.0k of bookings lost to promoters going under, 0 late-payment waves; ended with 93% of the fleet on one model and 23% of the work from one client.
+- Bad nights were mostly down to late load-ins (62), an office stretched too thin (56), broken technical riders (45).
+- Root conditions in the incident log: kit dying on stage ×5, manufacturer faults ×1.
+- Cash: 0 months overdrawn, lowest balance £11k, 0 bills deferred, 21 forecast warnings, borrowed £120k, factored invoices 4 months.
+- Clients: 7 cancellations (2 with nothing to claim), 42 bans; asked for better terms 123 times, won 90.
+- Crew: 61 on the books, 0 lost along the way, burnout 0%, 32 trusted pairs and 4 feuds; split feuding crews 1 times; hired crew@1996, production@1997, finance@1997.
+- Riders and rooms: 31 cross-hires and 13 room fixes booked; 58 rider breaches and 1 room problem reached the stage.
+- Kit and fleet: kit averaged 96% condition (98% at the end), 25 lines refurbished; 1 manufacturer fault.
+- Road: 1,439k km driven, 26 roadside breakdowns — 1.81 per 100,000 km (one every 55k km) at 81% average reliability.
+- Rivals (same rules): 4 trading, 14 gone; 3283 shows at 66% average, 0 failed; 31 cross-hires and 222 room fixes paid; 2 overdrawn.
+- Learned from its post-mortems: workshop→full@1995.
+
+#### GB from 1995, seed 5
+
+- Survived 8 years, worth £1.7M (reputation 85).
+- Earned £27M: show income 99%, maker sponsorship 1%, merchandise 0%.
+- Operating margin 3%. Biggest costs as a share of revenue: crew wages 32%, sub-hired kit 8%, full-time staff 7%, office, admin & cover 6%.
+- Ran 30 vehicles at 13.2 shows per vehicle-year; 3169 shows at 96% average, 40 failed (1%).
+- Nights: 90% triumphs, 8% solid, 0% shaky, 0% bad, 1% failed; clients docked £458k and claimed £153k in damages (2% of revenue).
+- Office: 10 office staff at the end; the work outgrew the office by 11% on average and 36% at worst.
+- Industry: 4 recalls grounding 112 trucks, 0 big accounts lost, £271k of invoices and £538k of bookings lost to promoters going under, 0 late-payment waves; ended with 93% of the fleet on one model and 22% of the work from one client.
+- Bad nights were mostly down to late load-ins (51), an office stretched too thin (44), nobody arriving (40).
+- Root conditions in the incident log: kit dying on stage ×5, manufacturer faults ×1.
+- Cash: 0 months overdrawn, lowest balance £13k, 0 bills deferred, 37 forecast warnings, borrowed £60k, factored invoices 8 months.
+- Clients: 6 cancellations (0 with nothing to claim), 38 bans; asked for better terms 167 times, won 120.
+- Crew: 61 on the books, 0 lost along the way, burnout 0%, 32 trusted pairs and 5 feuds; hired production@1996, crew@1996, finance@1996.
+- Riders and rooms: 15 cross-hires and 4 room fixes booked; 27 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 96% condition (99% at the end), 13 lines refurbished; 1 manufacturer fault.
+- Road: 1,228k km driven, 12 roadside breakdowns — 0.98 per 100,000 km (one every 102k km) at 81% average reliability.
+- Rivals (same rules): 7 trading, 13 gone; 3690 shows at 67% average, 0 failed; 92 cross-hires and 169 room fixes paid; turned work down for rider ×146, crew ×17, kit ×10; 5 overdrawn.
+- Learned from its post-mortems: workshop→full@1995.
+
+#### GB from 1995, seed 6
+
+- Survived 8 years, worth £7.3M (reputation 89).
+- Earned £35M: show income 98%, maker sponsorship 2%, merchandise 0%.
+- Operating margin 18%. Biggest costs as a share of revenue: crew wages 23%, sub-hired kit 9%, corporation tax 9%, full-time staff 5%.
+- Ran 30 vehicles at 15.8 shows per vehicle-year; 3791 shows at 95% average, 22 failed (1%).
+- Nights: 94% triumphs, 5% solid, 0% shaky, 0% bad, 1% failed; clients docked £424k and claimed £60k in damages (1% of revenue).
+- Office: 10 office staff at the end; the work outgrew the office by 12% on average and 36% at worst.
+- Industry: 1 recall grounding 28 trucks, 1 big account lost, £0.0k of invoices and £0.0k of bookings lost to promoters going under, 0 late-payment waves; ended with 93% of the fleet on one model and 14% of the work from one client.
+- Bad nights were mostly down to an office stretched too thin (63), late load-ins (56), broken technical riders (53).
+- Root conditions in the incident log: kit dying on stage ×3, exhausted crews ×1, manufacturer faults ×3.
+- Cash: 0 months overdrawn, lowest balance £15k, 0 bills deferred, 51 forecast warnings, borrowed £330k, factored invoices 10 months.
+- Clients: 9 cancellations (2 with nothing to claim), 34 bans; asked for better terms 225 times, won 154.
+- Crew: 61 on the books, 0 lost along the way, burnout 0%, 34 trusted pairs and 0 feuds; hired crew@1997, production@1997, finance@1997.
+- Riders and rooms: 20 cross-hires and 14 room fixes booked; 62 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 96% condition (99% at the end), 27 lines refurbished; 3 manufacturer faults.
+- Road: 1,464k km driven, 27 roadside breakdowns — 1.84 per 100,000 km (one every 54k km) at 81% average reliability.
+- Rivals (same rules): 6 trading, 7 gone; 4251 shows at 73% average, 0 failed; 63 cross-hires and 316 room fixes paid; turned work down for rider ×2, crew ×1; 1 overdrawn.
+- Learned from its post-mortems: workshop→full@1995.
+
+#### ES from 1990, seed 3
+
+- Survived 8 years, worth 817M pts (reputation 82).
+- Earned 4455M pts: show income 99%, maker sponsorship 1%, merchandise 0%.
+- Operating margin 14%. Biggest costs as a share of revenue: crew wages 26%, sub-hired kit 7%, full-time staff 6%, new vehicles & gear 6%.
+- Ran 29 vehicles at 12.7 shows per vehicle-year; 2946 shows at 96% average, 33 failed (1%).
+- Nights: 87% triumphs, 11% solid, 1% shaky, 0% bad, 1% failed; clients docked 29M pts and claimed 15M pts in damages (1% of revenue).
+- Office: 10 office staff at the end; the work outgrew the office by 7% on average and 36% at worst.
+- Industry: 3 recalls grounding 59 trucks, 0 big accounts lost, 0.0k pts of invoices and 0.0k pts of bookings lost to promoters going under, 0 late-payment waves; ended with 93% of the fleet on one model and 7% of the work from one client.
+- Bad nights were mostly down to short-handed crews (39), broken technical riders (37), nobody arriving (32).
+- Root conditions in the incident log: services put off ×3, kit dying on stage ×9, exhausted crews ×1.
+- Cash: 0 months overdrawn, lowest balance 1.2M pts, 0 bills deferred, 62 forecast warnings, borrowed 33M pts, factored invoices 13 months.
+- Clients: 10 cancellations (2 with nothing to claim), 35 bans; asked for better terms 246 times, won 134.
+- Crew: 59 on the books, 0 lost along the way, burnout 0%, 43 trusted pairs and 1 feuds; hired crew@1992, production@1992, finance@1992.
+- Riders and rooms: 65 cross-hires and 20 room fixes booked; 38 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 93% condition (100% at the end), 18 lines refurbished; 0 manufacturer faults.
+- Road: 3,166k km driven, 35 roadside breakdowns — 1.11 per 100,000 km (one every 90k km) at 81% average reliability.
+- Rivals (same rules): 3 trading, 9 gone; 3088 shows at 64% average, 0 failed; 4 cross-hires and 12 room fixes paid; turned work down for rider ×22; 1 overdrawn.
+- Learned from its post-mortems: workshop→full@1992.
+
+#### ES from 1990, seed 4
+
+- Survived 8 years, worth 1248M pts (reputation 88).
+- Earned 5188M pts: show income 99%, maker sponsorship 1%, merchandise 0%.
+- Operating margin 19%. Biggest costs as a share of revenue: crew wages 24%, sub-hired kit 7%, corporation tax 6%, full-time staff 5%.
+- Ran 30 vehicles at 14.2 shows per vehicle-year; 3399 shows at 96% average, 35 failed (1%).
+- Nights: 87% triumphs, 11% solid, 1% shaky, 0% bad, 1% failed; clients docked 28M pts and claimed 27M pts in damages (1% of revenue).
+- Office: 10 office staff at the end; the work outgrew the office by 10% on average and 36% at worst.
+- Industry: 2 recalls grounding 44 trucks, 0 big accounts lost, 0.0k pts of invoices and 0.0k pts of bookings lost to promoters going under, 1 late-payment wave; ended with 93% of the fleet on one model and 9% of the work from one client.
+- Bad nights were mostly down to short-handed crews (55), an office stretched too thin (48), late load-ins (45).
+- Root conditions in the incident log: services put off ×2, kit dying on stage ×8, exhausted crews ×4.
+- Cash: 0 months overdrawn, lowest balance 1.6M pts, 0 bills deferred, 64 forecast warnings, borrowed 70M pts, factored invoices 11 months.
+- Clients: 4 cancellations (3 with nothing to claim), 35 bans; asked for better terms 308 times, won 175.
+- Crew: 61 on the books, 0 lost along the way, burnout 0%, 41 trusted pairs and 2 feuds; split feuding crews 3 times; hired crew@1992, finance@1992, production@1992.
+- Riders and rooms: 117 cross-hires and 36 room fixes booked; 47 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 93% condition (98% at the end), 16 lines refurbished; 0 manufacturer faults.
+- Road: 3,416k km driven, 55 roadside breakdowns — 1.61 per 100,000 km (one every 62k km) at 81% average reliability.
+- Rivals (same rules): 9 trading, 5 gone; 3419 shows at 64% average, 0 failed; 73 cross-hires and 21 room fixes paid; turned work down for rider ×96, crew ×6; 5 overdrawn.
+- Learned from its post-mortems: workshop→full@1992.
+
+#### ES from 1990, seed 5
+
+- Survived 8 years, worth 706M pts (reputation 88).
+- Earned 4321M pts: show income 98%, maker sponsorship 1%, merchandise 0%.
+- Operating margin 12%. Biggest costs as a share of revenue: crew wages 28%, full-time staff 7%, new vehicles & gear 6%, office, admin & cover 6%.
+- Ran 30 vehicles at 12.5 shows per vehicle-year; 3005 shows at 97% average, 27 failed (1%).
+- Nights: 91% triumphs, 8% solid, 0% shaky, 0% bad, 1% failed; clients docked 9.8M pts and claimed 31M pts in damages (1% of revenue).
+- Office: 10 office staff at the end; the work outgrew the office by 5% on average and 36% at worst.
+- Industry: 2 recalls grounding 47 trucks, 0 big accounts lost, 0.0k pts of invoices and 0.0k pts of bookings lost to promoters going under, 2 late-payment waves; ended with 93% of the fleet on one model and 9% of the work from one client.
+- Bad nights were mostly down to short-handed crews (32), nobody arriving (27), late load-ins (27).
+- Root conditions in the incident log: services put off ×3, kit dying on stage ×5, exhausted crews ×1.
+- Cash: 0 months overdrawn, lowest balance 1.4M pts, 0 bills deferred, 60 forecast warnings, borrowed 45M pts, factored invoices 14 months.
+- Clients: 13 cancellations (3 with nothing to claim), 27 bans; asked for better terms 245 times, won 123.
+- Crew: 61 on the books, 0 lost along the way, burnout 0%, 36 trusted pairs and 5 feuds; split feuding crews 2 times; hired crew@1992, production@1992, finance@1992.
+- Riders and rooms: 66 cross-hires and 19 room fixes booked; 12 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 95% condition (100% at the end), 10 lines refurbished; 0 manufacturer faults.
+- Road: 3,501k km driven, 46 roadside breakdowns — 1.31 per 100,000 km (one every 76k km) at 81% average reliability.
+- Rivals (same rules): 4 trading, 8 gone; 2873 shows at 64% average, 0 failed; 12 cross-hires and 21 room fixes paid; turned work down for rider ×50, kit ×9, crew ×1; 2 overdrawn.
+- Learned from its post-mortems: workshop→full@1991.
+
+#### ES from 1990, seed 6
+
+- Survived 8 years, worth 562M pts (reputation 76).
+- Earned 4383M pts: show income 99%, maker sponsorship 1%, merchandise 0%.
+- Operating margin 9%. Biggest costs as a share of revenue: crew wages 29%, full-time staff 7%, corporation tax 6%, new vehicles & gear 6%.
+- Ran 30 vehicles at 13.1 shows per vehicle-year; 3143 shows at 98% average, 26 failed (1%).
+- Nights: 87% triumphs, 12% solid, 1% shaky, 0% bad, 1% failed; clients docked 20M pts and claimed 36M pts in damages (1% of revenue).
+- Office: 10 office staff at the end; the work outgrew the office by 10% on average and 31% at worst.
+- Industry: 1 recall grounding 28 trucks, 0 big accounts lost, 0.0k pts of invoices and 0.0k pts of bookings lost to promoters going under, 0 late-payment waves; ended with 93% of the fleet on one model and 15% of the work from one client.
+- Bad nights were mostly down to late load-ins (46), an office stretched too thin (40), nobody arriving (26).
+- Root conditions in the incident log: services put off ×1, kit dying on stage ×6, exhausted crews ×2, manufacturer faults ×1.
+- Cash: 0 months overdrawn, lowest balance 1.1M pts, 0 bills deferred, 47 forecast warnings, borrowed 48M pts, factored invoices 9 months.
+- Clients: 13 cancellations (6 with nothing to claim), 29 bans; asked for better terms 226 times, won 119.
+- Crew: 61 on the books, 0 lost along the way, burnout 0%, 37 trusted pairs and 1 feuds; hired production@1992, crew@1992, finance@1992.
+- Riders and rooms: 72 cross-hires and 14 room fixes booked; 26 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 95% condition (100% at the end), 8 lines refurbished; 1 manufacturer fault.
+- Road: 3,266k km driven, 62 roadside breakdowns — 1.9 per 100,000 km (one every 53k km) at 81% average reliability.
+- Rivals (same rules): 6 trading, 7 gone; 3419 shows at 73% average, 0 failed; 15 cross-hires and 16 room fixes paid; turned work down for rider ×21, crew ×7; 2 overdrawn.
+- Learned from its post-mortems: workshop→full@1991.
 
 ### Lean operator
 
@@ -838,145 +1062,149 @@ Keeps overheads down: low pay, no workshop, no insurance, no training, no heads.
 
 #### GB from 1995, seed 3
 
-- Survived 8 years, worth -£86k (reputation 1).
-- Earned £2.9M: show income 100%.
-- Operating margin -11%. Biggest costs as a share of revenue: crew wages 39%, office, admin & cover 12%, new vehicles & gear 12%, vehicle running costs 10%.
-- Ran 5 vehicles at 23.3 shows per vehicle-year; 934 shows at 58% average, 19 failed (2%).
-- Nights: 6% triumphs, 35% solid, 41% shaky, 16% bad, 2% failed; clients docked £354k and claimed £22k in damages (13% of revenue).
-- Office: 0 office staff at the end; the work outgrew the office by 81% on average and 169% at worst.
-- Overdraft: 145 days in it, 145 over the limit (20 times), 2 demands from the bank, cut 1×, 2 bridging loans, sold 2 trucks to raise cash.
-- Bad nights were mostly down to tired kit (238), kit dying on stage (204), late load-ins (150).
-- Root conditions in the incident log: kit dying on stage ×204.
-- Cash: 5 months overdrawn, lowest balance -£17k, 46 bills deferred, 158 forecast warnings, borrowed £220k, factored invoices 36 months.
-- Clients: 1 cancellation (0 with nothing to claim), 24 bans.
-- Crew: 5 on the books, 31 lost along the way, burnout 0%, 6 trusted pairs and 1 feuds.
-- Riders and rooms: 13 cross-hires and 11 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 30% condition (13% at the end); 0 manufacturer faults.
-- Road: 393k km driven, 7 roadside breakdowns — 1.78 per 100,000 km (one every 56k km) at 80% average reliability.
-- Rivals (same rules): 7 trading, 8 gone; 3566 shows at 67% average, 0 failed; 50 cross-hires and 182 room fixes paid; turned work down for rider ×61, crew ×3, kit ×1; 2 overdrawn.
+- Survived 8 years, worth £241k (reputation 36).
+- Earned £2.8M: show income 100%.
+- Operating margin 2%. Biggest costs as a share of revenue: crew wages 34%, office, admin & cover 10%, sub-hired kit 9%, depots & property 8%.
+- Ran 5 vehicles at 19.5 shows per vehicle-year; 782 shows at 69% average, 7 failed (1%).
+- Nights: 9% triumphs, 54% solid, 30% shaky, 6% bad, 1% failed; clients docked £233k and claimed £32k in damages (10% of revenue).
+- Office: 0 office staff at the end; the work outgrew the office by 32% on average and 94% at worst.
+- Industry: 0 recalls grounding 0 trucks, 1 big account lost, £0.0k of invoices and £0.0k of bookings lost to promoters going under, 1 late-payment wave; ended with 60% of the fleet on one model and 32% of the work from one client.
+- Bad nights were mostly down to kit dying on stage (135), tired kit (130), short-handed crews (56).
+- Root conditions in the incident log: kit dying on stage ×135.
+- Cash never got tight (lowest £40k).
+- Clients: 2 cancellations (0 with nothing to claim), 8 bans.
+- Crew: 11 on the books, 10 lost along the way, burnout 0%, 6 trusted pairs and 2 feuds.
+- Riders and rooms: 5 cross-hires and 9 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 36% condition (14% at the end); 0 manufacturer faults.
+- Road: 334k km driven, 7 roadside breakdowns — 2.1 per 100,000 km (one every 48k km) at 79% average reliability.
+- Rivals (same rules): 8 trading, 8 gone; 3516 shows at 73% average, 1 failed; 47 cross-hires and 87 room fixes paid; turned work down for rider ×23, crew ×11, kit ×7; 4 overdrawn.
 
 #### GB from 1995, seed 4
 
-- Went under after 6.5 years: Bot stayed £4,043 over its overdraft limit after the bank's demand, and the administrators have been appointed.
-- Earned £2.6M: show income 100%.
-- Operating margin -13%. Biggest costs as a share of revenue: crew wages 39%, new vehicles & gear 13%, office, admin & cover 11%, vehicle running costs 8%.
-- Ran 5 vehicles at 23.1 shows per vehicle-year; 754 shows at 48% average, 13 failed (2%).
-- Nights: 10% triumphs, 37% solid, 38% shaky, 12% bad, 2% failed; clients docked £285k and claimed £24k in damages (12% of revenue).
-- Office: 0 office staff at the end; the work outgrew the office by 77% on average and 169% at worst.
-- Overdraft: 107 days in it, 107 over the limit (4 times), 3 demands from the bank, cut 1×, 1 bridging loan, sold 2 trucks to raise cash.
-- Bad nights were mostly down to kit dying on stage (156), tired kit (125), late load-ins (116).
-- Root conditions in the incident log: kit dying on stage ×156.
-- Cash: 4 months overdrawn, lowest balance -£30k, 18 bills deferred, 118 forecast warnings, borrowed £220k, factored invoices 28 months.
-- Clients: 1 cancellation (1 with nothing to claim), 19 bans.
-- Crew: 4 on the books, 18 lost along the way, burnout 0%, 4 trusted pairs and 4 feuds.
+- Went under after 7.6 years: Bot stayed £12,019 over its overdraft limit after the bank's demand, and the administrators have been appointed.
+- Earned £2.5M: show income 100%.
+- Operating margin -17%. Biggest costs as a share of revenue: crew wages 37%, new vehicles & gear 13%, office, admin & cover 12%, vehicle running costs 10%.
+- Ran 2 vehicles at 50.4 shows per vehicle-year; 768 shows at 0% average, 31 failed (4%).
+- Nights: 10% triumphs, 35% solid, 35% shaky, 16% bad, 4% failed; clients docked £269k and claimed £29k in damages (12% of revenue).
+- Office: 0 office staff at the end; the work outgrew the office by 65% on average and 169% at worst.
+- Industry: 0 recalls grounding 0 trucks, 1 big account lost, £0.0k of invoices and £0.0k of bookings lost to promoters going under, 0 late-payment waves; ended with 50% of the fleet on one model and 11% of the work from one client.
+- Overdraft: 253 days in it, 253 over the limit (12 times), 6 demands from the bank, cut 2×, 2 bridging loans, sold 5 trucks to raise cash.
+- Bad nights were mostly down to tired kit (158), kit dying on stage (150), late load-ins (107).
+- Root conditions in the incident log: kit dying on stage ×150.
+- Cash: 8 months overdrawn, lowest balance -£22k, 38 bills deferred, 169 forecast warnings, borrowed £220k, factored invoices 40 months.
+- Clients: 2 cancellations (1 with nothing to claim), 45 bans.
+- Crew: 0 on the books, 36 lost along the way, burnout 0%, 3 trusted pairs and 4 feuds.
 - Riders and rooms: 6 cross-hires and 1 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 39% condition (16% at the end); 0 manufacturer faults.
-- Road: 323k km driven, 5 roadside breakdowns — 1.55 per 100,000 km (one every 65k km) at 80% average reliability.
-- Rivals (same rules): 10 trading, 8 gone; 2858 shows at 68% average, 0 failed; 57 cross-hires and 90 room fixes paid; turned work down for rider ×249, crew ×50, kit ×46; 7 overdrawn.
+- Kit and fleet: kit averaged 36% condition (18% at the end); 0 manufacturer faults.
+- Road: 333k km driven, 1 roadside breakdown — 0.3 per 100,000 km (one every 333k km) at 80% average reliability.
+- Rivals (same rules): 5 trading, 12 gone; 2585 shows at 67% average, 1 failed; 63 cross-hires and 168 room fixes paid; turned work down for crew ×40, rider ×30, kit ×16; 2 overdrawn.
 
 #### GB from 1995, seed 5
 
-- Survived 8 years, worth £182k (reputation 19).
-- Earned £2.9M: show income 100%.
-- Operating margin -1%. Biggest costs as a share of revenue: crew wages 34%, office, admin & cover 11%, new vehicles & gear 10%, sub-hired kit 8%.
-- Ran 6 vehicles at 18 shows per vehicle-year; 866 shows at 64% average, 6 failed (1%).
-- Nights: 7% triumphs, 46% solid, 34% shaky, 11% bad, 1% failed; clients docked £331k and claimed £25k in damages (12% of revenue).
-- Office: 0 office staff at the end; the work outgrew the office by 44% on average and 131% at worst.
-- Bad nights were mostly down to kit dying on stage (202), tired kit (123), short-handed crews (93).
-- Root conditions in the incident log: kit dying on stage ×202.
-- Cash: 0 months overdrawn, lowest balance £25k, 0 bills deferred, 26 forecast warnings, borrowed £40k, factored invoices 6 months.
-- Clients: 0 cancellations (0 with nothing to claim), 8 bans.
-- Crew: 12 on the books, 29 lost along the way, burnout 0%, 6 trusted pairs and 7 feuds.
-- Riders and rooms: 5 cross-hires and 8 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 34% condition (15% at the end); 0 manufacturer faults.
-- Road: 363k km driven, 3 roadside breakdowns — 0.83 per 100,000 km (one every 121k km) at 79% average reliability.
-- Rivals (same rules): 7 trading, 12 gone; 2932 shows at 69% average, 0 failed; 36 cross-hires and 80 room fixes paid; turned work down for crew ×24, rider ×17, kit ×1; 3 overdrawn.
+- Survived 8 years, worth £79k (reputation 34).
+- Earned £1.8M: show income 100%.
+- Operating margin -2%. Biggest costs as a share of revenue: crew wages 34%, sub-hired kit 15%, depots & property 12%, office, admin & cover 11%.
+- Ran 2 vehicles at 31.1 shows per vehicle-year; 498 shows at 59% average, 3 failed (1%).
+- Nights: 11% triumphs, 54% solid, 30% shaky, 4% bad, 1% failed; clients docked £120k and claimed £14k in damages (7% of revenue).
+- Industry: 0 recalls grounding 0 trucks, 1 big account lost, £0.0k of invoices and £0.0k of bookings lost to promoters going under, 0 late-payment waves; ended with 50% of the fleet on one model and 16% of the work from one client.
+- Bad nights were mostly down to tired kit (128), kit dying on stage (88), short-handed crews (57).
+- Root conditions in the incident log: kit dying on stage ×88.
+- Cash never got tight (lowest £15k).
+- Clients: 0 cancellations (0 with nothing to claim), 4 bans.
+- Crew: 4 on the books, 4 lost along the way, burnout 0%, 3 trusted pairs and 1 feuds.
+- Riders and rooms: 8 cross-hires and 0 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 33% condition (22% at the end); 0 manufacturer faults.
+- Road: 208k km driven, 2 roadside breakdowns — 0.96 per 100,000 km (one every 104k km) at 78% average reliability.
+- Rivals (same rules): 7 trading, 8 gone; 3495 shows at 69% average, 0 failed; 35 cross-hires and 88 room fixes paid; turned work down for crew ×4, rider ×2, kit ×1; 2 overdrawn.
 
 #### GB from 1995, seed 6
 
-- Survived 8 years, worth £47k (reputation 7).
-- Earned £2.4M: show income 100%.
-- Operating margin -4%. Biggest costs as a share of revenue: crew wages 36%, office, admin & cover 11%, sub-hired kit 11%, depots & property 9%.
-- Ran 4 vehicles at 23.4 shows per vehicle-year; 748 shows at 57% average, 3 failed (0%).
-- Nights: 6% triumphs, 31% solid, 52% shaky, 11% bad, 0% failed; clients docked £256k and claimed £7.0k in damages (11% of revenue).
-- Office: 0 office staff at the end; the work outgrew the office by 25% on average and 56% at worst.
-- Bad nights were mostly down to tired kit (276), kit dying on stage (146), short-handed crews (124).
-- Root conditions in the incident log: kit dying on stage ×146.
-- Cash: 0 months overdrawn, lowest balance £17k, 0 bills deferred, 47 forecast warnings, borrowed £80k, factored invoices 11 months.
-- Clients: 2 cancellations (1 with nothing to claim), 4 bans.
-- Crew: 8 on the books, 24 lost along the way, burnout 0%, 6 trusted pairs and 3 feuds.
-- Riders and rooms: 20 cross-hires and 0 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 42% condition (24% at the end); 0 manufacturer faults.
-- Road: 318k km driven, 6 roadside breakdowns — 1.89 per 100,000 km (one every 53k km) at 79% average reliability.
-- Rivals (same rules): 7 trading, 8 gone; 3835 shows at 67% average, 0 failed; 55 cross-hires and 202 room fixes paid; turned work down for rider ×15, crew ×3; 2 overdrawn.
+- Survived 8 years, worth £267k (reputation 33).
+- Earned £3.4M: show income 100%.
+- Operating margin 0%. Biggest costs as a share of revenue: crew wages 34%, new vehicles & gear 10%, office, admin & cover 10%, sub-hired kit 8%.
+- Ran 7 vehicles at 17.6 shows per vehicle-year; 986 shows at 63% average, 8 failed (1%).
+- Nights: 9% triumphs, 51% solid, 32% shaky, 8% bad, 1% failed; clients docked £376k and claimed £27k in damages (12% of revenue).
+- Office: 0 office staff at the end; the work outgrew the office by 64% on average and 169% at worst.
+- Industry: 1 recall grounding 5 trucks, 1 big account lost, £0.0k of invoices and £0.0k of bookings lost to promoters going under, 0 late-payment waves; ended with 71% of the fleet on one model and 8% of the work from one client.
+- Bad nights were mostly down to kit dying on stage (199), late load-ins (156), tired kit (127).
+- Root conditions in the incident log: kit dying on stage ×199.
+- Cash: 0 months overdrawn, lowest balance £17k, 0 bills deferred, 19 forecast warnings, factored invoices 3 months.
+- Clients: 0 cancellations (0 with nothing to claim), 9 bans.
+- Crew: 13 on the books, 0 lost along the way, burnout 0%, 9 trusted pairs and 4 feuds.
+- Riders and rooms: 17 cross-hires and 4 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 42% condition (19% at the end); 0 manufacturer faults.
+- Road: 420k km driven, 6 roadside breakdowns — 1.43 per 100,000 km (one every 70k km) at 80% average reliability.
+- Rivals (same rules): 9 trading, 5 gone; 3564 shows at 71% average, 0 failed; 92 cross-hires and 116 room fixes paid; turned work down for rider ×77, kit ×14, crew ×11; 5 overdrawn.
 
 #### ES from 1990, seed 3
 
-- Survived 8 years, worth 26M pts (reputation 36).
-- Earned 299M pts: show income 100%.
-- Operating margin 3%. Biggest costs as a share of revenue: crew wages 35%, sub-hired kit 14%, office, admin & cover 11%, per diems & hotels 10%.
-- Ran 2 vehicles at 27.1 shows per vehicle-year; 434 shows at 63% average, 1 failed (0%).
-- Nights: 15% triumphs, 51% solid, 28% shaky, 5% bad, 0% failed; clients docked 22M pts and claimed 553k pts in damages (8% of revenue).
-- Bad nights were mostly down to tired kit (108), kit dying on stage (71), short-handed crews (35).
-- Root conditions in the incident log: kit dying on stage ×72.
+- Survived 8 years, worth 30M pts (reputation 38).
+- Earned 306M pts: show income 100%.
+- Operating margin 5%. Biggest costs as a share of revenue: crew wages 35%, sub-hired kit 14%, office, admin & cover 11%, per diems & hotels 10%.
+- Ran 2 vehicles at 27.4 shows per vehicle-year; 438 shows at 72% average, 1 failed (0%).
+- Nights: 15% triumphs, 54% solid, 26% shaky, 5% bad, 0% failed; clients docked 21M pts and claimed 553k pts in damages (7% of revenue).
+- Bad nights were mostly down to tired kit (103), kit dying on stage (63), short-handed crews (36).
+- Root conditions in the incident log: kit dying on stage ×64.
 - Cash: 0 months overdrawn, lowest balance 1.8M pts, 0 bills deferred, 20 forecast warnings, borrowed 3.3M pts, factored invoices 6 months.
-- Clients: 3 cancellations (0 with nothing to claim), 2 bans.
-- Crew: 5 on the books, 0 lost along the way, burnout 0%, 4 trusted pairs and 2 feuds.
-- Riders and rooms: 26 cross-hires and 0 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 46% condition (32% at the end); 0 manufacturer faults.
-- Road: 453k km driven, 6 roadside breakdowns — 1.32 per 100,000 km (one every 76k km) at 78% average reliability.
-- Rivals (same rules): 9 trading, 5 gone; 3737 shows at 70% average, 0 failed; 31 cross-hires and 19 room fixes paid; turned work down for rider ×17; 1 overdrawn.
+- Clients: 4 cancellations (0 with nothing to claim), 2 bans.
+- Crew: 5 on the books, 0 lost along the way, burnout 0%, 4 trusted pairs and 1 feuds.
+- Riders and rooms: 25 cross-hires and 0 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 46% condition (35% at the end); 0 manufacturer faults.
+- Road: 461k km driven, 4 roadside breakdowns — 0.87 per 100,000 km (one every 115k km) at 78% average reliability.
+- Rivals (same rules): 9 trading, 5 gone; 3584 shows at 76% average, 0 failed; 19 cross-hires and 18 room fixes paid; turned work down for rider ×25.
 
 #### ES from 1990, seed 4
 
-- Survived 8 years, worth 18M pts (reputation 29).
-- Earned 287M pts: show income 100%.
-- Operating margin 0%. Biggest costs as a share of revenue: crew wages 36%, sub-hired kit 14%, office, admin & cover 11%, per diems & hotels 10%.
-- Ran 2 vehicles at 28.1 shows per vehicle-year; 449 shows at 55% average, 6 failed (1%).
-- Nights: 11% triumphs, 53% solid, 31% shaky, 4% bad, 1% failed; clients docked 15M pts and claimed 3.0M pts in damages (6% of revenue).
-- Bad nights were mostly down to tired kit (130), kit dying on stage (69), short-handed crews (29).
-- Root conditions in the incident log: kit dying on stage ×69.
-- Cash: 0 months overdrawn, lowest balance 471k pts, 0 bills deferred, 20 forecast warnings, borrowed 6.7M pts, factored invoices 6 months.
+- Survived 8 years, worth 18M pts (reputation 31).
+- Earned 294M pts: show income 100%.
+- Operating margin 1%. Biggest costs as a share of revenue: crew wages 36%, sub-hired kit 14%, office, admin & cover 11%, per diems & hotels 10%.
+- Ran 2 vehicles at 28.4 shows per vehicle-year; 455 shows at 66% average, 6 failed (1%).
+- Nights: 10% triumphs, 54% solid, 30% shaky, 3% bad, 1% failed; clients docked 15M pts and claimed 3.0M pts in damages (6% of revenue).
+- Bad nights were mostly down to tired kit (152), kit dying on stage (69), short-handed crews (25).
+- Root conditions in the incident log: services put off ×1, kit dying on stage ×69.
+- Cash: 0 months overdrawn, lowest balance 471k pts, 0 bills deferred, 19 forecast warnings, borrowed 6.7M pts, factored invoices 6 months.
 - Clients: 0 cancellations (0 with nothing to claim), 8 bans.
-- Crew: 4 on the books, 2 lost along the way, burnout 0%, 6 trusted pairs and 2 feuds.
-- Riders and rooms: 25 cross-hires and 3 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
+- Crew: 5 on the books, 1 lost along the way, burnout 0%, 6 trusted pairs and 1 feuds.
+- Riders and rooms: 26 cross-hires and 3 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
 - Kit and fleet: kit averaged 44% condition (28% at the end); 0 manufacturer faults.
-- Road: 427k km driven, 8 roadside breakdowns — 1.87 per 100,000 km (one every 53k km) at 78% average reliability.
-- Rivals (same rules): 8 trading, 9 gone; 3139 shows at 67% average, 0 failed; 108 cross-hires and 14 room fixes paid; turned work down for rider ×39, crew ×2, kit ×1; 2 overdrawn.
+- Road: 440k km driven, 9 roadside breakdowns — 2.04 per 100,000 km (one every 49k km) at 78% average reliability.
+- Rivals (same rules): 7 trading, 10 gone; 2945 shows at 68% average, 0 failed; 42 cross-hires and 12 room fixes paid; turned work down for rider ×2, crew ×1.
 
 #### ES from 1990, seed 5
 
-- Survived 8 years, worth -179k pts (reputation 29).
-- Earned 272M pts: show income 100%.
-- Operating margin -7%. Biggest costs as a share of revenue: crew wages 38%, sub-hired kit 15%, office, admin & cover 12%, per diems & hotels 11%.
-- Ran 2 vehicles at 28.1 shows per vehicle-year; 450 shows at 64% average, 2 failed (0%).
-- Nights: 8% triumphs, 39% solid, 45% shaky, 8% bad, 0% failed; clients docked 29M pts and claimed 1.3M pts in damages (11% of revenue).
-- Bad nights were mostly down to tired kit (168), short-handed crews (94), kit dying on stage (65).
-- Root conditions in the incident log: kit dying on stage ×65.
-- Cash: 0 months overdrawn, lowest balance 259k pts, 0 bills deferred, 79 forecast warnings, borrowed 20M pts, factored invoices 19 months.
-- Clients: 0 cancellations (0 with nothing to claim), 4 bans.
-- Crew: 5 on the books, 10 lost along the way, burnout 0%, 5 trusted pairs and 3 feuds.
-- Riders and rooms: 28 cross-hires and 0 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 51% condition (37% at the end); 0 manufacturer faults.
-- Road: 438k km driven, 7 roadside breakdowns — 1.6 per 100,000 km (one every 63k km) at 78% average reliability.
-- Rivals (same rules): 7 trading, 5 gone; 3608 shows at 69% average, 0 failed; 12 cross-hires and 15 room fixes paid; turned work down for rider ×4.
+- Survived 8 years, worth 8.7M pts (reputation 34).
+- Earned 292M pts: show income 100%.
+- Operating margin -3%. Biggest costs as a share of revenue: crew wages 37%, sub-hired kit 14%, office, admin & cover 11%, per diems & hotels 10%.
+- Ran 2 vehicles at 27.1 shows per vehicle-year; 433 shows at 68% average, 4 failed (1%).
+- Nights: 11% triumphs, 61% solid, 24% shaky, 3% bad, 1% failed; clients docked 17M pts and claimed 1.9M pts in damages (6% of revenue).
+- Industry: 0 recalls grounding 0 trucks, 1 big account lost, 0.0k pts of invoices and 0.0k pts of bookings lost to promoters going under, 2 late-payment waves; ended with 50% of the fleet on one model and 15% of the work from one client.
+- Bad nights were mostly down to tired kit (110), kit dying on stage (66), short-handed crews (28).
+- Root conditions in the incident log: services put off ×1, kit dying on stage ×66.
+- Cash: 0 months overdrawn, lowest balance 1.2M pts, 0 bills deferred, 27 forecast warnings, borrowed 6.7M pts, factored invoices 8 months.
+- Clients: 0 cancellations (0 with nothing to claim), 7 bans.
+- Crew: 4 on the books, 2 lost along the way, burnout 0%, 5 trusted pairs and 0 feuds.
+- Riders and rooms: 23 cross-hires and 0 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 49% condition (30% at the end); 0 manufacturer faults.
+- Road: 480k km driven, 10 roadside breakdowns — 2.08 per 100,000 km (one every 48k km) at 78% average reliability.
+- Rivals (same rules): 6 trading, 5 gone; 3395 shows at 66% average, 0 failed; 12 cross-hires and 16 room fixes paid; turned work down for rider ×24, crew ×5; 1 overdrawn.
 
 #### ES from 1990, seed 6
 
-- Survived 8 years, worth 23M pts (reputation 28).
+- Survived 8 years, worth 22M pts (reputation 29).
 - Earned 305M pts: show income 100%.
 - Operating margin 2%. Biggest costs as a share of revenue: crew wages 34%, sub-hired kit 16%, office, admin & cover 11%, per diems & hotels 10%.
-- Ran 2 vehicles at 28.3 shows per vehicle-year; 453 shows at 59% average, 2 failed (0%).
-- Nights: 8% triumphs, 55% solid, 32% shaky, 4% bad, 0% failed; clients docked 24M pts and claimed 588k pts in damages (8% of revenue).
-- Bad nights were mostly down to tired kit (124), kit dying on stage (72), short-handed crews (38).
-- Root conditions in the incident log: kit dying on stage ×72.
+- Ran 2 vehicles at 28.3 shows per vehicle-year; 453 shows at 61% average, 2 failed (0%).
+- Nights: 8% triumphs, 55% solid, 31% shaky, 5% bad, 0% failed; clients docked 24M pts and claimed 588k pts in damages (8% of revenue).
+- Industry: 0 recalls grounding 0 trucks, 1 big account lost, 0.0k pts of invoices and 0.0k pts of bookings lost to promoters going under, 0 late-payment waves; ended with 50% of the fleet on one model and 31% of the work from one client.
+- Bad nights were mostly down to tired kit (124), kit dying on stage (71), short-handed crews (38).
+- Root conditions in the incident log: kit dying on stage ×71.
 - Cash: 0 months overdrawn, lowest balance 2.1M pts, 0 bills deferred, 10 forecast warnings, borrowed 3.3M pts, factored invoices 3 months.
-- Clients: 3 cancellations (0 with nothing to claim), 3 bans.
+- Clients: 3 cancellations (0 with nothing to claim), 4 bans.
 - Crew: 4 on the books, 0 lost along the way, burnout 0%, 6 trusted pairs and 3 feuds.
 - Riders and rooms: 30 cross-hires and 1 room fixes booked; 0 rider breaches and 0 room problems reached the stage.
 - Kit and fleet: kit averaged 46% condition (32% at the end); 0 manufacturer faults.
 - Road: 481k km driven, 10 roadside breakdowns — 2.08 per 100,000 km (one every 48k km) at 78% average reliability.
-- Rivals (same rules): 9 trading, 6 gone; 3572 shows at 72% average, 0 failed; 37 cross-hires and 11 room fixes paid; turned work down for rider ×14, crew ×1; 1 overdrawn.
+- Rivals (same rules): 9 trading, 6 gone; 3563 shows at 68% average, 0 failed; 37 cross-hires and 11 room fixes paid; turned work down for rider ×13, crew ×1.
 
 ### Corner-cutter
 
@@ -984,59 +1212,61 @@ Takes everything, never cross-hires or fixes a room, no workshop or insurance, n
 
 #### GB from 1995, seed 3
 
-- Survived 8 years, worth £159k (reputation 2).
+- Survived 8 years, worth £259k (reputation 37).
 - Earned £2.5M: show income 100%.
-- Operating margin -1%. Biggest costs as a share of revenue: crew wages 31%, office, admin & cover 11%, new vehicles & gear 9%, depots & property 9%.
-- Ran 5 vehicles at 21 shows per vehicle-year; 841 shows at 52% average, 14 failed (2%).
-- Nights: 7% triumphs, 25% solid, 50% shaky, 17% bad, 2% failed; clients docked £316k and claimed £22k in damages (13% of revenue).
-- Office: 0 office staff at the end; the work outgrew the office by 39% on average and 94% at worst.
-- Overdraft: 361 days in it, 0 over the limit (0 times), cut 2×.
-- Bad nights were mostly down to tired kit (284), kit dying on stage (166), short-handed crews (120).
-- Root conditions in the incident log: services put off ×2, kit dying on stage ×166.
-- Cash: 13 months overdrawn, lowest balance -£19k, 8 bills deferred, 0 forecast warnings.
-- Clients: 0 cancellations (0 with nothing to claim), 19 bans.
-- Crew: 2 on the books, 32 lost along the way, burnout 0%, 5 trusted pairs and 5 feuds.
-- Riders and rooms: 0 cross-hires and 0 room fixes booked; 6 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 36% condition (23% at the end); 0 manufacturer faults.
-- Road: 335k km driven, 8 roadside breakdowns — 2.39 per 100,000 km (one every 42k km) at 74% average reliability.
-- Rivals (same rules): 8 trading, 9 gone; 3677 shows at 68% average, 0 failed; 65 cross-hires and 189 room fixes paid; turned work down for rider ×99, kit ×25, crew ×17; 2 overdrawn.
+- Operating margin 2%. Biggest costs as a share of revenue: crew wages 32%, sub-hired kit 10%, office, admin & cover 10%, new vehicles & gear 9%.
+- Ran 5 vehicles at 17.3 shows per vehicle-year; 693 shows at 67% average, 4 failed (1%).
+- Nights: 12% triumphs, 59% solid, 25% shaky, 3% bad, 1% failed; clients docked £168k and claimed £11k in damages (7% of revenue).
+- Office: 0 office staff at the end; the work outgrew the office by 21% on average and 94% at worst.
+- Industry: 0 recalls grounding 0 trucks, 1 big account lost, £0.0k of invoices and £0.0k of bookings lost to promoters going under, 0 late-payment waves; ended with 60% of the fleet on one model and 37% of the work from one client.
+- Bad nights were mostly down to kit dying on stage (113), tired kit (106), short-handed crews (40).
+- Root conditions in the incident log: kit dying on stage ×113.
+- Cash never got tight (lowest £41k).
+- Clients: 1 cancellation (0 with nothing to claim), 6 bans.
+- Crew: 10 on the books, 1 lost along the way, burnout 0%, 3 trusted pairs and 4 feuds.
+- Riders and rooms: 0 cross-hires and 0 room fixes booked; 7 rider breaches and 1 room problem reached the stage.
+- Kit and fleet: kit averaged 35% condition (18% at the end); 0 manufacturer faults.
+- Road: 310k km driven, 8 roadside breakdowns — 2.58 per 100,000 km (one every 39k km) at 79% average reliability.
+- Rivals (same rules): 7 trading, 7 gone; 3714 shows at 68% average, 1 failed; 27 cross-hires and 101 room fixes paid; turned work down for rider ×8, crew ×6, kit ×3; 2 overdrawn.
 
 #### GB from 1995, seed 4
 
-- Went under after 6.3 years: Bot stayed £29,493 over its overdraft limit after the bank's demand, and the administrators have been appointed.
-- Earned £2.7M: show income 100%.
-- Operating margin -4%. Biggest costs as a share of revenue: crew wages 36%, new vehicles & gear 12%, office, admin & cover 10%, vehicle running costs 8%.
-- Ran 7 vehicles at 17.5 shows per vehicle-year; 779 shows at 56% average, 7 failed (1%).
-- Nights: 10% triumphs, 43% solid, 36% shaky, 11% bad, 1% failed; clients docked £290k and claimed £16k in damages (11% of revenue).
-- Office: 0 office staff at the end; the work outgrew the office by 76% on average and 169% at worst.
-- Overdraft: 289 days in it, 44 over the limit (1 time), 1 demand from the bank, cut 2×.
-- Bad nights were mostly down to kit dying on stage (148), tired kit (130), late load-ins (130).
-- Root conditions in the incident log: services put off ×1, money tied up in unpaid invoices ×14, kit dying on stage ×148.
-- Cash: 8 months overdrawn, lowest balance -£72k, 23 bills deferred, 0 forecast warnings.
-- Clients: 1 cancellation (1 with nothing to claim), 9 bans.
-- Crew: 12 on the books, 8 lost along the way, burnout 0%, 3 trusted pairs and 2 feuds.
-- Riders and rooms: 0 cross-hires and 0 room fixes booked; 5 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 42% condition (23% at the end); 0 manufacturer faults.
-- Road: 334k km driven, 5 roadside breakdowns — 1.5 per 100,000 km (one every 67k km) at 77% average reliability.
-- Rivals (same rules): 8 trading, 9 gone; 2544 shows at 68% average, 1 failed; 54 cross-hires and 76 room fixes paid; turned work down for rider ×123, kit ×65, crew ×28; 7 overdrawn.
+- Went under after 6.2 years: Bot stayed £26,924 over its overdraft limit after the bank's demand, and the administrators have been appointed.
+- Earned £2.6M: show income 100%.
+- Operating margin -5%. Biggest costs as a share of revenue: crew wages 36%, new vehicles & gear 12%, office, admin & cover 10%, per diems & hotels 8%.
+- Ran 7 vehicles at 17.4 shows per vehicle-year; 759 shows at 58% average, 7 failed (1%).
+- Nights: 10% triumphs, 44% solid, 33% shaky, 12% bad, 1% failed; clients docked £256k and claimed £15k in damages (11% of revenue).
+- Office: 0 office staff at the end; the work outgrew the office by 69% on average and 169% at worst.
+- Industry: 0 recalls grounding 0 trucks, 1 big account lost, £0.0k of invoices and £0.0k of bookings lost to promoters going under, 0 late-payment waves; ended with 71% of the fleet on one model and 6% of the work from one client.
+- Overdraft: 141 days in it, 44 over the limit (1 time), 1 demand from the bank, cut 1×.
+- Bad nights were mostly down to tired kit (148), kit dying on stage (142), late load-ins (114).
+- Root conditions in the incident log: services put off ×1, kit dying on stage ×142.
+- Cash: 5 months overdrawn, lowest balance -£66k, 8 bills deferred, 0 forecast warnings.
+- Clients: 1 cancellation (1 with nothing to claim), 10 bans.
+- Crew: 9 on the books, 11 lost along the way, burnout 0%, 2 trusted pairs and 1 feuds.
+- Riders and rooms: 0 cross-hires and 0 room fixes booked; 6 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 42% condition (19% at the end); 0 manufacturer faults.
+- Road: 332k km driven, 6 roadside breakdowns — 1.81 per 100,000 km (one every 55k km) at 79% average reliability.
+- Rivals (same rules): 9 trading, 8 gone; 2567 shows at 69% average, 0 failed; 58 cross-hires and 69 room fixes paid; turned work down for rider ×229, crew ×31, kit ×23; 8 overdrawn.
 
 #### GB from 1995, seed 5
 
-- Survived 8 years, worth £285k (reputation 28).
-- Earned £3.2M: show income 100%.
-- Operating margin 0%. Biggest costs as a share of revenue: crew wages 33%, new vehicles & gear 11%, office, admin & cover 10%, sub-hired kit 9%.
-- Ran 7 vehicles at 15.9 shows per vehicle-year; 892 shows at 71% average, 7 failed (1%).
-- Nights: 12% triumphs, 51% solid, 28% shaky, 8% bad, 1% failed; clients docked £365k and claimed £34k in damages (12% of revenue).
-- Office: 0 office staff at the end; the work outgrew the office by 51% on average and 163% at worst.
-- Bad nights were mostly down to kit dying on stage (157), late load-ins (120), tired kit (112).
-- Root conditions in the incident log: services put off ×1, kit dying on stage ×157.
+- Survived 8 years, worth £204k (reputation 31).
+- Earned £2.6M: show income 100%.
+- Operating margin 1%. Biggest costs as a share of revenue: crew wages 34%, office, admin & cover 11%, sub-hired kit 9%, new vehicles & gear 9%.
+- Ran 5 vehicles at 19.3 shows per vehicle-year; 773 shows at 66% average, 3 failed (0%).
+- Nights: 11% triumphs, 47% solid, 32% shaky, 9% bad, 0% failed; clients docked £235k and claimed £11k in damages (10% of revenue).
+- Office: 0 office staff at the end; the work outgrew the office by 26% on average and 94% at worst.
+- Industry: 0 recalls grounding 0 trucks, 1 big account lost, £5.5k of invoices and £0.0k of bookings lost to promoters going under, 1 late-payment wave; ended with 60% of the fleet on one model and 5% of the work from one client.
+- Bad nights were mostly down to tired kit (150), kit dying on stage (140), short-handed crews (89).
+- Root conditions in the incident log: kit dying on stage ×140.
 - Cash never got tight (lowest £25k).
-- Clients: 2 cancellations (2 with nothing to claim), 12 bans.
-- Crew: 14 on the books, 4 lost along the way, burnout 0%, 4 trusted pairs and 9 feuds.
-- Riders and rooms: 0 cross-hires and 0 room fixes booked; 7 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 34% condition (10% at the end); 0 manufacturer faults.
-- Road: 380k km driven, 4 roadside breakdowns — 1.05 per 100,000 km (one every 95k km) at 79% average reliability.
-- Rivals (same rules): 8 trading, 8 gone; 3449 shows at 64% average, 0 failed; 75 cross-hires and 93 room fixes paid; turned work down for rider ×32, crew ×18; 4 overdrawn.
+- Clients: 2 cancellations (2 with nothing to claim), 4 bans.
+- Crew: 10 on the books, 17 lost along the way, burnout 0%, 3 trusted pairs and 6 feuds.
+- Riders and rooms: 0 cross-hires and 0 room fixes booked; 6 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 32% condition (11% at the end); 0 manufacturer faults.
+- Road: 324k km driven, 5 roadside breakdowns — 1.54 per 100,000 km (one every 65k km) at 79% average reliability.
+- Rivals (same rules): 10 trading, 7 gone; 3581 shows at 69% average, 0 failed; 35 cross-hires and 115 room fixes paid; turned work down for rider ×53, crew ×7, kit ×3; 5 overdrawn.
 
 #### GB from 1995, seed 6
 
@@ -1058,57 +1288,59 @@ Takes everything, never cross-hires or fixes a room, no workshop or insurance, n
 
 #### ES from 1990, seed 3
 
-- Went under after 7.5 years: Bot stayed 3,599,456 pts over its overdraft limit after the bank's demand, and the administrators have been appointed.
-- Earned 257M pts: show income 100%.
-- Operating margin -6%. Biggest costs as a share of revenue: crew wages 40%, sub-hired kit 14%, office, admin & cover 13%, per diems & hotels 11%.
-- Ran 2 vehicles at 27.5 shows per vehicle-year; 414 shows at 0% average, 4 failed (1%).
-- Nights: 13% triumphs, 55% solid, 25% shaky, 6% bad, 1% failed; clients docked 19M pts and claimed 2.8M pts in damages (9% of revenue).
-- Overdraft: 302 days in it, 44 over the limit (1 time), 1 demand from the bank, cut 1×.
-- Bad nights were mostly down to tired kit (77), kit dying on stage (69), short-handed crews (39).
-- Root conditions in the incident log: services put off ×1, money tied up in unpaid invoices ×11, kit dying on stage ×70.
-- Cash: 11 months overdrawn, lowest balance -9.3M pts, 13 bills deferred, 0 forecast warnings.
-- Clients: 1 cancellation (0 with nothing to claim), 6 bans.
-- Crew: 5 on the books, 2 lost along the way, burnout 0%, 4 trusted pairs and 4 feuds.
-- Riders and rooms: 0 cross-hires and 0 room fixes booked; 19 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 44% condition (36% at the end); 0 manufacturer faults.
-- Road: 416k km driven, 3 roadside breakdowns — 0.72 per 100,000 km (one every 139k km) at 77% average reliability.
-- Rivals (same rules): 8 trading, 4 gone; 3156 shows at 70% average, 0 failed; 18 cross-hires and 15 room fixes paid; turned work down for rider ×29, crew ×2; 2 overdrawn.
+- Went under after 6.8 years: Bot stayed 1,234,300 pts over its overdraft limit after the bank's demand, and the administrators have been appointed.
+- Earned 217M pts: show income 100%.
+- Operating margin -7%. Biggest costs as a share of revenue: crew wages 37%, sub-hired kit 15%, office, admin & cover 13%, per diems & hotels 11%.
+- Ran 2 vehicles at 28.1 shows per vehicle-year; 382 shows at 43% average, 4 failed (1%).
+- Nights: 13% triumphs, 45% solid, 32% shaky, 9% bad, 1% failed; clients docked 22M pts and claimed 2.3M pts in damages (11% of revenue).
+- Industry: 0 recalls grounding 0 trucks, 1 big account lost, 0.0k pts of invoices and 0.0k pts of bookings lost to promoters going under, 0 late-payment waves; ended with 50% of the fleet on one model and 23% of the work from one client.
+- Overdraft: 610 days in it, 47 over the limit (3 times), 1 demand from the bank, cut 4×.
+- Bad nights were mostly down to tired kit (81), kit dying on stage (63), short-handed crews (57).
+- Root conditions in the incident log: services put off ×5, money tied up in unpaid invoices ×20, kit dying on stage ×64.
+- Cash: 20 months overdrawn, lowest balance -6.8M pts, 20 bills deferred, 0 forecast warnings.
+- Clients: 3 cancellations (1 with nothing to claim), 7 bans.
+- Crew: 4 on the books, 5 lost along the way, burnout 0%, 3 trusted pairs and 0 feuds.
+- Riders and rooms: 0 cross-hires and 0 room fixes booked; 24 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 46% condition (28% at the end); 0 manufacturer faults.
+- Road: 386k km driven, 9 roadside breakdowns — 2.33 per 100,000 km (one every 43k km) at 75% average reliability.
+- Rivals (same rules): 9 trading, 3 gone; 2290 shows at 72% average, 1 failed; 43 cross-hires and 15 room fixes paid; turned work down for rider ×91, crew ×2, kit ×1; 5 overdrawn.
 
 #### ES from 1990, seed 4
 
-- Survived 8 years, worth 14M pts (reputation 38).
-- Earned 291M pts: show income 100%.
-- Operating margin -1%. Biggest costs as a share of revenue: crew wages 40%, sub-hired kit 12%, office, admin & cover 12%, per diems & hotels 10%.
-- Ran 2 vehicles at 28.2 shows per vehicle-year; 451 shows at 62% average, 1 failed (0%).
-- Nights: 16% triumphs, 58% solid, 24% shaky, 3% bad, 0% failed; clients docked 15M pts and claimed 886k pts in damages (5% of revenue).
-- Overdraft: 124 days in it, 0 over the limit (0 times).
-- Bad nights were mostly down to tired kit (100), kit dying on stage (58), short-handed crews (19).
-- Root conditions in the incident log: money tied up in unpaid invoices ×2, kit dying on stage ×59.
-- Cash: 5 months overdrawn, lowest balance -2.1M pts, 2 bills deferred, 0 forecast warnings.
-- Clients: 1 cancellation (0 with nothing to claim), 3 bans.
-- Crew: 5 on the books, 0 lost along the way, burnout 0%, 4 trusted pairs and 3 feuds.
-- Riders and rooms: 0 cross-hires and 0 room fixes booked; 12 rider breaches and 3 room problems reached the stage.
-- Kit and fleet: kit averaged 44% condition (27% at the end); 0 manufacturer faults.
-- Road: 465k km driven, 7 roadside breakdowns — 1.5 per 100,000 km (one every 66k km) at 78% average reliability.
-- Rivals (same rules): 7 trading, 4 gone; 3453 shows at 68% average, 0 failed; 75 cross-hires and 17 room fixes paid; turned work down for rider ×17; 1 overdrawn.
+- Survived 8 years, worth 8.1M pts (reputation 30).
+- Earned 265M pts: show income 100%.
+- Operating margin -3%. Biggest costs as a share of revenue: crew wages 37%, sub-hired kit 14%, office, admin & cover 12%, per diems & hotels 10%.
+- Ran 2 vehicles at 27.2 shows per vehicle-year; 435 shows at 55% average, 1 failed (0%).
+- Nights: 17% triumphs, 48% solid, 29% shaky, 6% bad, 0% failed; clients docked 20M pts and claimed 886k pts in damages (8% of revenue).
+- Industry: 0 recalls grounding 0 trucks, 1 big account lost, 0.0k pts of invoices and 0.0k pts of bookings lost to promoters going under, 0 late-payment waves; ended with 50% of the fleet on one model and 19% of the work from one client.
+- Overdraft: 338 days in it, 0 over the limit (0 times), cut 1×.
+- Bad nights were mostly down to tired kit (98), kit dying on stage (56), short-handed crews (34).
+- Root conditions in the incident log: money tied up in unpaid invoices ×8, kit dying on stage ×57.
+- Cash: 13 months overdrawn, lowest balance -3.9M pts, 8 bills deferred, 0 forecast warnings.
+- Clients: 1 cancellation (0 with nothing to claim), 6 bans.
+- Crew: 4 on the books, 2 lost along the way, burnout 0%, 4 trusted pairs and 2 feuds.
+- Riders and rooms: 0 cross-hires and 0 room fixes booked; 24 rider breaches and 3 room problems reached the stage.
+- Kit and fleet: kit averaged 45% condition (28% at the end); 0 manufacturer faults.
+- Road: 444k km driven, 7 roadside breakdowns — 1.58 per 100,000 km (one every 63k km) at 76% average reliability.
+- Rivals (same rules): 9 trading, 5 gone; 3350 shows at 72% average, 0 failed; 12 cross-hires and 17 room fixes paid; turned work down for rider ×1.
 
 #### ES from 1990, seed 5
 
-- Went under after 6.5 years: Bot stayed 7,293,400 pts over its overdraft limit after the bank's demand, and the administrators have been appointed.
-- Earned 223M pts: show income 100%.
-- Operating margin -9%. Biggest costs as a share of revenue: crew wages 40%, sub-hired kit 13%, office, admin & cover 12%, per diems & hotels 11%.
-- Ran 2 vehicles at 27.6 shows per vehicle-year; 361 shows at 0% average, 3 failed (1%).
-- Nights: 15% triumphs, 58% solid, 23% shaky, 4% bad, 1% failed; clients docked 15M pts and claimed 4.6M pts in damages (9% of revenue).
-- Overdraft: 447 days in it, 44 over the limit (1 time), 1 demand from the bank, cut 3×.
-- Bad nights were mostly down to tired kit (81), kit dying on stage (47), short-handed crews (20).
-- Root conditions in the incident log: services put off ×2, money tied up in unpaid invoices ×7, kit dying on stage ×48.
-- Cash: 17 months overdrawn, lowest balance -12M pts, 8 bills deferred, 0 forecast warnings.
-- Clients: 0 cancellations (0 with nothing to claim), 4 bans.
-- Crew: 4 on the books, 1 lost along the way, burnout 0%, 3 trusted pairs and 1 feuds.
-- Riders and rooms: 0 cross-hires and 0 room fixes booked; 21 rider breaches and 0 room problems reached the stage.
-- Kit and fleet: kit averaged 47% condition (25% at the end); 0 manufacturer faults.
-- Road: 393k km driven, 9 roadside breakdowns — 2.29 per 100,000 km (one every 44k km) at 75% average reliability.
-- Rivals (same rules): 6 trading, 5 gone; 2279 shows at 69% average, 0 failed; 10 cross-hires and 13 room fixes paid; turned work down for rider ×2, crew ×1.
+- Survived 8 years, worth 9.3M pts (reputation 36).
+- Earned 283M pts: show income 100%.
+- Operating margin -3%. Biggest costs as a share of revenue: crew wages 38%, sub-hired kit 14%, office, admin & cover 11%, per diems & hotels 11%.
+- Ran 2 vehicles at 28.1 shows per vehicle-year; 450 shows at 65% average, 1 failed (0%).
+- Nights: 12% triumphs, 55% solid, 29% shaky, 4% bad, 0% failed; clients docked 22M pts and claimed 382k pts in damages (8% of revenue).
+- Overdraft: 351 days in it, 0 over the limit (0 times), cut 3×.
+- Bad nights were mostly down to tired kit (123), kit dying on stage (67), short-handed crews (20).
+- Root conditions in the incident log: money tied up in unpaid invoices ×7, kit dying on stage ×67.
+- Cash: 13 months overdrawn, lowest balance -5.1M pts, 7 bills deferred, 0 forecast warnings.
+- Clients: 0 cancellations (0 with nothing to claim), 3 bans.
+- Crew: 4 on the books, 1 lost along the way, burnout 0%, 3 trusted pairs and 0 feuds.
+- Riders and rooms: 0 cross-hires and 0 room fixes booked; 20 rider breaches and 0 room problems reached the stage.
+- Kit and fleet: kit averaged 41% condition (20% at the end); 0 manufacturer faults.
+- Road: 482k km driven, 9 roadside breakdowns — 1.87 per 100,000 km (one every 54k km) at 77% average reliability.
+- Rivals (same rules): 4 trading, 8 gone; 3019 shows at 66% average, 0 failed; 9 cross-hires and 12 room fixes paid; turned work down for rider ×4, crew ×3.
 
 #### ES from 1990, seed 6
 

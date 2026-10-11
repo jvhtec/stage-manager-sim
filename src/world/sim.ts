@@ -90,7 +90,8 @@ import { canAfford, deferService, lastingConsequences, nightCauses, OVERDUE_DECA
 import { monthlyTraining, PAY, freelancersFor, monthlyCrew, moraleBonus } from './crew';
 import { REST_AT, crewDirectives, aboard, atDepot, dailyPeopleFatigue, dailyPoachBids, dayRate, evaluateCrew, learnFromShow, moveToDepot, moveToVehicle, pickCrew, refreshCandidates, sideRng, syncCrew } from './people';
 import { averageCondition, dailyWorkshop, monthlyWorkshop, ownedStock, rollFailure, wearFromShow, type Failure } from './wear';
-import { rivalsFor } from './content/companies';
+import { entryYear, hqFor, rivalsFor } from './content/companies';
+import { leaderIn, STYLES } from './leaders';
 import { getTech, techBonus, techsActiveIn } from './content/techs';
 import { dailyOffers, pruneGigs, rivalsTakeOffers, yearlyVenues } from './offers';
 import { dailyTours } from './tours';
@@ -112,6 +113,8 @@ import { KM_PER_UNIT, getCityPath, roadDistance } from './pathfinding';
 import { TIER_REP_CEILING, monthlyReputation, noteShow } from './reputation';
 import { contractDock, damagesFor, outcomeOf } from './outcomes';
 import { dailyLiquidity, monthlyLiquidity } from './liquidity';
+import { dailyStandby, grounded, monthlyRiskCover } from './risk';
+import { monthlyIndustry } from './industry';
 import { officeCapacity, officeLoad, officePrepFactor, officeSlipChance, officeSlipHours, officeStretch } from './office';
 import { dailyDisruptions, monthlyWinter, tripCharges, yearlyDriversRules } from './infra';
 import { countTownShow, fadeTownShows } from './territory';
@@ -370,7 +373,7 @@ function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
     case 'parked':
     case 'scheduled':
       // Called in by the maker (shocks.ts): stays in the yard until the fix is done.
-      if ((v.recalledUntil ?? 0) > s.hour) return;
+      if (grounded(s, v)) return;
       decide(s, world, v);
       return;
     case 'broken':
@@ -740,6 +743,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   dailyCourses(s);
   dailyReceivables(s, sideRng(s, dayOf(s.hour) + 7006));
   dailyLiquidity(s);
+  dailyStandby(s);
   dailyTerms(s, sideRng(s, dayOf(s.hour) + 7008));
   dailyRentOut(s);
   dailyPeopleFatigue(s);
@@ -793,6 +797,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
 
   if (date.getUTCDate() === 1 && day > 0) {
     monthlyTick(s, rng);
+    monthlyIndustry(s, sideRng(s, dayOf(s.hour) + 7011));
     monthlyContracts(s, world, rng);
     monthlyRivals(s, rng);
     monthlyAuctions(s, rng);
@@ -832,6 +837,7 @@ function monthlyTick(s: TycoonState, rng: Rng) {
   });
   monthlyWorkshop(s);
   monthlyReputation(s);
+  monthlyRiskCover(s);
   monthlyManagers(s);
   monthlyCrew(s, rng);
   monthlyTraining(s);
@@ -889,13 +895,14 @@ export function updateRivals(s: TycoonState, world: WorldMap, year: number) {
       return;
     }
     if (!rival) {
-      if (t.enters > year || gone) return;
+      if (entryYear(t, s.country) > year || gone) return;
+      const hq = hqFor(t, s.country);
       // Their real home town if it's on the map with a free lot; otherwise
       // spread out to the emptiest big town.
       const candidates = world.cities
         .map(c => ({ c, lot: freeLot(s, world, c.id), crowd: s.rivals.filter(r => r.hqCityId === c.id).length }))
         .filter(x => x.lot >= 0 && x.c.id !== s.company.hqCityId)
-        .sort((a, b) => Number(b.c.name === t.hq) - Number(a.c.name === t.hq) || a.crowd - b.crowd || b.c.population - a.c.population);
+        .sort((a, b) => Number(b.c.name === hq) - Number(a.c.name === hq) || a.crowd - b.crowd || b.c.population - a.c.population);
       const pick = candidates[0];
       if (!pick) return;
       s.rivals.push({
@@ -911,8 +918,18 @@ export function updateRivals(s: TycoonState, world: WorldMap, year: number) {
         reputation: t.startingReputation,
         showsPlayed: 0,
       });
-      if (s.hour > 24) pushNews(s, `${t.name} opens a base in ${pick.c.name} and starts bidding for work.`, 'big', { cityId: pick.c.id });
+      const name = s.rivals[s.rivals.length - 1].name;
+      if (s.hour > 24) pushNews(s, t.entryNews?.[s.country] ?? `${name} opens a base in ${pick.c.name} and starts bidding for work.`, 'big', { cityId: pick.c.id });
+      s.rivals[s.rivals.length - 1].boss = leaderIn(t, year)?.name;
       return;
+    }
+    // A new boss.
+    const boss = leaderIn(t, year);
+    if (boss && rival.boss !== boss.name) {
+      if (s.hour > 24 && rival.boss !== undefined) {
+        pushNews(s, `${boss.name} ${boss.name.includes(' and ') ? 'take' : 'takes'} charge at ${rival.name}${boss.note ? ` — ${boss.note}` : ''}. Expect a ${STYLES[boss.style].label.toLowerCase()} hand.`, 'info', { cityId: rival.hqCityId });
+      }
+      rival.boss = boss.name;
     }
     const latest = (t.renames ?? []).filter(r => r.year <= year).pop();
     if (latest && rival.name !== latest.name) {

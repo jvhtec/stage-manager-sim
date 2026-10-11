@@ -9,6 +9,7 @@ import { offerBlocked } from './blacklist';
 import { rivalTryTake } from './rivalOps';
 import { worldOf } from './mapgen';
 import { RIVAL_COMPANIES } from './content/companies';
+import { styleOf } from './leaders';
 import { traitsOf } from './venueTraits';
 import { FIESTA_OFFER_BOOST, councilBooked, isFiestaSeason, needsMeister, needsReliefCrew, ruleCountry } from './rules';
 import { priceWarFactor, warWinBonus } from './pricewars';
@@ -19,6 +20,7 @@ import { relationFeeBonus, relationOfferWeight } from './promoters';
 import { townGrowth } from './towns';
 import type { Rng } from '@/lib/rng';
 import { shareThrottle } from './territory';
+import { frameworkFeeFactor } from './risk';
 import { tierInfo } from './catalog';
 import { TEAM_PACE, dateOfDay, dayOf, newId, pushNews, yearOf } from './core';
 import { VENUE_YEARS, closuresIn, openingsIn, reopeningsIn, venueOpenIn } from './content/venueYears';
@@ -128,7 +130,7 @@ export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
   const star = spec.real ? 1.15 : 1;
   const loyalty = asksForYou ? 1.1 : 1;
   const fee =
-    Math.round((info.baseFee * marketOnDay(state, spec.day).fees * (0.85 + rng.next() * 0.4) * (0.9 + rating / 500) * star * loyalty * (spec.feeMultiplier ?? 1) * FEE_LEVEL * (COUNTRY_FEES[state.country ?? ''] ?? 1)) / 50) * 50;
+    Math.round((info.baseFee * marketOnDay(state, spec.day).fees * (0.85 + rng.next() * 0.4) * (0.9 + rating / 500) * star * loyalty * (spec.feeMultiplier ?? 1) * frameworkFeeFactor(state, spec.act) * FEE_LEVEL * (COUNTRY_FEES[state.country ?? ''] ?? 1)) / 50) * 50;
 
   // National rules (rules.ts): who books, who must be aboard, how many hands.
   const world = worldOf(state);
@@ -331,7 +333,7 @@ export function offerToRivals(state: TycoonState, world: WorldMap, rng: Rng, gig
     // Already working the area? The next date there is easy money (a run, like yours).
     const nearby = rivalNearbyDates(state, world, rival.id, gig);
     const onARun = nearby.length ? RIVAL_RUN_BONUS * (nearby.length > 1 ? 1.15 : 1) : 1;
-    const chance = boost * 0.05 * difficultyOf(state).rivals * warWinBonus(state, gig.cityId, rival.id) * intelFactor(state, rival.id) * crowding * proximity * fit * specialty * loyalty * onARun * abroadFactor * (1.15 - (rating / 100) * 0.6);
+    const chance = boost * 0.05 * styleOf(rival, yearOf(state, state.hour)).take * difficultyOf(state).rivals * warWinBonus(state, gig.cityId, rival.id) * intelFactor(state, rival.id) * crowding * proximity * fit * specialty * loyalty * onARun * abroadFactor * (1.15 - (rating / 100) * 0.6);
     if (!rng.chance(chance)) continue;
     // Same rules as you: kit, crew and a truck free; the rider and the room met (or paid for).
     if (!rivalTryTake(state, world, rival, gig)) continue;

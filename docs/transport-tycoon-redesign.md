@@ -115,13 +115,14 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
 - **Rival companies** (`companies.ts`) — the international giants (Clair Brothers → Clair Global
   2010, Light & Sound Design → PRG 2001, Solotech 2005) trade everywhere; each country adds its
   own period-accurate roster. UK: Martin Audio's '70s PA hire (to 1988), Britannia Row (Clair
-  Global from 2017), Wigwam, Skan PA Hire (to Britannia Row 2024), SSE, Neg Earth, Adlib,
-  Capital, Delta Sound (1988, later DeltaLive), XL Video, Creative Technology, ESS PA, 22live
-  (2022). US: Tycobrahe, Silverfish → Sound Image, Showco, Thunder Audio, Eighth Day, Bandit,
-  Upstaging, Firehouse, Christie. Spain: LIL Service → Twin Cam, Milán Acústica, Berenice,
-  Sorter, Apogee, Fluge, Pronorte, Sonido Tole. Plus France, Germany and Italy. Each has a
+  Global from 2017), Wigwam, Skan PA Hire (to Britannia Row 2022), SSE, Neg Earth, Adlib,
+  Capital, Delta Sound (1988, later DeltaLive), XL Video, Creative Technology, Light & Sound
+  Design, 22live (2022). US: Tycobrahe, Silverfish → Sound Image, Showco, Thunder Audio, Eighth Day, Bandit,
+  Upstaging, Firehouse, Christie. Spain: Milán Acústica, Stonex, Berenice, Sorter,
+  Pronorte, Cinelux, Twin Cam, Fluge, Sonido Tole, EML and Dushow Barcelona. Plus France, Germany and Italy. Each has a
   specialty department, the venue tiers they chase, an HQ town, and entry/rename/exit years.
-  Entries marked `// verify` are guesses. Towns have several warehouse lots (1 in villages, 2
+  Sources and confidence for each firm are in docs/rival-history.md; entries marked `// verify`
+  are still guesses. Towns have several warehouse lots (1 in villages, 2
   in towns, 3 in cities) shared between you and rivals. Shown in a TT-style **company league**.
 - **Tours** (`tours.ts`, `content/world.ts`) — club, theatre and arena tours bundle 3-6 dates
   in different towns with a completion bonus; put one truck on the whole tour and it drives the
@@ -249,8 +250,8 @@ All of it lives in plain data files under `src/world/content/` so it's easy to e
   until the mid-'80s), your starter rig (the cheapest kit a pub crowd of that year will accept),
   which acts are touring (Led Zeppelin, The Who, Miguel Ríos, Barón Rojo… through to today) and
   which firms are trading. Companies arrive, rebrand and fold in their real years — e.g. in
-  Spain LIL Service (1979, later Twin Cam Audio), Milán Acústica (1981), Berenice, Sorter,
-  Apogee, then Fluge (1991); in the US Tycobrahe Sound (1968–81) and Silverfish (→ Sound Image,
+  Spain Milán Acústica (1976), Stonex (1980), Berenice, Sorter (1986), then Twin Cam
+  Audio and Fluge (1990); in the US Tycobrahe Sound (1969–81) and Silverfish (→ Sound Image,
   1984). Rivals set up in their real home city when it's on the map.
 
 - **Real populations** — towns carry approximate real metro-area populations (Madrid 6.8M,
@@ -969,3 +970,67 @@ The Company window shows the overdraft, how far down this road you are, and the 
 **Two growth profiles** in the balance bot test the danger:
 - the **expansionist** grows as fast as leases and loans allow and never builds the office;
 - the **ambitious** company grows as fast but hires office staff and department heads as it goes.
+
+## Concentration risk and a moving industry
+
+A big company should face risks a small one doesn't, and have tools a small one doesn't need. This round adds no new layer of operations; it makes size itself something to manage.
+
+**Exposure** (`risk.ts`, the Company window's Concentration risk panel):
+- how much of the fleet is one truck model;
+- the biggest client's share of your work (this year, last year and what's booked);
+- how much of your work is in one area (towns within 15 tiles of each other);
+- who owes you what, and how much of it is uninsured.
+
+**Industry events** (`industry.ts`), rolled each month:
+- **Manufacturer recalls.** The monthly odds are 0.12% per truck of the model on the road, so a fleet of 20 identical trucks is recalled about one year in four. Fewer than three of a model is beneath a maker's notice. A recall grounds every truck of the model for 12 days.
+- **Big accounts out to tender.** Only a client worth 100,000 or more over two years is reviewed at all, which is what makes this a big-company risk. The odds rise with its share of your work above 15%. If it walks, its booked shows are cancelled on their terms and it won't book you for two years.
+- **A regional promoter going under.** About once every 14 years somewhere in the country, weighted towards where the market's busy. It takes its area's unpaid invoices and its arena and stadium dates for the next two months. What that costs depends on how much of your work is in that area and whether the invoices were insured.
+- **Late-payment waves** across the industry, now and then.
+- **Rivals** live through the same recalls (losing trucks for the duration) and the same promoter collapses (losing the fees owed to them there).
+
+**Tools** (Policies and the Concentration risk panel):
+- **a mixed fleet**: no model is ever recalled across the whole company;
+- **a fleet service contract** (0.2% of each truck's price a month): recalls turned round in 3 days instead of 12;
+- **standby hire** (a monthly retainer per truck, plus a day rate per stand-in): recalled trucks' shows go out anyway;
+- **framework agreements**: a client worth at least a tenth of your work commits it to you for two years at 5% off, and is a fifth as likely to walk;
+- **credit insurance on invoices** (already there): a collapsed promoter's invoices are paid;
+- **bases in more than one area**: spreads the work so no single promoter's patch holds too much of it.
+
+Damages for a failed show are now capped at the fee (more on cutthroat), as contracts cap liability.
+
+**What the bot shows.** The ambitious company (fast growth on leases, building its office) now hedges: it puts no more than half its fleet on one model, takes the service contract and standby hire as the fleet grows, signs frameworks with its biggest clients and insures a big invoice book. Its unhedged twin does none of that. Both growth bots stop adding trucks while the office can't cope and move to bigger premises first. Results are in docs/balance-report.md (*Concentration and industry events*) and docs/balance-adverse-growth.md.
+
+**Results** (balance run on the concentration milestone; GB 1995 and ES 1990, four seeds each, eight years):
+- **Hedging pays, and it's the size of the firm that makes it pay.** The hedged ambitious company is worth a median £11M (GB) and 1,643M pts (ES); its unhedged twin £3.7M and 761M pts. Both survive every normal run. The unhedged fleet is 93% one model (28 trucks), and recalls grounded 251 and 178 truck-spells against 179 and 158 for the hedged fleet, which has twice the trucks in service but half on any one model.
+- **Small firms barely notice.** The baseline, lean and corner-cutter companies had 0–3 recalls across all runs and rarely a client big enough to go to tender. Industry events never cost them more than a percent of income.
+- **Under shocks** (docs/balance-adverse-growth.md, seeds 3–4, each shock in its own run): the hedged company survives 20 of 20, with the worst combined shock taking 26–37% off its value. The unhedged company survives 14 of 20. A recall of 26 identical trucks takes 80% of its next year's show income and 48 points of reputation in GB.
+- **Expansionist still fails everywhere** (0/8, 3–4 years) and lean and corner-cutter still fail now and then. The new events don't make those strategies any worse; they were already failing for their own reasons.
+
+## Historic rivals: who arrived when, and who ran them
+
+A research pass on every rival (sources and confidence levels in docs/rival-history.md) corrected a lot of dates and bases. Some examples:
+- Light & Sound Design was founded in Birmingham in 1975 and joined PRG in 1998.
+- XL Video went to PRG in 2015, not 2011.
+- Neg Earth dates from 1983 and Capital Sound from 1989.
+- Neumann&Müller is from Düsseldorf in 1981, not Dresden in 1990.
+- Pronorte is in Gijón and Sonido Tole in Sevilla.
+
+Three firms we couldn't find anywhere (ESS PA, Mastervoice, Apogee) are gone. Seven real ones are added, among them Stonex, Cinelux, STS Communication and Mixer Sound & Light. Spain now also has the foreign arrivals EML and Dushow Barcelona.
+
+**When the international houses arrive.** A firm now appears in a country only from the year it had a base there (`entersIn`, `hqIn` and `entryNews` on the template):
+- Clair is in the US from 1966, in Britain from 2008 (buying Concert Sound) and in Germany from 2022 (Black Box Music). No Spanish, French or Italian base has been found.
+- PRG is in the US from 1983 (as Harris Production Services). It reaches Britain through LSD (1998) and Spain in 2011, by buying EML.
+- Solotech is in the US from 2007 and Britain from 2018 (SSE).
+- Spain sees no big American house until PRG in 2011. Its foreign arrivals before that are European neighbours: EML with Vari-Lite (1998), Dushow (2005) and CT (2007).
+
+**Leaders with a style** (`leaders.ts`). Each historic firm lists who ran it and when: Roy and Gene Clair, then Troy Clair; Bryan Grant and Mike Lowe at Britannia Row; John Penn at SSE; Jere Harris at PRG; Rafael Campos at Twin Cam; and so on. Each leader has one of six styles, read from how the trade press describes the firm: pioneer, perfectionist, expansionist, dealmaker, prudent or hustler.
+
+A style nudges decisions the rival already makes:
+- how readily it goes for an offer;
+- how much it will spend meeting a rider or fixing a room;
+- how big a cash cushion it keeps before reinvesting, and what kit it aims for;
+- how likely it is to start a price war or to buy a struggling firm;
+- how readily it climbs a tier;
+- how quick it is to hold a grudge.
+
+Start-ups get a style of their own. A firm between known leaders plays "steady". A change at the top makes the news ("Bryan Grant and Mike Lowe take charge at Britannia Row — …"). The League window shows who runs each rival and what that means.

@@ -29,11 +29,11 @@ describe('rivalry', () => {
   it('each rival has a stable grudge', () => {
     const s = game();
     s.rivals.forEach(r => {
-      expect(aggression(r)).toBe(aggression(r));
-      expect(aggression(r)).toBeGreaterThanOrEqual(0.2);
-      expect(aggression(r)).toBeLessThanOrEqual(0.9);
+      expect(aggression(r, 1990)).toBe(aggression(r, 1990));
+      expect(aggression(r, 1990)).toBeGreaterThanOrEqual(0.1);
+      expect(aggression(r, 1990)).toBeLessThanOrEqual(1);
     });
-    expect(new Set(s.rivals.map(aggression)).size).toBeGreaterThan(1);
+    expect(new Set(s.rivals.map(r => aggression(r, 1990))).size).toBeGreaterThan(1);
   });
 
   it('headhunting a rival heats things up; heat cools by itself', () => {

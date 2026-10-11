@@ -3,6 +3,7 @@ import { createTycoonGame } from '../state';
 import { advanceHours } from '../sim';
 import { HOURS_PER_DAY, tierInfo } from '../catalog';
 import { monthlyRivals } from '../rivals';
+import { styleOf } from '../leaders';
 import type { TycoonState } from '../types';
 
 const game = (): TycoonState => createTycoonGame({ companyName: 'R', color: '#f00', seed: 19, country: 'GB', startYear: 1995 });
@@ -12,7 +13,8 @@ const rng = (chance: boolean | ((p: number) => boolean), next = 0.99) =>
 describe('rivals grow, merge and start up', () => {
   it('healthy firms build their name and move up a tier; weak ones lose it', () => {
     const s = game();
-    const [good, bad] = s.rivals;
+    // Firms with no named boss, so no style tilts the odds.
+    const [good, bad] = s.rivals.filter(r => styleOf(r, 1995).label === 'Steady');
     good.health = 90;
     good.maxTier = 2;
     good.reputation = tierInfo(3).minReputation + 4.95;

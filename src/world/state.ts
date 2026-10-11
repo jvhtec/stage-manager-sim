@@ -33,7 +33,7 @@ export const TYCOON_SAVE_KEY = 'stage-manager-sim:tycoon';
 export const TYCOON_SAVE_VERSION = 7;
 const OLDEST_MIGRATABLE = 7;
 
-export const DEFAULT_POLICIES: Policies = { workshop: 'basic', pay: 'standard', insurance: 'none', freelance: 'fill', subhire: 'fill', rentOut: 'off', training: 'none', rest: 'off', marketing: 'none', rehearsal: 'manual', invoicing: 'hold' };
+export const DEFAULT_POLICIES: Policies = { workshop: 'basic', pay: 'standard', insurance: 'none', freelance: 'fill', subhire: 'fill', rentOut: 'off', training: 'none', rest: 'off', marketing: 'none', rehearsal: 'manual', invoicing: 'hold', fleetCover: 'none', standby: 'off' };
 
 export interface NewGameOptions {
   companyName: string;
