@@ -2,6 +2,7 @@
  * Player commands. Each takes the current state and returns
  * `{ state, result }` — a new state on success, the untouched one on failure.
  */
+import { bridgeOffer, takeBridge } from './liquidity';
 import { projectCoverage } from './queries';
 import { crossHire, crossHireCost } from './techRider';
 import { askForTerms, hasTerms } from './terms';
@@ -811,6 +812,7 @@ export function orderTourMerch(state: TycoonState, tourId: string, level: MerchL
 }
 
 export function borrow(state: TycoonState): ActionOutcome {
+  if (state.liquidity?.breachDays) return fail(state, 'The bank won’t lend more while you’re over your overdraft limit. Bridging finance is the only door open.');
   const limit = creditLimit(state);
   const step = Math.min(borrowStep(state), limit - state.company.loan);
   if (step <= 0) return fail(state, `The bank won't lend more than ${formatMoney(state, limit)} against what you own.`);
@@ -818,6 +820,14 @@ export function borrow(state: TycoonState): ActionOutcome {
   s.company.loan += step;
   s.company.cash += step;
   return ok(s);
+}
+
+/** Bridging finance when you're over the overdraft limit: expensive, and once a year (liquidity.ts). */
+export function bridgingLoan(state: TycoonState): ActionOutcome {
+  if (!bridgeOffer(state)) return fail(state, state.liquidity?.breachDays ? 'No bridging lender will touch you again so soon.' : 'Bridging finance is only for when you’re over your overdraft limit.');
+  const s = cloneState(state);
+  const amount = takeBridge(s);
+  return ok(s, `${formatMoney(s, amount)} of bridging finance.`);
 }
 
 export function repay(state: TycoonState): ActionOutcome {

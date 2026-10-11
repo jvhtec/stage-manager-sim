@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { borrow, buyRival, goPublic, headhunt, investigate, repay, setDividend, takePrivate } from '@/world/actions';
+import { borrow, bridgingLoan, buyRival, goPublic, headhunt, investigate, repay, setDividend, takePrivate } from '@/world/actions';
 import { brandOf } from '@/world/sponsors';
 import { owed } from '@/world/receivables';
 import { expertise, knownForLabel } from '@/world/expertise';
@@ -13,7 +13,6 @@ import type { DividendLevel } from '@/world/types';
 import { rivalHealth, takeoverBlocker, takeoverPrice } from '@/world/rivals';
 import {
   START_YEARS,
-  NEGATIVE_MONTHS_GAME_OVER,
   TIERS,
   companyTier,
   tierInfo,
@@ -30,6 +29,9 @@ import { companyValue } from '@/world/queries';
 import { awardsName, companyRating, rivalRating } from '@/world/awards';
 import { describeLoanRate } from '@/world/market';
 import { borrowStep, creditLimit } from '@/world/finance';
+import { bridgeOffer, overdraftLimit } from '@/world/liquidity';
+import { officeCapacity, officeLoad, officeSlipChance, officeStretch } from '@/world/office';
+import { SHARE_MIN_SHOWS, shareCeiling, townShare } from '@/world/territory';
 import { suggestedHqCities } from '@/world/state';
 import { LEDGER_LABELS, type AnnualReport, type Difficulty, type GoalId, type LedgerCategory, type TycoonState } from '@/world/types';
 import { createRandomSeed } from '@/lib/rng';
@@ -134,12 +136,8 @@ export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
           ? ` Leases: ${money(state.vehicles.reduce((sum, v) => sum + (v.owner === 'player' && v.lease ? v.lease.monthly : 0), 0))}/month.`
           : ''}
       </div>
-      {state.negativeMonths > 0 && (
-        <div className="tt-bad" style={{ marginTop: 6 }}>
-          {state.negativeMonths} month{state.negativeMonths > 1 ? 's' : ''} closed in the red —{' '}
-          {NEGATIVE_MONTHS_GAME_OVER - state.negativeMonths} more and the bank shuts you down.
-        </div>
-      )}
+      <Liquidity state={state} act={act} />
+      <Strain state={state} />
       <h4>Shareholders</h4>
       {state.listing ? (
         <>
@@ -1169,6 +1167,84 @@ function CashForecast({ state }: { state: TycoonState }) {
         <div className="tt-dim" style={{ whiteSpace: 'normal', marginTop: 3 }}>
           By week {f.squeezeWeek} cash could be too thin to pay for services, and maintenance would be put off.
         </div>
+      )}
+    </>
+  );
+}
+
+/** The overdraft, and how far down the road to administration the company is (liquidity.ts). */
+function Liquidity({ state, act }: { state: TycoonState; act: (fn: Parameters<WinCtx['dispatch']>[0]) => void }) {
+  const limit = overdraftLimit(state);
+  const cash = state.company.cash;
+  const l = state.liquidity;
+  const today = Math.floor(state.hour / 24);
+  const grace = DIFFICULTIES[state.difficulty ?? 'normal'].graceMonths;
+  const over = cash < -limit;
+  const offer = bridgeOffer(state);
+  return (
+    <>
+      <Stat label="Overdraft">
+        {limit ? `${money(limit)} arranged` : <span className="tt-bad">none</span>}
+        {cash < 0 && <span className={over ? 'tt-bad' : ''}> · using {money(-cash)}</span>}
+        {(l?.withdrawnUntil ?? -1) > today && <span className="tt-dim"> · withdrawn until {formatDay(state, l!.withdrawnUntil!)}</span>}
+      </Stat>
+      {over ? (
+        <div className="tt-bad" style={{ marginTop: 6, whiteSpace: 'normal' }}>
+          Over the limit by {money(-cash - limit)}: wages are going out late and suppliers, hire desks and freelancers want cash up front.
+          {l?.demandDay !== undefined
+            ? ` The bank wants you back inside the limit by ${formatDay(state, l.demandDay)} or it appoints administrators.`
+            : ` The bank will make its demand after ${Math.max(0, DIFFICULTIES[state.difficulty ?? 'normal'].bankPatience - (l?.breachDays ?? 0))} more days.`}
+          {offer > 0 && (
+            <div style={{ marginTop: 4 }}>
+              <button className="tt-btn sm" onClick={() => act(bridgingLoan)}>
+                Bridging finance: {money(offer)}
+              </button>{' '}
+              <span className="tt-dim">8% arrangement fee, added to the loan; once a year.</span>
+            </div>
+          )}
+        </div>
+      ) : state.negativeMonths > 0 ? (
+        <div className="tt-warn" style={{ marginTop: 6, whiteSpace: 'normal' }}>
+          {state.negativeMonths} month{state.negativeMonths > 1 ? 's' : ''} closed in the overdraft — {Math.max(0, grace - state.negativeMonths)} more and the bank withdraws it.
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+/** Growing pains: is the office keeping up, and how much of the market will promoters give you? */
+function Strain({ state }: { state: TycoonState }) {
+  const load = officeLoad(state);
+  const capacity = officeCapacity(state);
+  const stretch = officeStretch(state);
+  const world = worldOf(state);
+  const busiest = Object.keys(state.townShows ?? {})
+    .map(c => ({ c, t: townShare(state, c) }))
+    .filter(x => x.t.total >= SHARE_MIN_SHOWS && x.t.yours !== undefined)
+    .sort((a, b) => b.t.total - a.t.total)
+    .slice(0, 5);
+  const ceiling = shareCeiling(state);
+  const over = busiest.filter(x => (x.t.yours ?? 0) > ceiling);
+  return (
+    <>
+      <Stat label="Office">
+        <span className={stretch > 0 ? 'tt-bad' : ''}>
+          {load.toFixed(1)} / {capacity.toFixed(1)}
+        </span>{' '}
+        <span className="tt-dim">trucks-and-crews to coordinate / what the office can handle</span>
+      </Stat>
+      {stretch > 0 && (
+        <div className="tt-warn" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+          The work has outgrown the office: call times go wrong on about {Math.round(officeSlipChance(stretch) * 100)}% of shows, cases get left behind and invoices go unchased. Hire office staff at a base, or department heads.
+        </div>
+      )}
+      {busiest.length > 0 && (
+        <Stat label="Market share">
+          {busiest.map(x => `${world.cityById.get(x.c)?.name ?? x.c} ${Math.round((x.t.yours ?? 0) * 100)}%`).join(' · ')}{' '}
+          <span className={over.length ? 'tt-bad' : 'tt-dim'}>
+            {over.length ? `— past ${Math.round(ceiling * 100)}%, promoters start ringing round the other firms first` : `(promoters spread work past ${Math.round(ceiling * 100)}%)`}
+          </span>
+        </Stat>
       )}
     </>
   );

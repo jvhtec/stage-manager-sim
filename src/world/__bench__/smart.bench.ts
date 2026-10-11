@@ -20,7 +20,7 @@ it('smart bot', () => {
     const r = runBot({ country, startYear, years, seed: SEED, strategy: STRATEGY });
     console.log(
       'RES',
-      JSON.stringify({ country, startYear, seed: SEED, strategy: r.strategy, alive: r.survived, value: Math.round(r.value / 1000), cash: Math.round(r.cash / 1000), rep: r.reputation, shows: r.shows, failed: r.failed, quality: r.avgQuality, fleet: r.fleet, crew: r.crew, invariants: r.invariantViolations.length }),
+      JSON.stringify({ country, startYear, seed: SEED, strategy: r.strategy, alive: r.survived, value: Math.round(r.value / 1000), cash: Math.round(r.cash / 1000), rep: r.reputation, shows: r.shows, failed: r.failed, quality: r.avgQuality, fleet: r.fleet, crew: r.crew, invariants: r.invariantViolations.length, outcomes: r.contracts.outcomes, docked: Math.round(r.contracts.docked / 1000), damages: Math.round(r.contracts.damages / 1000), rev: Math.round(r.revenue / 1000), overdrawn: r.monthsOverdrawn, low: Math.round(r.lowestCash / 1000), liq: r.liquidity, office: r.office, gameOver: r.gameOver }),
     );
     explain(r).forEach(l => console.log('  ·', l));
   }

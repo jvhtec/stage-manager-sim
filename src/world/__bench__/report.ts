@@ -58,6 +58,10 @@ const CAUSES: Record<string, string> = {
   'rider-twice': 'repeat rider breaches',
   'brand-fault': 'manufacturer faults',
   standardised: 'all eggs in one brand',
+  'stretched-office': 'an office stretched too thin',
+  'over-limit': 'going over the overdraft limit',
+  'lost-client': 'losing the biggest client',
+  recall: 'a manufacturer recall',
 };
 const label = (k: string) => CAUSES[k] ?? k;
 const pct = (n: number) => `${Math.round(n * 100)}%`;
@@ -88,7 +92,7 @@ export function cohortTitle(r: Pick<BotReport, 'country' | 'startYear' | 'yearsR
 }
 
 /** The show-side causes: what went wrong on the night. */
-const NIGHT = ['late', 'kit-failed', 'kit-worn', 'short-crew', 'tired-crew', 'prep', 'unrehearsed', 'tickets', 'venue', 'rider', 'room', 'feud', 'slow-load', 'breakdown', 'no-show', 'change-hour', 'change-kit', 'change-early'];
+const NIGHT = ['stretched-office', 'late', 'kit-failed', 'kit-worn', 'short-crew', 'tired-crew', 'prep', 'unrehearsed', 'tickets', 'venue', 'rider', 'room', 'feud', 'slow-load', 'breakdown', 'no-show', 'change-hour', 'change-kit', 'change-early'];
 
 export function explain(r: BotReport): string[] {
   const out: string[] = [];
@@ -104,6 +108,13 @@ export function explain(r: BotReport): string[] {
     out.push(`Operating margin ${pct(margin)}. Biggest costs as a share of revenue: ${spend.slice(0, 4).map(([c, v]) => `${LEDGER_LABELS[c].toLowerCase()} ${pct(-v / r.revenue)}`).join(', ')}.`);
   }
   out.push(`Ran ${r.fleet} vehicles at ${r.utilisation} shows per vehicle-year; ${r.shows} shows at ${pct(r.avgQuality)} average, ${r.failed} failed (${pct(r.failed / Math.max(1, r.shows + r.failed))}).`);
+  // Under the contracts.
+  const o = r.contracts.outcomes;
+  const nights = Object.values(o).reduce((a: number, b) => a + (b ?? 0), 0) || 1;
+  out.push(`Nights: ${pct((o.triumph ?? 0) / nights)} triumphs, ${pct((o.solid ?? 0) / nights)} solid, ${pct((o.shaky ?? 0) / nights)} shaky, ${pct((o.bad ?? 0) / nights)} bad, ${pct((o.failed ?? 0) / nights)} failed; clients docked ${k(r.contracts.docked)} and claimed ${k(r.contracts.damages)} in damages (${pct((r.contracts.docked + r.contracts.damages) / Math.max(1, r.revenue))} of revenue).`);
+  if (r.office.peak > 0) out.push(`Office: ${r.office.staff} office staff at the end; the work outgrew the office by ${pct(r.office.stretch)} on average and ${pct(r.office.peak)} at worst.`);
+  const lq = r.liquidity;
+  if (lq.daysOverdrawn) out.push(`Overdraft: ${lq.daysOverdrawn} days in it, ${lq.daysInBreach} over the limit (${lq.breaches} time${lq.breaches === 1 ? '' : 's'})${lq.demands ? `, ${lq.demands} demand${lq.demands === 1 ? '' : 's'} from the bank` : ''}${lq.withdrawn ? `, withdrawn ${lq.withdrawn}×` : ''}${lq.bridges ? `, ${lq.bridges} bridging loan${lq.bridges === 1 ? '' : 's'}` : ''}${r.bot.soldTrucks ? `, sold ${r.bot.soldTrucks} truck${r.bot.soldTrucks === 1 ? '' : 's'} to raise cash` : ''}.`);
   // Why nights went wrong.
   const night = Object.entries(r.incidents.main).filter(([c]) => NIGHT.includes(c)).sort((a, b) => b[1] - a[1]);
   if (night.length) out.push(`Bad nights were mostly down to ${night.slice(0, 3).map(([c, n]) => `${label(c)} (${n})`).join(', ')}.`);
@@ -140,6 +151,12 @@ export const median = (xs: number[]) => {
   const a = [...xs].sort((x, y) => x - y);
   return a.length ? (a.length % 2 ? a[(a.length - 1) / 2] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2) : 0;
 };
+/** Share of nights that were bad or failed (outcomes.ts). */
+export const badShare = (r: BotReport) => {
+  const o = r.contracts.outcomes;
+  const n = Object.values(o).reduce((a: number, b) => a + (b ?? 0), 0);
+  return n ? ((o.bad ?? 0) + (o.failed ?? 0)) / n : 0;
+};
 export const marginOf = (r: BotReport) => (r.revenue ? (r.revenue - r.costs) / r.revenue : 0);
 
 /**
@@ -175,14 +192,14 @@ export function byCohort<T extends Pick<BotReport, 'country' | 'startYear'>>(rep
 
 function strategyTable(reports: BotReport[], strategies: Strategy[], k: (n: number) => string): string[] {
   const lines = [
-    '| Strategy | Survived | Median value | Range | Margin | Avg quality | Failed | Overdrawn months | Breakdowns /100k km | Crew lost | Cancellations | Bans |',
-    '|---|---|---|---|---|---|---|---|---|---|---|---|',
+    '| Strategy | Survived | Median value | Range | Margin | Avg quality | Bad or failed nights | Docked & damages | Days over the limit | Office stretch | Breakdowns /100k km | Crew lost | Cancellations | Bans |',
+    '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
   ];
   strategies.forEach(st => {
     const rs = reports.filter(r => r.strategy === st.id);
     if (!rs.length) return;
     lines.push(
-      `| ${st.label} | ${rs.filter(r => r.survived).length}/${rs.length} | ${k(median(rs.map(r => r.value)))} | ${k(Math.min(...rs.map(r => r.value)))} – ${k(Math.max(...rs.map(r => r.value)))} | ${pct(median(rs.map(marginOf)))} | ${pct(median(rs.map(r => r.avgQuality)))} | ${pct(median(rs.map(r => r.failed / Math.max(1, r.shows + r.failed))))} | ${median(rs.map(r => r.monthsOverdrawn))} | ${median(rs.map(r => r.road.per100k)).toFixed(2)} | ${median(rs.map(r => r.crewLost))} | ${median(rs.map(r => r.incidents.causes['client-cancel'] ?? 0))} | ${median(rs.map(r => r.bans))} |`,
+      `| ${st.label} | ${rs.filter(r => r.survived).length}/${rs.length} | ${k(median(rs.map(r => r.value)))} | ${k(Math.min(...rs.map(r => r.value)))} – ${k(Math.max(...rs.map(r => r.value)))} | ${pct(median(rs.map(marginOf)))} | ${pct(median(rs.map(r => r.avgQuality)))} | ${pct(median(rs.map(badShare)))} | ${pct(median(rs.map(r => (r.contracts.docked + r.contracts.damages) / Math.max(1, r.revenue))))} | ${median(rs.map(r => r.liquidity.daysInBreach))} | ${pct(median(rs.map(r => r.office.stretch)))} | ${median(rs.map(r => r.road.per100k)).toFixed(2)} | ${median(rs.map(r => r.crewLost))} | ${median(rs.map(r => r.incidents.causes['client-cancel'] ?? 0))} | ${median(rs.map(r => r.bans))} |`,
     );
   });
   return [...lines, ''];

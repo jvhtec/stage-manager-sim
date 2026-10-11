@@ -8,6 +8,7 @@ import { clientTemper } from './changes';
 import type { Rng } from '@/lib/rng';
 import { book, dayOf, formatMoney, newId, pushNews } from './core';
 import { marketNow, shockFactors } from './market';
+import { officeLateFactor, officeStretch } from './office';
 import { COUNCIL_PAYMENT_DAYS } from './rules';
 import type { Gig, InvoicingPolicy, Invoice, TycoonState } from './types';
 
@@ -82,7 +83,8 @@ export function dailyReceivables(s: TycoonState, rng: Rng) {
     if (inv.dueDay > today || inv.slipped || inv.insured) return;
     inv.slipped = true;
     // A late-payment wave (shocks.ts) makes it likelier, and later.
-    const wave = shockFactors(s, today).late;
+    // An office with no time to chase invoices lets more of them slide (office.ts).
+    const wave = shockFactors(s, today).late * officeLateFactor(officeStretch(s));
     if (!rng.chance(Math.min(0.9, LATE_RISK[Math.max(0, Math.min(4, inv.tier))] * LATE_TEMPER[clientTemper(inv.act)] * (s.managers?.finance ? 0.6 : 1) * wave))) return;
     inv.dueDay = today + LATE_SLIP_MIN + rng.nextInt(Math.round(LATE_SLIP_SPREAD * Math.min(2, wave)) + 1);
     pushNews(s, `${inv.act}'s promoter is late paying your ${formatMoney(s, inv.amount)} invoice — they promise it within ${inv.dueDay - today} days.`, 'bad');

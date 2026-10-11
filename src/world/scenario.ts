@@ -17,14 +17,22 @@ export interface DifficultyInfo {
   rivals: number;
   /** Multiplier on how often things go wrong on the day. */
   crises: number;
-  /** Months in the red before the bank pulls the plug. */
+  /** Months closing in the overdraft before the bank withdraws it (liquidity.ts). */
   graceMonths: number;
+  /** A show below this quality has failed: no fee, damages, the deposit back (outcomes.ts). */
+  failLine: number;
+  /** Multiplier on contract penalties and damages. */
+  penalties: number;
+  /** Multiplier on the arranged overdraft. */
+  overdraft: number;
+  /** Days over the overdraft limit before the bank demands its money back. */
+  bankPatience: number;
 }
 
 export const DIFFICULTIES: Record<Difficulty, DifficultyInfo> = {
-  easy: { label: 'Gentle', blurb: 'More cash to start, softer rivals, patient bank.', startingCash: 1.6, rivals: 0.8, crises: 0.7, graceMonths: 5 },
-  normal: { label: 'Standard', blurb: 'The game as designed.', startingCash: 1, rivals: 1, crises: 1, graceMonths: NEGATIVE_MONTHS_GAME_OVER },
-  hard: { label: 'Cutthroat', blurb: 'Lean start, hungry rivals, a jumpy bank.', startingCash: 0.7, rivals: 1.25, crises: 1.3, graceMonths: 2 },
+  easy: { label: 'Gentle', blurb: 'More cash to start, softer rivals, forgiving clients and a patient bank.', startingCash: 1.6, rivals: 0.8, crises: 0.7, graceMonths: 5, failLine: 0.3, penalties: 0.7, overdraft: 1.5, bankPatience: 60 },
+  normal: { label: 'Standard', blurb: 'The game as designed.', startingCash: 1, rivals: 1, crises: 1, graceMonths: NEGATIVE_MONTHS_GAME_OVER, failLine: 0.35, penalties: 1, overdraft: 1, bankPatience: 30 },
+  hard: { label: 'Cutthroat', blurb: 'Lean start, hungry rivals, clients who enforce every clause, and a jumpy bank.', startingCash: 0.7, rivals: 1.25, crises: 1.3, graceMonths: 2, failLine: 0.4, penalties: 1.3, overdraft: 0.6, bankPatience: 14 },
 };
 export const DIFFICULTY_IDS: Difficulty[] = ['easy', 'normal', 'hard'];
 export const difficultyOf = (s: Pick<TycoonState, 'difficulty'>): DifficultyInfo => DIFFICULTIES[s.difficulty ?? 'normal'];

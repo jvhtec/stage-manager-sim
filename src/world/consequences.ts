@@ -170,6 +170,8 @@ export interface NightFacts {
   production?: string[];
   feuds?: string[];
   slowLoad?: string;
+  /** The office dropped the call times (office.ts). */
+  office?: string;
   present: boolean;
   workshop: string;
   noKit: boolean;
@@ -201,6 +203,7 @@ export function nightCauses(s: TycoonState, gig: Gig, f: NightFacts): Cause[] {
   if (f.unrehearsed) causes.push({ id: 'unrehearsed', label: 'Not rehearsed', detail: 'A show this size should have had a rehearsal.', weight: 0.3 });
   if (f.missingTickets) causes.push({ id: 'tickets', label: 'Uncertified crew', detail: `${f.missingTickets} ticket${f.missingTickets === 1 ? '' : 's'} short, so the inspectors were not happy.`, weight: 0.25 });
   if (f.slowLoad) causes.push({ id: 'slow-load', label: 'Slow load-in', detail: f.slowLoad, weight: 0.4 });
+  if (f.office) causes.push({ id: 'stretched-office', label: 'The office is stretched', detail: f.office, weight: 0.5 });
   (f.feuds ?? []).forEach((p, i) => causes.push({ id: `feud-${i}`, label: 'Crew at loggerheads', detail: `${p} were on the same crew and it showed.`, weight: 0.3 }));
   (f.production ?? []).forEach((b, i) => causes.push({ id: `room-${i}`, label: 'The production didn’t fit the room', detail: b, weight: 0.45 }));
   (f.breaches ?? []).forEach((b, i) => causes.push({ id: `rider-${i}`, label: 'Rider broken', detail: b, weight: 0.55 }));

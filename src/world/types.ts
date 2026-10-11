@@ -349,6 +349,20 @@ export interface VehicleRoute {
   total?: number;
 }
 
+/** Overdraft and the slide to administration (liquidity.ts). */
+export interface Liquidity {
+  /** Days in a row over the overdraft limit. */
+  breachDays: number;
+  /** The day the bank wants to be back inside the limit by. */
+  demandDay?: number;
+  /** The overdraft is withdrawn until this day. */
+  withdrawnUntil?: number;
+  /** Last bridging loan. */
+  bridgeDay?: number;
+  /** Over the whole game. */
+  history: { daysOverdrawn: number; daysInBreach: number; breaches: number; demands: number; withdrawn: number; bridges: number };
+}
+
 /** A shock that runs for a while and bends the market or the payers (shocks.ts). */
 export interface Shock {
   kind: 'lose-client' | 'recall' | 'downturn' | 'late-payers';
@@ -433,6 +447,9 @@ export interface GigResult {
   riderMet?: boolean;
   /** Star techs who worked the show. */
   techs?: string[];
+  /** The band the night fell in, and what the client docked under the contract (outcomes.ts). */
+  outcome?: 'triumph' | 'solid' | 'shaky' | 'bad' | 'failed';
+  docked?: number;
 }
 
 export interface OverseasStop {
@@ -1035,6 +1052,8 @@ export interface TycoonState {
   clients?: Record<string, { paid: number; absorbed: number; refused: number; declined: number }>;
   /** Maintenance you've put off because cash was short. */
   lapses?: { workshop?: { hour: number; incidentId: string } };
+  /** The overdraft, and how far down the road to administration the company is (liquidity.ts). */
+  liquidity?: Liquidity;
   /** Exclusive production deals with acts (deals.ts). */
   deals: { id: string; act: string; tier: number; monthly: number; startDay: number; endDay: number; strikes: number; status: 'offer' | 'active' | 'ended'; offerExpires: number }[];
   /** Your own products (encoded ids, see content/gear.ts ownProductId). */
@@ -1055,7 +1074,7 @@ export interface TycoonState {
   artistRelations: Record<string, number>;
   negativeMonths: number;
   nextId: number;
-  stats: { showsPlayed: number; showsFailed: number; peakCash: number; rivalsBought?: number; /** Cash at the start, for the money invariant (invariants.ts). */ startCash?: number; /** Crew who quit, burnt out or were poached. */ crewLost?: number; /** Kilometres the fleet has driven. */ fleetKm?: number; /** Roadside breakdowns. */ breakdowns?: number };
+  stats: { showsPlayed: number; showsFailed: number; peakCash: number; rivalsBought?: number; /** Cash at the start, for the money invariant (invariants.ts). */ startCash?: number; /** Crew who quit, burnt out or were poached. */ crewLost?: number; /** Kilometres the fleet has driven. */ fleetKm?: number; /** Roadside breakdowns. */ breakdowns?: number; /** Nights by outcome band, and what clients docked or claimed under contracts (outcomes.ts). */ outcomes?: Partial<Record<'triumph' | 'solid' | 'shaky' | 'bad' | 'failed', number>>; docked?: number; damages?: number };
   /** Chosen at the start (scenario.ts). */
   difficulty?: Difficulty;
   goal?: GoalId;

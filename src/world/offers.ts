@@ -18,6 +18,7 @@ import { offerBuzz } from './marketing';
 import { relationFeeBonus, relationOfferWeight } from './promoters';
 import { townGrowth } from './towns';
 import type { Rng } from '@/lib/rng';
+import { shareThrottle } from './territory';
 import { tierInfo } from './catalog';
 import { TEAM_PACE, dateOfDay, dayOf, newId, pushNews, yearOf } from './core';
 import { VENUE_YEARS, closuresIn, openingsIn, reopeningsIn, venueOpenIn } from './content/venueYears';
@@ -225,7 +226,12 @@ export function dailyOffers(state: TycoonState, world: WorldMap, rng: Rng) {
     const chance = OFFER_RATE[city.size] * fiesta * demand * localFame(state, city.id) * townGrowth(state, city.id) * offerBuzz(state) * (1 + salesBoost(state, world, city.id));
     if (rng.chance(chance)) {
       const gig = generateOffer(state, world, city, rng);
-      if (gig && !offerBlocked(state, gig)) state.gigs.push(gig);
+      if (gig && !offerBlocked(state, gig)) {
+        state.gigs.push(gig);
+        // Past your share of this town's work, the promoter rings round the other firms first (territory.ts).
+        const reach = shareThrottle(state, city.id);
+        if (reach < 1 && !rng.chance(reach)) offerToRivals(state, world, rng, gig, SPREAD_BOOST);
+      }
     }
   });
   // Just over the border: promoters there call foreign crews less often — but they do call.
@@ -240,6 +246,8 @@ export function dailyOffers(state: TycoonState, world: WorldMap, rng: Rng) {
 
 /** How often a town abroad offers you a show, relative to a home town of its size. */
 export const ABROAD_OFFER_SHARE = 0.45;
+/** How much likelier a rival is to take an offer when the promoter is spreading work away from you. */
+export const SPREAD_BOOST = 20;
 
 function rivalVehicleModel(tier: number): string {
   if (tier >= 4) return 'artic-40';
@@ -296,6 +304,83 @@ export function rivalReach(state: TycoonState, world: WorldMap, rival: Rival, gi
 }
 
 /** Rivals bid on open offers near their HQ; the player's local standing makes them less likely to win. */
+/**
+ * A rival goes for an open offer: the odds depend on distance, fit, the client's loyalty to you and
+ * whether the rival is already working the area; `boost` is a promoter actively calling round.
+ * Returns true if a rival took it.
+ */
+export function offerToRivals(state: TycoonState, world: WorldMap, rng: Rng, gig: Gig, boost = 1): boolean {
+  const rating = state.cityRatings[gig.cityId] ?? 50;
+  const actBar = actReputationBar(state, gig.act, false);
+  for (const rival of state.rivals) {
+    if (rival.reputation < actBar - 5) continue; // the act's management wouldn't call them either
+    const rawDist = roadDistance(world, rival.hqCityId, gig.cityId);
+    if (!Number.isFinite(rawDist)) continue;
+    // The bigger houses run team drivers on the long hauls (from 1990) and fly kit between the cities (from 1995).
+    const reach = rivalReach(state, world, rival, gig);
+    const dist = rawDist / reach.pace;
+    const proximity = Math.max(dist < 14 ? 1.6 : dist < 32 ? 1 : 0.45, reach.freight ? 0.9 : 0);
+    // Over the border only the international houses (and neighbours) have the contacts.
+    const abroadFactor = reach.abroad ? (reach.international ? 1.3 : rawDist < 30 ? 0.6 : 0.05) : 1;
+    const fit = gig.tier >= rival.minTier && gig.tier <= rival.maxTier ? 1 : 0.05;
+    const mainDept = DEPTS.reduce((a, b) => (gig.needs[b] > gig.needs[a] ? b : a));
+    const specialty = mainDept === rival.specialty ? 1.3 : 1;
+    const loyalty = gig.asksForYou ? 0.25 : 1;
+    // More firms in the market split the work between them.
+    const crowding = Math.min(1, 5 / state.rivals.length);
+    // Already working the area? The next date there is easy money (a run, like yours).
+    const nearby = rivalNearbyDates(state, world, rival.id, gig);
+    const onARun = nearby.length ? RIVAL_RUN_BONUS * (nearby.length > 1 ? 1.15 : 1) : 1;
+    const chance = boost * 0.05 * difficultyOf(state).rivals * warWinBonus(state, gig.cityId, rival.id) * intelFactor(state, rival.id) * crowding * proximity * fit * specialty * loyalty * onARun * abroadFactor * (1.15 - (rating / 100) * 0.6);
+    if (!rng.chance(chance)) continue;
+    // Same rules as you: kit, crew and a truck free; the rider and the room met (or paid for).
+    if (!rivalTryTake(state, world, rival, gig)) continue;
+
+    gig.status = 'rival';
+    gig.rivalId = rival.id;
+    if (reach.freight && rawDist >= 32) {
+      // Flown or railed in: no truck on the road, just a line in the news.
+      pushNews(state, `${rival.name} is sending kit by ${yearOf(state, state.hour) >= 1995 && world.cityById.get(gig.cityId)?.size !== 'town' ? 'air' : 'rail'} freight for ${gig.act} at ${world.venueById.get(gig.venueId)?.name}, ${world.cityById.get(gig.cityId)?.name}.`, 'info', { cityId: gig.cityId, gigId: gig.id });
+      return true;
+    }
+    // The same truck takes it if the timing works; otherwise they send another.
+    const sameTruck = nearby.length ? runnableTruck(state, world, rival.id, gig) : undefined;
+    if (sameTruck) {
+      sameTruck.orders = [...sameTruck.orders, gig.id].sort(
+        (a, b) => (state.gigs.find(g => g.id === a)?.day ?? 0) - (state.gigs.find(g => g.id === b)?.day ?? 0),
+      );
+      pushNews(state, `${rival.name} strings ${gig.act} (${world.cityById.get(gig.cityId)?.name}) onto its run.`, 'info', { cityId: gig.cityId, gigId: gig.id });
+      return true;
+    }
+    const venue = world.venueById.get(gig.venueId);
+    const city = world.cityById.get(gig.cityId);
+    pushNews(state, `${rival.name} landed ${gig.act} at ${venue?.name}, ${city?.name}.`, 'info', {
+      cityId: gig.cityId,
+      gigId: gig.id,
+    });
+    const truck: Vehicle = {
+      id: newId(state, 'rv'),
+      owner: rival.id,
+      modelId: rivalVehicleModel(gig.tier),
+      name: `${rival.name} truck`,
+      homeCityId: rival.hqCityId,
+      boughtHour: state.hour,
+      reliability: 90,
+      lastServiceHour: state.hour,
+      status: 'parked',
+      cityId: rival.hqCityId,
+      orders: [gig.id],
+      cargo: {},
+      crew: 0,
+      profitThisYear: 0,
+      profitLastYear: 0,
+    };
+    state.vehicles.push(truck);
+    return true;
+  }
+  return false;
+}
+
 export function rivalsTakeOffers(state: TycoonState, world: WorldMap, rng: Rng) {
   const today = dayOf(state.hour);
   state.gigs.forEach(gig => {
@@ -305,74 +390,7 @@ export function rivalsTakeOffers(state: TycoonState, world: WorldMap, rng: Rng) 
       return;
     }
     if (holdsContractAt(state, gig.venueId)) return; // the house supplier gets first call
-    const rating = state.cityRatings[gig.cityId] ?? 50;
-    const actBar = actReputationBar(state, gig.act, false);
-    for (const rival of state.rivals) {
-      if (rival.reputation < actBar - 5) continue; // the act's management wouldn't call them either
-      const rawDist = roadDistance(world, rival.hqCityId, gig.cityId);
-      if (!Number.isFinite(rawDist)) continue;
-      // The bigger houses run team drivers on the long hauls (from 1990) and fly kit between the cities (from 1995).
-      const reach = rivalReach(state, world, rival, gig);
-      const dist = rawDist / reach.pace;
-      const proximity = Math.max(dist < 14 ? 1.6 : dist < 32 ? 1 : 0.45, reach.freight ? 0.9 : 0);
-      // Over the border only the international houses (and neighbours) have the contacts.
-      const abroadFactor = reach.abroad ? (reach.international ? 1.3 : rawDist < 30 ? 0.6 : 0.05) : 1;
-      const fit = gig.tier >= rival.minTier && gig.tier <= rival.maxTier ? 1 : 0.05;
-      const mainDept = DEPTS.reduce((a, b) => (gig.needs[b] > gig.needs[a] ? b : a));
-      const specialty = mainDept === rival.specialty ? 1.3 : 1;
-      const loyalty = gig.asksForYou ? 0.25 : 1;
-      // More firms in the market split the work between them.
-      const crowding = Math.min(1, 5 / state.rivals.length);
-      // Already working the area? The next date there is easy money (a run, like yours).
-      const nearby = rivalNearbyDates(state, world, rival.id, gig);
-      const onARun = nearby.length ? RIVAL_RUN_BONUS * (nearby.length > 1 ? 1.15 : 1) : 1;
-      const chance = 0.05 * difficultyOf(state).rivals * warWinBonus(state, gig.cityId, rival.id) * intelFactor(state, rival.id) * crowding * proximity * fit * specialty * loyalty * onARun * abroadFactor * (1.15 - (rating / 100) * 0.6);
-      if (!rng.chance(chance)) continue;
-      // Same rules as you: kit, crew and a truck free; the rider and the room met (or paid for).
-      if (!rivalTryTake(state, world, rival, gig)) continue;
-
-      gig.status = 'rival';
-      gig.rivalId = rival.id;
-      if (reach.freight && rawDist >= 32) {
-        // Flown or railed in: no truck on the road, just a line in the news.
-        pushNews(state, `${rival.name} is sending kit by ${yearOf(state, state.hour) >= 1995 && world.cityById.get(gig.cityId)?.size !== 'town' ? 'air' : 'rail'} freight for ${gig.act} at ${world.venueById.get(gig.venueId)?.name}, ${world.cityById.get(gig.cityId)?.name}.`, 'info', { cityId: gig.cityId, gigId: gig.id });
-        break;
-      }
-      // The same truck takes it if the timing works; otherwise they send another.
-      const sameTruck = nearby.length ? runnableTruck(state, world, rival.id, gig) : undefined;
-      if (sameTruck) {
-        sameTruck.orders = [...sameTruck.orders, gig.id].sort(
-          (a, b) => (state.gigs.find(g => g.id === a)?.day ?? 0) - (state.gigs.find(g => g.id === b)?.day ?? 0),
-        );
-        pushNews(state, `${rival.name} strings ${gig.act} (${world.cityById.get(gig.cityId)?.name}) onto its run.`, 'info', { cityId: gig.cityId, gigId: gig.id });
-        break;
-      }
-      const venue = world.venueById.get(gig.venueId);
-      const city = world.cityById.get(gig.cityId);
-      pushNews(state, `${rival.name} landed ${gig.act} at ${venue?.name}, ${city?.name}.`, 'info', {
-        cityId: gig.cityId,
-        gigId: gig.id,
-      });
-      const truck: Vehicle = {
-        id: newId(state, 'rv'),
-        owner: rival.id,
-        modelId: rivalVehicleModel(gig.tier),
-        name: `${rival.name} truck`,
-        homeCityId: rival.hqCityId,
-        boughtHour: state.hour,
-        reliability: 90,
-        lastServiceHour: state.hour,
-        status: 'parked',
-        cityId: rival.hqCityId,
-        orders: [gig.id],
-        cargo: {},
-        crew: 0,
-        profitThisYear: 0,
-        profitLastYear: 0,
-      };
-      state.vehicles.push(truck);
-      break;
-    }
+    offerToRivals(state, world, rng, gig);
   });
 }
 

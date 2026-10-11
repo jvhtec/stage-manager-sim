@@ -22,13 +22,20 @@ describe('difficulty', () => {
   });
 
   it('gives the bank more or less patience', () => {
+    const ended: Record<string, number> = {};
     for (const d of ['easy', 'normal', 'hard'] as const) {
       let s = game({ difficulty: d });
       s.company.cash = -500_000;
       s = advanceHours(s, 24 * 400);
       expect(s.gameOver, d).toBeTruthy();
-      expect(s.negativeMonths).toBe(DIFFICULTIES[d].graceMonths);
+      expect(s.gameOver?.reason).toMatch(/administrators/);
+      // Over the limit from day one: the bank's patience, then two weeks to fix it.
+      ended[d] = Math.floor(s.gameOver!.hour / 24);
+      expect(ended[d]).toBeGreaterThanOrEqual(DIFFICULTIES[d].bankPatience + 14 - 1);
+      expect(ended[d]).toBeLessThanOrEqual(DIFFICULTIES[d].bankPatience + 14 + 1);
     }
+    expect(ended.hard).toBeLessThan(ended.normal);
+    expect(ended.normal).toBeLessThan(ended.easy);
   });
 
   it('scales rivals and crises', () => {

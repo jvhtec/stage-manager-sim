@@ -17,6 +17,7 @@ import { shockFactors } from './market';
 import { OVERHEAD } from './facilities';
 import { DEFAULT_RISK, LATE_RISK, LATE_SLIP_MIN, LATE_SLIP_SPREAD, paymentDays } from './receivables';
 import { showPayout } from './gate';
+import { contractDock, damagesFor, outcomeOf } from './outcomes';
 import { productionProblems, typicalKit } from './production';
 import { crossHireCost, crossHireOptions } from './techRider';
 import type { Gig, Rival, RivalOps, TycoonState, WorldMap } from './types';
@@ -28,6 +29,8 @@ export const RIVAL_FIX_LIMIT = 0.2;
 export const RIVAL_SHOW_COST = 0.25;
 /** Chance a rival's truck breaks down on the way to a show (more with worn kit and trucks). */
 export const RIVAL_BREAKDOWN = 0.06;
+/** How late a rival's load-in runs when its truck breaks down on the way. */
+export const RIVAL_LATE_HOURS = 2;
 
 const hash = (s: string) => [...s].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 41);
 
@@ -162,8 +165,11 @@ export function playRivalShow(s: TycoonState, r: Rival, gig: Gig, rng: Rng): num
   if (late) ops.record.late = (ops.record.late ?? 0) + 1;
   if (dies) ops.record.kitFailures = (ops.record.kitFailures ?? 0) + 1;
   const q = Math.max(0, Math.min(1, 0.2 + 0.6 * kit + (ops.condition - 80) / 400 - trouble + (rng.next() - 0.5) * 0.16));
-  const failed = q < 0.3;
-  const payout = failed ? -Math.round(gig.fee * 0.3) : showPayout(gig, q);
+  // The same contract lines as yours (outcomes.ts): damages for a show that fell apart, money
+  // docked for a shaky or bad night and for a late load-in.
+  const failed = outcomeOf(s, q) === 'failed';
+  const earned = failed ? 0 : showPayout(gig, q);
+  const payout = failed ? -damagesFor(s, gig) : earned - contractDock(s, gig, q, late ? RIVAL_LATE_HOURS : 0, earned).total;
   const cost = Math.round(gig.fee * RIVAL_SHOW_COST);
   // Promoters pay rivals on the same terms they pay you: big shows weeks later, some late, a few never.
   const wait = paymentDays(gig);

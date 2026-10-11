@@ -41,7 +41,6 @@ import {
   PER_DIEM,
   fuelPerTile,
   NEGATIVE_MONTHS_GAME_OVER,
-  NO_SHOW_PENALTY_RATE,
   SERVICE_COST,
   SERVICE_HOURS,
   SERVICE_INTERVAL_DAYS,
@@ -111,6 +110,9 @@ import { dailyMarket, fuelMultiplier, marketNow, monthlyInterest } from './marke
 import { getRegion } from './content/world';
 import { KM_PER_UNIT, getCityPath, roadDistance } from './pathfinding';
 import { TIER_REP_CEILING, monthlyReputation, noteShow } from './reputation';
+import { contractDock, damagesFor, outcomeOf } from './outcomes';
+import { dailyLiquidity, monthlyLiquidity } from './liquidity';
+import { officeCapacity, officeLoad, officePrepFactor, officeSlipChance, officeSlipHours, officeStretch } from './office';
 import { dailyDisruptions, monthlyWinter, tripCharges, yearlyDriversRules } from './infra';
 import { countTownShow, fadeTownShows } from './territory';
 import { returnFreight } from './freight';
@@ -496,11 +498,13 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   }
   // Prep: every truck's kit was checked (or not) by its home base's warehouse crew.
   const prep = prepOf(s, onSite);
+  // An office that's outgrown its staff drops things (office.ts).
+  const stretch = officeStretch(s);
   const forgotten: string[] = [];
   onSite.forEach(v => {
     const base = depotInCity(s, v.homeCityId);
     const ids = Object.keys(v.cargo).filter(id => working[id] > 0).sort();
-    if (!ids.length || !rng.chance(leftBehindChance(base ? prepRatio(s, base) : 0))) return;
+    if (!ids.length || !rng.chance(Math.min(0.9, leftBehindChance(base ? prepRatio(s, base) : 0) * officePrepFactor(stretch)))) return;
     const id = rng.pick(ids);
     working[id] -= 1;
     if (!working[id]) delete working[id];
@@ -541,7 +545,8 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const hands = crew + freelance.count + (gig.fixes?.loaders ? LOADERS : 0);
   const handling = present && !gig.overseas ? handlingHours(ownKit, hands, access) : 0;
   const overrun = handlingOverrun(handling);
-  const lateHours = onSite.length ? Math.max(0, lastArrival + fx.delay - loadInHour(gig)) + overrun : 0;
+  const officeSlip = present && stretch > 0 && rng.chance(officeSlipChance(stretch)) ? officeSlipHours(stretch, n => rng.nextInt(n)) : 0;
+  const lateHours = onSite.length ? Math.max(0, lastArrival + fx.delay - loadInHour(gig)) + overrun + officeSlip : 0;
   // The room's quirks: a union call to pay, a curfew to run into, a noise limiter to trip.
   const traits = venue && !gig.overseas && !gig.festival ? traitsOf(world, venue) : undefined;
   let venueHit = 0;
@@ -601,18 +606,24 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     breaches: breaches.map(b => `${b.label}: ${b.detail}`),
     production: problems.map(p => `${p.label}: ${p.detail}`),
     feuds: crewEval.feuds,
+    office: officeSlip ? `The office is coordinating ${Math.round(officeLoad(s))} trucks-and-crews' worth of work with room for ${Math.round(officeCapacity(s))}: the call times went out wrong and the crew lost ${officeSlip} h.` : undefined,
     slowLoad: overrun > 0 ? `About ${handling} h to get the rig in with ${hands} hands${access === 'dock' ? '' : access === 'stairs' ? ' up stairs' : ' from the street'}, against a ${HANDLING_WINDOW} h window.` : undefined,
     present,
     workshop: s.policies.workshop,
     noKit: !stockSize(delivered),
   });
-  if (!present || quality < 0.3) {
-    const penalty = Math.round(gig.fee * NO_SHOW_PENALTY_RATE);
+  const band = outcomeOf(s, quality, present);
+  const outcomes = (s.stats.outcomes ??= {});
+  outcomes[band] = (outcomes[band] ?? 0) + 1;
+  if (band === 'failed') {
+    // The fee is gone, the deposit goes back, and the promoter claims damages: more at bigger venues.
+    const penalty = damagesFor(s, gig);
     book(s, 'penalties', -penalty);
+    s.stats.damages = (s.stats.damages ?? 0) + penalty;
     gig.status = 'failed';
     // The client wants their deposit back.
     if (gig.depositPaid) book(s, 'shows', -gig.depositPaid);
-    gig.result = { quality, payout: -penalty, lateHours, gearCoverage, crewCoverage, ...resultExtras };
+    gig.result = { quality, payout: -penalty, lateHours, gearCoverage, crewCoverage, ...resultExtras, outcome: band };
     s.company.reputation = Math.max(0, s.company.reputation - 4 * tw + Math.min(0, stakes.reputation));
     s.cityRatings[gig.cityId] = Math.max(0, rating - 20);
     s.stats.showsFailed += 1;
@@ -626,8 +637,8 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     pushNews(
       s,
       (onSite.length
-        ? `Disaster at ${where}: ${gig.act} played to a half-built rig.${failureNote} Penalty ${formatMoney(s, penalty)}.`
-        : `No-show! Nobody turned up for ${gig.act} at ${where}. Penalty ${formatMoney(s, penalty)}.`) + why,
+        ? `Disaster at ${where}: ${gig.act} played to a half-built rig.${failureNote} No fee${gig.depositPaid ? ', the deposit goes back' : ''}, and the promoter claims ${formatMoney(s, penalty)} in damages.`
+        : `No-show! Nobody turned up for ${gig.act} at ${where}. No fee${gig.depositPaid ? ', the deposit goes back' : ''}, and the promoter claims ${formatMoney(s, penalty)} in damages.`) + why,
       'bad',
       { cityId: gig.cityId, gigId: gig.id },
     );
@@ -642,7 +653,10 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     strike(s, gig.act, 'the rig broke their technical rider');
     afterBreach(s, gig);
   }
-  collectOrInvoice(s, gig, balanceDue(gig, payout - withheld));
+  // The contract's lines: money off for a shaky or bad night, and for every hour the doors opened late.
+  const dock = contractDock(s, gig, quality, lateHours, payout - withheld);
+  if (dock.total) s.stats.docked = (s.stats.docked ?? 0) + dock.total;
+  collectOrInvoice(s, gig, balanceDue(gig, payout - withheld - dock.total));
   learnMix(s, gig);
   if (gig.overseas) {
     // Air freight for the rig and flights for the crew, there and back.
@@ -654,14 +668,14 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   }
   const totalCargo = onSite.reduce((sum, v) => sum + stockSize(v.cargo) + v.crew, 0) || 1;
   onSite.forEach(v => {
-    v.profitThisYear += Math.round((payout * (stockSize(v.cargo) + v.crew)) / totalCargo);
+    v.profitThisYear += Math.round(((payout - dock.total) * (stockSize(v.cargo) + v.crew)) / totalCargo);
   });
   // Acts remember who did them proud — they'll ask for you again.
   if (quality >= 0.75 && (findArtist(gig.act) || gig.festival)) {
     s.artistRelations[gig.act] = (s.artistRelations[gig.act] ?? 0) + 1;
   }
   gig.status = 'done';
-  gig.result = { quality, payout, lateHours, gearCoverage, crewCoverage, ...resultExtras };
+  gig.result = { quality, payout, lateHours, gearCoverage, crewCoverage, ...resultExtras, outcome: band, docked: dock.total || undefined };
   countTownShow(s, gig.cityId, 'player');
   s.company.reputation = Math.max(0, Math.min(100, reputationAfterShow(s.company.reputation, gig.tier, quality) + stakes.reputation));
   noteShow(s, gig, quality);
@@ -675,13 +689,16 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   recordShow(s, yearOf(s, s.hour), quality, false, !!gig.festival);
   const why = postMortem(s, gig, where, quality, false, causes);
   lastingConsequences(s, gig, quality, causes);
-  const verdict = quality >= 0.9 ? 'Storming show' : quality >= 0.7 ? 'Solid show' : 'Rough show';
+  const verdict = band === 'triumph' ? 'Storming show' : band === 'solid' ? 'Solid show' : band === 'shaky' ? 'Shaky show' : 'Bad night';
+  const dockNote = dock.total
+    ? ` Under the contract the client docked ${formatMoney(s, dock.total)}${dock.quality && dock.late ? ` (${formatMoney(s, dock.quality)} for the night, ${formatMoney(s, dock.late)} for opening ${Math.ceil(lateHours)} h late)` : dock.late ? ` for opening ${Math.ceil(lateHours)} h late` : ` for a ${band === 'bad' ? 'bad' : 'shaky'} night`}.`
+    : '';
   const riderNote = gear.riderMet === undefined ? '' : gear.riderMet ? ` Rider (${gig.rider!.brand}) honoured.` : ` They wanted ${gig.rider!.brand} and didn't get it.`;
   const kitNote = gear.quality < 0.8 ? ' Reviewers called the kit dated.' : '';
   const techNote = techIds.length ? ` ${techIds.map(id => getTech(id).name).join(' & ')} on the crew.` : '';
   const specialistNote = Math.abs(specialist) >= 0.015 ? ` (${specialist > 0 ? '+' : ''}${Math.round(specialist * 100)}% ${specialist > 0 ? 'specialist' : 'off-speciality'})` : '';
   const gateNote = gig.gate ? ` Tickets: ${hypeLabel(gig.gate.hype)} (gate deal).` : '';
-  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}${specialistNote}.${gateNote}${weather?.note ?? ''}${failureNote}${freelanceNote}${hire.units ? ` Sub-hired ${hire.units} unit${hire.units > 1 ? 's' : ''} from ${hire.from.join(' & ')}.` : ''}${stakes.note}${riderNote}${kitNote}${techNote}${venueNotes.length ? ` At the venue, ${venueNotes.join('; ')}.` : ''}${breaches.length ? ` The rider was broken (${breaches.map(b => b.label.toLowerCase()).join(', ')}): the client held back ${formatMoney(s, Math.round(payout * breach.withhold))}.` : ''}${why}`, quality >= 0.7 ? 'good' : 'info', {
+  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}${specialistNote}.${gateNote}${weather?.note ?? ''}${failureNote}${freelanceNote}${hire.units ? ` Sub-hired ${hire.units} unit${hire.units > 1 ? 's' : ''} from ${hire.from.join(' & ')}.` : ''}${stakes.note}${riderNote}${kitNote}${techNote}${venueNotes.length ? ` At the venue, ${venueNotes.join('; ')}.` : ''}${breaches.length ? ` The rider was broken (${breaches.map(b => b.label.toLowerCase()).join(', ')}): the client held back ${formatMoney(s, Math.round(payout * breach.withhold))}.` : ''}${dockNote}${why}`, band === 'triumph' || band === 'solid' ? 'good' : band === 'bad' ? 'bad' : 'info', {
     cityId: gig.cityId,
     gigId: gig.id,
   });
@@ -722,6 +739,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   dailyRehearsals(s);
   dailyCourses(s);
   dailyReceivables(s, sideRng(s, dayOf(s.hour) + 7006));
+  dailyLiquidity(s);
   dailyTerms(s, sideRng(s, dayOf(s.hour) + 7008));
   dailyRentOut(s);
   dailyPeopleFatigue(s);
@@ -823,28 +841,8 @@ function monthlyTick(s: TycoonState, rng: Rng) {
   monthlyLeases(s);
   if (s.company.loan > 0) book(s, 'interest', -monthlyInterest(s));
 
-  // During a shutdown the banks give everyone a repayment holiday.
-  if (s.company.cash < 0 && marketNow(s).shutdown) {
-    pushNews(s, 'Month closed in the red — the bank is giving the whole industry breathing room until venues reopen.', 'info');
-  } else if (s.company.cash < 0) {
-    s.negativeMonths += 1;
-    const grace = difficultyOf(s).graceMonths;
-    if (s.negativeMonths >= grace) {
-      s.gameOver = {
-        hour: s.hour,
-        reason: `${s.company.name} spent ${s.negativeMonths} months in the red and the bank has called in the receivers.`,
-      };
-      pushNews(s, s.gameOver.reason, 'big');
-    } else {
-      pushNews(
-        s,
-        `Month closed in the red. ${grace - s.negativeMonths} more and the bank shuts you down.`,
-        'big',
-      );
-    }
-  } else {
-    s.negativeMonths = 0;
-  }
+  // Closing months in the overdraft; over the limit is handled day by day (liquidity.ts).
+  monthlyLiquidity(s);
 }
 
 function announceModels(s: TycoonState, year: number) {
