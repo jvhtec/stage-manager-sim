@@ -47,7 +47,6 @@ import { CityWindow, DepotListWindow, DepotWindow, TownsWindow, VenueWindow } fr
 import { VehicleListWindow, VehicleWindow } from './ui/fleet';
 import { GigWindow, ShowsWindow } from './ui/shows';
 import { TourWindow } from './ui/tours';
-import { PoliciesWindow } from './ui/policies';
 import { DecisionsWindow } from './ui/decisions';
 import { BriefingWindow } from './ui/briefing';
 import { briefing, attentionCount } from '@/world/advisor';
@@ -58,6 +57,7 @@ const AuctionsWindow = lazy(() => import('./ui/auctions').then(m => ({ default: 
 const WorldMapWindow = lazy(() => import('./ui/worldMap').then(m => ({ default: m.WorldMapWindow })));
 const PlannerWindow = lazy(() => import('./ui/planner').then(m => ({ default: m.PlannerWindow })));
 const RndWindow = lazy(() => import('./ui/rnd').then(m => ({ default: m.RndWindow })));
+const PoliciesWindow = lazy(() => import('./ui/policies').then(m => ({ default: m.PoliciesWindow })));
 import { CrewWindow } from './ui/crewWindow';
 import { Splash } from './ui/Splash';
 import { Intro, introSkipped } from './ui/Intro';
