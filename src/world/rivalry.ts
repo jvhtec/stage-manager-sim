@@ -11,7 +11,7 @@ import { marketingScale } from './marketing';
 import { rivalHealth } from './rivals';
 import { roadDistance } from './pathfinding';
 import { worldOf } from './mapgen';
-import { styleOf } from './leaders';
+import { styleOf } from './strategies';
 import { ownedStock } from './wear';
 import { getProduct } from './content/gear';
 import type { Gig, Rival, TycoonState } from './types';
