@@ -926,3 +926,46 @@ A show moves reputation (`reputationAfterShow`), capped by the tier of the venue
 - **crew politics and re-planning** never came into play: no feuds formed before a crew chief was hired, and no truck was recalled.
 
 The first ablation pass found the managed bot paying for its own caution — every forecast warning froze investment and left invoices with a factor until cash passed a fixed mark (80+ months of factoring in Spain), and refurbishing worn lines one at a time hid the case for a better workshop. Both were bot behaviour, fixed above; the remaining "no clear effect" results are findings about the game.
+
+## When things go wrong: failure, penalties, liquidity and overexpansion
+
+The detailed simulation only matters if its outcomes cost something, even for a company that isn't being run badly on purpose.
+
+**Show outcomes and contract penalties** (`outcomes.ts`). Every night falls in a band by quality:
+- **triumph** from 85%;
+- **solid** from 65%;
+- **shaky** from 50%;
+- **bad** below that;
+- **failed** below the difficulty's failure line (35% on standard, 30% gentle, 40% cutthroat), or when nobody arrives.
+
+Under the contract:
+- clients dock 8% of the fee for a shaky night and 30% for a bad one;
+- they charge 4% for every hour the doors open late, up to 25%;
+- pushy clients enforce half as much again, easy ones half as much, and the difficulty scales it;
+- docking never takes more than 60% of what the night earned.
+
+A failed show loses the fee, hands back the deposit and pays **damages scaled by the venue**: 30% of the fee for a club, 120% for a stadium, where the promoter loses a night's ticket sales. Rivals play under the same lines.
+
+**Liquidity** (`liquidity.ts`). The arranged overdraft is 35% of the credit the bank would still give you, so borrowing to the hilt leaves none.
+- **Inside it:** you pay the loan rate plus 8%.
+- **Too long inside it:** close too many months there (the difficulty's grace months) and the bank cuts it in half for six months.
+- **Over the limit:** the business seizes up. Wages go out late (morale falls and crew quit), freelancers and hire desks want cash you haven't got (so shows go out short-handed), and the bank won't lend.
+- **The bank's demand:** after its patience runs out (30 days standard, 60 gentle, 14 cutthroat), it demands you get back inside the limit within 14 days. Miss that and the administrators come in.
+- **The way out:** sell invoices, sell trucks, cut back, or take bridging finance once a year (8% arrangement fee, on the loan).
+
+The Company window shows the overdraft, how far down this road you are, and the bridging offer.
+
+**Overexpansion.** Two mechanisms make growth something to manage:
+- **Span of control** (`office.ts`). The founder can coordinate about four trucks-and-crews; each office staff member adds 2.5, and department heads add 2–6. When the work outgrows the office:
+  - call times go wrong (up to 60% of shows, losing hours);
+  - cases get left behind;
+  - invoices go unchased.
+
+  The post-mortems say so.
+- **Market depth** (`territory.ts`). No promoter gives one firm all its work. Past a share of a town's recent shows — 15% plus a quarter of a point per reputation point, at most 40% — more of its new offers go to a rival first. Capacity beyond the share of the market you can hold sits idle and costs money.
+
+**Difficulty** now sets the failure line, the weight of penalties, the size of the overdraft and the bank's patience, as well as starting cash, rivals and crises.
+
+**Two growth profiles** in the balance bot test the danger:
+- the **expansionist** grows as fast as leases and loans allow and never builds the office;
+- the **ambitious** company grows as fast but hires office staff and department heads as it goes.
