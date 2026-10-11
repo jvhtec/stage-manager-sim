@@ -6,7 +6,7 @@
  */
 import type { Rng } from '@/lib/rng';
 import { dayOf, formatMoney, newId, pushNews, yearOf } from './core';
-import { pickWeighted, styleOf } from './leaders';
+import { pickWeighted, styleOf } from './strategies';
 import { marketingScale } from './marketing';
 import { rivalHealth } from './rivals';
 import { roadDistance } from './pathfinding';

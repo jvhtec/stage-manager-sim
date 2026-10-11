@@ -9,22 +9,30 @@
  */
 import type { Rng } from '@/lib/rng';
 import { createRng } from '@/lib/rng';
-import { getModel, tierInfo } from './catalog';
+import { DEPT_LABELS, getModel, tierInfo } from './catalog';
 import { consoleInputs } from './content/consoles';
 import { expectedQuality, productsAvailableIn } from './content/gear';
-import { dateOfDay, dayOf, yearOf } from './core';
+import { dateOfDay, dayOf, pushNews, yearOf } from './core';
 import { shockFactors } from './market';
 import { OVERHEAD } from './facilities';
 import { rivalTrucksToday } from './industry';
-import { styleOf } from './leaders';
+import { styleOf } from './strategies';
+import { rivalDryHire } from './hire';
+import { canPrime, commitSupply, deptsOf, planSupply, SUBCONTRACT_LIMIT, supplyPenalty } from './supply';
 import { DEFAULT_RISK, LATE_RISK, LATE_SLIP_MIN, LATE_SLIP_SPREAD, paymentDays } from './receivables';
 import { showPayout } from './gate';
 import { contractDock, damagesFor, outcomeOf } from './outcomes';
 import { productionProblems, typicalKit } from './production';
 import { crossHireCost, crossHireOptions } from './techRider';
-import type { Gig, Rival, RivalOps, TycoonState, WorldMap } from './types';
+import type { Dept, Gig, Rival, RivalOps, TycoonState, WorldMap } from './types';
 import { DEPTS } from './types';
 
+/** Share of the month a rival's kit is idle and out on dry hire. */
+export const DRY_HIRE_IDLE = 0.5;
+/** Units subcontracted in a department before a firm thinks about owning more of it. */
+export const SHORT_TRIGGER = 30;
+/** Taking on a whole new department is a once-a-year board decision (January), not a monthly whim. */
+const diversifyMonth = (s: TycoonState) => dateOfDay(s, dayOf(s.hour)).getUTCMonth() === 0;
 /** A rival won't take a show whose rider and room fixes cost more than this share of the fee. */
 export const RIVAL_FIX_LIMIT = 0.2;
 /** Share of the fee a show costs a rival to deliver (crew, fuel, per diems). */
@@ -56,16 +64,22 @@ export function opsOf(s: TycoonState, r: Rival): RivalOps {
   const rng = createRng((s.mapSeed ^ hash(r.id)) >>> 0);
   const top = tierInfo(r.maxTier);
   const scale = 1.5 + r.reputation / 50;
-  const desk = pickDesk(year, r.maxTier, rng);
+  // Only the departments its business runs (supply.ts); the rest it subcontracts.
+  const owned = deptsOf(r, year);
+  const sound = owned.includes('audio');
+  const desk = sound ? pickDesk(year, r.maxTier, rng) : undefined;
+  const allNeeds = DEPTS.reduce((n, d) => n + top.needs[d], 0) || 1;
+  const share = owned.reduce((n, d) => n + top.needs[d], 0) / allNeeds;
   r.ops = {
     cash: 40000 * r.maxTier + r.reputation * 600,
-    kit: Object.fromEntries(DEPTS.map(d => [d, Math.ceil(top.needs[d] * scale)])) as RivalOps['kit'],
+    kit: Object.fromEntries(DEPTS.map(d => [d, owned.includes(d) ? Math.ceil(top.needs[d] * scale) : 0])) as RivalOps['kit'],
     quality: Math.round((expectedQuality(r.maxTier, year) - 0.8 + rng.next()) * 10) / 10,
     desk: desk?.brand,
-    inputs: desk ? consoleInputs(desk) : 24,
-    pa: pickPa(year, r.maxTier, rng),
-    crew: Math.ceil(top.crew * scale),
-    trucks: 2 + r.maxTier,
+    inputs: desk ? consoleInputs(desk) : sound ? 24 : 0,
+    pa: sound ? pickPa(year, r.maxTier, rng) : [],
+    crew: Math.ceil(top.crew * scale * Math.max(0.25, share)),
+    // A specialist moves less kit than a full-service house.
+    trucks: 2 + Math.round(r.maxTier * Math.max(0.4, share)),
     condition: 85,
     month: { income: 0, costs: 0 },
     record: { shows: 0, failed: 0, crossHires: 0, fixes: 0, cancelled: 0, declined: {} },
@@ -80,26 +94,28 @@ export function rivalCommitments(s: Pick<TycoonState, 'gigs'>, rivalId: string, 
   return s.gigs.filter(g => g.rivalId === rivalId && g.status === 'rival' && !g.result && g.id !== gig.id && overlaps(g, gig));
 }
 
-export type DeclineReason = 'kit' | 'crew' | 'trucks' | 'rider' | 'room';
+export type DeclineReason = 'kit' | 'crew' | 'trucks' | 'rider' | 'room' | 'lines';
 export interface RivalQuote {
   ok: boolean;
   reason?: DeclineReason;
   cost: number;
   crossHires: number;
   fixes: number;
+  /** Departments covered by partners or the hire market (supply.ts). */
+  supply?: import('./supply').SupplyPlan;
 }
 
 /** Can this rival do this show, and what does meeting the rider and the room cost? */
 export function rivalQuote(s: TycoonState, world: WorldMap, r: Rival, gig: Gig): RivalQuote {
   const ops = opsOf(s, r);
   const busy = rivalCommitments(s, r.id, gig);
-  for (const d of DEPTS) {
-    const held = busy.reduce((n, g) => n + g.needs[d], 0);
-    if (gig.needs[d] && held + gig.needs[d] > ops.kit[d]) return { ok: false, reason: 'kit', cost: 0, crossHires: 0, fixes: 0 };
-  }
+  const year = dateOfDay(s, gig.day).getUTCFullYear();
+  // It must run the show's main department itself; the rest can be subcontracted.
+  if (!canPrime(r, gig, year)) return { ok: false, reason: 'lines', cost: 0, crossHires: 0, fixes: 0 };
+  const supply = planSupply(s, world, r, ops, gig, year);
+  if (supply.cost > gig.fee * SUBCONTRACT_LIMIT) return { ok: false, reason: 'kit', cost: 0, crossHires: 0, fixes: 0 };
   if (busy.reduce((n, g) => n + g.crewNeeded, 0) + gig.crewNeeded > ops.crew) return { ok: false, reason: 'crew', cost: 0, crossHires: 0, fixes: 0 };
   if (busy.length + 1 > rivalTrucksToday(s, ops)) return { ok: false, reason: 'trucks', cost: 0, crossHires: 0, fixes: 0 };
-  const year = dateOfDay(s, gig.day).getUTCFullYear();
   let cost = 0;
   let crossHires = 0;
   const limit = gig.fee * RIVAL_FIX_LIMIT * styleOf(r, year).fix;
@@ -126,7 +142,7 @@ export function rivalQuote(s: TycoonState, world: WorldMap, r: Rival, gig: Gig):
   const problems = productionProblems(world, gig, typicalKit(gig, year), [{ modelId: truck }]);
   const fixCost = problems.reduce((n, p) => n + p.fixCost, 0);
   if (cost + fixCost > limit) return { ok: false, reason: 'room', cost: cost + fixCost, crossHires, fixes: problems.length };
-  return { ok: true, cost: cost + fixCost, crossHires, fixes: problems.length };
+  return { ok: true, cost: cost + fixCost, crossHires, fixes: problems.length, supply };
 }
 
 /** Note a rival passing on a show, for the reports and its own reinvestment. */
@@ -147,6 +163,11 @@ export function rivalTryTake(s: TycoonState, world: WorldMap, r: Rival, gig: Gig
   ops.month.costs += q.cost;
   ops.record.crossHires += q.crossHires;
   ops.record.fixes += q.fixes;
+  if (q.supply?.lines.length) {
+    ops.cash -= q.supply.cost;
+    ops.month.costs += q.supply.cost;
+    commitSupply(s, r, ops, gig, q.supply);
+  }
   return true;
 }
 
@@ -164,7 +185,7 @@ export function playRivalShow(s: TycoonState, r: Rival, gig: Gig, rng: Rng): num
   const dies = rng.chance(((100 - ops.condition) / 100) * 0.35);
   const busyCrew = rivalCommitments(s, r.id, gig).reduce((n, g) => n + g.crewNeeded, 0) + gig.crewNeeded;
   const stretched = busyCrew > ops.crew * 0.8;
-  const trouble = (late ? 0.15 : 0) + (dies ? 0.08 : 0) + (stretched ? 0.05 : 0);
+  const trouble = (late ? 0.15 : 0) + (dies ? 0.08 : 0) + (stretched ? 0.05 : 0) + supplyPenalty(gig, ops);
   if (late) ops.record.late = (ops.record.late ?? 0) + 1;
   if (dies) ops.record.kitFailures = (ops.record.kitFailures ?? 0) + 1;
   const q = Math.max(0, Math.min(1, 0.2 + 0.6 * kit + (ops.condition - 80) / 400 - trouble + (rng.next() - 0.5) * 0.16));
@@ -190,6 +211,11 @@ export function playRivalShow(s: TycoonState, r: Rival, gig: Gig, rng: Rng): num
   if (failed) ops.record.failed += 1;
   const tw = [0, 1, 1.5, 2.5, 4][gig.tier] ?? 1;
   r.reputation = Math.max(5, Math.min(100, r.reputation + (failed ? -2 * tw : q >= 0.7 ? 0.3 * tw : q >= 0.5 ? 0.1 * tw : -0.5 * tw)));
+  // The partners who supplied a department share a little of the credit (or the blame).
+  new Set((gig.supply ?? []).map(x => x.from).filter(Boolean)).forEach(id => {
+    const p = s.rivals.find(x => x.id === id);
+    if (p) p.reputation = Math.max(5, Math.min(100, p.reputation + (failed ? -0.5 * tw : q >= 0.7 ? 0.1 * tw : 0)));
+  });
   gig.result = { quality: q, payout, lateHours: 0, gearCoverage: 1, crewCoverage: 1 };
   return q;
 }
@@ -231,40 +257,73 @@ export function monthlyRivalOps(s: TycoonState, r: Rival, rng: Rng): number {
   }
   ops.cash -= overhead;
   ops.month.costs += overhead;
+  // Kit not out on shows this month earns its keep on dry hire, as yours can.
+  rivalDryHire(s, ops, r.maxTier, DRY_HIRE_IDLE);
   if (ops.cash > 0) ops.condition = Math.min(100, ops.condition + 6);
   const profit = ops.month.income - ops.month.costs;
   ops.month = { income: 0, costs: 0 };
-  // Reinvest when there's a cushion: in what turned work away most, else in keeping the kit current.
+
+  // Reinvest when there's a cushion. Build the purchase first and only mutate the operation after
+  // proving it can pay for the whole thing: no free trucks, desks or new departments when cash is short.
   const style = styleOf(r, year);
   if (ops.cash > overhead * style.reinvest) {
     const reasons = Object.entries(ops.record.declined).sort((a, b) => b[1] - a[1]);
     const top = reasons[0]?.[0] as DeclineReason | undefined;
     const target = expectedQuality(r.maxTier, year) + style.quality;
+    const short = (Object.entries(ops.short ?? {}) as [Dept, number][]).sort((a, b) => b[1] - a[1])[0];
+    const needs = tierInfo(r.maxTier).needs;
+
     let spend = 0;
+    let commit: (() => void) | undefined;
+
     if (ops.quality < target - 1) {
+      const nextQuality = Math.round((target - 0.3 + rng.next() * 0.6) * 10) / 10;
       spend = DEPTS.reduce((n, d) => n + ops.kit[d], 0) * 900;
-      ops.quality = Math.round((target - 0.3 + rng.next() * 0.6) * 10) / 10;
+      commit = () => { ops.quality = nextQuality; };
+    } else if (short && short[1] >= SHORT_TRIGGER && (ops.kit[short[0]] > 0 || (diversifyMonth(s) && rng.chance(style.diversify)))) {
+      const [d] = short;
+      const fresh = !ops.kit[d];
+      const add = Math.ceil(needs[d] * (fresh ? 1.2 : 0.3)) || 1;
+      const consoleAdd = d === 'audio' && !ops.kit.console ? Math.ceil(needs.console * 1.2) || 1 : 0;
+      const newPa = d === 'audio' && !ops.pa.length ? pickPa(year, r.maxTier, rng) : ops.pa;
+      spend = (add + consoleAdd) * 1500;
+      commit = () => {
+        ops.kit[d] += add;
+        if (consoleAdd) ops.kit.console += consoleAdd;
+        if (d === 'audio' && !ops.pa.length) ops.pa = newPa;
+        ops.short![d] = Math.floor(short[1] / 3);
+        if (fresh && s.hour > 24) pushNews(s, `${r.name} has been hiring in ${DEPT_LABELS[d].toLowerCase()} for long enough — it buys its own.`, 'info', { cityId: r.hqCityId });
+      };
     } else if (top === 'rider') {
       const desk = pickDesk(year, r.maxTier, rng);
       const best = productsAvailableIn(year, 'console').filter(p => p.brand === desk?.brand).sort((a, b) => consoleInputs(b) - consoleInputs(a))[0];
-      if (best) {
-        ops.desk = best.brand;
-        ops.inputs = Math.max(ops.inputs, consoleInputs(best));
-        spend = best.price * 2;
+      const nextPa = [...new Set([...ops.pa, ...pickPa(year, r.maxTier, rng)])].slice(-3);
+      const paAdded = nextPa.some(b => !ops.pa.includes(b));
+      spend = (best?.price ?? 0) * 2 + (paAdded ? 15000 * r.maxTier : 0);
+      if (spend > 0) {
+        commit = () => {
+          if (best) {
+            ops.desk = best.brand;
+            ops.inputs = Math.max(ops.inputs, consoleInputs(best));
+          }
+          ops.pa = nextPa;
+        };
       }
-      ops.pa = [...new Set([...ops.pa, ...pickPa(year, r.maxTier, rng)])].slice(-3);
     } else if (top === 'kit') {
-      DEPTS.forEach(d => (ops.kit[d] += Math.ceil(tierInfo(r.maxTier).needs[d] * 0.3)));
+      const additions = Object.fromEntries(DEPTS.map(d => [d, ops.kit[d] > 0 ? Math.ceil(needs[d] * 0.3) : 0])) as Record<Dept, number>;
       spend = 25000 * r.maxTier;
+      commit = () => DEPTS.forEach(d => { ops.kit[d] += additions[d]; });
     } else if (top === 'crew') {
-      ops.crew += 3;
       spend = 3000;
+      commit = () => { ops.crew += 3; };
     } else if (top === 'trucks') {
-      ops.trucks += 1;
       spend = getModel(r.maxTier >= 3 ? 'artic-40' : 'rigid-7t').price;
+      commit = () => { ops.trucks += 1; };
     }
-    if (spend && spend < ops.cash) {
+
+    if (commit && spend > 0 && spend <= ops.cash) {
       ops.cash -= spend;
+      commit();
       if (top) ops.record.declined[top] = Math.floor((ops.record.declined[top] ?? 0) / 2);
     }
   }

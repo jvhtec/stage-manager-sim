@@ -1006,31 +1006,40 @@ Damages for a failed show are now capped at the fee (more on cutthroat), as cont
 - **Under shocks** (docs/balance-adverse-growth.md, seeds 3–4, each shock in its own run): the hedged company survives 20 of 20, with the worst combined shock taking 26–37% off its value. The unhedged company survives 14 of 20. A recall of 26 identical trucks takes 80% of its next year's show income and 48 points of reputation in GB.
 - **Expansionist still fails everywhere** (0/8, 3–4 years) and lean and corner-cutter still fail now and then. The new events don't make those strategies any worse; they were already failing for their own reasons.
 
-## Historic rivals: who arrived when, and who ran them
+## Historic rivals: a historical market, not a list of names
 
-A research pass on every rival (sources and confidence levels in docs/rival-history.md) corrected a lot of dates and bases. Some examples:
-- Light & Sound Design was founded in Birmingham in 1975 and joined PRG in 1998.
-- XL Video went to PRG in 2015, not 2011.
-- Neg Earth dates from 1983 and Capital Sound from 1989.
-- Neumann&Müller is from Düsseldorf in 1981, not Dresden in 1990.
-- Pronorte is in Gijón and Sonido Tole in Sevilla.
+The research in PR #24 (docs/research/) showed the old rival model was wrong in its bones. A rival was one permanent identity with one HQ, one specialty and generic kit in every department. Its global founding year doubled as the year it entered your country, so Clair had a Spanish warehouse in 1966. The rivals now follow that research's architecture (docs/research/historical-market-architecture.md). History sets who could plausibly exist, where, in what business and under which owners; the simulation decides how they fare.
 
-Three firms we couldn't find anywhere (ESS PA, Mastervoice, Apogee) are gone. Seven real ones are added, among them Stonex, Cinelux, STS Communication and Mixer Sound & Light. Spain now also has the foreign arrivals EML and Dushow Barcelona.
+**Content, kept out of the save:**
+- **Actors** (`content/actors/`): each historical firm has:
+  - local-presence eras per country;
+  - name eras;
+  - operating eras (business lines, venue tiers, reach);
+  - company events: ownership, absorbed, pivot, closure.
 
-**When the international houses arrive.** A firm now appears in a country only from the year it had a base there (`entersIn`, `hqIn` and `entryNews` on the template):
-- Clair is in the US from 1966, in Britain from 2008 (buying Concert Sound) and in Germany from 2022 (Black Box Music). No Spanish, French or Italian base has been found.
-- PRG is in the US from 1983 (as Harris Production Services). It reaches Britain through LSD (1998) and Spain in 2011, by buying EML.
-- Solotech is in the US from 2007 and Britain from 2018 (SSE).
-- Spain sees no big American house until PRG in 2011. Its foreign arrivals before that are European neighbours: EML with Vari-Lite (1998), Dushow (2005) and CT (2007).
+  Sources and confidence are in docs/rival-history.md and docs/research/.
+- **People** (`content/people.ts`): documented roles and tenures. A person is never shown before the year they're documented, and is never a stat.
+- **Strategies** (`strategies.ts`): game tuning, attached to a *company and era* together with the documented behaviour it's read from. Espiral plays pioneer, then regional from 2000. Fluge is an integrator. Valladar is a specialist.
+- **Regions and pools** (`content/marketRegions.ts`): the central firms always appear. Each region draws a few of its own by map seed, and the draw is saved in `state.marketRoster`, so later content fixes never change an old game.
 
-**Leaders with a style** (`leaders.ts`). Each historic firm lists who ran it and when: Roy and Gene Clair, then Troy Clair; Bryan Grant and Mike Lowe at Britannia Row; John Penn at SSE; Jere Harris at PRG; Rafael Campos at Twin Cam; and so on. Each leader has one of six styles, read from how the trade press describes the firm: pioneer, perfectionist, expansionist, dealmaker, prudent or hustler.
+**What it changes in play:**
+- **Presence, not founding year.** A firm opens only where and when it had a base. In Spain, no foreign group arrives until EML in Madrid in 2006. PRG buys it in 2011 and renames it in 2012, as the same company with the same kit, crew and bookings. Clair and Solotech never come.
+- **Specialised firms** (`supply.ts`). A rival owns only its business lines' departments, and must run a show's main department to take it. The rest it subcontracts: first to a partner firm it trusts (partners are paid and their kit is held), then on the hire market. Subcontracted work costs coordination on the night, less with a trusted partner. A firm that keeps hiring in a department may buy into it, once a year, if its strategy leans that way. That gives the specialist → partner network → integrated supplier path that Fluge followed.
+- **How the specialists live.** Lighting, video and staging houses rarely lead a show, because sound is the biggest department. They live on what they supply to the firms that do lead. Partner jobs count as work won for their health, and good nights add a little to their name. Firms hire to each other at trade rates: half your one-off sub-hire rate from a partner, three-quarters on the open trade market. Partner work is spread by trust and distance, so it doesn't all go to one firm. Rivals rent idle kit out at your rent-out rate. When you sub-hire kit from rivals, the money now goes to the firms that sent it.
+- **Local competition.** What splits a town's work is the number of capable firms near it, not the number of firms in the country.
+- **Continuity.** An acquisition keeps the company: the absorbed firm's kit, crew, trucks, receivables, booked shows and patch go to the buyer. That applies to historical takeovers (Wigwam and Capital into SSE, Showco into Clair, XL Video into PRG) and to the simulation's own mergers. Pivots (Soinua into distribution, Martin Audio into manufacturing) and voluntary closures are not bankruptcies.
+- **The League** shows what each rival runs, who leads it, who owns it, and how it plays, labelled as our reading.
 
-A style nudges decisions the rival already makes:
-- how readily it goes for an offer;
-- how much it will spend meeting a rider or fixing a room;
-- how big a cash cushion it keeps before reinvesting, and what kit it aims for;
-- how likely it is to start a price war or to buy a struggling firm;
-- how readily it climbs a tier;
-- how quick it is to hold a grudge.
+`npm run balance:history` builds the market up layer by layer on the same seeds and reports what each layer changes (docs/balance-history.md). It uses the baseline company, ES 1990 and GB 1995, four seeds, eight years:
+- **Player.** All 32 runs survive. The full model is within run-to-run noise of chronology only: median value 3.0M against 3.2M (ES), 3.9M against 3.7M (GB).
+- **Specialisation.** Rivals now subcontract part of about half their shows in Spain and 70% in Britain, mostly to partners: around 2,000 partner jobs per Spanish run and 3,000 per British run.
+- **Local competition.** It gives back the work that national crowding was taking from rivals in the provinces.
+- **Market at the end.** It looks like a market: sound houses that grew into lighting, staging houses, regional integrators, and absorbed firms whose bookings carried on.
+- **Not yet right.** Specialists still fail more often than history says they did: Valladar, Tri i Talfis, Arcoiris and the video houses go under in some runs, usually in the early-'90s downturn. They earn only from partner work and dry hire, because artists and promoters don't yet hire a department directly. That's the per-department contract the architecture deferred.
 
-Start-ups get a style of their own. A firm between known leaders plays "steady". A change at the top makes the news ("Bryan Grant and Mike Lowe take charge at Britannia Row — …"). The League window shows who runs each rival and what that means.
+The regular balance report (docs/balance-report.md), regenerated on this model, keeps the strategy ranking:
+- Competent strategies survive everywhere, except that the unhedged growth company now goes under in 2 of 4 Spanish runs and 1 of 4 British runs.
+- Ambitious: £11M and 1,607M pts.
+- Managed: £5.4M and 402M pts.
+- Baseline: £3.9M and 504M pts.
+- Expansionist: 0/8.

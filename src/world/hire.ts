@@ -36,6 +36,8 @@ export interface SubHire {
   cost: number;
   /** Rivals supplying it. */
   from: string[];
+  /** What each supplying rival is paid (rival id → amount). */
+  paid?: Record<string, number>;
 }
 
 /** What you'd sub-hire to fill the gaps left by `working` at `gig`. */
@@ -49,22 +51,58 @@ export function subHireFor(state: TycoonState, world: WorldMap, gig: Gig, workin
   const year = yearOf(state, gig.day * 24);
   const days = gig.days ?? 1;
   const stock: GearStock = {};
+  const paid: Record<string, number> = {};
   let units = 0;
   let cost = 0;
   DEPTS.forEach(d => {
-    const short = Math.min(gig.needs[d] - have[d], nearby.length * UNITS_PER_RIVAL);
+    // Only firms that run the department have it to hire out (supply.ts) — and they're paid for it.
+    const suppliers = nearby.filter(r => !r.ops || r.ops.kit[d] > 0);
+    const short = Math.min(gig.needs[d] - have[d], suppliers.length * UNITS_PER_RIVAL);
     if (short <= 0) return;
     const id = rentalProduct(d, gig.tier, year);
     if (!id) return;
     stock[id] = (stock[id] ?? 0) + short;
     units += short;
-    cost += getProduct(id).price * SUBHIRE_DAY_RATE * short * days;
+    const c = getProduct(id).price * SUBHIRE_DAY_RATE * short * days;
+    cost += c;
+    suppliers.forEach(r => (paid[r.id] = (paid[r.id] ?? 0) + Math.round(c / suppliers.length)));
   });
-  return { stock, units, cost: Math.round(cost), from: nearby.slice(0, 2).map(r => r.name) };
+  return { stock, units, cost: Math.round(cost), from: nearby.slice(0, 2).map(r => r.name), paid };
 }
 
 export function bookSubHire(s: TycoonState, hire: SubHire) {
   if (hire.cost) book(s, 'subhire', -hire.cost);
+  // The money goes to the firms that sent the kit.
+  Object.entries(hire.paid ?? {}).forEach(([id, amount]) => {
+    const ops = s.rivals.find(r => r.id === id)?.ops;
+    if (!ops) return;
+    ops.cash += amount;
+    ops.month.income += amount;
+  });
+}
+
+/**
+ * Monthly, for a rival: dry hire of the kit that sat idle, at the rate you get renting yours out —
+ * the way lighting, video and staging houses filled the weeks between shows. Same wear as yours.
+ */
+type Ops = NonNullable<TycoonState['rivals'][number]['ops']>;
+export function rivalDryHireIncome(s: Pick<TycoonState, 'hour' | 'startYear'>, ops: Ops, tier: number, idleShare: number): number {
+  const year = yearOf(s, s.hour);
+  let income = 0;
+  DEPTS.forEach(d => {
+    if (!ops.kit[d]) return;
+    const id = rentalProduct(d, tier, year);
+    if (id) income += getProduct(id).price * ops.kit[d] * idleShare * RENT_OUT_DAY_RATE * 30;
+  });
+  return Math.round(income);
+}
+
+export function rivalDryHire(s: TycoonState, ops: Ops, tier: number, idleShare: number) {
+  const income = rivalDryHireIncome(s, ops, tier, idleShare);
+  ops.cash += income;
+  ops.month.income += income;
+  ops.condition = Math.max(20, ops.condition - RENT_OUT_WEAR * 30 * idleShare * 0.5);
+  return income;
 }
 
 /** Daily: idle kit out on dry hire earns a little and wears a little. */

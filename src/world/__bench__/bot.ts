@@ -54,6 +54,7 @@ import { relationOf, rapport } from '../bonds';
 import { checkInvariants } from '../invariants';
 import { officeStretch } from '../office';
 import { exposureOf, fleetExposure, topClient, underFramework } from '../risk';
+import { deptsOf } from '../supply';
 import { owed } from '../receivables';
 import { facilitySpec } from '../facilities';
 import { MANAGERS } from '../management';
@@ -254,7 +255,9 @@ export interface BotReport {
   lowestCash: number;
   forecastWarnings: number;
   bot: { termsAsked: number; termsWon: number; crossHires: number; fixes: number; crewSplits: number; heads: string[]; lessons: string[]; refurbished: number; borrowed: number; factoredMonths: number; frozenMonths: number; replanned: number; bridged: number; soldTrucks: number; frameworks: number };
-  rivals: { alive: number; gone: number; shows: number; failed: number; avgQuality: number; crossHires: number; fixes: number; declined: Record<string, number>; cashNegative: number };
+  rivals: { alive: number; gone: number; shows: number; failed: number; avgQuality: number; crossHires: number; fixes: number; declined: Record<string, number>; cashNegative: number; subcontracted: number; partnered: number; taken: number };
+  /** The historical market at the end (roster.ts): who was drawn, who's alive and what they run, what happened to them. */
+  market: { roster: string[]; alive: { id: string; name: string; depts: string[] }[]; gone: string[]; events: string[] };
   invariantViolations: string[];
   /** The company month by month. */
   series: BotMonth[];
@@ -660,6 +663,15 @@ export function runBot(run: BotRun): BotReport {
       fixes: rivalOps.reduce((n: number, o: S) => n + o.record.fixes, 0),
       declined,
       cashNegative: rivalOps.filter((o: S) => o.cash < 0).length,
+      subcontracted: rivalOps.reduce((n: number, o: S) => n + (o.record.subcontracted ?? 0), 0),
+      partnered: rivalOps.reduce((n: number, o: S) => n + (o.record.partnered ?? 0), 0),
+      taken: s.gigs.filter((g: S) => g.status === 'rival').length,
+    },
+    market: {
+      roster: s.marketRoster ?? [],
+      alive: s.rivals.map((r: S) => ({ id: r.id, name: r.name, depts: deptsOf(r, yearOf(s, s.hour)).filter((d: string) => d !== 'console') })),
+      gone: s.goneRivals,
+      events: s.companyEventsApplied ?? [],
     },
     invariantViolations: violations,
     series,

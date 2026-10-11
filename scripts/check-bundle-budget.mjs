@@ -7,10 +7,11 @@ import { join } from 'node:path';
 
 const ASSETS_DIR = join(process.cwd(), 'dist', 'assets');
 // Raw (pre-gzip) budget in KB. The map game (src/world + src/tycoon) is the
-// whole app now that the old dashboard build is gone: about 640KB today, with
-// its rarely-opened windows (world map, market, R&D, star techs, planner,
-// auctions) as lazy chunks. This leaves room to grow before it needs raising.
-const TOTAL_BUDGET_KB = 900;
+// whole app now that the old dashboard build is gone. Historical actors and other static
+// reference data now live in a separate content chunk so they can grow and cache independently
+// from executable simulation code. Keep a hard total ratchet, but leave enough room for the
+// promoter/supplier registries already designed in docs/research/historical-market-architecture.md.
+const TOTAL_BUDGET_KB = 1024;
 // No single chunk should silently balloon past this without a deliberate
 // decision. The game chunk carries every strategy system plus the real-geography
 // data (coastline masks and town coordinates for six countries, ~15KB), plus the

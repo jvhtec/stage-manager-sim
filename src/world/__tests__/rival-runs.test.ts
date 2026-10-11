@@ -4,25 +4,27 @@ import { RIVAL_RUN_DAYS, RIVAL_RUN_TILES, rivalNearbyDates, rivalsTakeOffers } f
 import { dayOf } from '../core';
 import { worldOf } from '../mapgen';
 import { roadDistance } from '../pathfinding';
+import { canPrime } from '../supply';
 import type { Gig, TycoonState, Vehicle } from '../types';
 
 function setup() {
   const s: TycoonState = createTycoonGame({ companyName: 'R', color: '#f00', seed: 19, country: 'GB', startYear: 1995 });
   const world = worldOf(s);
-  const rival = s.rivals[0];
+  const base = createTycoonGame({ companyName: 'R', color: '#f00', seed: 19, country: 'GB', startYear: 1995 });
+  const template = base.gigs.find(g => g.status === 'offer')!;
+  // A firm that runs the show's main department, so it can take it as prime contractor.
+  const rival = s.rivals.find(r => canPrime(r, template, 1995))!;
   rival.minTier = 1;
   rival.maxTier = 4;
   s.rivals = [rival]; // one rival, so chances are comparable
   s.gigs = [];
   s.vehicles = s.vehicles.filter(v => v.owner === 'player');
-  const base = createTycoonGame({ companyName: 'R', color: '#f00', seed: 19, country: 'GB', startYear: 1995 });
   const today = dayOf(s.hour);
   // Two towns close together, and one far away.
   let near: [string, string] | null = null;
   for (const a of world.cities) for (const b of world.cities) if (!near && a.id !== b.id && roadDistance(world, a.id, b.id) <= RIVAL_RUN_TILES && roadDistance(world, a.id, b.id) > 12) near = [a.id, b.id];
   const far = [...world.cities].sort((a, b) => roadDistance(world, near![0], b.id) - roadDistance(world, near![0], a.id))[0];
   expect(roadDistance(world, near![0], far.id)).toBeGreaterThan(RIVAL_RUN_TILES + 5);
-  const template = base.gigs.find(g => g.status === 'offer')!;
   const mk = (id: string, cityId: string, day: number, status: Gig['status'] = 'offer'): Gig => {
     const venue = world.cityById.get(cityId)!.venues.find(v => v.kind !== 'airport')!;
     return { ...template, id, cityId, venueId: venue.id, day, tier: 1, acceptByDay: today + 30, status, tourId: undefined, festival: undefined, event: undefined, overseas: undefined, asksForYou: false };

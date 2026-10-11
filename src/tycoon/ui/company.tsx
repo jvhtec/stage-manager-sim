@@ -18,7 +18,10 @@ import {
   tierInfo,
 } from '@/world/catalog';
 import { formatDay, formatHour, yearOf } from '@/world/core';
-import { bossOf, STYLES } from '@/world/leaders';
+import { STRATEGIES, strategyEraOf, strategyIdOf } from '@/world/strategies';
+import { actorById, ownerIn } from '@/world/content/actors';
+import { joinNames, leadersOf } from '@/world/content/people';
+import { deptsOf } from '@/world/supply';
 import { MILESTONES } from '@/world/milestones';
 import { forecastCash } from '@/world/cashflow';
 import { activeBans } from '@/world/blacklist';
@@ -41,6 +44,9 @@ import { suggestedHqCities } from '@/world/state';
 import { LEDGER_LABELS, type AnnualReport, type Difficulty, type GoalId, type LedgerCategory, type TycoonState } from '@/world/types';
 import { createRandomSeed } from '@/lib/rng';
 import { COUNTRIES, type CountryCode } from '@/world/content/countries';
+
+/** What a rival's departments read as in the League. */
+const RUNS_LABEL: Partial<Record<string, string>> = { audio: 'sound', lighting: 'lighting', video: 'video', stage: 'staging' };
 
 /** Default the picker to the player's browser locale when we support it. */
 function guessCountry(): CountryCode {
@@ -622,12 +628,25 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
                   </div>
                 )}
                 {'rival' in r && r.rival && (() => {
-                  const boss = bossOf(r.rival, yearOf(state, state.hour));
-                  if (!boss.style) return null;
-                  const st = STYLES[boss.style];
+                  // Who runs it (documented people) and how it plays (game tuning, labelled as such).
+                  const year = yearOf(state, state.hour);
+                  const rv = r.rival;
+                  const actor = actorById(rv.id);
+                  const leaders = joinNames(leadersOf(rv.id, year));
+                  const owner = actor ? ownerIn(actor, year) : undefined;
+                  const sid = strategyIdOf(rv, year);
+                  const era = strategyEraOf(rv.id, year);
+                  const runs = deptsOf(rv, year).filter(d => d !== 'console').map(d => RUNS_LABEL[d] ?? DEPT_LABELS[d].toLowerCase());
                   return (
-                    <div className="tt-dim" style={{ fontSize: 11, paddingLeft: 30, marginTop: 2, whiteSpace: 'normal' }} title={boss.note ? `${boss.name}, ${boss.note}` : st.blurb}>
-                      {boss.name ? `Run by ${boss.name}` : 'Run by its founders'} · <b>{st.label}</b>: {st.blurb}
+                    <div className="tt-dim" style={{ fontSize: 11, paddingLeft: 30, marginTop: 2, whiteSpace: 'normal' }}>
+                      {runs.length ? `Runs ${runs.join(', ')}` : 'No kit of its own'}
+                      {leaders ? ` · ${leaders}` : ''}
+                      {owner ? ` · owned by ${owner}` : ''}
+                      {sid && (
+                        <span title={era ? `Our reading of how it played: ${era.basis}` : 'A start-up: how its owners like to run things'}>
+                          {' · '}plays <b>{STRATEGIES[sid].label.toLowerCase()}</b>: {STRATEGIES[sid].blurb}
+                        </span>
+                      )}
                     </div>
                   );
                 })()}

@@ -8,8 +8,10 @@ import { defaultTerms } from './terms';
 import { offerBlocked } from './blacklist';
 import { rivalTryTake } from './rivalOps';
 import { worldOf } from './mapgen';
-import { RIVAL_COMPANIES } from './content/companies';
-import { styleOf } from './leaders';
+import { actorById, eraIn } from './content/actors';
+import { styleOf } from './strategies';
+import { canPrime } from './supply';
+import { HISTORY } from './historyFlags';
 import { traitsOf } from './venueTraits';
 import { FIESTA_OFFER_BOOST, councilBooked, isFiestaSeason, needsMeister, needsReliefCrew, ruleCountry } from './rules';
 import { priceWarFactor, warWinBonus } from './pricewars';
@@ -288,11 +290,17 @@ function runnableTruck(state: TycoonState, world: WorldMap, rivalId: string, gig
   });
 }
 
+/** Firms closer than this to a show count as its local market (game distance units, 18 km each). */
+export const LOCAL_MARKET = 32;
+/** With this many capable firms nearby or fewer, none of them loses work to crowding. */
+export const CROWD_SHARE = 2.5;
+
 /** What a rival can do, by era and size: team drivers, freight between cities, work abroad. */
 export function rivalReach(state: TycoonState, world: WorldMap, rival: Rival, gig: Gig) {
   const year = yearOf(state, state.hour);
-  const template = RIVAL_COMPANIES.find(t => t.id === rival.id);
-  const international = !!template?.countries.includes('*');
+  // A dated capability of the firm in this era, not a property of its name.
+  const actor = actorById(rival.id);
+  const international = !!actor && eraIn(actor, year).reach === 'international';
   const big = international || rival.reputation >= 55 || rival.maxTier >= 3;
   const hq = world.cityById.get(rival.hqCityId);
   const town = world.cityById.get(gig.cityId);
@@ -314,26 +322,34 @@ export function rivalReach(state: TycoonState, world: WorldMap, rival: Rival, gi
 export function offerToRivals(state: TycoonState, world: WorldMap, rng: Rng, gig: Gig, boost = 1): boolean {
   const rating = state.cityRatings[gig.cityId] ?? 50;
   const actBar = actReputationBar(state, gig.act, false);
-  for (const rival of state.rivals) {
-    if (rival.reputation < actBar - 5) continue; // the act's management wouldn't call them either
-    const rawDist = roadDistance(world, rival.hqCityId, gig.cityId);
-    if (!Number.isFinite(rawDist)) continue;
+  const year = yearOf(state, state.hour);
+  const showYear = yearOf(state, gig.day * 24);
+  // Who could actually be called for it, before anyone rolls: the act's management would ring them,
+  // they can reach the town, and they run the show's main department (supply.ts).
+  const eligible = state.rivals
+    .filter(r => r.reputation >= actBar - 5 && canPrime(r, gig, showYear))
+    .map(r => ({ r, rawDist: roadDistance(world, r.hqCityId, gig.cityId) }))
+    .filter(x => Number.isFinite(x.rawDist));
+  // Competition is local: what splits the work is how many such firms are near this town.
+  const local = eligible.filter(x => x.rawDist < LOCAL_MARKET).length;
+  const crowding = HISTORY.localCrowding ? Math.min(1, CROWD_SHARE / Math.max(1, local)) : Math.min(1, 5 / state.rivals.length);
+  for (const { r: rival, rawDist } of eligible) {
     // The bigger houses run team drivers on the long hauls (from 1990) and fly kit between the cities (from 1995).
     const reach = rivalReach(state, world, rival, gig);
     const dist = rawDist / reach.pace;
-    const proximity = Math.max(dist < 14 ? 1.6 : dist < 32 ? 1 : 0.45, reach.freight ? 0.9 : 0);
+    // Regional firms rarely stray far from home; expansionists go anywhere (strategies.ts).
+    const style = styleOf(rival, year);
+    const proximity = Math.max(dist < 14 ? 1.6 : dist < 32 ? style.far : 0.45 * style.far, reach.freight ? 0.9 : 0);
     // Over the border only the international houses (and neighbours) have the contacts.
     const abroadFactor = reach.abroad ? (reach.international ? 1.3 : rawDist < 30 ? 0.6 : 0.05) : 1;
     const fit = gig.tier >= rival.minTier && gig.tier <= rival.maxTier ? 1 : 0.05;
     const mainDept = DEPTS.reduce((a, b) => (gig.needs[b] > gig.needs[a] ? b : a));
     const specialty = mainDept === rival.specialty ? 1.3 : 1;
     const loyalty = gig.asksForYou ? 0.25 : 1;
-    // More firms in the market split the work between them.
-    const crowding = Math.min(1, 5 / state.rivals.length);
     // Already working the area? The next date there is easy money (a run, like yours).
     const nearby = rivalNearbyDates(state, world, rival.id, gig);
     const onARun = nearby.length ? RIVAL_RUN_BONUS * (nearby.length > 1 ? 1.15 : 1) : 1;
-    const chance = boost * 0.05 * styleOf(rival, yearOf(state, state.hour)).take * difficultyOf(state).rivals * warWinBonus(state, gig.cityId, rival.id) * intelFactor(state, rival.id) * crowding * proximity * fit * specialty * loyalty * onARun * abroadFactor * (1.15 - (rating / 100) * 0.6);
+    const chance = boost * 0.05 * style.take * difficultyOf(state).rivals * warWinBonus(state, gig.cityId, rival.id) * intelFactor(state, rival.id) * crowding * proximity * fit * specialty * loyalty * onARun * abroadFactor * (1.15 - (rating / 100) * 0.6);
     if (!rng.chance(chance)) continue;
     // Same rules as you: kit, crew and a truck free; the rider and the room met (or paid for).
     if (!rivalTryTake(state, world, rival, gig)) continue;

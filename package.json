@@ -18,7 +18,8 @@
     "balance:report": "vitest run --config vitest.balance.config.ts src/world/__bench__/strategies.bench.ts",
     "balance:ablation": "vitest run --config vitest.balance.config.ts src/world/__bench__/ablation.bench.ts",
     "balance:adverse": "vitest run --config vitest.balance.config.ts src/world/__bench__/adverse.bench.ts",
-    "balance:decades": "vitest run --config vitest.balance.config.ts src/world/__bench__/decades.bench.ts"
+    "balance:decades": "vitest run --config vitest.balance.config.ts src/world/__bench__/decades.bench.ts",
+    "balance:history": "vitest run --config vitest.balance.config.ts src/world/__bench__/history.bench.ts"
   },
   "dependencies": {
     "lucide-react": "^0.462.0",

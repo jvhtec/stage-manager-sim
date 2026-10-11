@@ -24,3 +24,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm run budget:bundle
+      - name: Verify historical balance report
+        run: |
+          npm run balance:history
+          git diff --exit-code -- docs/balance-history.md docs/balance-history.json

@@ -5,7 +5,8 @@ import { HOURS_PER_DAY } from '../catalog';
 import { worldOf } from '../mapgen';
 import { monthlyRivalOps, opsOf, playRivalShow, rivalOverhead, rivalQuote, rivalTryTake } from '../rivalOps';
 import { createRng } from '@/lib/rng';
-import { styleOf } from '../leaders';
+import { styleOf } from '../strategies';
+import { canPrime } from '../supply';
 import type { Gig, TycoonState } from '../types';
 
 const game = (year = 2005): TycoonState => createTycoonGame({ companyName: 'R', color: '#f00', seed: 7, country: 'GB', startYear: year });
@@ -18,17 +19,19 @@ describe('rivals run the same business', () => {
       const ops = opsOf(s, r);
       expect(ops.crew).toBeGreaterThan(0);
       expect(ops.trucks).toBeGreaterThan(1);
-      expect(ops.inputs).toBeGreaterThan(0);
       expect(Object.values(ops.kit).some(n => n > 0)).toBe(true);
+      // A sound house has desks and a PA; a lighting or staging house has neither (supply.ts).
+      if (ops.kit.audio) expect(ops.inputs).toBeGreaterThan(0);
+      else expect(ops.pa).toEqual([]);
     });
   });
 
   it('a rival can’t take a show when its kit, crew or trucks are already out on those days', () => {
     const s = game();
     const w = worldOf(s);
-    const r = s.rivals[0];
-    const ops = opsOf(s, r);
     const gig = { ...offerFor(s, 2), techSpec: undefined } as Gig;
+    const r = s.rivals.find(x => canPrime(x, gig, 2005))!;
+    const ops = opsOf(s, r);
     ops.trucks = 1;
     s.gigs.push({ ...gig, id: 'busy', status: 'rival', rivalId: r.id, result: undefined } as Gig);
     expect(rivalQuote(s, w, r, gig)).toMatchObject({ ok: false, reason: 'trucks' });
