@@ -8,6 +8,19 @@ import { LEDGER_LABELS, type LedgerCategory } from '../types';
 import { currencyFor, formatCompact } from '../content/currency';
 import type { BotReport, Strategy } from './bot';
 
+/**
+ * The runs as JSON for the record: one run per line, and the monthly series cut to year-ends, so
+ * the files stay small enough to diff.
+ */
+export function reportsJson(reports: BotReport[]): string {
+  const yearEnds = (r: BotReport) => {
+    const by = new Map<number, BotReport['series'][number]>();
+    r.series.forEach(m => by.set(m.year, m));
+    return [...by.values()];
+  };
+  return `[\n${reports.map(r => JSON.stringify({ ...r, series: yearEnds(r) })).join(',\n')}\n]\n`;
+}
+
 const CAUSES: Record<string, string> = {
   'unpaid-invoices': 'money tied up in unpaid invoices',
   overdrawn: 'an overdraft',

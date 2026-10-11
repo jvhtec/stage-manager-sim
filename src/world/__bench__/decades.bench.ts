@@ -2,6 +2,7 @@ import { afterAll, it } from 'vitest';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { runBot, STRATEGIES, type BotReport } from './bot';
 import { renderDecades, yearly } from './scenarios';
+import { reportsJson } from './report';
 import type { ShockKind } from '../shocks';
 import type { CountryCode } from '../content/countries';
 
@@ -39,6 +40,6 @@ afterAll(() => {
   const md = renderDecades(reports, { years: YEARS, runs: `${RUNS.map(([c, y]) => `${c} ${y}`).join(' and ')}, seeds ${SEEDS.join(', ')}, ${IDS.join(', ')}`, shockYear: SHOCK_YEAR });
   mkdirSync(OUT.split('/').slice(0, -1).join('/') || '.', { recursive: true });
   writeFileSync(`${OUT}.md`, md);
-  writeFileSync(`${OUT}.json`, JSON.stringify(reports.map(({ series, ...r }) => ({ ...r, yearly: yearly(series) })), null, 1));
+  writeFileSync(`${OUT}.json`, reportsJson(reports));
   console.log(`Wrote ${OUT}.md and ${OUT}.json`);
 });

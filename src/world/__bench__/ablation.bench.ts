@@ -2,6 +2,7 @@ import { afterAll, it } from 'vitest';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { runBot, STRATEGIES, type BotReport, type Feature, type Strategy } from './bot';
 import { renderAblation } from './scenarios';
+import { reportsJson } from './report';
 import type { CountryCode } from '../content/countries';
 
 /**
@@ -49,6 +50,6 @@ afterAll(() => {
   const md = renderAblation(reports, VARIANTS, SYSTEMS, { years: YEARS, runs: `${RUNS.map(([c, y]) => `${c} ${y}`).join(' and ')}, seeds ${SEEDS.join(', ')}` });
   mkdirSync(OUT.split('/').slice(0, -1).join('/') || '.', { recursive: true });
   writeFileSync(`${OUT}.md`, md);
-  writeFileSync(`${OUT}.json`, JSON.stringify(reports.map(({ series, ...r }) => r), null, 1));
+  writeFileSync(`${OUT}.json`, reportsJson(reports));
   console.log(`Wrote ${OUT}.md and ${OUT}.json`);
 });
