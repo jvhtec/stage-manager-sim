@@ -230,7 +230,7 @@ export interface BotReport {
   /** How far the work outgrew the office (office.ts): average and worst monthly stretch, and office staff at the end. */
   office: { stretch: number; peak: number; staff: number };
   /** The overdraft over the run (liquidity.ts): days in it, days over the limit, how often the bank demanded its money or withdrew the overdraft. */
-  liquidity: { daysOverdrawn: number; daysInBreach: number; breaches: number; demands: number; withdrawn: number; bridges: number };
+  liquidity: { daysOverdrawn: number; daysInBreach: number; breaches: number; demands: number; withdrawn: number; bridges: number; endOverLimit: boolean };
   /** On the road: kilometres driven, roadside breakdowns, the rate per 100,000 km, average truck reliability (sampled monthly). */
   road: { km: number; breakdowns: number; per100k: number; reliability: number };
   monthsOverdrawn: number;
@@ -583,7 +583,7 @@ export function runBot(run: BotRun): BotReport {
       peak: Math.round(Math.max(0, ...stretches) * 100) / 100,
       staff: s.depots.reduce((n: number, d: S) => n + d.staff.office, 0),
     },
-    liquidity: { ...(s.liquidity?.history ?? { daysOverdrawn: 0, daysInBreach: 0, breaches: 0, demands: 0, withdrawn: 0, bridges: 0 }) },
+    liquidity: { ...(s.liquidity?.history ?? { daysOverdrawn: 0, daysInBreach: 0, breaches: 0, demands: 0, withdrawn: 0, bridges: 0 }), endOverLimit: (s.liquidity?.breachDays ?? 0) > 0 },
     contracts: { outcomes: { ...(s.stats.outcomes ?? {}) }, docked: Math.round(s.stats.docked ?? 0), damages: Math.round(s.stats.damages ?? 0) },
     road: {
       km: Math.round(s.stats.fleetKm ?? 0),

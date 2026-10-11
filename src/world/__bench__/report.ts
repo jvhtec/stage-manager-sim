@@ -151,12 +151,32 @@ export const median = (xs: number[]) => {
   const a = [...xs].sort((x, y) => x - y);
   return a.length ? (a.length % 2 ? a[(a.length - 1) / 2] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2) : 0;
 };
-/** Share of nights that were bad or failed (outcomes.ts). */
-export const badShare = (r: BotReport) => {
+/** Share of nights in one outcome band (outcomes.ts). */
+export const bandShare = (r: BotReport, band: string) => {
   const o = r.contracts.outcomes;
   const n = Object.values(o).reduce((a: number, b) => a + (b ?? 0), 0);
-  return n ? ((o.bad ?? 0) + (o.failed ?? 0)) / n : 0;
+  return n ? (o[band] ?? 0) / n : 0;
 };
+
+/**
+ * Every run that went over its overdraft limit or under altogether: how many crises, how long
+ * they lasted, what the bank did, and whether the company came back from it.
+ */
+function crisisTable(reports: BotReport[], strategies: Strategy[]): string[] {
+  const hit = reports.filter(r => !r.survived || r.liquidity.breaches > 0);
+  const label = (id: string) => strategies.find(s => s.id === id)?.label ?? id;
+  const lines = [`**Crises and recovery.** ${reports.filter(r => !r.survived).length} of ${reports.length} runs went under; ${hit.length} went over the overdraft limit at least once.`, ''];
+  if (!hit.length) return [...lines, ''];
+  lines.push('| Strategy | Seed | Over-limit crises | Days over the limit | Average crisis | Bank demands | Overdraft withdrawn | Bridging loans | Trucks sold | Outcome |');
+  lines.push('|---|---|---|---|---|---|---|---|---|---|');
+  hit.forEach(r => {
+    const l = r.liquidity;
+    const outcome = !r.survived ? `went under after ${r.yearsRun} years` : l.endOverLimit ? 'still over the limit at the end' : l.breaches ? 'recovered: back inside the limit' : 'no crisis';
+    lines.push(`| ${label(r.strategy)} | ${r.seed} | ${l.breaches} | ${l.daysInBreach} | ${l.breaches ? Math.round(l.daysInBreach / l.breaches) : 0} days | ${l.demands} | ${l.withdrawn} | ${l.bridges} | ${r.bot.soldTrucks} | ${outcome} |`);
+  });
+  return [...lines, ''];
+}
+
 export const marginOf = (r: BotReport) => (r.revenue ? (r.revenue - r.costs) / r.revenue : 0);
 
 /**
@@ -192,14 +212,14 @@ export function byCohort<T extends Pick<BotReport, 'country' | 'startYear'>>(rep
 
 function strategyTable(reports: BotReport[], strategies: Strategy[], k: (n: number) => string): string[] {
   const lines = [
-    '| Strategy | Survived | Median value | Range | Margin | Avg quality | Bad or failed nights | Docked & damages | Days over the limit | Office stretch | Breakdowns /100k km | Crew lost | Cancellations | Bans |',
-    '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
+    '| Strategy | Survived | Median value | Range | Margin | Avg quality | Failed shows | Bad nights | Docked | Damages | Days in overdraft | Days over the limit | Office stretch (avg / peak) | Breakdowns /100k km | Crew lost |',
+    '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
   ];
   strategies.forEach(st => {
     const rs = reports.filter(r => r.strategy === st.id);
     if (!rs.length) return;
     lines.push(
-      `| ${st.label} | ${rs.filter(r => r.survived).length}/${rs.length} | ${k(median(rs.map(r => r.value)))} | ${k(Math.min(...rs.map(r => r.value)))} – ${k(Math.max(...rs.map(r => r.value)))} | ${pct(median(rs.map(marginOf)))} | ${pct(median(rs.map(r => r.avgQuality)))} | ${pct(median(rs.map(badShare)))} | ${pct(median(rs.map(r => (r.contracts.docked + r.contracts.damages) / Math.max(1, r.revenue))))} | ${median(rs.map(r => r.liquidity.daysInBreach))} | ${pct(median(rs.map(r => r.office.stretch)))} | ${median(rs.map(r => r.road.per100k)).toFixed(2)} | ${median(rs.map(r => r.crewLost))} | ${median(rs.map(r => r.incidents.causes['client-cancel'] ?? 0))} | ${median(rs.map(r => r.bans))} |`,
+      `| ${st.label} | ${rs.filter(r => r.survived).length}/${rs.length} | ${k(median(rs.map(r => r.value)))} | ${k(Math.min(...rs.map(r => r.value)))} – ${k(Math.max(...rs.map(r => r.value)))} | ${pct(median(rs.map(marginOf)))} | ${pct(median(rs.map(r => r.avgQuality)))} | ${pct(median(rs.map(r => bandShare(r, 'failed'))))} | ${pct(median(rs.map(r => bandShare(r, 'bad'))))} | ${pct(median(rs.map(r => r.contracts.docked / Math.max(1, r.revenue))))} | ${pct(median(rs.map(r => r.contracts.damages / Math.max(1, r.revenue))))} | ${median(rs.map(r => r.liquidity.daysOverdrawn))} | ${median(rs.map(r => r.liquidity.daysInBreach))} | ${pct(median(rs.map(r => r.office.stretch)))} / ${pct(median(rs.map(r => r.office.peak)))} | ${median(rs.map(r => r.road.per100k)).toFixed(2)} | ${median(rs.map(r => r.crewLost))} |`,
     );
   });
   return [...lines, ''];
@@ -218,6 +238,7 @@ export function renderReport(reports: BotReport[], strategies: Strategy[], meta:
     lines.push(`## ${cohortTitle(cohort[0])}`);
     lines.push('');
     lines.push(...strategyTable(cohort, strategies, k));
+    lines.push(...crisisTable(cohort, strategies));
     lines.push(...noiseNote(cohort, strategies, k));
   });
   lines.push('## Why each run went the way it did');
