@@ -112,6 +112,8 @@ import { KM_PER_UNIT, getCityPath, roadDistance } from './pathfinding';
 import { TIER_REP_CEILING, monthlyReputation, noteShow } from './reputation';
 import { contractDock, damagesFor, outcomeOf } from './outcomes';
 import { dailyLiquidity, monthlyLiquidity } from './liquidity';
+import { dailyStandby, grounded, monthlyRiskCover } from './risk';
+import { monthlyIndustry } from './industry';
 import { officeCapacity, officeLoad, officePrepFactor, officeSlipChance, officeSlipHours, officeStretch } from './office';
 import { dailyDisruptions, monthlyWinter, tripCharges, yearlyDriversRules } from './infra';
 import { countTownShow, fadeTownShows } from './territory';
@@ -370,7 +372,7 @@ function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
     case 'parked':
     case 'scheduled':
       // Called in by the maker (shocks.ts): stays in the yard until the fix is done.
-      if ((v.recalledUntil ?? 0) > s.hour) return;
+      if (grounded(s, v)) return;
       decide(s, world, v);
       return;
     case 'broken':
@@ -740,6 +742,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   dailyCourses(s);
   dailyReceivables(s, sideRng(s, dayOf(s.hour) + 7006));
   dailyLiquidity(s);
+  dailyStandby(s);
   dailyTerms(s, sideRng(s, dayOf(s.hour) + 7008));
   dailyRentOut(s);
   dailyPeopleFatigue(s);
@@ -793,6 +796,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
 
   if (date.getUTCDate() === 1 && day > 0) {
     monthlyTick(s, rng);
+    monthlyIndustry(s, sideRng(s, dayOf(s.hour) + 7011));
     monthlyContracts(s, world, rng);
     monthlyRivals(s, rng);
     monthlyAuctions(s, rng);
@@ -832,6 +836,7 @@ function monthlyTick(s: TycoonState, rng: Rng) {
   });
   monthlyWorkshop(s);
   monthlyReputation(s);
+  monthlyRiskCover(s);
   monthlyManagers(s);
   monthlyCrew(s, rng);
   monthlyTraining(s);

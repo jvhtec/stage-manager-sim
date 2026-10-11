@@ -50,7 +50,10 @@ describe('show outcomes and contract penalties', () => {
   it('a failed stadium show costs far more in damages than a failed club night', () => {
     const s = game();
     expect(damagesFor(s, gig({ tier: 4 }))).toBeGreaterThan(damagesFor(s, gig({ tier: 1 })) * 3);
-    expect(damagesFor(s, gig({ tier: 4 }))).toBe(Math.round(10000 * DAMAGES[4]));
+    // Liability is capped at the contract value (the fee) on standard difficulty.
+    expect(DAMAGES[4]).toBeGreaterThan(1);
+    expect(damagesFor(s, gig({ tier: 4 }))).toBe(10000);
+    expect(damagesFor(s, gig({ tier: 3 }))).toBe(Math.round(10000 * DAMAGES[3]));
   });
 });
 

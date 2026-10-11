@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { borrow, bridgingLoan, buyRival, goPublic, headhunt, investigate, repay, setDividend, takePrivate } from '@/world/actions';
+import { borrow, bridgingLoan, buyRival, frameworkAgreement, goPublic, headhunt, investigate, repay, setDividend, takePrivate } from '@/world/actions';
 import { brandOf } from '@/world/sponsors';
 import { owed } from '@/world/receivables';
 import { expertise, knownForLabel } from '@/world/expertise';
@@ -32,6 +32,10 @@ import { borrowStep, creditLimit } from '@/world/finance';
 import { bridgeOffer, overdraftLimit } from '@/world/liquidity';
 import { officeCapacity, officeLoad, officeSlipChance, officeStretch } from '@/world/office';
 import { SHARE_MIN_SHOWS, shareCeiling, townShare } from '@/world/territory';
+import { CONCENTRATED, FRAMEWORK_DISCOUNT, exposureOf, frameworkBlocker, underFramework } from '@/world/risk';
+import { RECALL_MIN_TRUCKS, TENDER_THRESHOLD, describeRecallOdds } from '@/world/industry';
+import { clientFees } from '@/world/reputation';
+import { getModel } from '@/world/catalog';
 import { suggestedHqCities } from '@/world/state';
 import { LEDGER_LABELS, type AnnualReport, type Difficulty, type GoalId, type LedgerCategory, type TycoonState } from '@/world/types';
 import { createRandomSeed } from '@/lib/rng';
@@ -138,6 +142,7 @@ export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
       </div>
       <Liquidity state={state} act={act} />
       <Strain state={state} />
+      <Risk state={state} act={act} />
       <h4>Shareholders</h4>
       {state.listing ? (
         <>
@@ -1246,6 +1251,67 @@ function Strain({ state }: { state: TycoonState }) {
           </span>
         </Stat>
       )}
+    </>
+  );
+}
+
+/** Concentration risk: what a recall, a lost account or a promoter going bust would hit, and what's covering it (risk.ts). */
+function Risk({ state, act }: { state: TycoonState; act: (fn: Parameters<WinCtx['dispatch']>[0]) => void }) {
+  const world = worldOf(state);
+  const e = useMemo(() => exposureOf(state, world), [state, world]);
+  const pct = (n: number) => `${Math.round(n * 100)}%`;
+  const fleetHot = e.fleet.share >= CONCENTRATED.fleetShare && e.fleet.count >= CONCENTRATED.fleetCount;
+  const recallOdds = describeRecallOdds(e.fleet.count);
+  const covered = state.policies.fleetCover === 'priority' || state.policies.standby === 'on';
+  const big = e.client.act ? (clientFees(state)[e.client.act] ?? 0) >= TENDER_THRESHOLD : false;
+  const clientHot = big && e.client.share >= CONCENTRATED.clientShare;
+  const fw = e.client.act ? underFramework(state, e.client.act) : false;
+  const fwBlock = e.client.act ? frameworkBlocker(state, e.client.act) : 'No clients yet.';
+  const areaHot = e.area.share >= CONCENTRATED.areaShare;
+  const insured = state.policies.invoicing === 'insure';
+  return (
+    <>
+      <h4>Concentration risk</h4>
+      <Stat label="Fleet">
+        <span className={fleetHot && !covered ? 'tt-bad' : ''}>
+          {e.fleet.modelId ? `${e.fleet.count} of ${e.fleet.size} trucks are ${getModel(e.fleet.modelId).name}s (${pct(e.fleet.share)})` : 'no trucks'}
+        </span>{' '}
+        <span className="tt-dim">
+          {e.fleet.count >= RECALL_MIN_TRUCKS ? `· ${pct(recallOdds)} a year that the model is recalled` : '· too few of one model for a maker to notice'}
+          {state.policies.fleetCover === 'priority' ? ' · service contract' : ''}
+          {state.policies.standby === 'on' ? ' · standby hire' : ''}
+        </span>
+      </Stat>
+      <Stat label="Biggest client">
+        <span className={clientHot && !fw ? 'tt-bad' : ''}>{e.client.act ? `${e.client.act}, ${pct(e.client.share)} of your work` : '—'}</span>{' '}
+        <span className="tt-dim">{fw ? '· under a framework agreement' : big ? '· big enough to put its work out to tender' : ''}</span>
+        {e.client.act && !fw && !fwBlock && (
+          <button className="tt-btn sm" style={{ marginLeft: 6 }} onClick={() => act(s => frameworkAgreement(s, e.client.act!))} title={`Two years of their work at ${Math.round(FRAMEWORK_DISCOUNT * 100)}% off; far less likely to walk.`}>
+            Offer a framework agreement
+          </button>
+        )}
+      </Stat>
+      <Stat label="Busiest area">
+        <span className={areaHot ? 'tt-bad' : ''}>{e.area.cityId ? `around ${world.cityById.get(e.area.cityId)?.name}: ${pct(e.area.share)} of your shows` : '—'}</span>{' '}
+        <span className="tt-dim">· a regional promoter going under takes its invoices and arena dates with it</span>
+      </Stat>
+      <Stat label="Owed to you">
+        <span className={e.debtor.uninsured > 0 && e.debtor.share >= CONCENTRATED.debtorShare && !insured ? 'tt-bad' : ''}>
+          {e.debtor.owed ? `${money(e.debtor.owed)}, ${money(e.debtor.uninsured)} uninsured` : 'nothing'}
+        </span>{' '}
+        <span className="tt-dim">{e.debtor.act && e.debtor.owed ? `· ${pct(e.debtor.share)} from ${e.debtor.act}` : ''}</span>
+      </Stat>
+      {(fleetHot && !covered) || (clientHot && !fw) || areaHot ? (
+        <div className="tt-warn" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+          {[
+            fleetHot && !covered ? 'Mix the fleet, or take a fleet service contract or standby hire (Policies).' : '',
+            clientHot && !fw ? 'Tie your biggest client in with a framework agreement, or win other work.' : '',
+            areaHot ? 'Open a base elsewhere, and insure invoices (Policies → Invoices).' : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        </div>
+      ) : null}
     </>
   );
 }

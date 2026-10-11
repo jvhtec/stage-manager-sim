@@ -67,5 +67,6 @@ export function contractDock(s: Diff, gig: Pick<Gig, 'act' | 'fee'>, quality: nu
   return { quality: Math.round(quality$ * f), late: total - Math.round(quality$ * f), total };
 }
 
-/** Damages for a show that fell apart (on top of losing the fee and handing back the deposit). */
-export const damagesFor = (s: Diff, gig: Pick<Gig, 'act' | 'fee' | 'tier'>) => Math.round(gig.fee * DAMAGES[Math.max(0, Math.min(4, gig.tier))] * enforce(s, gig));
+/** Damages for a show that fell apart (on top of losing the fee and handing back the deposit), capped — as contracts cap liability — at the fee itself (more on cutthroat). */
+export const damagesFor = (s: Diff, gig: Pick<Gig, 'act' | 'fee' | 'tier'>) =>
+  Math.round(Math.min(gig.fee * DAMAGES[Math.max(0, Math.min(4, gig.tier))] * enforce(s, gig), gig.fee * Math.max(1, difficultyOf(s).penalties)));

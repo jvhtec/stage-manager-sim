@@ -19,6 +19,7 @@ import { relationFeeBonus, relationOfferWeight } from './promoters';
 import { townGrowth } from './towns';
 import type { Rng } from '@/lib/rng';
 import { shareThrottle } from './territory';
+import { frameworkFeeFactor } from './risk';
 import { tierInfo } from './catalog';
 import { TEAM_PACE, dateOfDay, dayOf, newId, pushNews, yearOf } from './core';
 import { VENUE_YEARS, closuresIn, openingsIn, reopeningsIn, venueOpenIn } from './content/venueYears';
@@ -128,7 +129,7 @@ export function buildGig(state: TycoonState, rng: Rng, spec: GigSpec): Gig {
   const star = spec.real ? 1.15 : 1;
   const loyalty = asksForYou ? 1.1 : 1;
   const fee =
-    Math.round((info.baseFee * marketOnDay(state, spec.day).fees * (0.85 + rng.next() * 0.4) * (0.9 + rating / 500) * star * loyalty * (spec.feeMultiplier ?? 1) * FEE_LEVEL * (COUNTRY_FEES[state.country ?? ''] ?? 1)) / 50) * 50;
+    Math.round((info.baseFee * marketOnDay(state, spec.day).fees * (0.85 + rng.next() * 0.4) * (0.9 + rating / 500) * star * loyalty * (spec.feeMultiplier ?? 1) * frameworkFeeFactor(state, spec.act) * FEE_LEVEL * (COUNTRY_FEES[state.country ?? ''] ?? 1)) / 50) * 50;
 
   // National rules (rules.ts): who books, who must be aboard, how many hands.
   const world = worldOf(state);

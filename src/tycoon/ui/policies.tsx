@@ -1,5 +1,6 @@
 import { MANAGERS, MANAGER_IDS, SPEND_LIMITS } from '@/world/management';
 import { INVOICING, INVOICING_LEVELS } from '@/world/receivables';
+import { COVERED_RECALL_DAYS, STANDBY_DAY_RATE, fleetCoverMonthly, standbyMonthly } from '@/world/risk';
 import { setManager, setPartner, setPolicy, setSpendLimit } from '@/world/actions';
 import { PARTNER_DISCOUNT, PARTNER_REPUTATION, PARTNER_SHARE, brandShare, brandsFor, sponsorship } from '@/world/partners';
 import { DEPT_LABELS } from '@/world/catalog';
@@ -62,7 +63,7 @@ export function Choice<T extends string>({
 
 export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
-  const set = <K extends 'workshop' | 'pay' | 'insurance' | 'freelance' | 'subhire' | 'rentOut' | 'training' | 'rest' | 'marketing' | 'rehearsal' | 'invoicing'>(key: K, value: (typeof state.policies)[K]) => ctx.dispatch(s => setPolicy(s, key, value));
+  const set = <K extends 'workshop' | 'pay' | 'insurance' | 'freelance' | 'subhire' | 'rentOut' | 'training' | 'rest' | 'marketing' | 'rehearsal' | 'invoicing' | 'fleetCover' | 'standby'>(key: K, value: (typeof state.policies)[K]) => ctx.dispatch(s => setPolicy(s, key, value));
   const owned = ownedStock(state);
   const act = (fn: Parameters<WinCtx['dispatch']>[0]) => {
     const r = ctx.dispatch(fn);
@@ -168,6 +169,28 @@ export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
       <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
         Clubs and pubs pay on the night; arenas take about a month and stadiums and festivals longer. A promoter sometimes goes under owing you —
         more often in a downturn.
+      </div>
+
+      <h4>Fleet service contract</h4>
+      <Choice
+        value={state.policies.fleetCover}
+        options={[
+          { id: 'none', label: 'None', detail: 'A recall keeps the trucks at the dealer for as long as it takes (about 12 days).' },
+          { id: 'priority', label: 'Priority service', detail: `${money(fleetCoverMonthly(state))}/month across the fleet: recalls turned round in ${COVERED_RECALL_DAYS} days.` },
+        ]}
+        onPick={id => set('fleetCover', id)}
+      />
+      <h4>Standby hire</h4>
+      <Choice
+        value={state.policies.standby}
+        options={[
+          { id: 'off', label: 'Off', detail: 'A grounded truck stays grounded; re-plan its shows yourself.' },
+          { id: 'on', label: 'Standby agreement', detail: `${money(standbyMonthly(state))}/month retainer, ${money(STANDBY_DAY_RATE)} a day for each stand-in: recalled trucks' shows still go out.` },
+        ]}
+        onPick={id => set('standby', id)}
+      />
+      <div className="tt-dim" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+        A maker recalls a model now and then — likelier the more of it you run. A mixed fleet, a service contract or standby hire keeps a recall from grounding the business.
       </div>
 
       <h4>Rehearsals</h4>

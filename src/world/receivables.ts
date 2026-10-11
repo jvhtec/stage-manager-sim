@@ -71,7 +71,7 @@ export function collectOrInvoice(s: TycoonState, gig: Gig, amount: number) {
     book(s, 'insurance', -Math.round(amount * INSURE_PREMIUM));
     insured = true;
   }
-  s.receivables.push({ id: newId(s, 'inv'), gigId: gig.id, act: gig.act, amount, dueDay: dayOf(s.hour) + days, tier: gig.tier, insured });
+  s.receivables.push({ id: newId(s, 'inv'), gigId: gig.id, act: gig.act, amount, dueDay: dayOf(s.hour) + days, tier: gig.tier, insured, cityId: gig.cityId });
 }
 
 /** Daily: invoices fall due — most pay, the odd one doesn't. */

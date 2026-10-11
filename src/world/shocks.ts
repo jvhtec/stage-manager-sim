@@ -11,7 +11,9 @@ import { book, dayOf, formatDay, formatMoney, pushNews } from './core';
 import { logIncident } from './consequences';
 import { ACT_BAN_DAYS } from './blacklist';
 import { cancelByClient } from './terms';
-import { clientFees } from './reputation';
+import { COVERED_RECALL_DAYS, grounded, topClient } from './risk';
+
+export { topClient };
 import type { Shock, TycoonState } from './types';
 import { shockFactors } from './market';
 
@@ -23,19 +25,6 @@ export type ShockKind = Shock['kind'];
 export const DOWNTURN = { months: 18, demand: 0.7, fees: 0.85 };
 export const LATE_WAVE = { months: 12, late: 3 };
 export const RECALL_DAYS = 12;
-
-/** The client that brought in the most money this year and last, counting what's booked ahead. */
-export function topClient(s: TycoonState): { act: string; share: number } | undefined {
-  // What they've paid you this year and last, and what they've booked ahead.
-  const today = dayOf(s.hour);
-  const by = clientFees(s);
-  s.gigs.forEach(g => {
-    if (g.status === 'booked' && g.day >= today) by[g.act] = (by[g.act] ?? 0) + g.fee;
-  });
-  const total = Object.values(by).reduce((a, b) => a + b, 0);
-  const top = Object.entries(by).sort((a, b) => b[1] - a[1])[0];
-  return top ? { act: top[0], share: total ? top[1] / total : 0 } : undefined;
-}
 
 /** The biggest client takes its work to a rival: everything booked is cancelled (on its contract terms) and it won't call for two years. */
 export function loseClient(s: TycoonState, act: string): number {
@@ -60,12 +49,14 @@ export function loseClient(s: TycoonState, act: string): number {
  * it's on and then sits at the dealer until the fix is done. Shows booked onto them need another
  * truck. The parts are free; the downtime and a courtesy-vehicle charge are yours.
  */
-export function recallFleet(s: TycoonState, days = RECALL_DAYS): { modelId: string; vehicles: number } | undefined {
+export function recallFleet(s: TycoonState, days = RECALL_DAYS, only?: string): { modelId: string; vehicles: number } | undefined {
   const mine = s.vehicles.filter(v => v.owner === 'player' && getModel(v.modelId).kind !== 'bus');
   const counts: Record<string, number> = {};
   mine.forEach(v => (counts[v.modelId] = (counts[v.modelId] ?? 0) + 1));
-  const modelId = Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
-  if (!modelId) return undefined;
+  const modelId = only ?? Object.entries(counts).sort((a, b) => b[1] - a[1])[0]?.[0];
+  if (!modelId || !counts[modelId]) return undefined;
+  // A fleet service contract turns a recall round in days (risk.ts).
+  if (s.policies.fleetCover === 'priority') days = Math.min(days, COVERED_RECALL_DAYS);
   const hit = mine.filter(v => v.modelId === modelId);
   const until = s.hour + days * 24;
   hit.forEach(v => (v.recalledUntil = until));
@@ -77,12 +68,13 @@ export function recallFleet(s: TycoonState, days = RECALL_DAYS): { modelId: stri
     causes: [{ id: 'recall', label: 'Manufacturer recall', detail: `${hit.length} of your ${model.name}s are off the road for ${days} days.`, weight: 1 }],
     outcome: `Back on ${formatDay(s, dayOf(until))}.`,
   });
-  pushNews(s, `${model.name} recall: ${hit.length} of your trucks must go back to the dealer after their current trip, for ${days} days. Re-plan the shows booked on them.`, 'bad');
+  const standby = s.policies.standby === 'on';
+  pushNews(s, `${model.name} recall: ${hit.length} of your trucks must go back to the dealer after their current trip, for ${days} days. ${standby ? 'Your standby hire covers them with stand-in trucks.' : 'Re-plan the shows booked on them.'}`, 'bad');
   return { modelId, vehicles: hit.length };
 }
 
-/** A truck the maker has called in can't set off on a new job. */
-export const recalled = (s: Pick<TycoonState, 'hour'>, v: { recalledUntil?: number }) => (v.recalledUntil ?? 0) > s.hour;
+/** A truck the maker has called in can't set off on a new job — unless standby hire sends a stand-in (risk.ts). */
+export const recalled = (s: Pick<TycoonState, 'hour' | 'policies'>, v: { recalledUntil?: number }) => grounded(s, v);
 
 export function startShock(s: TycoonState, kind: 'downturn' | 'late-payers'): Shock {
   const today = dayOf(s.hour);

@@ -15,6 +15,7 @@ import { expectedQuality, productsAvailableIn } from './content/gear';
 import { dateOfDay, dayOf, yearOf } from './core';
 import { shockFactors } from './market';
 import { OVERHEAD } from './facilities';
+import { rivalTrucksToday } from './industry';
 import { DEFAULT_RISK, LATE_RISK, LATE_SLIP_MIN, LATE_SLIP_SPREAD, paymentDays } from './receivables';
 import { showPayout } from './gate';
 import { contractDock, damagesFor, outcomeOf } from './outcomes';
@@ -96,7 +97,7 @@ export function rivalQuote(s: TycoonState, world: WorldMap, r: Rival, gig: Gig):
     if (gig.needs[d] && held + gig.needs[d] > ops.kit[d]) return { ok: false, reason: 'kit', cost: 0, crossHires: 0, fixes: 0 };
   }
   if (busy.reduce((n, g) => n + g.crewNeeded, 0) + gig.crewNeeded > ops.crew) return { ok: false, reason: 'crew', cost: 0, crossHires: 0, fixes: 0 };
-  if (busy.length + 1 > ops.trucks) return { ok: false, reason: 'trucks', cost: 0, crossHires: 0, fixes: 0 };
+  if (busy.length + 1 > rivalTrucksToday(s, ops)) return { ok: false, reason: 'trucks', cost: 0, crossHires: 0, fixes: 0 };
   const year = dateOfDay(s, gig.day).getUTCFullYear();
   let cost = 0;
   let crossHires = 0;
@@ -177,7 +178,7 @@ export function playRivalShow(s: TycoonState, r: Rival, gig: Gig, rng: Rng): num
     const tier = Math.max(0, Math.min(4, gig.tier));
     const wave = shockFactors(s, gig.day).late;
     const slip = rng.chance(Math.min(0.9, LATE_RISK[tier] * wave)) ? LATE_SLIP_MIN + rng.nextInt(Math.round(LATE_SLIP_SPREAD * Math.min(2, wave)) + 1) : 0;
-    if (!rng.chance(DEFAULT_RISK[tier])) (ops.owed ??= []).push({ day: gig.day + wait + slip, amount: payout });
+    if (!rng.chance(DEFAULT_RISK[tier])) (ops.owed ??= []).push({ day: gig.day + wait + slip, amount: payout, cityId: gig.cityId });
     ops.cash -= cost;
   } else ops.cash += payout - cost;
   ops.month.income += Math.max(0, payout);
