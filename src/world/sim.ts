@@ -90,8 +90,7 @@ import { canAfford, deferService, lastingConsequences, nightCauses, OVERDUE_DECA
 import { monthlyTraining, PAY, freelancersFor, monthlyCrew, moraleBonus } from './crew';
 import { REST_AT, crewDirectives, aboard, atDepot, dailyPeopleFatigue, dailyPoachBids, dayRate, evaluateCrew, learnFromShow, moveToDepot, moveToVehicle, pickCrew, refreshCandidates, sideRng, syncCrew } from './people';
 import { averageCondition, dailyWorkshop, monthlyWorkshop, ownedStock, rollFailure, wearFromShow, type Failure } from './wear';
-import { entryYear, hqFor, rivalsFor } from './content/companies';
-import { leaderIn, STYLES } from './leaders';
+import { updateRivals } from './roster';
 import { getTech, techBonus, techsActiveIn } from './content/techs';
 import { dailyOffers, pruneGigs, rivalsTakeOffers, yearlyVenues } from './offers';
 import { dailyTours } from './tours';
@@ -883,61 +882,7 @@ function announceGear(s: TycoonState, year: number) {
 }
 
 /** New companies set up shop and old ones rebrand as the years go by. */
-export function updateRivals(s: TycoonState, world: WorldMap, year: number) {
-  rivalsFor(s.country).forEach(t => {
-    if (s.goneRivals.includes(t.id)) return;
-    const rival = s.rivals.find(r => r.id === t.id);
-    const gone = t.exits && year >= t.exits.year;
-    if (rival && gone) {
-      s.rivals = s.rivals.filter(r => r.id !== t.id);
-      s.vehicles = s.vehicles.filter(v => v.owner !== t.id);
-      if (s.hour > 24) pushNews(s, t.exits!.news, 'big', { cityId: rival.hqCityId });
-      return;
-    }
-    if (!rival) {
-      if (entryYear(t, s.country) > year || gone) return;
-      const hq = hqFor(t, s.country);
-      // Their real home town if it's on the map with a free lot; otherwise
-      // spread out to the emptiest big town.
-      const candidates = world.cities
-        .map(c => ({ c, lot: freeLot(s, world, c.id), crowd: s.rivals.filter(r => r.hqCityId === c.id).length }))
-        .filter(x => x.lot >= 0 && x.c.id !== s.company.hqCityId)
-        .sort((a, b) => Number(b.c.name === hq) - Number(a.c.name === hq) || a.crowd - b.crowd || b.c.population - a.c.population);
-      const pick = candidates[0];
-      if (!pick) return;
-      s.rivals.push({
-        id: t.id,
-        // Already renamed by the time they show up? Use the current name.
-        name: (t.renames ?? []).filter(r => r.year <= year).pop()?.name ?? t.name,
-        color: t.color,
-        specialty: t.specialty,
-        minTier: t.minTier,
-        maxTier: t.maxTier,
-        hqCityId: pick.c.id,
-        lot: pick.lot,
-        reputation: t.startingReputation,
-        showsPlayed: 0,
-      });
-      const name = s.rivals[s.rivals.length - 1].name;
-      if (s.hour > 24) pushNews(s, t.entryNews?.[s.country] ?? `${name} opens a base in ${pick.c.name} and starts bidding for work.`, 'big', { cityId: pick.c.id });
-      s.rivals[s.rivals.length - 1].boss = leaderIn(t, year)?.name;
-      return;
-    }
-    // A new boss.
-    const boss = leaderIn(t, year);
-    if (boss && rival.boss !== boss.name) {
-      if (s.hour > 24 && rival.boss !== undefined) {
-        pushNews(s, `${boss.name} ${boss.name.includes(' and ') ? 'take' : 'takes'} charge at ${rival.name}${boss.note ? ` — ${boss.note}` : ''}. Expect a ${STYLES[boss.style].label.toLowerCase()} hand.`, 'info', { cityId: rival.hqCityId });
-      }
-      rival.boss = boss.name;
-    }
-    const latest = (t.renames ?? []).filter(r => r.year <= year).pop();
-    if (latest && rival.name !== latest.name) {
-      rival.name = latest.name;
-      if (s.hour > 24) pushNews(s, latest.news, 'big', { cityId: rival.hqCityId });
-    }
-  });
-}
+export { updateRivals };
 
 /** Star techs retire at the end of their career; new names come onto the market. */
 function updateTechs(s: TycoonState, year: number) {
