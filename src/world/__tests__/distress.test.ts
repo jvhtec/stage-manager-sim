@@ -105,13 +105,14 @@ describe('liquidity', () => {
     expect(inBreach(s)).toBe(false);
   });
 
-  it('months living in the overdraft get it withdrawn', () => {
+  it('months living in the overdraft get it cut in half', () => {
     const s = game();
+    const full = overdraftLimit(s);
     for (let m = 0; m < DIFFICULTIES.normal.graceMonths; m++) {
       s.company.cash = -1000;
       monthlyLiquidity(s);
     }
-    expect(overdraftLimit(s)).toBe(0);
+    expect(Math.abs(overdraftLimit(s) - full / 2)).toBeLessThanOrEqual(1000);
     expect(s.liquidity?.history.withdrawn).toBe(1);
   });
 

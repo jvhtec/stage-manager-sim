@@ -114,7 +114,7 @@ export function explain(r: BotReport): string[] {
   out.push(`Nights: ${pct((o.triumph ?? 0) / nights)} triumphs, ${pct((o.solid ?? 0) / nights)} solid, ${pct((o.shaky ?? 0) / nights)} shaky, ${pct((o.bad ?? 0) / nights)} bad, ${pct((o.failed ?? 0) / nights)} failed; clients docked ${k(r.contracts.docked)} and claimed ${k(r.contracts.damages)} in damages (${pct((r.contracts.docked + r.contracts.damages) / Math.max(1, r.revenue))} of revenue).`);
   if (r.office.peak > 0) out.push(`Office: ${r.office.staff} office staff at the end; the work outgrew the office by ${pct(r.office.stretch)} on average and ${pct(r.office.peak)} at worst.`);
   const lq = r.liquidity;
-  if (lq.daysOverdrawn) out.push(`Overdraft: ${lq.daysOverdrawn} days in it, ${lq.daysInBreach} over the limit (${lq.breaches} time${lq.breaches === 1 ? '' : 's'})${lq.demands ? `, ${lq.demands} demand${lq.demands === 1 ? '' : 's'} from the bank` : ''}${lq.withdrawn ? `, withdrawn ${lq.withdrawn}×` : ''}${lq.bridges ? `, ${lq.bridges} bridging loan${lq.bridges === 1 ? '' : 's'}` : ''}${r.bot.soldTrucks ? `, sold ${r.bot.soldTrucks} truck${r.bot.soldTrucks === 1 ? '' : 's'} to raise cash` : ''}.`);
+  if (lq.daysOverdrawn) out.push(`Overdraft: ${lq.daysOverdrawn} days in it, ${lq.daysInBreach} over the limit (${lq.breaches} time${lq.breaches === 1 ? '' : 's'})${lq.demands ? `, ${lq.demands} demand${lq.demands === 1 ? '' : 's'} from the bank` : ''}${lq.withdrawn ? `, cut ${lq.withdrawn}×` : ''}${lq.bridges ? `, ${lq.bridges} bridging loan${lq.bridges === 1 ? '' : 's'}` : ''}${r.bot.soldTrucks ? `, sold ${r.bot.soldTrucks} truck${r.bot.soldTrucks === 1 ? '' : 's'} to raise cash` : ''}.`);
   // Why nights went wrong.
   const night = Object.entries(r.incidents.main).filter(([c]) => NIGHT.includes(c)).sort((a, b) => b[1] - a[1]);
   if (night.length) out.push(`Bad nights were mostly down to ${night.slice(0, 3).map(([c, n]) => `${label(c)} (${n})`).join(', ')}.`);
@@ -167,7 +167,7 @@ function crisisTable(reports: BotReport[], strategies: Strategy[]): string[] {
   const label = (id: string) => strategies.find(s => s.id === id)?.label ?? id;
   const lines = [`**Crises and recovery.** ${reports.filter(r => !r.survived).length} of ${reports.length} runs went under; ${hit.length} went over the overdraft limit at least once.`, ''];
   if (!hit.length) return [...lines, ''];
-  lines.push('| Strategy | Seed | Over-limit crises | Days over the limit | Average crisis | Bank demands | Overdraft withdrawn | Bridging loans | Trucks sold | Outcome |');
+  lines.push('| Strategy | Seed | Over-limit crises | Days over the limit | Average crisis | Bank demands | Overdraft cut | Bridging loans | Trucks sold | Outcome |');
   lines.push('|---|---|---|---|---|---|---|---|---|---|');
   hit.forEach(r => {
     const l = r.liquidity;

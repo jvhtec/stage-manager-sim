@@ -430,6 +430,13 @@ export function runBot(run: BotRun): BotReport {
       }
     }
 
+    // Anyone minding the books takes a loan rather than sit in the overdraft (the corner-cutter doesn't).
+    if (on('invoice') && !on('cash') && day % 7 === 5 && s.company.cash < 0 && !s.liquidity?.breachDays) {
+      const before = s.company.loan;
+      s = ok(s, borrow(s));
+      if (s.company.loan > before) bot.borrowed += s.company.loan - before;
+    }
+
     // Weekly: the cash forecast.
     if (on('cash') && day % 7 === 3) {
       const f = forecastCash(s, world);

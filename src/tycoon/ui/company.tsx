@@ -596,7 +596,7 @@ export function HelpWindow() {
       <p className="tt-dim" style={{ marginBottom: 0 }}>
         Drag to pan, scroll or pinch to zoom. Space pauses; 1–4 set the speed. Install it as an app: on iPhone/iPad use Share →
         Add to Home Screen; on Android use the browser's Install prompt. Vehicles break down more as they age — keep them
-        serviced. Wages and running costs tick every day. Live in your overdraft too long and the bank withdraws it; go over the limit and wages go late and suppliers want cash up front — stay over it past the bank's demand and the administrators come in. Grow faster than your office and the shows start to slip.
+        serviced. Wages and running costs tick every day. Live in your overdraft too long and the bank cuts it; go over the limit and wages go late and suppliers want cash up front — stay over it past the bank's demand and the administrators come in. Grow faster than your office and the shows start to slip.
       </p>
     </div>
   );
@@ -1186,7 +1186,7 @@ function Liquidity({ state, act }: { state: TycoonState; act: (fn: Parameters<Wi
       <Stat label="Overdraft">
         {limit ? `${money(limit)} arranged` : <span className="tt-bad">none</span>}
         {cash < 0 && <span className={over ? 'tt-bad' : ''}> · using {money(-cash)}</span>}
-        {(l?.withdrawnUntil ?? -1) > today && <span className="tt-dim"> · withdrawn until {formatDay(state, l!.withdrawnUntil!)}</span>}
+        {(l?.withdrawnUntil ?? -1) > today && <span className="tt-dim"> · cut in half until {formatDay(state, l!.withdrawnUntil!)}</span>}
       </Stat>
       {over ? (
         <div className="tt-bad" style={{ marginTop: 6, whiteSpace: 'normal' }}>
@@ -1205,7 +1205,7 @@ function Liquidity({ state, act }: { state: TycoonState; act: (fn: Parameters<Wi
         </div>
       ) : state.negativeMonths > 0 ? (
         <div className="tt-warn" style={{ marginTop: 6, whiteSpace: 'normal' }}>
-          {state.negativeMonths} month{state.negativeMonths > 1 ? 's' : ''} closed in the overdraft — {Math.max(0, grace - state.negativeMonths)} more and the bank withdraws it.
+          {state.negativeMonths} month{state.negativeMonths > 1 ? 's' : ''} closed in the overdraft — {Math.max(0, grace - state.negativeMonths)} more and the bank cuts it in half.
         </div>
       ) : null}
     </>

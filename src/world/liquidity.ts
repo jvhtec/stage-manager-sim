@@ -1,6 +1,6 @@
 /**
  * Running out of money is a process, not a switch. Within your arranged overdraft you pay a stiff
- * rate and life goes on. Close too many months in it and the bank withdraws it. Go past the limit
+ * rate and life goes on. Close too many months in it and the bank cuts it in half. Go past the limit
  * and the business starts to seize up: wages go out late and the crew's patience goes with them;
  * rental houses, rivals' hire desks and freelancers want cash you haven't got, so shows go out
  * short. Stay over the limit long enough and the bank demands its money back — and if you can't
@@ -20,8 +20,9 @@ export type { Liquidity };
 export const OVERDRAFT_SHARE = 0.35;
 /** What an overdraft costs over the loan rate, a year. */
 export const OVERDRAFT_MARGIN = 0.08;
-/** Months the bank withdraws an overdraft for after you've lived in it. */
+/** Days the bank cuts the overdraft for after you've lived in it, and by how much. */
 export const WITHDRAWN_DAYS = 180;
+export const CUT_SHARE = 0.5;
 /** Days to get back inside the limit once the bank makes its demand. */
 export const DEMAND_DAYS = 14;
 /** Morale lost each day wages go out late. */
@@ -38,9 +39,9 @@ export const liquidityOf = (s: TycoonState): Liquidity => (s.liquidity ??= fresh
 
 /** The arranged overdraft today. */
 export function overdraftLimit(s: TycoonState): number {
-  if ((s.liquidity?.withdrawnUntil ?? -1) > dayOf(s.hour)) return 0;
+  const cut = (s.liquidity?.withdrawnUntil ?? -1) > dayOf(s.hour) ? CUT_SHARE : 1;
   const headroom = Math.max(0, creditLimit(s) - s.company.loan);
-  return Math.round((headroom * OVERDRAFT_SHARE * difficultyOf(s).overdraft) / 1000) * 1000;
+  return Math.round((headroom * OVERDRAFT_SHARE * difficultyOf(s).overdraft * cut) / 1000) * 1000;
 }
 
 export const overLimit = (s: TycoonState) => s.company.cash < -overdraftLimit(s);
@@ -100,7 +101,7 @@ export function dailyLiquidity(s: TycoonState) {
   }
 }
 
-/** Monthly: close too many months in the overdraft and the bank takes it away. */
+/** Monthly: close too many months in the overdraft and the bank cuts it. */
 export function monthlyLiquidity(s: TycoonState) {
   if (s.company.cash >= 0) {
     s.negativeMonths = 0;
@@ -117,9 +118,9 @@ export function monthlyLiquidity(s: TycoonState) {
     l.withdrawnUntil = dayOf(s.hour) + WITHDRAWN_DAYS;
     l.history.withdrawn++;
     s.negativeMonths = 0;
-    pushNews(s, `${grace} months living in the overdraft: the bank has withdrawn it for six months. Every penny below zero is now over the limit.`, 'big');
+    pushNews(s, `${grace} months living in the overdraft: the bank has cut it in half for six months (${formatMoney(s, overdraftLimit(s))} now). Get the account back into the black.`, 'big');
   } else if (s.negativeMonths < grace) {
-    pushNews(s, `Month closed in the overdraft. ${grace - s.negativeMonths} more and the bank withdraws it.`, 'bad');
+    pushNews(s, `Month closed in the overdraft. ${grace - s.negativeMonths} more and the bank cuts it.`, 'bad');
   }
 }
 
