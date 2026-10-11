@@ -37,7 +37,7 @@ export interface FacilitySpec {
 export const DELEGATION: FacilitySpec = {
   label: 'Delegation',
   build: 12000,
-  rent: 450,
+  rent: 700,
   capacity: 25,
   maxStaff: { warehouse: 1, office: 4 },
   vehicles: ['van', 'bus'],
@@ -49,7 +49,7 @@ export const WAREHOUSES: FacilitySpec[] = [
   {
     label: 'Small warehouse',
     build: 35000,
-    rent: 900,
+    rent: 1350,
     capacity: 120,
     maxStaff: { warehouse: 4, office: 2 },
     vehicles: 'all',
@@ -59,7 +59,7 @@ export const WAREHOUSES: FacilitySpec[] = [
   {
     label: 'Medium warehouse',
     build: 60000,
-    rent: 1700,
+    rent: 2550,
     capacity: 320,
     maxStaff: { warehouse: 8, office: 4 },
     vehicles: 'all',
@@ -69,7 +69,7 @@ export const WAREHOUSES: FacilitySpec[] = [
   {
     label: 'Large warehouse',
     build: 110000,
-    rent: 3000,
+    rent: 4500,
     capacity: 800,
     maxStaff: { warehouse: 16, office: 6 },
     vehicles: 'all',
@@ -79,7 +79,7 @@ export const WAREHOUSES: FacilitySpec[] = [
   {
     label: 'Production campus',
     build: 260000,
-    rent: 5200,
+    rent: 7800,
     capacity: 2000,
     maxStaff: { warehouse: 28, office: 10 },
     vehicles: 'all',
@@ -178,4 +178,22 @@ export const hasBaseIn = (state: TycoonState, cityId: string) => !!depotInCity(s
 export function canBaseVehicle(d: Pick<Depot, 'kind' | 'size'>, kind: 'van' | 'truck' | 'semi' | 'bus'): boolean {
   const allowed = facilitySpec(d).vehicles;
   return allowed === 'all' || (allowed as string[]).includes(kind);
+}
+
+/**
+ * The office: accounts, phones, IT, payroll, the yard, operator licences, PPE, public-liability
+ * cover and the accountant — the costs of being a company at all. A base, every person and every
+ * truck carry some, and the professional fees and liability cover track last year's turnover.
+ */
+export const OVERHEAD = { base: 600, perPerson: 220, perVehicle: 140, turnover: 0.015 };
+
+export function monthlyOverheads(state: Pick<TycoonState, 'depots' | 'people' | 'vehicles' | 'ledger' | 'hour' | 'startYear'>): number {
+  const lastYear = state.startYear + Math.floor(state.hour / (24 * 365)) - 1;
+  const turnover = Math.max(0, state.ledger[lastYear]?.shows ?? 0);
+  return Math.round(
+    state.depots.length * OVERHEAD.base +
+      state.people.length * OVERHEAD.perPerson +
+      state.vehicles.filter(v => v.owner === 'player').length * OVERHEAD.perVehicle +
+      (turnover * OVERHEAD.turnover) / 12,
+  );
 }

@@ -11,6 +11,8 @@
  * Citywide events (Fête de la Musique, the Love Parade) instead flood the
  * calendar with small shows on the day.
  */
+import { ableRivals, rivalTryTake } from './rivalOps';
+import { worldOf } from './mapgen';
 import type { Rng } from '@/lib/rng';
 import { DEPT_LABELS, tierInfo } from './catalog';
 import { dateOfDay, dayOf, formatDay, formatMoney, newId, pushNews } from './core';
@@ -97,6 +99,7 @@ function postEvent(s: TycoonState, world: WorldMap, rng: Rng, e: SpecialEvent, y
       const gig = buildGig(s, rng, { venue, day: start, act: actName(rng), real: false, feeMultiplier: 1.25 });
       gig.acceptByDay = start - 3;
       gig.event = { id: e.id, year, name: e.name, lot: 'audio', broadcast: false, scale: e.scale, citywide: true };
+      gig.terms = undefined;
       s.gigs.push(gig);
     }
     pushNews(s, `${eventTitle(e, year)}: ${e.bill ?? 'shows all over town'} — ${e.shows} extra shows on ${formatDay(s, start)}. Check Shows.`, 'big', { cityId: host.id });
@@ -120,6 +123,11 @@ function postEvent(s: TycoonState, world: WorldMap, rng: Rng, e: SpecialEvent, y
     if (lot === 'audio' && e.broadcast) gig.needs.console += 1; // a spare desk for broadcast
     gig.crewNeeded = Math.max(2, Math.round(gig.crewNeeded * share * 1.6));
     gig.rider = undefined;
+    // A lot only carries its own department's rider: the sound lot (which brings the desks) keeps the
+    // inputs, show file and PA list; lighting, video and staging lots have no desk to check.
+    gig.techSpec = lot === 'audio' ? gig.techSpec : undefined;
+    // Events are tendered on their own contract, not standard booking terms.
+    gig.terms = undefined;
     gig.fee = Math.round((base.baseFee * rig * share * EVENT_PREMIUM * days * marketOnDay(s, start).fees) / 100) * 100;
     gig.acceptByDay = close;
     gig.event = { id: e.id, year, name: e.name, lot, broadcast: !!e.broadcast, scale: e.scale };
@@ -138,7 +146,9 @@ const bidScore = (reputation: number, price: number, bonus: number, noise: numbe
 function closeBidding(s: TycoonState, gig: Gig, rng: Rng) {
   const ev = gig.event!;
   const tier = gig.tier;
-  const contenders = s.rivals.filter(r => r.maxTier >= tier && r.reputation >= EVENT_REPUTATION[ev.scale as 3 | 4 | 5] - 15);
+  const world = worldOf(s);
+  // Only firms that could deliver the lot (kit free on the day, rider and site met) put in a bid.
+  const contenders = ableRivals(s, world, s.rivals.filter(r => r.maxTier >= tier && r.reputation >= EVENT_REPUTATION[ev.scale as 3 | 4 | 5] - 15), gig);
   const rivalBids = contenders.map(r => ({
     r,
     price: 0.88 + rng.next() * 0.3,
@@ -161,6 +171,7 @@ function closeBidding(s: TycoonState, gig: Gig, rng: Rng) {
     gig.status = 'expired';
     return;
   }
+  rivalTryTake(s, world, best.r, gig);
   gig.status = 'rival';
   gig.rivalId = best.r.id;
   const truck: Vehicle = {

@@ -27,9 +27,10 @@ import { monthlySponsors } from './sponsors';
 import { UNREHEARSED_FAILURE, UNREHEARSED_QUALITY, dailyRehearsals, monthlyAnnexes, unrehearsed } from './annexes';
 import { monthlyRivalry } from './rivalry';
 import { dailyUtilisation } from './fleetReport';
-import { recordVenueNight } from './promoters';
+import { recordVenueNight, venueRelation } from './promoters';
 import { dailyAuctions, monthlyAuctions } from './auctions';
 import { annualReport, monthlyMilestones } from './milestones';
+import { yearEndCharts } from './charts';
 import { monthlyPartners } from './partners';
 import { monthlyTowns } from './towns';
 import { breakdownDilemma, dailyCrewDilemmas, hourlyCrises } from './dilemmas';
@@ -40,7 +41,6 @@ import {
   PER_DIEM,
   fuelPerTile,
   NEGATIVE_MONTHS_GAME_OVER,
-  NO_SHOW_PENALTY_RATE,
   SERVICE_COST,
   SERVICE_HOURS,
   SERVICE_INTERVAL_DAYS,
@@ -75,10 +75,21 @@ import {
 import { worldOf } from './mapgen';
 import { addStock, baseShowQuality, deptTotals, evaluateGear, pickGear, stockSize } from './loading';
 import { GEAR_PRODUCTS, getProduct } from './content/gear';
-import { leftBehindChance, monthlyRent, monthlySalaries, prepFailureFactor, prepOf, prepRatio } from './facilities';
+import { leftBehindChance, monthlyOverheads, monthlyRent, monthlySalaries, prepFailureFactor, prepOf, prepRatio } from './facilities';
+import { breachPenalty, checkSpec } from './techRider';
+import { bondAfterShow } from './bonds';
+import { playRivalShow } from './rivalOps';
+import { monthlyBrandFaults } from './ecosystem';
+import { dailyProduction, hasManager, monthlyManagers } from './management';
+import { FEUD, REFUSE } from './bonds';
+import { afterBreach, afterDisaster } from './blacklist';
+import { balanceDue, dailyTerms } from './terms';
+import { HANDLING_WINDOW, LOADERS, handlingHours, handlingOverrun, loadWeight, payloadOf } from './cargo';
+import { FIX_TEXT, problemEffects, productionProblems } from './production';
+import { canAfford, deferService, lastingConsequences, nightCauses, OVERDUE_DECAY, overdueDays, postMortem, recordBreakdown, serviceCleared } from './consequences';
 import { monthlyTraining, PAY, freelancersFor, monthlyCrew, moraleBonus } from './crew';
 import { REST_AT, crewDirectives, aboard, atDepot, dailyPeopleFatigue, dailyPoachBids, dayRate, evaluateCrew, learnFromShow, moveToDepot, moveToVehicle, pickCrew, refreshCandidates, sideRng, syncCrew } from './people';
-import { dailyWorkshop, monthlyWorkshop, rollFailure, wearFromShow, type Failure } from './wear';
+import { averageCondition, dailyWorkshop, monthlyWorkshop, ownedStock, rollFailure, wearFromShow, type Failure } from './wear';
 import { rivalsFor } from './content/companies';
 import { getTech, techBonus, techsActiveIn } from './content/techs';
 import { dailyOffers, pruneGigs, rivalsTakeOffers, yearlyVenues } from './offers';
@@ -97,17 +108,27 @@ import { dailyIncidents, monthlyInsurance, rollWeather } from './incidents';
 import { dailyContracts, houseRigAt, monthlyContracts } from './contracts';
 import { dailyMarket, fuelMultiplier, marketNow, monthlyInterest } from './market';
 import { getRegion } from './content/world';
-import { getCityPath, roadDistance } from './pathfinding';
+import { KM_PER_UNIT, getCityPath, roadDistance } from './pathfinding';
+import { TIER_REP_CEILING, monthlyReputation, noteShow } from './reputation';
+import { contractDock, damagesFor, outcomeOf } from './outcomes';
+import { dailyLiquidity, monthlyLiquidity } from './liquidity';
+import { officeCapacity, officeLoad, officePrepFactor, officeSlipChance, officeSlipHours, officeStretch } from './office';
 import { dailyDisruptions, monthlyWinter, tripCharges, yearlyDriversRules } from './infra';
 import { countTownShow, fadeTownShows } from './territory';
 import { returnFreight } from './freight';
+import { dailyBusHire, dailyBusOffers } from './buses';
 import { CURFEW_FINE, CURFEW_QUALITY, NOISE_HEADROOM, NOISE_QUALITY, UNION_CALL, traitsOf } from './venueTraits';
 import { DEPTS, type GearStock, type Gig, type TycoonState, type Vehicle, type WorldMap } from './types';
 import { findArtist } from './content/artists';
 
 const TIER_WEIGHT = [0, 1, 1.3, 1.7, 2.2];
-/** Playing pubs can only get you so far — each venue tier caps the reputation it can earn you. */
-const TIER_REP_CEILING = [0, 38, 68, 92, 100];
+
+/**
+ * Chance of a roadside breakdown per kilometre, from the truck's reliability: about one in 150,000 km
+ * for a sound modern truck (92%), one in 60,000 at 80%, one in 30,000 for a neglected one (60%).
+ */
+export const BREAKDOWN_PER_KM = 1 / 12_000;
+export const breakdownHazard = (reliability: number) => Math.max(0.05, 1 - reliability / 100) * BREAKDOWN_PER_KM;
 
 export function reputationAfterShow(rep: number, tier: number, quality: number): number {
   const delta = (quality - 0.6) * 3 * TIER_WEIGHT[tier];
@@ -214,7 +235,7 @@ function loadVehicle(s: TycoonState, v: Vehicle, gig: Gig) {
     crewRemaining = Math.max(crewRemaining, g.crewNeeded - crewBrought);
   });
 
-  const picked = pickGear(depot.gear, remaining, model.gearCapacity - stockSize(v.cargo), gig.rider);
+  const picked = pickGear(depot.gear, remaining, model.gearCapacity - stockSize(v.cargo), gig.rider, gig.techSpec, payloadOf(v.modelId, model.gearCapacity) - loadWeight(v.cargo));
   addStock(v.cargo, picked);
   const directives = crewDirectives(s, gig);
   const here = atDepot(s, depot.id);
@@ -222,7 +243,7 @@ function loadVehicle(s: TycoonState, v: Vehicle, gig: Gig) {
   const seats = Math.min(model.crewSeats - v.crew, Math.max(crewRemaining, pinned), depot.crew);
   if (seats > 0) {
     // Pinned and named people first, then the freshest, best-matched people for the job ahead get on board.
-    const opts = { vehicleId: v.id, restAt: REST_AT[s.policies.rest], ...directives };
+    const opts = { vehicleId: v.id, restAt: REST_AT[s.policies.rest], bonds: s.bonds, refuseAt: hasManager(s, 'crew') ? FEUD : REFUSE, ...directives };
     pickCrew(atDepot(s, depot.id), gig, seats, aboard(s, v.id), opts).forEach(m => moveToVehicle(m, v.id));
     syncCrew(s);
   }
@@ -244,6 +265,10 @@ function maybeService(s: TycoonState, v: Vehicle, freeHours: number) {
   if (v.owner !== 'player') return false;
   const due = s.hour - v.lastServiceHour >= SERVICE_INTERVAL_DAYS * HOURS_PER_DAY;
   if (!due || freeHours < SERVICE_HOURS) return false;
+  if (!canAfford(s, SERVICE_COST)) {
+    deferService(s, v);
+    return false;
+  }
   serviceNow(s, v);
   return true;
 }
@@ -253,6 +278,7 @@ export function serviceNow(s: TycoonState, v: Vehicle) {
   v.busyUntil = s.hour + SERVICE_HOURS;
   v.lastServiceHour = s.hour;
   v.reliability = maxReliability(v, s.hour);
+  serviceCleared(v);
   book(s, 'servicing', -SERVICE_COST);
   v.profitThisYear -= SERVICE_COST;
 }
@@ -321,6 +347,9 @@ function arrive(s: TycoonState, world: WorldMap, v: Vehicle) {
 
 function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
   switch (v.status) {
+    case 'hired-out':
+      // Out on tour: buses.ts brings it home when the contract ends.
+      return;
     case 'servicing':
       if (s.hour >= (v.busyUntil ?? 0)) {
         v.status = 'parked';
@@ -340,6 +369,8 @@ function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
     }
     case 'parked':
     case 'scheduled':
+      // Called in by the maker (shocks.ts): stays in the yard until the fix is done.
+      if ((v.recalledUntil ?? 0) > s.hour) return;
       decide(s, world, v);
       return;
     case 'broken':
@@ -349,11 +380,14 @@ function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
       if (v.owner === 'player') pushNews(s, `${v.name} is back on the road.`, 'info', { vehicleId: v.id });
       break;
     case 'driving':
-      if (rng.chance((1 - v.reliability / 100) * 0.035)) {
+      // Breakdowns happen per kilometre driven, likelier the more worn the truck (see breakdownHazard).
+      if (rng.chance(breakdownHazard(v.reliability) * vehicleSpeed(v, world) * KM_PER_UNIT)) {
         v.status = 'broken';
         v.brokenUntil = s.hour + 3 + rng.nextInt(6);
         if (v.owner === 'player') {
-          pushNews(s, `${v.name} has broken down!`, 'bad', { vehicleId: v.id });
+          s.stats.breakdowns = (s.stats.breakdowns ?? 0) + 1;
+          const inc = recordBreakdown(s, v, !!world.era?.winter);
+          pushNews(s, `${v.name} has broken down! ${inc.causes[0].label}: ${inc.causes[0].detail}`, 'bad', { vehicleId: v.id });
           breakdownDilemma(s, v);
         }
         return;
@@ -372,6 +406,9 @@ function stepVehicle(s: TycoonState, world: WorldMap, v: Vehicle, rng: Rng) {
   const speed = vehicleSpeed(v, world);
   route.progress += speed;
   if (v.owner === 'player') {
+    // The odometer, for the breakdown rate per kilometre (and the fleet's mileage).
+    v.km = (v.km ?? 0) + speed * KM_PER_UNIT;
+    s.stats.fleetKm = (s.stats.fleetKm ?? 0) + speed * KM_PER_UNIT;
     const fuel = speed * fuelPerTile(model) * fuelMultiplier(s);
     book(s, 'fuel', -fuel);
     v.profitThisYear -= fuel;
@@ -395,9 +432,9 @@ function resolveShows(s: TycoonState, world: WorldMap, rng: Rng) {
       if (rival) {
         countTownShow(s, gig.cityId, rival.id);
         rival.showsPlayed += 1;
-        rival.reputation = Math.min(100, rival.reputation + 0.3 * TIER_WEIGHT[gig.tier]);
-      }
-      gig.result = { quality: 0.8, payout: gig.fee, lateHours: 0, gearCoverage: 1, crewCoverage: 1 };
+        // Judged on its kit, like yours (rivalOps.ts).
+        playRivalShow(s, rival, gig, rng);
+      } else gig.result = { quality: 0.8, payout: gig.fee, lateHours: 0, gearCoverage: 1, crewCoverage: 1 };
       return;
     }
     if (gig.status !== 'booked') return;
@@ -442,9 +479,17 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   if (hire.cost) onSite.forEach(v => (v.profitThisYear -= Math.round(hire.cost / onSite.length)));
   const working: GearStock = { ...delivered };
   addStock(working, hire.stock);
+  // Kit cross-hired from a rental house for this show is waiting at the venue.
+  if (present && gig.crossHire) addStock(working, gig.crossHire);
+  // The technical rider: inputs, show file, approved PA. Break it and the act's engineer won't have it.
+  const breaches = present ? checkSpec(gig.techSpec, working) : [];
+  const breach = breachPenalty(breaches);
+  // Does the production fit the room? Power, roof load, where an artic can park.
+  const problems = present ? productionProblems(world, gig, working, onSite) : [];
+  const fx = problemEffects(problems);
   // Who's working the show, and how well their skills fit its departments.
   const people = onSite.flatMap(v => aboard(s, v.id));
-  const crewEval = evaluateCrew(people, gig);
+  const crewEval = evaluateCrew(people, gig, s);
   // Safety inspectors look for tickets on the big shows.
   const tickets = certPenalty(certShortfall(people, gig), gig);
   if (tickets.fine) {
@@ -453,11 +498,13 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   }
   // Prep: every truck's kit was checked (or not) by its home base's warehouse crew.
   const prep = prepOf(s, onSite);
+  // An office that's outgrown its staff drops things (office.ts).
+  const stretch = officeStretch(s);
   const forgotten: string[] = [];
   onSite.forEach(v => {
     const base = depotInCity(s, v.homeCityId);
     const ids = Object.keys(v.cargo).filter(id => working[id] > 0).sort();
-    if (!ids.length || !rng.chance(leftBehindChance(base ? prepRatio(s, base) : 0))) return;
+    if (!ids.length || !rng.chance(Math.min(0.9, leftBehindChance(base ? prepRatio(s, base) : 0) * officePrepFactor(stretch)))) return;
     const id = rng.pick(ids);
     working[id] -= 1;
     if (!working[id]) delete working[id];
@@ -467,7 +514,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   const showDays = gig.overseas ? gig.overseas.stops.length : (gig.days ?? 1);
   const failures: Failure[] = [];
   for (let d = 0; d < Math.min(4, showDays); d++) {
-    const f = rollFailure(s, working, rng, prepFailureFactor(prep) * crewEval.failureFactor * (gig.mods?.failureFactor ?? 1) * (unrehearsed(s, gig) ? UNREHEARSED_FAILURE : 1) * tickets.failureFactor);
+    const f = rollFailure(s, working, rng, prepFailureFactor(prep) * crewEval.failureFactor * (gig.mods?.failureFactor ?? 1) * (unrehearsed(s, gig) ? UNREHEARSED_FAILURE : 1) * tickets.failureFactor * fx.failureFactor);
     if (f) failures.push(f);
   }
   const gear = evaluateGear(working, gig, yearOf(s, s.hour), s.gearCondition);
@@ -490,11 +537,20 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   }
   const freelanceNote = freelance.count ? ` ${freelance.count} local freelancer${freelance.count > 1 ? 's' : ''} filled in.` : '';
   const lastArrival = Math.max(...onSite.map(v => v.arrivedHour ?? 0), 0);
-  const lateHours = onSite.length ? Math.max(0, lastArrival - loadInHour(gig)) : 0;
+  // Getting it all in: man-hours over hands, slower from the street or up stairs.
+  const access = venue && !gig.overseas && !gig.festival ? traitsOf(world, venue).loadIn : 'dock';
+  const ownKit: GearStock = {};
+  onSite.forEach(v => addStock(ownKit, v.cargo));
+  if (freighted) addStock(ownKit, freighted.gear);
+  const hands = crew + freelance.count + (gig.fixes?.loaders ? LOADERS : 0);
+  const handling = present && !gig.overseas ? handlingHours(ownKit, hands, access) : 0;
+  const overrun = handlingOverrun(handling);
+  const officeSlip = present && stretch > 0 && rng.chance(officeSlipChance(stretch)) ? officeSlipHours(stretch, n => rng.nextInt(n)) : 0;
+  const lateHours = onSite.length ? Math.max(0, lastArrival + fx.delay - loadInHour(gig)) + overrun + officeSlip : 0;
   // The room's quirks: a union call to pay, a curfew to run into, a noise limiter to trip.
   const traits = venue && !gig.overseas && !gig.festival ? traitsOf(world, venue) : undefined;
   let venueHit = 0;
-  const venueNotes: string[] = [];
+  const venueNotes: string[] = problems.map(p => FIX_TEXT[p.id]);
   if (traits && present) {
     if (traits.union) {
       const call = UNION_CALL * gig.crewNeeded;
@@ -516,7 +572,7 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
     0,
     Math.min(
       1,
-      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) + crewEval.bonus - (weather?.penalty ?? 0) + (gig.mods?.quality ?? 0) - (unrehearsed(s, gig) ? UNREHEARSED_QUALITY : 0) - tickets.quality - venueHit }) +
+      baseShowQuality({ gearCoverage, crewCoverage, lateHours, gearQuality: gear.quality, riderMet: gear.riderMet, bonus: techBonus(techIds, gig.act) + moraleBonus(s.crewMorale) + crewEval.bonus - (weather?.penalty ?? 0) + (gig.mods?.quality ?? 0) - (unrehearsed(s, gig) ? UNREHEARSED_QUALITY : 0) - tickets.quality - venueHit - breach.quality - fx.quality }) +
         (rng.next() - 0.5) * 0.08,
     ),
   );
@@ -537,22 +593,52 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
       onSite.forEach(v => (v.profitThisYear -= Math.round(papers.total / onSite.length)));
     }
   }
-  if (!present || quality < 0.3) {
-    const penalty = Math.round(gig.fee * NO_SHOW_PENALTY_RATE);
+  const causes = nightCauses(s, gig, {
+    lateHours,
+    failedKit: failures.map(f => `${getProduct(f.productId).brand} ${getProduct(f.productId).name}`),
+    avgCondition: averageCondition(s, delivered),
+    crewCoverage,
+    crewFatigue: onSite.length ? onSite.reduce((a, v) => a + (v.crewFatigue ?? 0), 0) / onSite.length : 0,
+    forgotten: forgotten.length,
+    unrehearsed: unrehearsed(s, gig),
+    missingTickets: tickets.missing,
+    venueNotes: venueNotes.slice(problems.length),
+    breaches: breaches.map(b => `${b.label}: ${b.detail}`),
+    production: problems.map(p => `${p.label}: ${p.detail}`),
+    feuds: crewEval.feuds,
+    office: officeSlip ? `The office is coordinating ${Math.round(officeLoad(s))} trucks-and-crews' worth of work with room for ${Math.round(officeCapacity(s))}: the call times went out wrong and the crew lost ${officeSlip} h.` : undefined,
+    slowLoad: overrun > 0 ? `About ${handling} h to get the rig in with ${hands} hands${access === 'dock' ? '' : access === 'stairs' ? ' up stairs' : ' from the street'}, against a ${HANDLING_WINDOW} h window.` : undefined,
+    present,
+    workshop: s.policies.workshop,
+    noKit: !stockSize(delivered),
+  });
+  const band = outcomeOf(s, quality, present);
+  const outcomes = (s.stats.outcomes ??= {});
+  outcomes[band] = (outcomes[band] ?? 0) + 1;
+  if (band === 'failed') {
+    // The fee is gone, the deposit goes back, and the promoter claims damages: more at bigger venues.
+    const penalty = damagesFor(s, gig);
     book(s, 'penalties', -penalty);
+    s.stats.damages = (s.stats.damages ?? 0) + penalty;
     gig.status = 'failed';
-    gig.result = { quality, payout: -penalty, lateHours, gearCoverage, crewCoverage, ...resultExtras };
+    // The client wants their deposit back.
+    if (gig.depositPaid) book(s, 'shows', -gig.depositPaid);
+    gig.result = { quality, payout: -penalty, lateHours, gearCoverage, crewCoverage, ...resultExtras, outcome: band };
     s.company.reputation = Math.max(0, s.company.reputation - 4 * tw + Math.min(0, stakes.reputation));
     s.cityRatings[gig.cityId] = Math.max(0, rating - 20);
     s.stats.showsFailed += 1;
     strike(s, gig.act, `the show at ${where} fell apart`);
+    afterDisaster(s, gig, where, venueRelation(s, gig.venueId));
     recordVenueNight(s, gig.venueId, quality, true);
     recordShow(s, yearOf(s, s.hour), quality, true, !!gig.festival);
+    bondAfterShow(s, people, quality);
+    const why = postMortem(s, gig, where, quality, true, causes);
+    lastingConsequences(s, gig, quality, causes);
     pushNews(
       s,
-      onSite.length
-        ? `Disaster at ${where}: ${gig.act} played to a half-built rig.${failureNote} Penalty ${formatMoney(s, penalty)}.`
-        : `No-show! Nobody turned up for ${gig.act} at ${where}. Penalty ${formatMoney(s, penalty)}.`,
+      (onSite.length
+        ? `Disaster at ${where}: ${gig.act} played to a half-built rig.${failureNote} No fee${gig.depositPaid ? ', the deposit goes back' : ''}, and the promoter claims ${formatMoney(s, penalty)} in damages.`
+        : `No-show! Nobody turned up for ${gig.act} at ${where}. No fee${gig.depositPaid ? ', the deposit goes back' : ''}, and the promoter claims ${formatMoney(s, penalty)} in damages.`) + why,
       'bad',
       { cityId: gig.cityId, gigId: gig.id },
     );
@@ -561,8 +647,16 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
 
   const specialist = expertiseBonus(s, gig);
   const payout = Math.round(showPayout(gig, quality) * (1 + specialist));
-  const withheld = maybeDisputeShow(s, gig, payout, quality);
-  collectOrInvoice(s, gig, payout - withheld);
+  const withheld = maybeDisputeShow(s, gig, payout, quality) + Math.round(payout * breach.withhold);
+  if (breaches.length) {
+    s.artistRelations[gig.act] = Math.max(0, (s.artistRelations[gig.act] ?? 0) - 2);
+    strike(s, gig.act, 'the rig broke their technical rider');
+    afterBreach(s, gig);
+  }
+  // The contract's lines: money off for a shaky or bad night, and for every hour the doors opened late.
+  const dock = contractDock(s, gig, quality, lateHours, payout - withheld);
+  if (dock.total) s.stats.docked = (s.stats.docked ?? 0) + dock.total;
+  collectOrInvoice(s, gig, balanceDue(gig, payout - withheld - dock.total));
   learnMix(s, gig);
   if (gig.overseas) {
     // Air freight for the rig and flights for the crew, there and back.
@@ -574,30 +668,37 @@ function playShow(s: TycoonState, world: WorldMap, gig: Gig, rng: Rng) {
   }
   const totalCargo = onSite.reduce((sum, v) => sum + stockSize(v.cargo) + v.crew, 0) || 1;
   onSite.forEach(v => {
-    v.profitThisYear += Math.round((payout * (stockSize(v.cargo) + v.crew)) / totalCargo);
+    v.profitThisYear += Math.round(((payout - dock.total) * (stockSize(v.cargo) + v.crew)) / totalCargo);
   });
   // Acts remember who did them proud — they'll ask for you again.
   if (quality >= 0.75 && (findArtist(gig.act) || gig.festival)) {
     s.artistRelations[gig.act] = (s.artistRelations[gig.act] ?? 0) + 1;
   }
   gig.status = 'done';
-  gig.result = { quality, payout, lateHours, gearCoverage, crewCoverage, ...resultExtras };
+  gig.result = { quality, payout, lateHours, gearCoverage, crewCoverage, ...resultExtras, outcome: band, docked: dock.total || undefined };
   countTownShow(s, gig.cityId, 'player');
   s.company.reputation = Math.max(0, Math.min(100, reputationAfterShow(s.company.reputation, gig.tier, quality) + stakes.reputation));
+  noteShow(s, gig, quality);
   if (gig.event && !gig.event.citywide) recordEvent(s, yearOf(s, s.hour), quality);
   if (quality < BAD_NIGHT) strike(s, gig.act, `a bad night at ${where}`);
   recordVenueNight(s, gig.venueId, quality, false);
   s.cityRatings[gig.cityId] = Math.max(0, Math.min(100, rating + (quality - 0.5) * 30));
   s.stats.showsPlayed += 1;
   learnFromShow(s, people, crewEval.assigned, gig.tier >= 3 || !!gig.festival || !!gig.event);
+  bondAfterShow(s, people, quality);
   recordShow(s, yearOf(s, s.hour), quality, false, !!gig.festival);
-  const verdict = quality >= 0.9 ? 'Storming show' : quality >= 0.7 ? 'Solid show' : 'Rough show';
+  const why = postMortem(s, gig, where, quality, false, causes);
+  lastingConsequences(s, gig, quality, causes);
+  const verdict = band === 'triumph' ? 'Storming show' : band === 'solid' ? 'Solid show' : band === 'shaky' ? 'Shaky show' : 'Bad night';
+  const dockNote = dock.total
+    ? ` Under the contract the client docked ${formatMoney(s, dock.total)}${dock.quality && dock.late ? ` (${formatMoney(s, dock.quality)} for the night, ${formatMoney(s, dock.late)} for opening ${Math.ceil(lateHours)} h late)` : dock.late ? ` for opening ${Math.ceil(lateHours)} h late` : ` for a ${band === 'bad' ? 'bad' : 'shaky'} night`}.`
+    : '';
   const riderNote = gear.riderMet === undefined ? '' : gear.riderMet ? ` Rider (${gig.rider!.brand}) honoured.` : ` They wanted ${gig.rider!.brand} and didn't get it.`;
   const kitNote = gear.quality < 0.8 ? ' Reviewers called the kit dated.' : '';
   const techNote = techIds.length ? ` ${techIds.map(id => getTech(id).name).join(' & ')} on the crew.` : '';
   const specialistNote = Math.abs(specialist) >= 0.015 ? ` (${specialist > 0 ? '+' : ''}${Math.round(specialist * 100)}% ${specialist > 0 ? 'specialist' : 'off-speciality'})` : '';
   const gateNote = gig.gate ? ` Tickets: ${hypeLabel(gig.gate.hype)} (gate deal).` : '';
-  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}${specialistNote}.${gateNote}${weather?.note ?? ''}${failureNote}${freelanceNote}${hire.units ? ` Sub-hired ${hire.units} unit${hire.units > 1 ? 's' : ''} from ${hire.from.join(' & ')}.` : ''}${stakes.note}${riderNote}${kitNote}${techNote}${venueNotes.length ? ` At the venue, ${venueNotes.join('; ')}.` : ''}`, quality >= 0.7 ? 'good' : 'info', {
+  pushNews(s, `${verdict}: ${gig.act} at ${where} — ${Math.round(quality * 100)}%, earned ${formatMoney(s, payout)}${specialistNote}.${gateNote}${weather?.note ?? ''}${failureNote}${freelanceNote}${hire.units ? ` Sub-hired ${hire.units} unit${hire.units > 1 ? 's' : ''} from ${hire.from.join(' & ')}.` : ''}${stakes.note}${riderNote}${kitNote}${techNote}${venueNotes.length ? ` At the venue, ${venueNotes.join('; ')}.` : ''}${breaches.length ? ` The rider was broken (${breaches.map(b => b.label.toLowerCase()).join(', ')}): the client held back ${formatMoney(s, Math.round(payout * breach.withhold))}.` : ''}${dockNote}${why}`, band === 'triumph' || band === 'solid' ? 'good' : band === 'bad' ? 'bad' : 'info', {
     cityId: gig.cityId,
     gigId: gig.id,
   });
@@ -620,6 +721,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     if (s.hour > HOURS_PER_DAY) awardsNight(s, date.getUTCFullYear() - 1);
     yearlyVenues(s, world, date.getUTCFullYear());
     annualReport(s, date.getUTCFullYear() - 1);
+    yearEndCharts(s, date.getUTCFullYear() - 1);
     yearlyZones(s, date.getUTCFullYear());
   }
   if (isLastDayOfYear(s)) yearEndTax(s);
@@ -637,6 +739,8 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   dailyRehearsals(s);
   dailyCourses(s);
   dailyReceivables(s, sideRng(s, dayOf(s.hour) + 7006));
+  dailyLiquidity(s);
+  dailyTerms(s, sideRng(s, dayOf(s.hour) + 7008));
   dailyRentOut(s);
   dailyPeopleFatigue(s);
   dailyPoachBids(s);
@@ -658,11 +762,11 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
       v.profitThisYear -= night;
     }
     // Tax, insurance and maintenance (fuel is paid by the mile).
-    const cost = Math.round((model.runningCostPerYear * 0.7) / 365);
+    const cost = Math.round(model.runningCostPerYear / 365);
     book(s, 'running', -cost);
     v.profitThisYear -= cost;
     const decay = vehicleAgeYears(v, s.hour) > model.lifespanYears ? 0.3 : 0.12;
-    v.reliability = Math.max(10, v.reliability - decay);
+    v.reliability = Math.max(10, v.reliability - decay - (overdueDays(s, v) > 0 ? OVERDUE_DECAY : 0));
   });
 
   dailyOffers(s, world, rng);
@@ -672,7 +776,10 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
   dailyOwnFestival(s, rng);
   dailyEvents(s, world, rng);
   dailyDisruptions(s, date);
+  dailyBusOffers(s, rng);
+  dailyBusHire(s, rng);
   dailyContracts(s, world);
+  dailyProduction(s);
   pruneGigs(s);
 
   // Nag about booked shows with nothing assigned two days out.
@@ -704,6 +811,7 @@ function dailyTick(s: TycoonState, world: WorldMap, rng: Rng) {
     monthlyVenues(s, rng);
     monthlyAnnexes(s);
     monthlyAudits(s, sideRng(s, dayOf(s.hour) + 7007));
+    monthlyBrandFaults(s, ownedStock(s), sideRng(s, dayOf(s.hour) + 7009));
     monthlyCerts(s, sideRng(s, dayOf(s.hour) + 7004));
     monthlySponsors(s, sideRng(s, dayOf(s.hour) + 7001));
     monthlyRivalry(s, sideRng(s, dayOf(s.hour) + 7003));
@@ -717,11 +825,14 @@ function monthlyTick(s: TycoonState, rng: Rng) {
   const world = worldOf(s);
   book(s, 'property', -s.depots.reduce((sum, d) => sum + monthlyRent(world, d), 0));
   book(s, 'salaries', -monthlySalaries(s, PAY[s.policies.pay].wage));
+  book(s, 'overheads', -monthlyOverheads(s));
   // Sales staff keep the local scene sweet.
   s.depots.forEach(d => {
     if (d.staff.office) s.cityRatings[d.cityId] = Math.min(100, (s.cityRatings[d.cityId] ?? 50) + 0.6 * d.staff.office);
   });
   monthlyWorkshop(s);
+  monthlyReputation(s);
+  monthlyManagers(s);
   monthlyCrew(s, rng);
   monthlyTraining(s);
   refreshCandidates(s, rng);
@@ -730,28 +841,8 @@ function monthlyTick(s: TycoonState, rng: Rng) {
   monthlyLeases(s);
   if (s.company.loan > 0) book(s, 'interest', -monthlyInterest(s));
 
-  // During a shutdown the banks give everyone a repayment holiday.
-  if (s.company.cash < 0 && marketNow(s).shutdown) {
-    pushNews(s, 'Month closed in the red — the bank is giving the whole industry breathing room until venues reopen.', 'info');
-  } else if (s.company.cash < 0) {
-    s.negativeMonths += 1;
-    const grace = difficultyOf(s).graceMonths;
-    if (s.negativeMonths >= grace) {
-      s.gameOver = {
-        hour: s.hour,
-        reason: `${s.company.name} spent ${s.negativeMonths} months in the red and the bank has called in the receivers.`,
-      };
-      pushNews(s, s.gameOver.reason, 'big');
-    } else {
-      pushNews(
-        s,
-        `Month closed in the red. ${grace - s.negativeMonths} more and the bank shuts you down.`,
-        'big',
-      );
-    }
-  } else {
-    s.negativeMonths = 0;
-  }
+  // Closing months in the overdraft; over the limit is handled day by day (liquidity.ts).
+  monthlyLiquidity(s);
 }
 
 function announceModels(s: TycoonState, year: number) {

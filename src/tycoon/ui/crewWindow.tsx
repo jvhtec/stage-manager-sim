@@ -6,6 +6,7 @@ import { CREW_HIRE_COST } from '@/world/catalog';
 import { PAY } from '@/world/crew';
 import { CREW_DEPTS, CREW_DEPT_LABEL, REST_AT, TRAITS, dayRate, evaluateCrew, hireFee, levelOf, roleOf } from '@/world/people';
 import { worldOf } from '@/world/mapgen';
+import { rapport, relationOf } from '@/world/bonds';
 import type { CertId, CrewMember, Gig, TycoonState } from '@/world/types';
 import { FatigueChip, Stat } from './bits';
 import { money } from './format';
@@ -20,6 +21,28 @@ export function Stars({ n }: { n: number }) {
       {'★'.repeat(full)}
       <span style={{ color: 'rgba(255,255,255,0.18)' }}>{'★'.repeat(5 - full)}</span>
     </span>
+  );
+}
+
+/** Who they work well with, and who they can't stand. */
+function Relations({ state, m }: { state: TycoonState; m: CrewMember }) {
+  const others = state.people.filter(o => o.id !== m.id);
+  const trusted = others.filter(o => relationOf(rapport(state, m.id, o.id)) === 'trusted');
+  const feuds = others.filter(o => {
+    const r = relationOf(rapport(state, m.id, o.id));
+    return r === 'feud' || r === 'refuse';
+  });
+  if (!trusted.length && !feuds.length) return null;
+  return (
+    <div style={{ fontSize: 11, whiteSpace: 'normal' }}>
+      {trusted.length > 0 && <span className="tt-good">🤝 {trusted.map(o => o.name).join(', ')}</span>}
+      {trusted.length > 0 && feuds.length > 0 && ' · '}
+      {feuds.length > 0 && (
+        <span className="tt-bad" title="They won't share a truck unless you name them both for a show">
+          ⚡ {feuds.map(o => `${o.name}${relationOf(rapport(state, m.id, o.id)) === 'refuse' ? ' (won’t work together)' : ''}`).join(', ')}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -50,7 +73,13 @@ export function PersonRow({ state, m, right, onTrain }: { state: TycoonState; m:
             </span>
           )}
           {(m.payBump ?? 1) > 1 && <span className="tt-dim"> · +{Math.round(((m.payBump ?? 1) - 1) * 100)}% retention</span>}
+          {(m.burnout ?? 0) >= 40 && (
+            <span className="tt-chip" style={{ background: (m.burnout ?? 0) >= 70 ? '#7f1d1d' : '#78350f' }} title="Lasting burnout from too long exhausted on the road: works below their level, and may leave. Long rest at base brings it down.">
+              burnout {Math.round(m.burnout ?? 0)}%
+            </span>
+          )}
         </div>
+        <Relations state={state} m={m} />
         <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginTop: 2 }}>
           {CERT_IDS.filter(c => hasCert(m, c)).map(c => (
             <span key={c} className="tt-chip" style={{ background: '#14532d' }} title={CERTS[c].label}>
@@ -88,7 +117,7 @@ export function CrewPicker({ ctx, gig }: { ctx: WinCtx; gig: Gig }) {
     const r = ctx.dispatch(s => setCrewPicks(s, gig.id, ids));
     if (r.message) ctx.toast(r.message, r.ok);
   };
-  const evaluation = named.length ? evaluateCrew(named, gig) : null;
+  const evaluation = named.length ? evaluateCrew(named, gig, state) : null;
   // People named for other shows are spoken for.
   const elsewhere = new Map<string, string>();
   state.gigs.forEach(g => g.id !== gig.id && g.status === 'booked' && (g.crewPicks ?? []).forEach(id => elsewhere.set(id, g.act)));
@@ -97,7 +126,9 @@ export function CrewPicker({ ctx, gig }: { ctx: WinCtx; gig: Gig }) {
   return (
     <div>
       <div className="tt-dim" style={{ marginBottom: 4, whiteSpace: 'normal' }}>
-        {named.length}/{gig.crewNeeded} named{evaluation ? ` · fit ${Math.round(evaluation.match * 100)}%` : ' — the rest are picked automatically'}.{' '}
+        {named.length}/{gig.crewNeeded} named{evaluation ? ` · fit ${Math.round(evaluation.match * 100)}%` : ' — the rest are picked automatically'}
+        {evaluation?.trusted ? ` · ${evaluation.trusted} trusted pair${evaluation.trusted > 1 ? 's' : ''}` : ''}.{' '}
+        {evaluation?.feuds?.length ? <span className="tt-bad">Friction: {evaluation.feuds.join('; ')}. </span> : null}
         {named.length > 0 && (
           <a style={{ cursor: 'pointer', textDecoration: 'underline' }} onClick={() => act([])}>
             Back to automatic

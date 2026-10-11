@@ -8,7 +8,7 @@ import { INTERMITTENTS, ruleCountry } from './rules';
 import type { Rng } from '@/lib/rng';
 import { CREW_WAGE_PER_DAY } from './catalog';
 import { book, pushNews } from './core';
-import { partyBonus, peopleLeave, trainPeople } from './people';
+import { burnoutLeave, partyBonus, peopleLeave, syncCrew, trainPeople } from './people';
 import type { CitySize, Gig, PayLevel, TrainingLevel, TycoonState, WorldMap } from './types';
 
 export interface PayInfo {
@@ -57,11 +57,15 @@ export function averageFatigue(state: TycoonState): number {
   return crew ? sum / crew : 0;
 }
 
-export const moraleTarget = (state: TycoonState) => Math.max(0, Math.min(100, PAY[state.policies.pay].morale + partyBonus(state) - averageFatigue(state) * 0.35));
+/** Morale lost while wages go out late (over the overdraft limit, liquidity.ts). */
+export const LATE_WAGES_TARGET = 30;
+
+export const moraleTarget = (state: TycoonState) => Math.max(0, Math.min(100, PAY[state.policies.pay].morale + partyBonus(state) - averageFatigue(state) * 0.35 - (state.liquidity?.breachDays ? LATE_WAGES_TARGET : 0)));
 
 /** Monthly: morale drifts towards what you pay (less how tired everyone is); unhappy crews quit, stars get poached. */
 export function monthlyCrew(s: TycoonState, rng: Rng) {
   s.crewMorale += (moraleTarget(s) - s.crewMorale) * 0.5;
+  if (burnoutLeave(s, rng)) syncCrew(s);
   if (s.crewMorale >= 50) return;
   const quit = peopleLeave(s, rng, s.crewMorale);
   if (quit) pushNews(s, `${quit} crew gone this month — morale is at ${Math.round(s.crewMorale)}. Pay more or give them time off.`, 'bad');
@@ -89,7 +93,8 @@ export interface FreelanceHire {
 
 export function freelancersFor(state: TycoonState, world: WorldMap, gig: Gig, crewOnSite: number): FreelanceHire {
   const none = { count: 0, cost: 0, effectiveness: 0, local: false };
-  if (state.policies.freelance === 'off') return none;
+  // Over the overdraft limit, nobody works for a promise (liquidity.ts).
+  if (state.policies.freelance === 'off' || state.liquidity?.breachDays) return none;
   const short = Math.max(0, gig.crewNeeded - crewOnSite);
   if (!short) return none;
   const local = !gig.overseas && state.depots.some(d => d.cityId === gig.cityId);

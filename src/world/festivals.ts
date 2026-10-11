@@ -5,6 +5,8 @@
  * takes whatever's left. Stages run for the festival's whole length, so the
  * rig is tied up for days — and it pays like it.
  */
+import { rivalTryTake } from './rivalOps';
+import { worldOf } from './mapgen';
 import type { Rng } from '@/lib/rng';
 import { tierInfo } from './catalog';
 import { dateOfDay, dayOf, formatDay, newId, pushNews } from './core';
@@ -98,8 +100,10 @@ function postTender(s: TycoonState, world: WorldMap, rng: Rng, f: Festival, year
 }
 
 function awardToRival(s: TycoonState, gig: Gig) {
+  const world = worldOf(s);
   const contenders = s.rivals.filter(r => gig.tier >= r.minTier && gig.tier <= r.maxTier).sort((a, b) => b.reputation - a.reputation);
-  const rival = contenders[0];
+  // The best-known firm that can actually do it (kit free, rider and site met) gets the stage.
+  const rival = contenders.find(r => rivalTryTake(s, world, r, gig));
   if (!rival) {
     gig.status = 'expired';
     return;

@@ -6,6 +6,7 @@
 import { NEGATIVE_MONTHS_GAME_OVER } from './catalog';
 import { dayOf, formatMoneyShort, pushNews, yearOf } from './core';
 import { companyValue } from './queries';
+import { getScenario, scenarioProgress } from './scenarios';
 import type { Difficulty, GoalId, TycoonState } from './types';
 
 export interface DifficultyInfo {
@@ -16,14 +17,22 @@ export interface DifficultyInfo {
   rivals: number;
   /** Multiplier on how often things go wrong on the day. */
   crises: number;
-  /** Months in the red before the bank pulls the plug. */
+  /** Months closing in the overdraft before the bank withdraws it (liquidity.ts). */
   graceMonths: number;
+  /** A show below this quality has failed: no fee, damages, the deposit back (outcomes.ts). */
+  failLine: number;
+  /** Multiplier on contract penalties and damages. */
+  penalties: number;
+  /** Multiplier on the arranged overdraft. */
+  overdraft: number;
+  /** Days over the overdraft limit before the bank demands its money back. */
+  bankPatience: number;
 }
 
 export const DIFFICULTIES: Record<Difficulty, DifficultyInfo> = {
-  easy: { label: 'Gentle', blurb: 'More cash to start, softer rivals, patient bank.', startingCash: 1.6, rivals: 0.8, crises: 0.7, graceMonths: 5 },
-  normal: { label: 'Standard', blurb: 'The game as designed.', startingCash: 1, rivals: 1, crises: 1, graceMonths: NEGATIVE_MONTHS_GAME_OVER },
-  hard: { label: 'Cutthroat', blurb: 'Lean start, hungry rivals, a jumpy bank.', startingCash: 0.7, rivals: 1.25, crises: 1.3, graceMonths: 2 },
+  easy: { label: 'Gentle', blurb: 'More cash to start, softer rivals, forgiving clients and a patient bank.', startingCash: 1.6, rivals: 0.8, crises: 0.7, graceMonths: 5, failLine: 0.3, penalties: 0.7, overdraft: 1.5, bankPatience: 60 },
+  normal: { label: 'Standard', blurb: 'The game as designed.', startingCash: 1, rivals: 1, crises: 1, graceMonths: NEGATIVE_MONTHS_GAME_OVER, failLine: 0.35, penalties: 1, overdraft: 1, bankPatience: 30 },
+  hard: { label: 'Cutthroat', blurb: 'Lean start, hungry rivals, clients who enforce every clause, and a jumpy bank.', startingCash: 0.7, rivals: 1.25, crises: 1.3, graceMonths: 2, failLine: 0.4, penalties: 1.3, overdraft: 0.6, bankPatience: 14 },
 };
 export const DIFFICULTY_IDS: Difficulty[] = ['easy', 'normal', 'hard'];
 export const difficultyOf = (s: Pick<TycoonState, 'difficulty'>): DifficultyInfo => DIFFICULTIES[s.difficulty ?? 'normal'];
@@ -63,15 +72,26 @@ export const GOALS: Record<GoalId, GoalInfo> = {
     const n = s.stats.rivalsBought ?? 0;
     return ratio(n, 3, `${n} / 3 rivals bought`);
   } },
+  scenario: {
+    label: 'Historic scenario',
+    blurb: 'Win a lot of the night\'s production and deliver it.',
+    years: 1,
+    progress: s => {
+      const sc = getScenario(s.scenario);
+      const p = scenarioProgress(s);
+      return { fraction: p.won ? 1 : p.bid ? 0.5 : 0, text: sc ? `${sc.title}: ${p.text}` : p.text, done: p.won };
+    },
+  },
   survivor: { label: 'Built to last', blurb: 'Keep the company going for 30 years.', years: 30, progress: s => {
     const y = Math.floor(s.hour / (24 * 365));
     return ratio(y, 30, `${y} / 30 years`);
   } },
 };
-export const GOAL_IDS = Object.keys(GOALS) as GoalId[];
+/** Goals you can pick in free play (a scenario sets its own). */
+export const GOAL_IDS = (Object.keys(GOALS) as GoalId[]).filter(g => g !== 'scenario');
 
-export const goalDeadlineYear = (s: Pick<TycoonState, 'goal' | 'startYear'>): number | undefined => {
-  const years = GOALS[s.goal ?? 'sandbox'].years;
+export const goalDeadlineYear = (s: Pick<TycoonState, 'goal' | 'startYear' | 'scenario'>): number | undefined => {
+  const years = s.goal === 'scenario' ? getScenario(s.scenario)?.years : GOALS[s.goal ?? 'sandbox'].years;
   return years === undefined ? undefined : s.startYear + years;
 };
 

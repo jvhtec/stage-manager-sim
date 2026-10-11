@@ -41,7 +41,8 @@ export interface SubHire {
 /** What you'd sub-hire to fill the gaps left by `working` at `gig`. */
 export function subHireFor(state: TycoonState, world: WorldMap, gig: Gig, working: GearStock): SubHire {
   const none: SubHire = { stock: {}, units: 0, cost: 0, from: [] };
-  if (state.policies.subhire === 'off' || gig.overseas) return none;
+  // Over the overdraft limit, the hire desks want cash up front (liquidity.ts).
+  if (state.policies.subhire === 'off' || gig.overseas || state.liquidity?.breachDays) return none;
   const nearby = state.rivals.filter(r => roadDistance(world, r.hqCityId, gig.cityId) <= SUBHIRE_RADIUS);
   if (!nearby.length) return none;
   const have = deptTotals(working);

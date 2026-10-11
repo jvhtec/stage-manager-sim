@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createTycoonGame } from '../state';
 import { advanceHours } from '../sim';
-import { FACTOR_DISCOUNT, INSURE_PREMIUM, collectOrInvoice, dailyReceivables, defaultRisk, owed, paymentDays } from '../receivables';
+import { INSURE_PREMIUM, LATE_SLIP_MIN, LATE_SLIP_SPREAD, factorDiscount, collectOrInvoice, dailyReceivables, defaultRisk, owed, paymentDays } from '../receivables';
 import { companyValue } from '../queries';
 import { dayOf } from '../core';
 import type { Gig, TycoonState } from '../types';
@@ -32,7 +32,7 @@ describe('getting paid', () => {
     expect(s.company.cash).toBe(cash);
     expect(owed(s)).toBe(5000);
     expect(companyValue(s)).toBeGreaterThan(companyValue({ ...s, receivables: [] }));
-    s.hour += 24 * 31;
+    s.hour += 24 * (paymentDays(gig(3)) + 1);
     dailyReceivables(s, no);
     expect(s.company.cash).toBe(cash + 5000);
     expect(owed(s)).toBe(0);
@@ -43,7 +43,7 @@ describe('getting paid', () => {
     f.policies.invoicing = 'factor';
     const cash = f.company.cash;
     collectOrInvoice(f, gig(3), 10000);
-    expect(f.company.cash).toBe(cash + Math.round(10000 * (1 - FACTOR_DISCOUNT)));
+    expect(f.company.cash).toBe(cash + Math.round(10000 * (1 - factorDiscount(paymentDays(gig(3))))));
     expect(f.receivables.length).toBe(0);
 
     const i = game();
@@ -51,15 +51,17 @@ describe('getting paid', () => {
     const c2 = i.company.cash;
     collectOrInvoice(i, gig(3), 10000);
     expect(i.company.cash).toBe(c2 - Math.round(10000 * INSURE_PREMIUM));
-    i.hour += 24 * 31;
+    i.hour += 24 * (paymentDays(gig(3)) + 1);
     dailyReceivables(i, yes); // everyone defaults
     expect(i.company.cash).toBe(c2 - Math.round(10000 * INSURE_PREMIUM) + 10000);
 
     const h = game();
     const c3 = h.company.cash;
     collectOrInvoice(h, gig(3), 10000);
-    h.hour += 24 * 31;
-    dailyReceivables(h, yes);
+    h.hour += 24 * (paymentDays(gig(3)) + 1);
+    dailyReceivables(h, yes); // a promoter who is late first…
+    h.hour += 24 * (LATE_SLIP_MIN + LATE_SLIP_SPREAD + 1);
+    dailyReceivables(h, yes); // …and then never pays
     expect(h.company.cash).toBe(c3);
     expect(h.news.some(n => /gone under owing you/.test(n.text))).toBe(true);
   });
@@ -75,8 +77,8 @@ describe('getting paid', () => {
   it('runs through the clock without trouble', () => {
     const s = game();
     collectOrInvoice(s, gig(2), 3000);
-    const later = advanceHours(s, 24 * 20);
+    const later = advanceHours(s, 24 * (paymentDays(gig(2)) + 2));
     expect(later.receivables.length).toBe(0);
-    expect(dayOf(later.hour)).toBeGreaterThan(14);
+    expect(dayOf(later.hour)).toBeGreaterThan(paymentDays(gig(2)));
   });
 });

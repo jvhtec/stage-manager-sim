@@ -99,3 +99,24 @@ describe('rivals string runs together', () => {
     expect(s.vehicles.find(v => v.id === 'rv-1')!.orders).toEqual(['held']);
   });
 });
+
+describe('rivals in the modern era', () => {
+  it('the big houses use team drivers and freight; the international ones work abroad', async () => {
+    const { rivalReach } = await import('../offers');
+    const s = createTycoonGame({ companyName: 'R', color: '#f00', seed: 19, country: 'GB', startYear: 2000 });
+    const world = worldOf(s);
+    const big = world.cities.find(c => c.size === 'metropolis')!;
+    const small = world.cities.find(c => c.size === 'village')!;
+    const rival = { ...s.rivals[0], hqCityId: big.id, reputation: 70, maxTier: 4 };
+    const gigIn = (cityId: string) => ({ ...s.gigs.find(g => g.status === 'offer')!, cityId });
+    const city = world.cities.find(c => c.size === 'city' && c.id !== big.id)!;
+    expect(rivalReach(s, world, rival, gigIn(city.id)).freight).toBe(true);
+    expect(rivalReach(s, world, rival, gigIn(small.id)).freight).toBe(false);
+    expect(rivalReach(s, world, rival, gigIn(city.id)).pace).toBeGreaterThan(1);
+    const abroad = world.abroad[0];
+    expect(rivalReach(s, world, rival, gigIn(abroad.id)).abroad).toBe(true);
+    // Before 1990 there's no team-driver edge.
+    const early = createTycoonGame({ companyName: 'R', color: '#f00', seed: 19, country: 'GB', startYear: 1980 });
+    expect(rivalReach(early, worldOf(early), { ...rival, hqCityId: big.id }, gigIn(city.id)).pace).toBe(1);
+  });
+});

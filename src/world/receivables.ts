@@ -4,25 +4,37 @@
  * wait for the money, sell your invoices to a factor for cash today (at a
  * discount), or insure them against default.
  */
+import { clientTemper } from './changes';
 import type { Rng } from '@/lib/rng';
 import { book, dayOf, formatMoney, newId, pushNews } from './core';
-import { marketNow } from './market';
+import { marketNow, shockFactors } from './market';
+import { officeLateFactor, officeStretch } from './office';
 import { COUNCIL_PAYMENT_DAYS } from './rules';
 import type { Gig, InvoicingPolicy, Invoice, TycoonState } from './types';
 
 /** Days promoters take to pay, by venue tier (festivals and events add more). */
-export const PAYMENT_DAYS = [0, 0, 14, 30, 45];
+export const PAYMENT_DAYS = [0, 0, 30, 45, 60];
 export const FESTIVAL_EXTRA_DAYS = 15;
 /** Factors buy invoices at this discount. */
-export const FACTOR_DISCOUNT = 0.035;
+/** Chance a promoter pays late, by tier. */
+export const LATE_RISK = [0, 0, 0.12, 0.18, 0.24];
+/** A late payer slips this many days, plus up to LATE_SLIP_SPREAD more. */
+export const LATE_SLIP_MIN = 15;
+export const LATE_SLIP_SPREAD = 45;
+/** Pushy clients are slow payers too. */
+export const LATE_TEMPER = { easy: 0.5, fair: 1, pushy: 1.8 };
+/** Factors charge a handling fee plus interest for every day they wait in your place. */
+export const FACTOR_DISCOUNT = 0.015;
+export const FACTOR_PER_DAY = 0.0005;
+export const factorDiscount = (days: number) => FACTOR_DISCOUNT + days * FACTOR_PER_DAY;
 /** Credit insurance premium on each invoice. */
 export const INSURE_PREMIUM = 0.012;
 /** Chance a promoter never pays, by tier. */
-export const DEFAULT_RISK = [0, 0, 0.008, 0.015, 0.02];
+export const DEFAULT_RISK = [0, 0, 0.01, 0.018, 0.025];
 
 export const INVOICING: Record<InvoicingPolicy, { label: string; blurb: string }> = {
   hold: { label: 'Wait for it', blurb: 'Collect when it falls due and carry the risk of a promoter not paying.' },
-  factor: { label: 'Sell to a factor', blurb: `Cash today for ${Math.round((1 - FACTOR_DISCOUNT) * 100)}% of the invoice, no risk.` },
+  factor: { label: 'Sell to a factor', blurb: `Cash today, no risk: the factor keeps ${(FACTOR_DISCOUNT * 100).toFixed(1)}% plus ${(FACTOR_PER_DAY * 100).toFixed(2)}% for each day the promoter would have taken (${(factorDiscount(PAYMENT_DAYS[4]) * 100).toFixed(1)}% on a ${PAYMENT_DAYS[4]}-day invoice).` },
   insure: { label: 'Credit insurance', blurb: `${(INSURE_PREMIUM * 100).toFixed(1)}% of each invoice: you wait, but a default is covered.` },
 };
 export const INVOICING_LEVELS: InvoicingPolicy[] = ['hold', 'factor', 'insure'];
@@ -51,7 +63,7 @@ export function collectOrInvoice(s: TycoonState, gig: Gig, amount: number) {
   }
   const policy = s.policies.invoicing ?? 'hold';
   if (policy === 'factor') {
-    book(s, 'shows', Math.round(amount * (1 - FACTOR_DISCOUNT)));
+    book(s, 'shows', Math.round(amount * (1 - factorDiscount(days))));
     return;
   }
   let insured = false;
@@ -66,6 +78,17 @@ export function collectOrInvoice(s: TycoonState, gig: Gig, amount: number) {
 export function dailyReceivables(s: TycoonState, rng: Rng) {
   const today = dayOf(s.hour);
   if (!s.receivables.some(i => i.dueDay <= today)) return;
+  // Some promoters pay late: the money comes, but weeks after it was due.
+  s.receivables.forEach(inv => {
+    if (inv.dueDay > today || inv.slipped || inv.insured) return;
+    inv.slipped = true;
+    // A late-payment wave (shocks.ts) makes it likelier, and later.
+    // An office with no time to chase invoices lets more of them slide (office.ts).
+    const wave = shockFactors(s, today).late * officeLateFactor(officeStretch(s));
+    if (!rng.chance(Math.min(0.9, LATE_RISK[Math.max(0, Math.min(4, inv.tier))] * LATE_TEMPER[clientTemper(inv.act)] * (s.managers?.finance ? 0.6 : 1) * wave))) return;
+    inv.dueDay = today + LATE_SLIP_MIN + rng.nextInt(Math.round(LATE_SLIP_SPREAD * Math.min(2, wave)) + 1);
+    pushNews(s, `${inv.act}'s promoter is late paying your ${formatMoney(s, inv.amount)} invoice — they promise it within ${inv.dueDay - today} days.`, 'bad');
+  });
   const due = s.receivables.filter(i => i.dueDay <= today);
   s.receivables = s.receivables.filter(i => i.dueDay > today);
   due.forEach(inv => {

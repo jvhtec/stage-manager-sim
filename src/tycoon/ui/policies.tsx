@@ -1,5 +1,6 @@
+import { MANAGERS, MANAGER_IDS, SPEND_LIMITS } from '@/world/management';
 import { INVOICING, INVOICING_LEVELS } from '@/world/receivables';
-import { setPartner, setPolicy } from '@/world/actions';
+import { setManager, setPartner, setPolicy, setSpendLimit } from '@/world/actions';
 import { PARTNER_DISCOUNT, PARTNER_REPUTATION, PARTNER_SHARE, brandShare, brandsFor, sponsorship } from '@/world/partners';
 import { DEPT_LABELS } from '@/world/catalog';
 import { DEPTS } from '@/world/types';
@@ -63,9 +64,45 @@ export function PoliciesWindow({ ctx }: { ctx: WinCtx }) {
   const { state } = ctx;
   const set = <K extends 'workshop' | 'pay' | 'insurance' | 'freelance' | 'subhire' | 'rentOut' | 'training' | 'rest' | 'marketing' | 'rehearsal' | 'invoicing'>(key: K, value: (typeof state.policies)[K]) => ctx.dispatch(s => setPolicy(s, key, value));
   const owned = ownedStock(state);
+  const act = (fn: Parameters<WinCtx['dispatch']>[0]) => {
+    const r = ctx.dispatch(fn);
+    if (r.message) ctx.toast(r.message, r.ok);
+  };
   return (
     <div>
-      <h4 style={{ marginTop: 0 }}>Gear workshop</h4>
+      <h4 style={{ marginTop: 0 }}>Department heads</h4>
+      {MANAGER_IDS.map(id => {
+        const on = !!state.managers?.[id];
+        return (
+          <div key={id} className="tt-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: 3 }}>
+            <div className="tt-row">
+              <b>{MANAGERS[id].title}</b>
+              <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                <span className="tt-dim">{money(MANAGERS[id].salary)}/mo</span>
+                <button className={`tt-btn sm${on ? '' : ' primary'}`} onClick={() => act(s => setManager(s, id, !on))}>
+                  {on ? 'Let go' : 'Hire'}
+                </button>
+              </span>
+            </div>
+            <div className="tt-dim" style={{ whiteSpace: 'normal', fontSize: 12 }}>
+              {MANAGERS[id].blurb}
+            </div>
+            {id === 'production' && on && (
+              <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
+                <span className="tt-dim" style={{ fontSize: 12 }}>May spend up to</span>
+                {SPEND_LIMITS.map(l => (
+                  <button key={l} className="tt-btn sm" data-on={(state.managers?.spendLimit ?? 0.2) === l} onClick={() => act(s => setSpendLimit(s, l))}>
+                    {Math.round(l * 100)}%
+                  </button>
+                ))}
+                <span className="tt-dim" style={{ fontSize: 12 }}>of a show's fee</span>
+              </div>
+            )}
+          </div>
+        );
+      })}
+
+      <h4>Gear workshop</h4>
       <Stat label="Average condition of your kit">
         <ConditionChip value={averageCondition(state, owned)} />
       </Stat>

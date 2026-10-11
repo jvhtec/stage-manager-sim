@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { borrow, buyRival, goPublic, headhunt, investigate, repay, setDividend, takePrivate } from '@/world/actions';
+import { borrow, bridgingLoan, buyRival, goPublic, headhunt, investigate, repay, setDividend, takePrivate } from '@/world/actions';
 import { brandOf } from '@/world/sponsors';
 import { owed } from '@/world/receivables';
 import { expertise, knownForLabel } from '@/world/expertise';
@@ -13,19 +13,25 @@ import type { DividendLevel } from '@/world/types';
 import { rivalHealth, takeoverBlocker, takeoverPrice } from '@/world/rivals';
 import {
   START_YEARS,
-  NEGATIVE_MONTHS_GAME_OVER,
   TIERS,
   companyTier,
   tierInfo,
 } from '@/world/catalog';
 import { formatDay, formatHour, yearOf } from '@/world/core';
 import { MILESTONES } from '@/world/milestones';
+import { forecastCash } from '@/world/cashflow';
+import { activeBans } from '@/world/blacklist';
+import { chainText, incidentsOf } from '@/world/consequences';
+import { SCENARIOS, getScenario } from '@/world/scenarios';
 import { DIFFICULTIES, DIFFICULTY_IDS, GOALS, GOAL_IDS, goalDeadlineYear, legacyScore } from '@/world/scenario';
 import { worldOf } from '@/world/mapgen';
 import { companyValue } from '@/world/queries';
 import { awardsName, companyRating, rivalRating } from '@/world/awards';
 import { describeLoanRate } from '@/world/market';
 import { borrowStep, creditLimit } from '@/world/finance';
+import { bridgeOffer, overdraftLimit } from '@/world/liquidity';
+import { officeCapacity, officeLoad, officeSlipChance, officeStretch } from '@/world/office';
+import { SHARE_MIN_SHOWS, shareCeiling, townShare } from '@/world/territory';
 import { suggestedHqCities } from '@/world/state';
 import { LEDGER_LABELS, type AnnualReport, type Difficulty, type GoalId, type LedgerCategory, type TycoonState } from '@/world/types';
 import { createRandomSeed } from '@/lib/rng';
@@ -115,6 +121,7 @@ export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
           </div>
         </>
       )}
+      <CashForecast state={state} />
       <div style={{ display: 'flex', gap: 4, marginTop: 6 }}>
         <button className="tt-btn sm" disabled={state.company.loan >= creditLimit(state)} onClick={() => act(borrow)}>
           Borrow {money(Math.min(borrowStep(state), Math.max(0, creditLimit(state) - state.company.loan)))}
@@ -129,12 +136,8 @@ export function FinanceWindow({ ctx }: { ctx: WinCtx }) {
           ? ` Leases: ${money(state.vehicles.reduce((sum, v) => sum + (v.owner === 'player' && v.lease ? v.lease.monthly : 0), 0))}/month.`
           : ''}
       </div>
-      {state.negativeMonths > 0 && (
-        <div className="tt-bad" style={{ marginTop: 6 }}>
-          {state.negativeMonths} month{state.negativeMonths > 1 ? 's' : ''} closed in the red —{' '}
-          {NEGATIVE_MONTHS_GAME_OVER - state.negativeMonths} more and the bank shuts you down.
-        </div>
-      )}
+      <Liquidity state={state} act={act} />
+      <Strain state={state} />
       <h4>Shareholders</h4>
       {state.listing ? (
         <>
@@ -501,6 +504,11 @@ export function HelpWindow() {
           Florida…) have no union houses while the north-east and west coast do. Spain has no stagehand unions at all.
         </li>
         <li>
+          <b>Tour bus hire</b> (Fleet window): touring acts want a bus and driver for weeks. Buy a coach (a Duple from 1975,
+          a Setra sleeper from 1985, the Skyliner from 1994) and hire it out at a day rate — the driver comes out of it, the
+          bus wears and can break down mid-tour, and contracts you leave on the table go to rivals.
+        </li>
+        <li>
           <b>Rehearsals are mandatory</b> for big jobs: arena shows, stadiums, broadcast events and tours can't be booked
           without a rehearsal stage of the right size (Base → Annexes), and an unrehearsed show suffers. Policies has an
           automatic option.
@@ -543,14 +551,52 @@ export function HelpWindow() {
           along with your legacy score. Reach it and the game keeps going; the score is what you leave behind.
         </li>
         <li>
+          <b>Cause and effect</b>: promoters sometimes pay late, so keep a cash cushion — when it runs thin, services and the
+          workshop get put off, worn trucks and kit fail, and the next bad night is written up in the League (<i>Post-mortems</i>)
+          with the chain that led to it. Clients ask for extras at load-in; give too many away and they expect them. The Money
+          window forecasts the next eight weeks.
+        </li>
+        <li>
+          <b>Technical riders</b>: bigger shows need a desk with enough inputs, sometimes a particular console family for the
+          engineer's show file, and a PA from the approved list. The show window checks your kit and offers cross-hire from a
+          rental house; break the rider and the client holds back part of the fee.
+        </li>
+        <li>
+          <b>The room</b>: clubs and up have limited power, a roof that only takes so much weight and sometimes no dock for an
+          artic. The offer warns you, and a booked show offers a generator, ground support or a van shuttle.
+        </li>
+        <li>
+          <b>Crew are people</b>: pairs who work well together become trusted teams (🤝) and deliver more; pairs who clash feud
+          (⚡) and cost the show, and past a point refuse to share a truck unless you name them both. Keep people exhausted on
+          the road for too long and they burn out for good.
+        </li>
+        <li>
+          <b>Kit is physical</b>: trucks have a payload as well as space, and a load-in has six hours before soundcheck — short
+          crews, street load-ins and stairs make it slow. The show window estimates it and offers local loaders.
+        </li>
+        <li>
+          <b>Terms</b>: easy-going clients pay a deposit and agree a cancellation fee; pushy ones don't. Ask for better terms
+          before you book — but they may walk. Clients do cancel, and without a clause you get nothing.
+        </li>
+        <li>
+          <b>Ecosystems</b>: old lines go legacy, then end-of-life, and repairs slow down as spares dry up. Standardise a
+          department on one brand and the workshop gets cheaper — until that maker has a bad day.
+        </li>
+        <li>
+          <b>Department heads</b> (Company policies): a production manager advances shows and answers change requests, a crew
+          chief keeps feuds apart and burnout down, a finance director chases invoices. Hire them when the clicking gets
+          too much.
+        </li>
+        <li>
           Buy bigger trucks and more gear, and win reputation to unlock arenas and stadiums. Every January the industry awards
-          judge your year.
+          judge your year and the trade press prints its supplier table, the biggest tours and reviews of your best and worst
+          shows. Or start from a <b>historic scenario</b> — Live Aid, Italia ’90, Barcelona ’92 — and win a lot of the night.
         </li>
       </ol>
       <p className="tt-dim" style={{ marginBottom: 0 }}>
         Drag to pan, scroll or pinch to zoom. Space pauses; 1–4 set the speed. Install it as an app: on iPhone/iPad use Share →
         Add to Home Screen; on Android use the browser's Install prompt. Vehicles break down more as they age — keep them
-        serviced. Wages and running costs tick every day, and three months in the red ends the company.
+        serviced. Wages and running costs tick every day. Live in your overdraft too long and the bank cuts it; go over the limit and wages go late and suppliers want cash up front — stay over it past the bank's demand and the administrators come in. Grow faster than your office and the shows start to slip.
       </p>
     </div>
   );
@@ -564,19 +610,23 @@ export function NewGameForm({
   onCancel,
 }: {
   onPreview: (seed: number, hqCityId?: string, country?: CountryCode) => void;
-  onStart: (opts: { companyName: string; color: string; seed: number; hqCityId: string; country: CountryCode; startYear: number; difficulty: Difficulty; goal: GoalId }) => void;
+  onStart: (opts: { companyName: string; color: string; seed: number; hqCityId: string; country: CountryCode; startYear: number; difficulty: Difficulty; goal: GoalId; scenario?: string }) => void;
   onCancel?: () => void;
 }) {
   const [name, setName] = useState('Roadcase & Rigging');
   const [color, setColor] = useState(COLORS[0]);
   const [seed, setSeed] = useState(() => createRandomSeed());
-  const [country, setCountry] = useState<CountryCode>(() => guessCountry());
-  const [startYear, setStartYear] = useState(1990);
+  const [pickedCountry, setCountry] = useState<CountryCode>(() => guessCountry());
+  const [pickedYear, setStartYear] = useState(1990);
+  const [scenarioId, setScenarioId] = useState('');
+  const sc = getScenario(scenarioId);
+  const country = sc?.country ?? pickedCountry;
+  const startYear = sc?.startYear ?? pickedYear;
   const [difficulty, setDifficulty] = useState<Difficulty>('normal');
   const [goal, setGoal] = useState<GoalId>('sandbox');
   const cities = useMemo(() => suggestedHqCities(seed, country), [seed, country]);
   const [hq, setHq] = useState<string>('');
-  const hqId = cities.find(c => c.id === hq)?.id ?? cities.find(c => c.size === 'town')?.id ?? cities[0]?.id;
+  const hqId = (sc ? cities.find(c => c.name === sc.hq)?.id : undefined) ?? cities.find(c => c.id === hq)?.id ?? cities.find(c => c.size === 'town')?.id ?? cities[0]?.id;
 
   useEffect(() => onPreview(seed, hqId, country), [seed, hqId, country, onPreview]);
 
@@ -603,6 +653,24 @@ export function NewGameForm({
       </div>
       <div>
         <div className="tt-dim" style={{ marginBottom: 3 }}>
+          Scenario
+        </div>
+        <select className="tt-input" value={scenarioId} onChange={e => setScenarioId(e.target.value)} aria-label="Scenario">
+          <option value="">Free play — pick your own country and year</option>
+          {SCENARIOS.map(x => (
+            <option key={x.id} value={x.id}>
+              {x.title}
+            </option>
+          ))}
+        </select>
+        {sc && (
+          <div className="tt-dim" style={{ marginTop: 3, fontSize: 11, whiteSpace: 'normal' }}>
+            {sc.blurb} Starts {sc.startYear} in {sc.hq}, with a name worth bidding on; you have {sc.years === 1 ? 'a year' : `${sc.years} years`}.
+          </div>
+        )}
+      </div>
+      <div style={{ display: sc ? 'none' : undefined }}>
+        <div className="tt-dim" style={{ marginBottom: 3 }}>
           Country
         </div>
         <div className="tt-countries">
@@ -622,7 +690,7 @@ export function NewGameForm({
           ))}
         </div>
       </div>
-      <div>
+      <div style={{ display: sc ? 'none' : undefined }}>
         <div className="tt-dim" style={{ marginBottom: 3 }}>
           Start year
         </div>
@@ -649,7 +717,7 @@ export function NewGameForm({
           {DIFFICULTIES[difficulty].blurb}
         </div>
       </div>
-      <div>
+      <div style={{ display: sc ? 'none' : undefined }}>
         <div className="tt-dim" style={{ marginBottom: 3 }}>
           Goal
         </div>
@@ -664,7 +732,7 @@ export function NewGameForm({
           {GOALS[goal].blurb}
         </div>
       </div>
-      <label>
+      <label style={{ display: sc ? 'none' : undefined }}>
         <div className="tt-dim" style={{ marginBottom: 3 }}>
           Home town
         </div>
@@ -689,7 +757,7 @@ export function NewGameForm({
           <button
             className="tt-btn primary"
             disabled={!name.trim() || !hqId}
-            onClick={() => onStart({ companyName: name.trim(), color, seed, hqCityId: hqId!, country, startYear, difficulty, goal })}
+            onClick={() => onStart({ companyName: name.trim(), color, seed, hqCityId: hqId!, country, startYear, difficulty, goal: sc ? 'scenario' : goal, scenario: sc?.id })}
           >
             Start company
           </button>
@@ -936,6 +1004,8 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
       ) : (
         <div className="tt-dim">Empty — for now.</div>
       )}
+      <PressCharts state={state} />
+      <PostMortems state={state} />
       <h4>
         Milestones ({state.milestones.length}/{MILESTONES.length})
       </h4>
@@ -953,5 +1023,229 @@ export function LeagueWindow({ ctx }: { ctx: WinCtx }) {
         })}
       </div>
     </div>
+  );
+}
+
+/** The trade press's latest year-end charts: the supplier table, the year's biggest tours and the reviews. */
+function PressCharts({ state }: { state: TycoonState }) {
+  const chart = state.charts?.[state.charts.length - 1];
+  if (!chart) {
+    return (
+      <>
+        <h4>Trade press</h4>
+        <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+          Every New Year the trade press prints the supplier table, the year's biggest tours and reviews of your best and worst nights.
+        </div>
+      </>
+    );
+  }
+  return (
+    <>
+      <h4>
+        Trade press, {chart.year} (you were {chart.rank} of {chart.firms})
+      </h4>
+      <div className="tt-list">
+        {chart.table.map((r, i) => (
+          <div key={r.name} className="tt-row" style={{ fontWeight: r.you ? 700 : undefined }}>
+            <span>
+              {i + 1}. {r.name}
+            </span>
+            <span className="tt-dim">{r.score}</span>
+          </div>
+        ))}
+      </div>
+      <div className="tt-dim" style={{ margin: '6px 0 2px' }}>
+        Biggest tours of {chart.year}
+      </div>
+      <div className="tt-list">
+        {chart.tours.map(t => (
+          <div key={t.act} className="tt-row">
+            <span>{t.act}</span>
+            <span className="tt-dim">{t.yours ? 'your rig ★' : tierInfo(t.tier).label}</span>
+          </div>
+        ))}
+      </div>
+      {chart.rave && (
+        <div style={{ whiteSpace: 'normal', marginTop: 6 }}>
+          ⭐ <b>{chart.rave.act}</b> — “{chart.rave.text}”
+        </div>
+      )}
+      {chart.pan && (
+        <div style={{ whiteSpace: 'normal', marginTop: 4 }}>
+          📰 <b>{chart.pan.act}</b> — “{chart.pan.text}”
+        </div>
+      )}
+    </>
+  );
+}
+
+/** The incident log: what went wrong, and the chain of conditions behind it. */
+function PostMortems({ state }: { state: TycoonState }) {
+  const log = incidentsOf(state).slice(-8).reverse();
+  const bans = activeBans(state);
+  const world = worldOf(state);
+  return (
+    <>
+      {bans.length > 0 && (
+        <>
+          <h4>Won't work with you</h4>
+          <div className="tt-list">
+            {bans.map(b => (
+              <div key={b.key} className="tt-row">
+                <span>{b.key.startsWith('act:') ? b.key.slice(4) : `${world.venueById.get(b.key.slice(6))?.name ?? 'A venue'} (promoter)`}</span>
+                <span className="tt-dim">until {formatDay(state, b.until)}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+      <h4>Post-mortems</h4>
+      {log.length ? (
+        <div className="tt-list">
+          {log.map(inc => (
+            <div key={inc.id} style={{ whiteSpace: 'normal', marginBottom: 8 }}>
+              <div className="tt-row">
+                <span>
+                  {inc.kind === 'cash' ? '💸' : inc.kind === 'breakdown' ? '🔧' : '🎭'} <b>{inc.title}</b>
+                </span>
+                <span className="tt-dim">{formatDay(state, Math.floor(inc.hour / 24))}</span>
+              </div>
+              <div className="tt-dim">{inc.outcome}</div>
+              {inc.causes.slice(0, 3).map(c => (
+                <div key={c.id} style={{ fontSize: 12, paddingLeft: 10 }}>
+                  ↳ <b>{c.label}</b> — {c.detail}
+                  {c.link && <span className="tt-dim"> ({chainText(state, c)})</span>}
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="tt-dim" style={{ whiteSpace: 'normal' }}>
+          When something goes wrong — a breakdown, a rough night, a bill you couldn't pay — the cause is written up here, including what set it up.
+        </div>
+      )}
+    </>
+  );
+}
+
+/** The next eight weeks of cash, as an estimate with a range. */
+function CashForecast({ state }: { state: TycoonState }) {
+  const world = worldOf(state);
+  const f = useMemo(() => forecastCash(state, world), [state, world]);
+  const hi = Math.max(1, ...f.weeks.map(w => w.high));
+  const lo = Math.min(...f.weeks.map(w => w.low));
+  const pad = (hi - lo) * 0.1 || 1;
+  const top = hi + pad;
+  const bottom = lo - pad;
+  const span = top - bottom || 1;
+  const pct = (v: number) => `${Math.round(((v - bottom) / span) * 100)}%`;
+  const nextBills = f.bills.filter(b => b.day <= f.bills[0]?.day).map(b => `${b.label} ${money(b.amount)}`).join(' · ');
+  return (
+    <>
+      <h4>Cash forecast, next {f.weeks.length} weeks</h4>
+      <div style={{ display: 'flex', gap: 3, alignItems: 'stretch', height: 54 }}>
+        {f.weeks.map(w => (
+          <div key={w.week} style={{ flex: 1, position: 'relative', background: 'rgba(255,255,255,0.05)' }} title={`Week ${w.week}: about ${money(w.expected)} (${money(w.low)} to ${money(w.high)})`}>
+            <div style={{ position: 'absolute', left: 0, right: 0, bottom: pct(w.low), top: `calc(100% - ${pct(w.high)})`, background: w.low < 0 ? 'rgba(220,60,60,0.45)' : 'rgba(120,170,255,0.35)' }} />
+            <div style={{ position: 'absolute', left: 0, right: 0, height: 2, bottom: pct(w.expected), background: w.expected < 0 ? '#ff6b6b' : '#e8eefc' }} />
+            {bottom < 0 && top > 0 && <div style={{ position: 'absolute', left: 0, right: 0, height: 1, bottom: pct(0), background: 'rgba(255,255,255,0.35)' }} />}
+          </div>
+        ))}
+      </div>
+      <div className="tt-dim" style={{ whiteSpace: 'normal', marginTop: 4, fontSize: 11 }}>
+        Expected low point: <b>{money(f.lowest.expected)}</b> in week {f.lowest.week}. Estimates are good to about ±{Math.round(f.accuracy * 100)}%
+        {f.accuracy > 0.12 ? ' — office staff at your bases sharpen it.' : '.'}
+        {nextBills ? ` Next bills: ${nextBills}.` : ''}
+      </div>
+      {f.riskWeek && (
+        <div className="tt-bad" style={{ whiteSpace: 'normal', marginTop: 3 }}>
+          If invoices run late you could be overdrawn by week {f.riskWeek}.
+        </div>
+      )}
+      {!f.riskWeek && f.squeezeWeek && (
+        <div className="tt-dim" style={{ whiteSpace: 'normal', marginTop: 3 }}>
+          By week {f.squeezeWeek} cash could be too thin to pay for services, and maintenance would be put off.
+        </div>
+      )}
+    </>
+  );
+}
+
+/** The overdraft, and how far down the road to administration the company is (liquidity.ts). */
+function Liquidity({ state, act }: { state: TycoonState; act: (fn: Parameters<WinCtx['dispatch']>[0]) => void }) {
+  const limit = overdraftLimit(state);
+  const cash = state.company.cash;
+  const l = state.liquidity;
+  const today = Math.floor(state.hour / 24);
+  const grace = DIFFICULTIES[state.difficulty ?? 'normal'].graceMonths;
+  const over = cash < -limit;
+  const offer = bridgeOffer(state);
+  return (
+    <>
+      <Stat label="Overdraft">
+        {limit ? `${money(limit)} arranged` : <span className="tt-bad">none</span>}
+        {cash < 0 && <span className={over ? 'tt-bad' : ''}> · using {money(-cash)}</span>}
+        {(l?.withdrawnUntil ?? -1) > today && <span className="tt-dim"> · cut in half until {formatDay(state, l!.withdrawnUntil!)}</span>}
+      </Stat>
+      {over ? (
+        <div className="tt-bad" style={{ marginTop: 6, whiteSpace: 'normal' }}>
+          Over the limit by {money(-cash - limit)}: wages are going out late and suppliers, hire desks and freelancers want cash up front.
+          {l?.demandDay !== undefined
+            ? ` The bank wants you back inside the limit by ${formatDay(state, l.demandDay)} or it appoints administrators.`
+            : ` The bank will make its demand after ${Math.max(0, DIFFICULTIES[state.difficulty ?? 'normal'].bankPatience - (l?.breachDays ?? 0))} more days.`}
+          {offer > 0 && (
+            <div style={{ marginTop: 4 }}>
+              <button className="tt-btn sm" onClick={() => act(bridgingLoan)}>
+                Bridging finance: {money(offer)}
+              </button>{' '}
+              <span className="tt-dim">8% arrangement fee, added to the loan; once a year.</span>
+            </div>
+          )}
+        </div>
+      ) : state.negativeMonths > 0 ? (
+        <div className="tt-warn" style={{ marginTop: 6, whiteSpace: 'normal' }}>
+          {state.negativeMonths} month{state.negativeMonths > 1 ? 's' : ''} closed in the overdraft — {Math.max(0, grace - state.negativeMonths)} more and the bank cuts it in half.
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+/** Growing pains: is the office keeping up, and how much of the market will promoters give you? */
+function Strain({ state }: { state: TycoonState }) {
+  const load = officeLoad(state);
+  const capacity = officeCapacity(state);
+  const stretch = officeStretch(state);
+  const world = worldOf(state);
+  const busiest = Object.keys(state.townShows ?? {})
+    .map(c => ({ c, t: townShare(state, c) }))
+    .filter(x => x.t.total >= SHARE_MIN_SHOWS && x.t.yours !== undefined)
+    .sort((a, b) => b.t.total - a.t.total)
+    .slice(0, 5);
+  const ceiling = shareCeiling(state);
+  const over = busiest.filter(x => (x.t.yours ?? 0) > ceiling);
+  return (
+    <>
+      <Stat label="Office">
+        <span className={stretch > 0 ? 'tt-bad' : ''}>
+          {load.toFixed(1)} / {capacity.toFixed(1)}
+        </span>{' '}
+        <span className="tt-dim">trucks-and-crews to coordinate / what the office can handle</span>
+      </Stat>
+      {stretch > 0 && (
+        <div className="tt-warn" style={{ marginTop: 4, whiteSpace: 'normal' }}>
+          The work has outgrown the office: call times go wrong on about {Math.round(officeSlipChance(stretch) * 100)}% of shows, cases get left behind and invoices go unchased. Hire office staff at a base, or department heads.
+        </div>
+      )}
+      {busiest.length > 0 && (
+        <Stat label="Market share">
+          {busiest.map(x => `${world.cityById.get(x.c)?.name ?? x.c} ${Math.round((x.t.yours ?? 0) * 100)}%`).join(' · ')}{' '}
+          <span className={over.length ? 'tt-bad' : 'tt-dim'}>
+            {over.length ? `— past ${Math.round(ceiling * 100)}%, promoters start ringing round the other firms first` : `(promoters spread work past ${Math.round(ceiling * 100)}%)`}
+          </span>
+        </Stat>
+      )}
+    </>
   );
 }

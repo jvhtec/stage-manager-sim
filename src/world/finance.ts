@@ -39,6 +39,8 @@ export function creditLimit(state: TycoonState): number {
 
 export const borrowStep = (state: TycoonState) => Math.max(10000, Math.round(creditLimit(state) / 10 / 10000) * 10000);
 
+export const monthlyLeasesTotal = (s: TycoonState) => s.vehicles.reduce((sum, v) => sum + (v.owner === 'player' && v.lease ? v.lease.monthly : 0), 0);
+
 export function monthlyLeases(s: TycoonState) {
   const total = s.vehicles.reduce((sum, v) => sum + (v.owner === 'player' && v.lease ? v.lease.monthly : 0), 0);
   if (total) book(s, 'leasing', -total);

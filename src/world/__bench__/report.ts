@@ -1,0 +1,266 @@
+/**
+ * Turning a bot run into an explanation: where the money came from and went, why shows went
+ * wrong, how close the company came to running dry, what its clients and crew did, and how the
+ * rivals fared under the same rules. `explain` gives the findings for one run; `renderReport`
+ * lays out a comparison of strategies as markdown.
+ */
+import { LEDGER_LABELS, type LedgerCategory } from '../types';
+import { currencyFor, formatCompact } from '../content/currency';
+import type { BotReport, Strategy } from './bot';
+
+/**
+ * The runs as JSON for the record: one run per line, and the monthly series cut to year-ends, so
+ * the files stay small enough to diff.
+ */
+export function reportsJson(reports: BotReport[]): string {
+  const yearEnds = (r: BotReport) => {
+    const by = new Map<number, BotReport['series'][number]>();
+    r.series.forEach(m => by.set(m.year, m));
+    return [...by.values()];
+  };
+  return `[\n${reports.map(r => JSON.stringify({ ...r, series: yearEnds(r) })).join(',\n')}\n]\n`;
+}
+
+const CAUSES: Record<string, string> = {
+  'unpaid-invoices': 'money tied up in unpaid invoices',
+  overdrawn: 'an overdraft',
+  loan: 'debt service',
+  'thin-cash': 'thin cash',
+  'losing-trucks': 'trucks losing money',
+  overdue: 'services put off',
+  old: 'trucks past their working life',
+  worn: 'worn-out trucks',
+  winter: 'winter roads',
+  'bad-luck': 'bad luck',
+  breakdown: 'a truck breaking down on the way',
+  'no-show': 'nobody arriving',
+  late: 'late load-ins',
+  'kit-failed': 'kit dying on stage',
+  'kit-worn': 'tired kit',
+  'short-crew': 'short-handed crews',
+  'tired-crew': 'exhausted crews',
+  prep: 'kit left behind',
+  unrehearsed: 'no rehearsal',
+  tickets: 'uncertified crew',
+  venue: 'venue limits',
+  rider: 'broken technical riders',
+  room: 'rigs that didn’t fit the room',
+  feud: 'crew at loggerheads',
+  'slow-load': 'slow load-ins',
+  'change-hour': 'unpaid extra hours',
+  'change-kit': 'unpaid extra kit',
+  'change-early': 'rushed load-ins for early soundchecks',
+  'client-cancel': 'clients cancelling',
+  terms: 'cancellation clauses paying out',
+  'no-terms': 'cancellations with no clause',
+  disaster: 'shows falling apart',
+  'no-goodwill': 'no goodwill with the promoter',
+  'rider-twice': 'repeat rider breaches',
+  'brand-fault': 'manufacturer faults',
+  standardised: 'all eggs in one brand',
+  'stretched-office': 'an office stretched too thin',
+  'over-limit': 'going over the overdraft limit',
+  'lost-client': 'losing the biggest client',
+  recall: 'a manufacturer recall',
+};
+const label = (k: string) => CAUSES[k] ?? k;
+const pct = (n: number) => `${Math.round(n * 100)}%`;
+
+/**
+ * Money in the run's own currency, as of its last year: pounds for Britain, pesetas for Spain
+ * before 2002 and euros after. Runs in different currencies are never added or compared directly.
+ */
+export const moneyOf = (r: Pick<BotReport, 'country' | 'startYear' | 'yearsRun'>) => {
+  const year = r.startYear + Math.floor(r.yearsRun);
+  const c = currencyFor(r.country, year);
+  return (n: number) => formatCompact(c, n);
+};
+/** A cohort: one country from one start year, so one currency. */
+export const cohortOf = (r: Pick<BotReport, 'country' | 'startYear'>) => `${r.country} ${r.startYear}`;
+export function cohortTitle(r: Pick<BotReport, 'country' | 'startYear' | 'yearsRun'>): string {
+  const name = ({ GB: 'Britain', ES: 'Spain', DE: 'Germany', FR: 'France', IT: 'Italy', US: 'United States' } as Record<string, string>)[r.country] ?? r.country;
+  const end = r.startYear + Math.floor(r.yearsRun);
+  const c = currencyFor(r.country, end);
+  const first = currencyFor(r.country, r.startYear);
+  const unit =
+    c.rate !== 1
+      ? `${c.symbol} (game units ×${c.rate}; the euro arrives in 2002)`
+      : first.symbol !== c.symbol
+        ? `${c.symbol} (the books were in ${first.symbol} until 2002; shown throughout at the conversion rate)`
+        : c.symbol;
+  return `${name} from ${r.startYear} — money in ${unit}`;
+}
+
+/** The show-side causes: what went wrong on the night. */
+const NIGHT = ['stretched-office', 'late', 'kit-failed', 'kit-worn', 'short-crew', 'tired-crew', 'prep', 'unrehearsed', 'tickets', 'venue', 'rider', 'room', 'feud', 'slow-load', 'breakdown', 'no-show', 'change-hour', 'change-kit', 'change-early'];
+
+export function explain(r: BotReport): string[] {
+  const out: string[] = [];
+  const k = moneyOf(r);
+  const margin = r.revenue ? (r.revenue - r.costs) / r.revenue : 0;
+  out.push(r.survived ? `Survived ${r.yearsRun} years, worth ${k(r.value)} (reputation ${r.reputation}).` : `Went under after ${r.yearsRun} years: ${r.gameOver}`);
+  // Money.
+  const ledger = Object.entries(r.ledger) as [LedgerCategory, number][];
+  const income = ledger.filter(([c, v]) => v > 0 && c !== 'equity' && c !== 'sales').sort((a, b) => b[1] - a[1]);
+  const spend = ledger.filter(([, v]) => v < 0).sort((a, b) => a[1] - b[1]);
+  if (r.revenue) {
+    out.push(`Earned ${k(r.revenue)}: ${income.slice(0, 3).map(([c, v]) => `${LEDGER_LABELS[c].toLowerCase()} ${pct(v / r.revenue)}`).join(', ')}.`);
+    out.push(`Operating margin ${pct(margin)}. Biggest costs as a share of revenue: ${spend.slice(0, 4).map(([c, v]) => `${LEDGER_LABELS[c].toLowerCase()} ${pct(-v / r.revenue)}`).join(', ')}.`);
+  }
+  out.push(`Ran ${r.fleet} vehicles at ${r.utilisation} shows per vehicle-year; ${r.shows} shows at ${pct(r.avgQuality)} average, ${r.failed} failed (${pct(r.failed / Math.max(1, r.shows + r.failed))}).`);
+  // Under the contracts.
+  const o = r.contracts.outcomes;
+  const nights = Object.values(o).reduce((a: number, b) => a + (b ?? 0), 0) || 1;
+  out.push(`Nights: ${pct((o.triumph ?? 0) / nights)} triumphs, ${pct((o.solid ?? 0) / nights)} solid, ${pct((o.shaky ?? 0) / nights)} shaky, ${pct((o.bad ?? 0) / nights)} bad, ${pct((o.failed ?? 0) / nights)} failed; clients docked ${k(r.contracts.docked)} and claimed ${k(r.contracts.damages)} in damages (${pct((r.contracts.docked + r.contracts.damages) / Math.max(1, r.revenue))} of revenue).`);
+  if (r.office.peak > 0) out.push(`Office: ${r.office.staff} office staff at the end; the work outgrew the office by ${pct(r.office.stretch)} on average and ${pct(r.office.peak)} at worst.`);
+  const lq = r.liquidity;
+  if (lq.daysOverdrawn) out.push(`Overdraft: ${lq.daysOverdrawn} days in it, ${lq.daysInBreach} over the limit (${lq.breaches} time${lq.breaches === 1 ? '' : 's'})${lq.demands ? `, ${lq.demands} demand${lq.demands === 1 ? '' : 's'} from the bank` : ''}${lq.withdrawn ? `, cut ${lq.withdrawn}×` : ''}${lq.bridges ? `, ${lq.bridges} bridging loan${lq.bridges === 1 ? '' : 's'}` : ''}${r.bot.soldTrucks ? `, sold ${r.bot.soldTrucks} truck${r.bot.soldTrucks === 1 ? '' : 's'} to raise cash` : ''}.`);
+  // Why nights went wrong.
+  const night = Object.entries(r.incidents.main).filter(([c]) => NIGHT.includes(c)).sort((a, b) => b[1] - a[1]);
+  if (night.length) out.push(`Bad nights were mostly down to ${night.slice(0, 3).map(([c, n]) => `${label(c)} (${n})`).join(', ')}.`);
+  const roots = ['overdue', 'unpaid-invoices', 'kit-failed', 'tired-crew', 'brand-fault'].filter(c => r.incidents.causes[c]);
+  if (roots.length) out.push(`Root conditions in the incident log: ${roots.map(c => `${label(c)} ×${r.incidents.causes[c]}`).join(', ')}.`);
+  // Cash stress.
+  const cashIncidents = r.incidents.kinds.cash ?? 0;
+  if (r.monthsOverdrawn || cashIncidents || r.forecastWarnings)
+    out.push(`Cash: ${r.monthsOverdrawn} month${r.monthsOverdrawn === 1 ? '' : 's'} overdrawn, lowest balance ${k(r.lowestCash)}, ${cashIncidents} bill${cashIncidents === 1 ? '' : 's'} deferred, ${r.forecastWarnings} forecast warning${r.forecastWarnings === 1 ? '' : 's'}${r.bot.borrowed ? `, borrowed ${k(r.bot.borrowed)}` : ''}${r.bot.factoredMonths ? `, factored invoices ${r.bot.factoredMonths} months` : ''}.`);
+  else out.push(`Cash never got tight (lowest ${k(r.lowestCash)}).`);
+  // Clients.
+  const cancels = r.incidents.causes['client-cancel'] ?? 0;
+  const bare = r.incidents.causes['no-terms'] ?? 0;
+  if (cancels || r.bot.termsAsked || r.bans)
+    out.push(`Clients: ${cancels} cancellation${cancels === 1 ? '' : 's'} (${bare} with nothing to claim), ${r.bans} ban${r.bans === 1 ? '' : 's'}${r.bot.termsAsked ? `; asked for better terms ${r.bot.termsAsked} times, won ${r.bot.termsWon}` : ''}.`);
+  // Crew.
+  out.push(`Crew: ${r.crew} on the books, ${r.crewLost} lost along the way, burnout ${r.burnout}%, ${r.trusted} trusted pairs and ${r.feuds} feuds${r.bot.crewSplits ? `; split feuding crews ${r.bot.crewSplits} times` : ''}${r.bot.heads.length ? `; hired ${r.bot.heads.join(', ')}` : ''}.`);
+  // Riders, rooms, kit.
+  const rider = r.incidents.causes.rider ?? 0;
+  const room = r.incidents.causes.room ?? 0;
+  out.push(`Riders and rooms: ${r.bot.crossHires} cross-hires and ${r.bot.fixes} room fixes booked; ${rider} rider breach${rider === 1 ? '' : 'es'} and ${room} room problem${room === 1 ? '' : 's'} reached the stage.`);
+  const faults = r.incidents.causes['brand-fault'] ?? 0;
+  out.push(`Kit and fleet: kit averaged ${r.kitCondition.average}% condition (${r.kitCondition.end}% at the end)${r.bot.refurbished ? `, ${r.bot.refurbished} lines refurbished` : ''}; ${faults} manufacturer fault${faults === 1 ? '' : 's'}.`);
+  out.push(`Road: ${Math.round(r.road.km / 1000).toLocaleString('en-US')}k km driven, ${r.road.breakdowns} roadside breakdown${r.road.breakdowns === 1 ? '' : 's'} — ${r.road.per100k} per 100,000 km (one every ${r.road.breakdowns ? `${Math.round(r.road.km / r.road.breakdowns / 1000)}k` : '–'} km) at ${r.road.reliability}% average reliability.`);
+  // Rivals, under the same rules.
+  const dec = Object.entries(r.rivals.declined).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
+  out.push(`Rivals (same rules): ${r.rivals.alive} trading, ${r.rivals.gone} gone; ${r.rivals.shows} shows at ${pct(r.rivals.avgQuality)} average, ${r.rivals.failed} failed; ${r.rivals.crossHires} cross-hires and ${r.rivals.fixes} room fixes paid${dec.length ? `; turned work down for ${dec.map(([c, n]) => `${c} ×${n}`).join(', ')}` : ''}${r.rivals.cashNegative ? `; ${r.rivals.cashNegative} overdrawn` : ''}.`);
+  if (r.bot.lessons.length) out.push(`Learned from its post-mortems: ${r.bot.lessons.join(', ')}.`);
+  if (r.invariantViolations.length) out.push(`⚠️ ${r.invariantViolations.length} invariant violations, first: ${r.invariantViolations[0]}`);
+  return out;
+}
+
+export const median = (xs: number[]) => {
+  const a = [...xs].sort((x, y) => x - y);
+  return a.length ? (a.length % 2 ? a[(a.length - 1) / 2] : (a[a.length / 2 - 1] + a[a.length / 2]) / 2) : 0;
+};
+/** Share of nights in one outcome band (outcomes.ts). */
+export const bandShare = (r: BotReport, band: string) => {
+  const o = r.contracts.outcomes;
+  const n = Object.values(o).reduce((a: number, b) => a + (b ?? 0), 0);
+  return n ? (o[band] ?? 0) / n : 0;
+};
+
+/**
+ * Every run that went over its overdraft limit or under altogether: how many crises, how long
+ * they lasted, what the bank did, and whether the company came back from it.
+ */
+function crisisTable(reports: BotReport[], strategies: Strategy[]): string[] {
+  const hit = reports.filter(r => !r.survived || r.liquidity.breaches > 0);
+  const label = (id: string) => strategies.find(s => s.id === id)?.label ?? id;
+  const lines = [`**Crises and recovery.** ${reports.filter(r => !r.survived).length} of ${reports.length} runs went under; ${hit.length} went over the overdraft limit at least once.`, ''];
+  if (!hit.length) return [...lines, ''];
+  lines.push('| Strategy | Seed | Over-limit crises | Days over the limit | Average crisis | Bank demands | Overdraft cut | Bridging loans | Trucks sold | Outcome |');
+  lines.push('|---|---|---|---|---|---|---|---|---|---|');
+  hit.forEach(r => {
+    const l = r.liquidity;
+    const outcome = !r.survived ? `went under after ${r.yearsRun} years` : l.endOverLimit ? 'still over the limit at the end' : l.breaches ? 'recovered: back inside the limit' : 'no crisis';
+    lines.push(`| ${label(r.strategy)} | ${r.seed} | ${l.breaches} | ${l.daysInBreach} | ${l.breaches ? Math.round(l.daysInBreach / l.breaches) : 0} days | ${l.demands} | ${l.withdrawn} | ${l.bridges} | ${r.bot.soldTrucks} | ${outcome} |`);
+  });
+  return [...lines, ''];
+}
+
+export const marginOf = (r: BotReport) => (r.revenue ? (r.revenue - r.costs) / r.revenue : 0);
+
+/**
+ * Is a gap between two strategies bigger than the spread within them? The same strategy on another
+ * seed can land millions apart (one lost stadium contract changes the next eight years), so a
+ * ranking inside that noise isn't a finding. Only ever within one cohort (one currency).
+ */
+function noiseNote(reports: BotReport[], strategies: Strategy[], k: (n: number) => string): string[] {
+  const stats = strategies
+    .map(st => {
+      const vs = reports.filter(r => r.strategy === st.id).map(r => r.value);
+      return vs.length ? { st, med: median(vs), spread: Math.max(...vs) - Math.min(...vs) } : undefined;
+    })
+    .filter((x): x is { st: Strategy; med: number; spread: number } => !!x)
+    .sort((a, b) => b.med - a.med);
+  const out: string[] = [];
+  for (let i = 0; i + 1 < stats.length; i++) {
+    const a = stats[i];
+    const b = stats[i + 1];
+    const gap = a.med - b.med;
+    const noise = Math.max(a.spread, b.spread) / 2;
+    out.push(gap > noise ? `- **${a.st.label}** beats **${b.st.label}** by ${k(gap)} — more than the run-to-run spread (±${k(noise)}).` : `- ${a.st.label} vs ${b.st.label}: ${k(gap)} apart, inside the run-to-run spread (±${k(noise)}) — not a real difference on these runs.`);
+  }
+  return out.length ? ['**Is the ranking real?**', '', ...out, ''] : [];
+}
+
+/** Runs grouped by cohort (country and start year), in the order they first appear. */
+export function byCohort<T extends Pick<BotReport, 'country' | 'startYear'>>(reports: T[]): T[][] {
+  const groups = new Map<string, T[]>();
+  reports.forEach(r => groups.set(cohortOf(r), [...(groups.get(cohortOf(r)) ?? []), r]));
+  return [...groups.values()];
+}
+
+function strategyTable(reports: BotReport[], strategies: Strategy[], k: (n: number) => string): string[] {
+  const lines = [
+    '| Strategy | Survived | Median value | Range | Margin | Avg quality | Failed shows | Bad nights | Docked | Damages | Days in overdraft | Days over the limit | Office stretch (avg / peak) | Breakdowns /100k km | Crew lost |',
+    '|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|',
+  ];
+  strategies.forEach(st => {
+    const rs = reports.filter(r => r.strategy === st.id);
+    if (!rs.length) return;
+    lines.push(
+      `| ${st.label} | ${rs.filter(r => r.survived).length}/${rs.length} | ${k(median(rs.map(r => r.value)))} | ${k(Math.min(...rs.map(r => r.value)))} – ${k(Math.max(...rs.map(r => r.value)))} | ${pct(median(rs.map(marginOf)))} | ${pct(median(rs.map(r => r.avgQuality)))} | ${pct(median(rs.map(r => bandShare(r, 'failed'))))} | ${pct(median(rs.map(r => bandShare(r, 'bad'))))} | ${pct(median(rs.map(r => r.contracts.docked / Math.max(1, r.revenue))))} | ${pct(median(rs.map(r => r.contracts.damages / Math.max(1, r.revenue))))} | ${median(rs.map(r => r.liquidity.daysOverdrawn))} | ${median(rs.map(r => r.liquidity.daysInBreach))} | ${pct(median(rs.map(r => r.office.stretch)))} / ${pct(median(rs.map(r => r.office.peak)))} | ${median(rs.map(r => r.road.per100k)).toFixed(2)} | ${median(rs.map(r => r.crewLost))} |`,
+    );
+  });
+  return [...lines, ''];
+}
+
+export function renderReport(reports: BotReport[], strategies: Strategy[], meta: { years: number; runs: string }): string {
+  const lines: string[] = [];
+  lines.push('# Balance report');
+  lines.push('');
+  lines.push(`Generated by \`npm run balance:report\` — ${meta.runs}, ${meta.years} years each. Deterministic: the same code gives the same report.`);
+  lines.push('');
+  lines.push('Each country is reported on its own, in its own money: a British company is valued in pounds and a Spanish one in pesetas (euros from 2002), so no figure here adds or compares the two. Margins, failure rates and breakdown rates are ratios and can be read across countries.');
+  lines.push('');
+  byCohort(reports).forEach(cohort => {
+    const k = moneyOf(cohort[0]);
+    lines.push(`## ${cohortTitle(cohort[0])}`);
+    lines.push('');
+    lines.push(...strategyTable(cohort, strategies, k));
+    lines.push(...crisisTable(cohort, strategies));
+    lines.push(...noiseNote(cohort, strategies, k));
+  });
+  lines.push('## Why each run went the way it did');
+  lines.push('');
+  strategies.forEach(st => {
+    const rs = reports.filter(r => r.strategy === st.id);
+    if (!rs.length) return;
+    lines.push(`### ${st.label}`);
+    lines.push('');
+    lines.push(st.blurb);
+    lines.push('');
+    rs.forEach(r => {
+      lines.push(`#### ${r.country} from ${r.startYear}, seed ${r.seed}`);
+      lines.push('');
+      explain(r).forEach(l => lines.push(`- ${l}`));
+      lines.push('');
+    });
+  });
+  const violations = reports.reduce((n, r) => n + r.invariantViolations.length, 0);
+  lines.push('## Invariants');
+  lines.push('');
+  lines.push(violations ? `⚠️ ${violations} violations across the runs — see the JSON.` : 'No invariant violations in any run (money, equipment, vehicles, contracts, personnel checked monthly).');
+  lines.push('');
+  return lines.join('\n');
+}

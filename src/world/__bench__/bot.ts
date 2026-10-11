@@ -1,0 +1,621 @@
+/**
+ * The balance bot: a scripted company that plays the game through the same actions as a player,
+ * following a named strategy. Deterministic for a given (country, year, seed, strategy), so runs
+ * can be compared. `runBot` returns a report that explains the result, not just the final cash.
+ */
+import { createTycoonGame } from '../state';
+import { advanceHours } from '../sim';
+import {
+  assignVehicle,
+  assignVehicleToTour,
+  bookGig,
+  bookTour,
+  borrow,
+  bridgingLoan,
+  buildAnnex,
+  buyGear,
+  buyVehicle,
+  crossHireKit,
+  fixProduction,
+  haggleGig,
+  hireCrew,
+  hireStaff,
+  leaseVehicle,
+  makeDecision,
+  negotiateTerms,
+  orderTourMerch,
+  refurbishGear,
+  rehearseShow,
+  repay,
+  sellVehicle,
+  unassignVehicle,
+  setCrewPicks,
+  setManager,
+  setPolicy,
+  trainCrew,
+  upgradeDepot,
+} from '../actions';
+import { gigBookingBar, tourBookingBar } from '../standing';
+import { dayOf, yearOf } from '../core';
+import { worldOf } from '../mapgen';
+import { roadDistance } from '../pathfinding';
+import { companyValue, projectCoverage } from '../queries';
+import { deptTotals } from '../loading';
+import { expectedQuality, productsAvailableIn } from '../content/gear';
+import { VEHICLE_MODELS, getModel } from '../catalog';
+import { tourMaxTier } from '../tours';
+import { nextUpgrade } from '../facilities';
+import { crossHireCost, crossHireOptions } from '../techRider';
+import { forecastCash } from '../cashflow';
+import { brandShares } from '../ecosystem';
+import { averageCondition, monthlyWorkshopCost, ownedStock, refurbishCost } from '../wear';
+import { relationOf, rapport } from '../bonds';
+import { checkInvariants } from '../invariants';
+import { officeStretch } from '../office';
+import { facilitySpec } from '../facilities';
+import { MANAGERS } from '../management';
+import { applyShock, recalled, type ShockKind } from '../shocks';
+import { DEPTS, type LedgerCategory, type TycoonState } from '../types';
+import type { CountryCode } from '../content/countries';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type S = any;
+const ok = (s: S, out: { state: S; result: { ok: boolean } }): S => (out.result.ok ? out.state : s);
+
+export type Feature =
+  | 'gear' // buy the kit the shows it books need
+  | 'invest' // trucks, crew, depot upgrades
+  | 'tours'
+  | 'merch'
+  | 'annex' // rehearsal stage
+  | 'train' // tickets
+  | 'invoice' // factor invoices when cash is thin
+  | 'sponsor'
+  | 'riders' // cross-hire to meet riders, book room fixes
+  | 'terms' // push for deposits and cancellation clauses
+  | 'crew' // keep feuding crew apart
+  | 'heads' // hire department heads
+  | 'cash' // act on the cash forecast
+  | 'standardise' // buy one brand per department
+  | 'haggle'
+  | 'learn' // read its own post-mortems and fix the biggest recurring cause
+  | 'replan' // move shows off trucks that are off the road for days
+  | 'maintain' // refurbish worn product lines
+  | 'office'; // hire office staff when the work outgrows the office
+
+export interface Strategy {
+  id: string;
+  label: string;
+  blurb: string;
+  features: Feature[];
+  /** Share of a fee it'll spend meeting a rider or fixing a room. */
+  fixLimit: number;
+  /** Skip club-level-and-up shows paying less than this. */
+  minFee: number;
+  policies: Partial<Record<'workshop' | 'pay' | 'insurance' | 'training' | 'rest', string>>;
+  /** How hard it grows: buy a truck once cash covers this many times its price; borrow and lease to grow; the biggest fleet it wants. */
+  growth?: { cashMultiple: number; borrow: boolean; lease: boolean; maxFleet: number };
+}
+
+const STEADY_GROWTH = { cashMultiple: 3, borrow: false, lease: false, maxFleet: 12 };
+
+const CORE: Feature[] = ['gear', 'invest', 'tours', 'merch', 'annex', 'train', 'invoice', 'sponsor', 'haggle', 'maintain', 'replan', 'office'];
+
+export const STRATEGIES: Record<string, Strategy> = {
+  baseline: {
+    id: 'baseline',
+    label: 'Baseline operator',
+    blurb: 'Books what it can reach, buys the kit and trucks it needs, meets riders and fixes rooms. Never negotiates terms, ignores crew politics and the cash forecast.',
+    features: [...CORE, 'riders'],
+    fixLimit: 0.2,
+    minFee: 800,
+    policies: { insurance: 'basic', training: 'courses' },
+  },
+  managed: {
+    id: 'managed',
+    label: 'Managed company',
+    blurb: 'The baseline, run properly: pushes for deposits and cancellation clauses on big shows (or any show when cash is at risk), keeps feuding crew apart, hires department heads as it grows, acts on the cash forecast, and reads its own post-mortems to fix what keeps going wrong.',
+    features: [...CORE, 'riders', 'terms', 'crew', 'heads', 'cash', 'learn'],
+    fixLimit: 0.2,
+    minFee: 800,
+    policies: { insurance: 'basic', training: 'courses' },
+  },
+  premium: {
+    id: 'premium',
+    label: 'Premium house',
+    blurb: 'Managed, plus a full workshop, top pay, one brand per department, and only shows worth having.',
+    features: [...CORE, 'riders', 'terms', 'crew', 'heads', 'cash', 'standardise', 'learn'],
+    fixLimit: 0.3,
+    minFee: 2500,
+    policies: { insurance: 'full', training: 'courses', workshop: 'full', pay: 'high' },
+  },
+  expansionist: {
+    id: 'expansionist',
+    label: 'Expansionist',
+    blurb: 'A competent operator in a hurry: meets riders, fixes rooms, keeps kit up and watches the forecast, but grows the fleet as fast as the bank and the lessors allow — a truck whenever every truck is busy, borrowing and leasing to pay for it — and never builds the office or hires department heads to run it.',
+    features: ['gear', 'invest', 'tours', 'merch', 'train', 'invoice', 'sponsor', 'haggle', 'maintain', 'replan', 'riders', 'terms', 'cash'],
+    fixLimit: 0.2,
+    minFee: 800,
+    policies: { insurance: 'basic', training: 'courses' },
+    growth: { cashMultiple: 1.2, borrow: true, lease: true, maxFleet: 30 },
+  },
+  ambitious: {
+    id: 'ambitious',
+    label: 'Ambitious',
+    blurb: 'Grows as fast as the expansionist — borrowing and leasing a truck whenever every truck is busy — but builds the office and hires department heads as it goes.',
+    features: ['gear', 'invest', 'tours', 'merch', 'annex', 'train', 'invoice', 'sponsor', 'haggle', 'maintain', 'replan', 'office', 'riders', 'terms', 'crew', 'heads', 'cash', 'learn'],
+    fixLimit: 0.2,
+    minFee: 800,
+    policies: { insurance: 'basic', training: 'courses' },
+    growth: { cashMultiple: 1.2, borrow: true, lease: true, maxFleet: 30 },
+  },
+  lean: {
+    id: 'lean',
+    label: 'Lean operator',
+    blurb: 'Keeps overheads down: low pay, no workshop, no insurance, no training, no heads. Still meets riders and watches the cash.',
+    features: ['gear', 'invest', 'tours', 'invoice', 'riders', 'cash', 'haggle', 'replan'],
+    fixLimit: 0.15,
+    minFee: 500,
+    policies: { insurance: 'none', training: 'none', workshop: 'none', pay: 'low' },
+  },
+  reckless: {
+    id: 'reckless',
+    label: 'Corner-cutter',
+    blurb: 'Takes everything, never cross-hires or fixes a room, no workshop or insurance, never looks at the forecast.',
+    features: ['gear', 'invest', 'tours', 'haggle'],
+    fixLimit: 0,
+    minFee: 0,
+    policies: { insurance: 'none', training: 'none', workshop: 'none', pay: 'low', rest: 'off' },
+  },
+};
+
+export interface BotRun {
+  country: CountryCode;
+  startYear: number;
+  years: number;
+  seed: number;
+  strategy: Strategy;
+  /** Shocks to throw at the company, by day of the run (shocks.ts). */
+  shocks?: { kind: ShockKind; day: number }[];
+  /** Look at the final state (diagnostics). */
+  onEnd?: (s: TycoonState) => void;
+}
+
+/** One month of the run. */
+export interface BotMonth {
+  day: number;
+  year: number;
+  cash: number;
+  value: number;
+  reputation: number;
+  shows: number;
+  /** Show income booked so far, all years. */
+  income: number;
+}
+
+export interface BotReport {
+  country: string;
+  startYear: number;
+  seed: number;
+  strategy: string;
+  survived: boolean;
+  gameOver?: string;
+  yearsRun: number;
+  value: number;
+  cash: number;
+  loan: number;
+  reputation: number;
+  shows: number;
+  failed: number;
+  avgQuality: number;
+  /** Totals over the whole run, by ledger category. */
+  ledger: Partial<Record<LedgerCategory, number>>;
+  revenue: number;
+  costs: number;
+  /** Shows per vehicle-year. */
+  utilisation: number;
+  fleet: number;
+  crew: number;
+  crewLost: number;
+  burnout: number;
+  trusted: number;
+  feuds: number;
+  /** Incidents by kind and by cause, over the whole run. */
+  incidents: { kinds: Record<string, number>; causes: Record<string, number>; main: Record<string, number> };
+  bans: number;
+  /** Average condition of the kit, sampled monthly and at the end. */
+  kitCondition: { average: number; end: number };
+  /** Nights by outcome band, and what clients docked (shaky or bad nights, late doors) or claimed in damages (failed shows). */
+  contracts: { outcomes: Partial<Record<string, number>>; docked: number; damages: number };
+  /** How far the work outgrew the office (office.ts): average and worst monthly stretch, and office staff at the end. */
+  office: { stretch: number; peak: number; staff: number };
+  /** The overdraft over the run (liquidity.ts): days in it, days over the limit, how often the bank demanded its money or withdrew the overdraft. */
+  liquidity: { daysOverdrawn: number; daysInBreach: number; breaches: number; demands: number; withdrawn: number; bridges: number; endOverLimit: boolean };
+  /** On the road: kilometres driven, roadside breakdowns, the rate per 100,000 km, average truck reliability (sampled monthly). */
+  road: { km: number; breakdowns: number; per100k: number; reliability: number };
+  monthsOverdrawn: number;
+  lowestCash: number;
+  forecastWarnings: number;
+  bot: { termsAsked: number; termsWon: number; crossHires: number; fixes: number; crewSplits: number; heads: string[]; lessons: string[]; refurbished: number; borrowed: number; factoredMonths: number; frozenMonths: number; replanned: number; bridged: number; soldTrucks: number };
+  rivals: { alive: number; gone: number; shows: number; failed: number; avgQuality: number; crossHires: number; fixes: number; declined: Record<string, number>; cashNegative: number };
+  invariantViolations: string[];
+  /** The company month by month. */
+  series: BotMonth[];
+  /** The shocks thrown at it, and what they hit. */
+  shockLog: { kind: ShockKind; day: number; what: string }[];
+}
+
+function ensureGear(s: S, gig: S, depotId: string, strategy: Strategy): S {
+  const depot = s.depots.find((d: S) => d.id === depotId);
+  if (!depot) return s;
+  const have = deptTotals(depot.gear);
+  const year = yearOf(s, s.hour);
+  const shares = strategy.features.includes('standardise') ? brandShares(ownedStock(s)) : undefined;
+  for (const d of DEPTS) {
+    let missing = gig.needs[d] - have[d];
+    while (missing > 0) {
+      const options = productsAvailableIn(year, d).filter((p: S) => p.price <= s.company.cash * 0.25);
+      if (!options.length) break;
+      const target = expectedQuality(gig.tier, year);
+      const brand = shares?.[d].brand;
+      options.sort(
+        (a, b) =>
+          (brand ? Number(b.brand === brand) - Number(a.brand === brand) : 0) ||
+          Math.abs(a.quality - target) - Math.abs(b.quality - target) ||
+          a.price - b.price,
+      );
+      const out = buyGear(s, depotId, options[0].id);
+      if (!out.result.ok) break;
+      s = out.state;
+      missing -= 1;
+    }
+  }
+  return s;
+}
+
+export function runBot(run: BotRun): BotReport {
+  const { country, startYear, years, seed, strategy, shocks = [] } = run;
+  const on = (f: Feature) => strategy.features.includes(f);
+  let s: S = createTycoonGame({ companyName: 'Bot', color: '#f00', seed, country, startYear });
+  const world = worldOf(s);
+  for (const [k, v] of Object.entries(strategy.policies)) s = ok(s, setPolicy(s, k as S, v as S));
+  s = ok(s, setPolicy(s, 'rehearsal', 'auto'));
+  const bot = { termsAsked: 0, termsWon: 0, crossHires: 0, fixes: 0, crewSplits: 0, heads: [] as string[], lessons: [] as string[], refurbished: 0, borrowed: 0, factoredMonths: 0, frozenMonths: 0, replanned: 0, bridged: 0, soldTrucks: 0 };
+  const violations: string[] = [];
+  let monthsOverdrawn = 0;
+  let lowestCash = Infinity;
+  let forecastWarnings = 0;
+  let frozenUntil = -1;
+  let learned = { kit: 0, shows: 0 };
+  const conditions: number[] = [];
+  const reliabilities: number[] = [];
+  const stretches: number[] = [];
+  const refurbSpend: { day: number; cost: number }[] = [];
+  const series: BotMonth[] = [];
+  const shockLog: BotReport['shockLog'] = [];
+
+  for (let day = 0; day < 365 * years && !s.gameOver; day++) {
+    s = advanceHours(s, 24);
+    const today = dayOf(s.hour);
+    lowestCash = Math.min(lowestCash, s.company.cash);
+    for (const sh of shocks) if (sh.day === day) shockLog.push({ kind: sh.kind, day, what: applyShock(s, sh.kind) });
+    if (day % 30 === 0) series.push({ day, year: yearOf(s, s.hour), cash: Math.round(s.company.cash), value: companyValue(s), reputation: Math.round(s.company.reputation * 10) / 10, shows: s.stats.showsPlayed, income: Math.round(Object.values(s.ledger).reduce((n: number, y: S) => n + (y.shows ?? 0), 0)) });
+    if (day % 30 === 0) conditions.push(averageCondition(s, ownedStock(s)));
+    if (day % 30 === 0) stretches.push(officeStretch(s));
+    if (day % 30 === 0) s.vehicles.forEach((x: S) => x.owner === 'player' && reliabilities.push(x.reliability));
+    if (day % 30 === 0) checkInvariants(s).forEach(v => violations.length < 200 && violations.push(`${v.kind}: ${v.message}`));
+
+    // Decisions: the defaults, except where there's a clearly better answer.
+    for (const d of [...s.dilemmas]) {
+      const pick = (id: string) => d.options.find((o: { id: string; cost?: number }) => o.id === id && (!o.cost || o.cost < s.company.cash * 0.15));
+      let choice = d.defaultOption;
+      const prefer: Record<string, string[]> = { breakdown: ['recovery'], sponsor: on('sponsor') ? ['sign'] : ['decline'], charity: ['half'], dispute: ['argue', 'settle'], audit: ['fix'], dirty: ['security'], shareholders: ['appease'], venue: ['refurb'], ownfest: ['cover'], pricewar: ['ride'] };
+      for (const id of prefer[d.kind] ?? []) if (pick(id)) { choice = id; break; }
+      s = ok(s, makeDecision(s, d.id, choice));
+    }
+
+    const frozen = today < frozenUntil;
+    const maxDist = 25 + Math.min(50, s.company.reputation);
+    // Single shows.
+    for (const g0 of s.gigs.filter((g: S) => g.status === 'offer' && !g.tourId)) {
+      let g = g0;
+      if (gigBookingBar(s, g).reason) continue;
+      if (roadDistance(world, s.company.hqCityId, g.cityId) > maxDist || g.day - today < 4) continue;
+      const v = s.vehicles.find((x: S) => x.owner === 'player' && x.orders.length === 0 && x.status !== 'broken' && !recalled(s, x) && getModel(x.modelId).kind !== 'bus');
+      if (!v) continue;
+      if (g.fee < strategy.minFee && g.tier > 1) continue;
+      const home = s.depots.find((d: S) => d.cityId === v.homeCityId);
+      if (!home) continue;
+      // Terms first: a deposit and a clause on anything worth having.
+      // Pushing for terms can lose the show: worth it on big fees, or on anything when cash is at risk.
+      if (on('terms') && g.terms && !g.termsAsked && (g.fee >= 15000 || (frozen && g.fee >= 3000)) && (g.terms.deposit < 0.3 || g.terms.cancel < 0.75)) {
+        bot.termsAsked++;
+        const t = negotiateTerms(s, g.id);
+        s = t.state;
+        if (t.result.ok) bot.termsWon++;
+        g = s.gigs.find((x: S) => x.id === g0.id);
+        if (!g || g.status !== 'offer') continue;
+      }
+      if (on('gear') && !frozen) s = ensureGear(s, g, home.id, strategy);
+      const b = bookGig(s, g.id);
+      if (!b.result.ok) continue;
+      const a = assignVehicle(b.state, v.id, g.id);
+      if (!a.result.ok) continue;
+      s = a.state;
+      if (on('haggle') && g.tier >= 2) s = ok(s, haggleGig(s, g.id));
+    }
+    // National tours.
+    if (on('tours')) {
+      for (const t of s.tours.filter((x: S) => x.status === 'offer' && x.kind === 'national')) {
+        if (tourBookingBar(s, t, tourMaxTier(s, t)).reason) continue;
+        const v = s.vehicles.find((x: S) => x.owner === 'player' && x.orders.length === 0 && !recalled(s, x) && getModel(x.modelId).kind !== 'bus');
+        if (!v) continue;
+        const first = Math.min(...t.gigIds.map((id: string) => s.gigs.find((g: S) => g.id === id)?.day ?? 1e9));
+        if (first - today < 5) continue;
+        const b = bookTour(s, t.id);
+        if (!b.result.ok) continue;
+        const a = assignVehicleToTour(b.state, v.id, t.id);
+        if (a.result.ok) {
+          s = a.state;
+          if (on('merch')) s = ok(s, orderTourMerch(s, t.id, 'small'));
+        } else s = b.state;
+      }
+    }
+
+    // A truck off the road for days (a recall): put its shows on another truck if one is free.
+    if (on('replan'))
+      for (const v of s.vehicles.filter((x: S) => x.owner === 'player' && recalled(s, x) && x.status !== 'driving' && x.orders.length)) {
+        for (const id of [...v.orders]) {
+          const g = s.gigs.find((x: S) => x.id === id);
+          if (!g || g.day * 24 >= v.recalledUntil) continue;
+          const spare = s.vehicles.find((x: S) => x.owner === 'player' && x.id !== v.id && x.orders.length === 0 && x.status !== 'broken' && !recalled(s, x) && getModel(x.modelId).kind !== 'bus');
+          if (!spare) break;
+          const u = unassignVehicle(s, v.id, id);
+          if (!u.result.ok) continue;
+          const a = assignVehicle(u.state, spare.id, id);
+          if (!a.result.ok) continue;
+          s = a.state;
+          bot.replanned++;
+        }
+      }
+
+    // Advancing the next few days' shows: riders, rooms, crew.
+    for (const g of s.gigs.filter((x: S) => x.status === 'booked' && x.day - today >= 1 && x.day - today <= 5)) {
+      const proj = projectCoverage(s, g);
+      if (on('riders') && strategy.fixLimit > 0 && !s.managers?.production) {
+        for (const b of proj.breaches) {
+          const opt = crossHireOptions(g.techSpec, b.id, yearOf(s, g.day * 24))[0];
+          const units = b.id === 'pa' ? Math.max(1, g.needs.audio) : 1;
+          if (opt && crossHireCost(opt.id, units, g.days ?? 1) < g.fee * strategy.fixLimit) {
+            const before = s;
+            s = ok(s, crossHireKit(s, g.id, opt.id, units));
+            if (s !== before) bot.crossHires++;
+          }
+        }
+        for (const pr of proj.production)
+          if (pr.fixCost < g.fee * strategy.fixLimit) {
+            const before = s;
+            s = ok(s, fixProduction(s, g.id, pr.id));
+            if (s !== before) bot.fixes++;
+          }
+      }
+      // Keep people who are at loggerheads off the same crew (a crew chief does it for you).
+      if (on('crew') && !s.managers?.crew && proj.people.length > 1 && !g.crewPicks) {
+        const clash = proj.people.find((m: S) => proj.people.some((o: S) => o.id !== m.id && ['feud', 'refuse'].includes(relationOf(rapport(s, m.id, o.id)) ?? '')));
+        if (clash) {
+          const keep = proj.people.filter((m: S) => m.id !== clash.id).map((m: S) => m.id);
+          const before = s;
+          s = ok(s, setCrewPicks(s, g.id, keep));
+          if (s !== before) bot.crewSplits++;
+        }
+      }
+    }
+    for (const g of s.gigs.filter((x: S) => x.status === 'booked' && !x.rehearsed && x.day - today >= 2 && x.day - today <= 14)) s = ok(s, rehearseShow(s, g.id));
+
+    // Over the overdraft limit: a manager who watches the cash takes bridging finance, sells
+    // invoices, and once the bank has made its demand, sells an idle truck.
+    if (on('cash') && s.liquidity?.breachDays) {
+      if (s.policies.invoicing !== 'factor') s = ok(s, setPolicy(s, 'invoicing', 'factor'));
+      const before = s.company.loan;
+      s = ok(s, bridgingLoan(s));
+      if (s.company.loan > before) bot.bridged += s.company.loan - before;
+      frozenUntil = Math.max(frozenUntil, today + 30);
+      if (s.liquidity?.demandDay !== undefined && s.company.cash < 0) {
+        const idle = s.vehicles.filter((x: S) => x.owner === 'player' && x.orders.length === 0 && x.status === 'parked' && x.cityId === x.homeCityId);
+        if (idle.length > 1) {
+          const sold = ok(s, sellVehicle(s, idle[idle.length - 1].id));
+          if (sold !== s) bot.soldTrucks++;
+          s = sold;
+        }
+      }
+    }
+
+    // Anyone minding the books takes a loan rather than sit in the overdraft (the corner-cutter doesn't).
+    if (on('invoice') && !on('cash') && day % 7 === 5 && s.company.cash < 0 && !s.liquidity?.breachDays) {
+      const before = s.company.loan;
+      s = ok(s, borrow(s));
+      if (s.company.loan > before) bot.borrowed += s.company.loan - before;
+    }
+
+    // Weekly: the cash forecast.
+    if (on('cash') && day % 7 === 3) {
+      const f = forecastCash(s, world);
+      // A graded response: if only the pessimistic line dips, sell this month's invoices; if even
+      // the expected line goes under, also stop spending and borrow. Stop factoring once it's clear.
+      if (f.riskWeek !== undefined) {
+        forecastWarnings++;
+        s = ok(s, setPolicy(s, 'invoicing', 'factor'));
+        if (f.lowest.expected < 0) {
+          frozenUntil = today + 30;
+          const before = s.company.loan;
+          s = ok(s, borrow(s));
+          if (s.company.loan > before) bot.borrowed += s.company.loan - before;
+        }
+      } else {
+        if (s.policies.invoicing === 'factor') s = ok(s, setPolicy(s, 'invoicing', 'hold'));
+        if (s.company.loan > 0 && f.lowest.low > s.company.loan * 2) s = ok(s, repay(s));
+      }
+    }
+
+    // Monthly management.
+    if (day % 30 === 15) {
+      if (s.company.cash < 0) monthsOverdrawn++;
+      if (frozen) bot.frozenMonths++;
+      if (s.policies.invoicing === 'factor') bot.factoredMonths++;
+      const depot = s.depots[0];
+      const rep = s.company.reputation;
+      const mine = s.vehicles.filter((x: S) => x.owner === 'player');
+      if (on('invest') && !frozen) {
+        const busy = mine.filter((x: S) => x.orders.length > 0).length;
+        const year = yearOf(s, s.hour);
+        const model = VEHICLE_MODELS.filter(m => m.introYear <= year && m.kind !== 'bus' && m.kind !== 'semi').sort((a, b) => b.gearCapacity - a.gearCapacity)[0];
+        const growth = strategy.growth ?? STEADY_GROWTH;
+        if (model && busy >= mine.length && mine.length < growth.maxFleet) {
+          if (s.company.cash > model.price * growth.cashMultiple) s = ok(s, buyVehicle(s, depot.id, model.id));
+          else if (growth.lease) s = ok(s, leaseVehicle(s, depot.id, model.id));
+          else if (growth.borrow && s.company.cash < model.price * growth.cashMultiple) {
+            s = ok(s, borrow(s));
+            if (s.company.cash > model.price * growth.cashMultiple) s = ok(s, buyVehicle(s, depot.id, model.id));
+          }
+        }
+        const fleetNow = s.vehicles.filter((x: S) => x.owner === 'player').length;
+        if (s.people.length < fleetNow * 2 && s.company.cash > 20000) s = ok(s, hireCrew(s, depot.id, 2));
+        // The office: one more pair of hands whenever the work has outgrown it.
+        if (on('office') && officeStretch(s) > 0) {
+          const room = s.depots.find((d: S) => d.staff.office < facilitySpec(d).maxStaff.office);
+          if (room) s = ok(s, hireStaff(s, room.id, 'office'));
+        }
+        const next = nextUpgrade(depot);
+        if (next && s.company.cash > next.cost * 2.5 && rep >= next.spec.minReputation) s = ok(s, upgradeDepot(s, depot.id));
+      }
+      if (on('annex') && !frozen && depot.kind === 'warehouse' && s.company.cash > 150000 && rep >= 40) s = ok(s, buildAnnex(s, depot.id, 'rehearsal'));
+      if (on('train') && !frozen) {
+        for (const cert of ['rigging', 'safety'] as const) {
+          const m = s.people.find((p: S) => p.depotId && !p.certs?.includes(cert) && !p.course);
+          if (m && rep >= 40 && s.company.cash > 30000) s = ok(s, trainCrew(s, m.id, cert));
+        }
+      }
+      // Refurbish the most worn lines while the bank can stand it.
+      if (on('maintain') && !frozen) {
+        const worn = Object.keys(s.gearCondition).filter(id => s.gearCondition[id] < 60).sort((a, b) => s.gearCondition[a] - s.gearCondition[b]);
+        for (const id of worn.slice(0, 3)) {
+          const cost = refurbishCost(s, id);
+          if (cost > 0 && cost < s.company.cash * 0.1) {
+            const before = s;
+            s = ok(s, refurbishGear(s, id));
+            if (s !== before) {
+              bot.refurbished++;
+              refurbSpend.push({ day, cost });
+            }
+          }
+        }
+      }
+      // Read the month's post-mortems: if kit dying on stage keeps coming up, buy a better workshop.
+      if (on('learn')) {
+        const main = s.incidentTally?.main ?? {};
+        const kitNow = (main['kit-failed'] ?? 0) + (main['kit-worn'] ?? 0);
+        const showsNow = s.stats.showsPlayed;
+        const kitRate = (kitNow - learned.kit) / Math.max(1, showsNow - learned.shows);
+        learned = { kit: kitNow, shows: showsNow };
+        // …or if patching worn lines one by one is costing more than a better workshop would.
+        const recentRefurb = refurbSpend.filter(x => day - x.day <= 180).reduce((n, x) => n + x.cost, 0);
+        const better = s.policies.workshop === 'none' ? 'basic' : 'full';
+        const upgradeCost = (monthlyWorkshopCost(s, better) - monthlyWorkshopCost(s)) * 6;
+        if ((kitRate > 0.08 || (recentRefurb > upgradeCost && upgradeCost > 0)) && s.policies.workshop !== 'full' && !frozen) {
+          s = ok(s, setPolicy(s, 'workshop', s.policies.workshop === 'none' ? 'basic' : 'full'));
+          bot.lessons.push(`workshop→${s.policies.workshop}@${yearOf(s, s.hour)}`);
+        }
+      }
+      if (on('invoice') && !on('cash')) s = ok(s, setPolicy(s, 'invoicing', s.company.cash < 60000 ? 'factor' : 'hold'));
+      // Department heads, once the business can carry them (a year's salary in the bank, ten times over).
+      if (on('heads') && !frozen) {
+        const showsPerMonth = s.stats.showsPlayed / Math.max(1, day / 30);
+        const feuds = Object.values(s.bonds ?? {}).filter((x: S) => x <= -40).length;
+        const afford = (id: keyof typeof MANAGERS) => s.company.cash > MANAGERS[id].salary * 120;
+        const hire = (id: keyof typeof MANAGERS) => {
+          const before = s;
+          s = ok(s, setManager(s, id, true));
+          if (s !== before) bot.heads.push(`${id}@${yearOf(s, s.hour)}`);
+        };
+        if (!s.managers?.production && showsPerMonth >= 12 && afford('production')) hire('production');
+        if (!s.managers?.crew && (feuds >= 2 || s.people.length >= 16) && afford('crew')) hire('crew');
+        if (!s.managers?.finance && s.receivables.length >= 6 && afford('finance')) hire('finance');
+      }
+    }
+  }
+
+  run.onEnd?.(s);
+  // The report.
+  const ledger: Partial<Record<LedgerCategory, number>> = {};
+  for (const y in s.ledger) for (const c in s.ledger[y]) ledger[c as LedgerCategory] = Math.round((ledger[c as LedgerCategory] ?? 0) + (s.ledger[y][c] ?? 0));
+  const revenue = Object.entries(ledger).reduce((n, [c, v]) => (c !== 'equity' && c !== 'sales' && (v ?? 0) > 0 ? n + (v ?? 0) : n), 0);
+  const costs = -Object.entries(ledger).reduce((n, [, v]) => ((v ?? 0) < 0 ? n + (v ?? 0) : n), 0);
+  const yearsRun = Math.max(0.1, s.hour / (24 * 365));
+  const done = s.gigs.filter((g: S) => g.status === 'done' && g.result);
+  const fleet = s.vehicles.filter((x: S) => x.owner === 'player').length;
+  const rivalOps = s.rivals.map((r: S) => r.ops).filter(Boolean);
+  const rivalShows = s.gigs.filter((g: S) => g.status === 'rival' && g.result);
+  const declined: Record<string, number> = {};
+  rivalOps.forEach((o: S) => Object.entries(o.record.declined).forEach(([k, n]) => (declined[k] = (declined[k] ?? 0) + (n as number))));
+  return {
+    country,
+    startYear,
+    seed,
+    strategy: strategy.id,
+    survived: !s.gameOver,
+    gameOver: s.gameOver?.reason,
+    yearsRun: Math.round(yearsRun * 10) / 10,
+    value: companyValue(s),
+    cash: Math.round(s.company.cash),
+    loan: s.company.loan,
+    reputation: Math.round(s.company.reputation),
+    shows: s.stats.showsPlayed,
+    failed: s.stats.showsFailed,
+    avgQuality: done.length ? Math.round((done.reduce((n: number, g: S) => n + g.result.quality, 0) / done.length) * 100) / 100 : 0,
+    ledger,
+    revenue,
+    costs,
+    utilisation: Math.round((s.stats.showsPlayed / Math.max(1, fleet) / yearsRun) * 10) / 10,
+    fleet,
+    crew: s.people.length,
+    crewLost: s.stats.crewLost ?? 0,
+    burnout: Math.round(s.people.reduce((n: number, m: S) => n + (m.burnout ?? 0), 0) / Math.max(1, s.people.length)),
+    trusted: Object.values(s.bonds ?? {}).filter((x: S) => x >= 40).length,
+    feuds: Object.values(s.bonds ?? {}).filter((x: S) => x <= -40).length,
+    incidents: s.incidentTally ?? { kinds: {}, causes: {}, main: {} },
+    bans: Object.keys(s.blacklist ?? {}).length,
+    kitCondition: { average: Math.round(conditions.reduce((a, b) => a + b, 0) / Math.max(1, conditions.length)), end: Math.round(averageCondition(s, ownedStock(s))) },
+    office: {
+      stretch: Math.round((stretches.reduce((a, b) => a + b, 0) / Math.max(1, stretches.length)) * 100) / 100,
+      peak: Math.round(Math.max(0, ...stretches) * 100) / 100,
+      staff: s.depots.reduce((n: number, d: S) => n + d.staff.office, 0),
+    },
+    liquidity: { ...(s.liquidity?.history ?? { daysOverdrawn: 0, daysInBreach: 0, breaches: 0, demands: 0, withdrawn: 0, bridges: 0 }), endOverLimit: (s.liquidity?.breachDays ?? 0) > 0 },
+    contracts: { outcomes: { ...(s.stats.outcomes ?? {}) }, docked: Math.round(s.stats.docked ?? 0), damages: Math.round(s.stats.damages ?? 0) },
+    road: {
+      km: Math.round(s.stats.fleetKm ?? 0),
+      breakdowns: s.stats.breakdowns ?? 0,
+      per100k: Math.round(((s.stats.breakdowns ?? 0) / Math.max(1, s.stats.fleetKm ?? 0)) * 1e5 * 100) / 100,
+      reliability: Math.round(reliabilities.reduce((a, b) => a + b, 0) / Math.max(1, reliabilities.length)),
+    },
+    monthsOverdrawn,
+    lowestCash: Math.round(lowestCash),
+    forecastWarnings,
+    bot,
+    rivals: {
+      alive: s.rivals.length,
+      gone: s.goneRivals.length,
+      shows: rivalOps.reduce((n: number, o: S) => n + o.record.shows, 0),
+      failed: rivalOps.reduce((n: number, o: S) => n + o.record.failed, 0),
+      avgQuality: rivalShows.length ? Math.round((rivalShows.reduce((n: number, g: S) => n + g.result.quality, 0) / rivalShows.length) * 100) / 100 : 0,
+      crossHires: rivalOps.reduce((n: number, o: S) => n + o.record.crossHires, 0),
+      fixes: rivalOps.reduce((n: number, o: S) => n + o.record.fixes, 0),
+      declined,
+      cashNegative: rivalOps.filter((o: S) => o.cash < 0).length,
+    },
+    invariantViolations: violations,
+    series,
+    shockLog,
+  };
+}
+

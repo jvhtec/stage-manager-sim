@@ -3,7 +3,8 @@ import { buyGear, refurbishGear, sellGear, transferGear } from '@/world/actions'
 import { describeQuote, transferQuote } from '@/world/transfers';
 import { partnerPrice } from '@/world/partners';
 import { worldOf } from '@/world/mapgen';
-import { condition, refurbishCost, resaleValue } from '@/world/wear';
+import { condition, ownedStock, refurbishCost, resaleValue } from '@/world/wear';
+import { brandShares, supportNote, supportOf } from '@/world/ecosystem';
 import { DEPT_LABELS } from '@/world/catalog';
 import { expectedQuality, getProduct, isOwnProduct } from '@/world/content/gear';
 import { yearOf } from '@/world/core';
@@ -102,6 +103,7 @@ export function WarehouseGear({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
         </div>
       )}
       {DEPTS.map(d => {
+        const shares = brandShares(ownedStock(state));
         const owned = Object.keys(depot.gear)
           .filter(id => depot.gear[id] > 0 && getProduct(id).dept === d)
           .sort((a, b) => getProduct(b).quality - getProduct(a).quality);
@@ -115,6 +117,12 @@ export function WarehouseGear({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
                 {totals[d]} unit{totals[d] === 1 ? '' : 's'}
               </b>
             </div>
+            {shares[d].units >= 3 && shares[d].share >= 0.5 && (
+              <div className="tt-dim" style={{ fontSize: 11, whiteSpace: 'normal' }}>
+                {Math.round(shares[d].share * 100)}% {shares[d].brand} across your bases
+                {shares[d].share >= 0.7 ? ' — cheaper to keep running, but a fault at the maker hits all of it' : ''}
+              </div>
+            )}
             {owned.map(id => {
               const p = getProduct(id);
               return (
@@ -125,6 +133,11 @@ export function WarehouseGear({ ctx, depot }: { ctx: WinCtx; depot: Depot }) {
                   </span>
                   <QualityChip quality={p.quality} state={state} />
                   <ConditionChip value={condition(state, id)} />
+                  {supportOf(id, yearOf(state, state.hour)) !== 'current' && (
+                    <span className="tt-chip" style={{ background: supportOf(id, yearOf(state, state.hour)) === 'eol' ? '#7f1d1d' : '#78350f' }} title={supportNote(state, id)}>
+                      {supportOf(id, yearOf(state, state.hour)) === 'eol' ? 'EOL' : 'legacy'}
+                    </span>
+                  )}
                   <b style={{ minWidth: 26, textAlign: 'right' }}>×{depot.gear[id]}</b>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'flex-end', flexBasis: '100%' }}>
                     {condition(state, id) < 95 && (
