@@ -306,24 +306,19 @@ describe('strategies', () => {
       const ops = opsOf(s, r);
       ops.quality = 99;
       ops.short = {};
-      ops.record.declined = { trucks: 9 };
+      ops.record.declined = { crew: 9 };
       const overhead = rivalOverhead(ops);
-      const truckCost = getModel(r.maxTier >= 3 ? 'artic-40' : 'rigid-7t').price;
-      const postOverheadCash = truckCost + 1;
-      const reserve = overhead * styleOf(r, 2000).reinvest;
-      ops.cash = overhead + postOverheadCash;
-      const trucks = ops.trucks;
+      // Leave three months of overhead after this month's bills. Expansionist reinvests above two;
+      // prudent waits for 4.5. Crew is deliberately cheap so this tests reserve policy, not affordability.
+      ops.cash = overhead * 4;
+      const crew = ops.crew;
       monthlyRivalOps(s, r, createRng(1));
-      return { bought: ops.trucks - trucks, postOverheadCash, reserve };
+      return ops.crew - crew;
     };
     expect(styleOf({ id: 'negearth' }, 2000).label).toBe('Prudent');
     expect(styleOf({ id: 'delta' }, 2000).label).toBe('Expansionist');
-    const prudent = spend('negearth');
-    const expansionist = spend('delta');
-    expect(prudent.postOverheadCash).toBeLessThan(prudent.reserve);
-    expect(expansionist.postOverheadCash).toBeGreaterThan(expansionist.reserve);
-    expect(prudent.bought).toBe(0);
-    expect(expansionist.bought).toBe(1);
+    expect(spend('negearth')).toBe(0);
+    expect(spend('delta')).toBe(3);
   });
 
   it('grudges stay in range and weighted picks follow the weights', () => {
