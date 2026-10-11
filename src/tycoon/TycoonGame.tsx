@@ -772,7 +772,7 @@ export default function TycoonGame() {
 
       {state?.gameOver && inGame && (
         <div className="tt-overlay">
-          <Window title="The receivers have arrived" x={0} y={0} z={100} onMove={() => undefined} onFocus={() => undefined}>
+          <Window title="The administrators have arrived" x={0} y={0} z={100} onMove={() => undefined} onFocus={() => undefined}>
             <GameOverPanel
               state={state}
               onRestart={() => {

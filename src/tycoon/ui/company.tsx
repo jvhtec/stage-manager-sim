@@ -596,7 +596,7 @@ export function HelpWindow() {
       <p className="tt-dim" style={{ marginBottom: 0 }}>
         Drag to pan, scroll or pinch to zoom. Space pauses; 1–4 set the speed. Install it as an app: on iPhone/iPad use Share →
         Add to Home Screen; on Android use the browser's Install prompt. Vehicles break down more as they age — keep them
-        serviced. Wages and running costs tick every day, and three months in the red ends the company.
+        serviced. Wages and running costs tick every day. Live in your overdraft too long and the bank withdraws it; go over the limit and wages go late and suppliers want cash up front — stay over it past the bank's demand and the administrators come in. Grow faster than your office and the shows start to slip.
       </p>
     </div>
   );
