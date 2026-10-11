@@ -9,6 +9,7 @@ import { offerBlocked } from './blacklist';
 import { rivalTryTake } from './rivalOps';
 import { worldOf } from './mapgen';
 import { RIVAL_COMPANIES } from './content/companies';
+import { styleOf } from './leaders';
 import { traitsOf } from './venueTraits';
 import { FIESTA_OFFER_BOOST, councilBooked, isFiestaSeason, needsMeister, needsReliefCrew, ruleCountry } from './rules';
 import { priceWarFactor, warWinBonus } from './pricewars';
@@ -332,7 +333,7 @@ export function offerToRivals(state: TycoonState, world: WorldMap, rng: Rng, gig
     // Already working the area? The next date there is easy money (a run, like yours).
     const nearby = rivalNearbyDates(state, world, rival.id, gig);
     const onARun = nearby.length ? RIVAL_RUN_BONUS * (nearby.length > 1 ? 1.15 : 1) : 1;
-    const chance = boost * 0.05 * difficultyOf(state).rivals * warWinBonus(state, gig.cityId, rival.id) * intelFactor(state, rival.id) * crowding * proximity * fit * specialty * loyalty * onARun * abroadFactor * (1.15 - (rating / 100) * 0.6);
+    const chance = boost * 0.05 * styleOf(rival, yearOf(state, state.hour)).take * difficultyOf(state).rivals * warWinBonus(state, gig.cityId, rival.id) * intelFactor(state, rival.id) * crowding * proximity * fit * specialty * loyalty * onARun * abroadFactor * (1.15 - (rating / 100) * 0.6);
     if (!rng.chance(chance)) continue;
     // Same rules as you: kit, crew and a truck free; the rider and the room met (or paid for).
     if (!rivalTryTake(state, world, rival, gig)) continue;

@@ -13,6 +13,7 @@ import { unlock } from './milestones';
 import { rentalProduct } from './hire';
 import { marketNow } from './market';
 import { worldOf } from './mapgen';
+import { pickWeighted, styleOf } from './leaders';
 import { ownedStock, condition } from './wear';
 import { seedPeople, sideRng, syncCrew } from './people';
 import { DEPTS, type Rival, type TycoonState } from './types';
@@ -95,12 +96,13 @@ const STARTUP_COLORS = ['#475569', '#78716c', '#6b7280', '#57534e', '#64748b'];
 
 /** Monthly: well-run firms build their name (and move up a tier); struggling ones lose theirs. */
 function growRivals(s: TycoonState, rng: Rng) {
+  const year = yearOf(s, s.hour);
   s.rivals.forEach(r => {
     const h = rivalHealth(r);
     // (Winning shows already lifts a rival's name; this is the slow drift from how well it's run.)
     const drift = h >= 60 ? 0.1 : h < 35 ? -0.25 : 0;
     r.reputation = Math.max(5, drift > 0 ? Math.min(Math.max(r.reputation, RIVAL_REPUTATION_CAP), r.reputation + drift) : r.reputation + drift);
-    if (r.maxTier < 4 && r.reputation >= tierInfo(r.maxTier + 1).minReputation + 5 && rng.chance(0.4)) {
+    if (r.maxTier < 4 && r.reputation >= tierInfo(r.maxTier + 1).minReputation + 5 && rng.chance(0.4 * styleOf(r, year).growth)) {
       r.maxTier += 1;
       pushNews(s, `${r.name} has outgrown its old rooms — now chasing ${TIER_NAMES[r.maxTier]}-size work.`, 'info', { cityId: r.hqCityId });
     }
@@ -113,7 +115,9 @@ function rivalMergers(s: TycoonState, rng: Rng) {
   const targets = s.rivals.filter(r => rivalHealth(r) < STRUGGLING);
   if (!buyers.length || !targets.length || !rng.chance(MERGER_CHANCE)) return;
   const target = rng.pick(targets);
-  const buyer = rng.pick(buyers.filter(b => b.id !== target.id));
+  // The dealmakers are first in line.
+  const year = yearOf(s, s.hour);
+  const buyer = pickWeighted(rng, buyers.filter(b => b.id !== target.id), b => styleOf(b, year).buyer);
   if (!buyer) return;
   const city = worldOf(s).cityById.get(target.hqCityId)?.name;
   s.rivals = s.rivals.filter(r => r.id !== target.id);

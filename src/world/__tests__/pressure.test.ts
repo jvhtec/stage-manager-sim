@@ -3,6 +3,7 @@ import { createTycoonGame } from '../state';
 import { OVERHEAD, monthlyOverheads } from '../facilities';
 import { PAYMENT_DAYS, factorDiscount } from '../receivables';
 import { monthlyRivalOps, opsOf, playRivalShow, rivalOverhead } from '../rivalOps';
+import { styleOf } from '../leaders';
 import type { Gig, TycoonState } from '../types';
 
 const game = (): TycoonState => createTycoonGame({ companyName: 'P', color: '#f00', seed: 5, country: 'GB', startYear: 1995 });
@@ -26,7 +27,7 @@ describe('financial pressure', () => {
 
   it('promoters pay rivals on the same terms: the fee lands weeks after a big show', () => {
     const s = game();
-    const r = s.rivals[0];
+    const r = s.rivals.find(x => styleOf(x, 1995).label === 'Steady')!;
     const ops = opsOf(s, r);
     const gig = { id: 'g', act: 'A', tier: 3, day: 10, fee: 30000, needs: {}, crewNeeded: 4, status: 'rival', rivalId: r.id } as unknown as Gig;
     s.gigs.push(gig);

@@ -6,11 +6,12 @@
  * investigator to see what they're up to and get a step ahead.
  */
 import type { Rng } from '@/lib/rng';
-import { book, dayOf, formatMoney, newId, pushNews } from './core';
+import { book, dayOf, formatMoney, newId, pushNews, yearOf } from './core';
 import { marketingScale } from './marketing';
 import { rivalHealth } from './rivals';
 import { roadDistance } from './pathfinding';
 import { worldOf } from './mapgen';
+import { styleOf } from './leaders';
 import { ownedStock } from './wear';
 import { getProduct } from './content/gear';
 import type { Gig, Rival, TycoonState } from './types';
@@ -36,8 +37,9 @@ export const RETALIATE_DAMAGE = 8;
 export const SECURITY_COOL = 8;
 
 const hash = (str: string) => [...str].reduce((h, c) => (Math.imul(h, 31) + c.charCodeAt(0)) >>> 0, 17);
-/** 0.2-0.9: how readily this rival holds a grudge. Stable per rival. */
-export const aggression = (r: Pick<Rival, 'id'>) => 0.2 + ((hash(r.id) % 71) / 70) * 0.7;
+/** 0.1-1: how readily this rival holds a grudge — its own nature, nudged by who runs it. */
+export const aggression = (r: Pick<Rival, 'id'>, year: number) =>
+  Math.max(0.1, Math.min(1, 0.2 + ((hash(r.id) % 71) / 70) * 0.7 + styleOf(r, year).grudge));
 
 export const heatOf = (s: Pick<TycoonState, 'rivalry'>, rivalId: string) => s.rivalry?.[rivalId]?.heat ?? 0;
 export const hasIntel = (s: Pick<TycoonState, 'rivalry' | 'hour'>, rivalId: string) => (s.rivalry?.[rivalId]?.intelUntil ?? -1) > dayOf(s.hour);
@@ -143,12 +145,13 @@ export function answerTrick(s: TycoonState, payload: string, choice: string, rng
 /** Monthly: heat builds near an aggressive neighbour, cools otherwise, and sometimes boils over. */
 export function monthlyRivalry(s: TycoonState, rng: Rng) {
   const world = worldOf(s);
+  const year = yearOf(s, s.hour);
   s.rivals.forEach(r => {
     const near = s.depots.some(d => {
       const dist = roadDistance(world, r.hqCityId, d.cityId);
       return Number.isFinite(dist) && dist <= NEIGHBOUR_REACH;
     });
-    if (near) addHeat(s, r.id, aggression(r) * 4);
+    if (near) addHeat(s, r.id, aggression(r, year) * 4);
     addHeat(s, r.id, -HEAT_DECAY);
   });
 

@@ -5,7 +5,8 @@
  * them harder and keep more of your fees), or pay for peace.
  */
 import type { Rng } from '@/lib/rng';
-import { dayOf, formatMoney, newId, pushNews } from './core';
+import { dayOf, formatMoney, newId, pushNews, yearOf } from './core';
+import { pickWeighted, styleOf } from './leaders';
 import { marketingScale } from './marketing';
 import { rivalHealth } from './rivals';
 import { roadDistance } from './pathfinding';
@@ -76,7 +77,9 @@ export function monthlyPriceWars(s: TycoonState, rng: Rng) {
       .map(c => ({ r, c })),
   );
   if (!pairs.length) return;
-  const { r, c } = rng.pick(pairs);
+  // The hustlers and expansionists start them; the perfectionists rarely do.
+  const year = yearOf(s, s.hour);
+  const { r, c } = pickWeighted(rng, pairs, p => styleOf(p.r, year).war)!;
   const undercut = Math.round((0.08 + rng.next() * 0.12) * 100) / 100;
   const war: PriceWar = { id: newId(s, 'war'), cityId: c, rivalId: r.id, startDay: today, endDay: today + 60 + Math.floor(rng.next() * 61), undercut, fight: false };
   s.priceWars.push(war);

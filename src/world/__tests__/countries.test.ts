@@ -51,10 +51,10 @@ describe('countries', () => {
   it('puts local firms plus the international giants on the map', () => {
     const s = game('ES');
     const ids = s.rivals.map(r => r.id);
-    expect(ids).toContain('clair');
-    // 1990: the '80s Spanish sound houses are trading; Fluge (1991) isn't yet.
-    ['twincam', 'milan', 'berenice', 'sorter', 'apogee'].forEach(id => expect(ids).toContain(id));
-    expect(ids).not.toContain('fluge');
+    // 1990: the Spanish houses are trading; the foreign groups haven't arrived (EML 1998, PRG 2011)
+    // and Clair never set up in Spain.
+    ['twincam', 'milan', 'berenice', 'sorter', 'fluge', 'pronorte'].forEach(id => expect(ids).toContain(id));
+    ['clair', 'prg', 'solotech', 'eml', 'ct', 'tole'].forEach(id => expect(ids).not.toContain(id));
     expect(ids).not.toContain('britrow');
     expect(ids).not.toContain('tycobrahe');
     expect(s.rivals.find(r => r.id === 'twincam')!.name).toBe('Twin Cam Audio');

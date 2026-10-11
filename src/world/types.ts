@@ -805,6 +805,8 @@ export interface Rival {
   lastShows?: number;
   /** Its operation: kit, crew, trucks, books (rivalOps.ts). */
   ops?: RivalOps;
+  /** Name of the boss we last announced (leaders.ts), to spot a change at the top. */
+  boss?: string;
 }
 
 export type NewsTone = 'info' | 'good' | 'bad' | 'big';

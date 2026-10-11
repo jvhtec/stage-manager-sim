@@ -16,6 +16,7 @@ import { dateOfDay, dayOf, yearOf } from './core';
 import { shockFactors } from './market';
 import { OVERHEAD } from './facilities';
 import { rivalTrucksToday } from './industry';
+import { styleOf } from './leaders';
 import { DEFAULT_RISK, LATE_RISK, LATE_SLIP_MIN, LATE_SLIP_SPREAD, paymentDays } from './receivables';
 import { showPayout } from './gate';
 import { contractDock, damagesFor, outcomeOf } from './outcomes';
@@ -101,6 +102,7 @@ export function rivalQuote(s: TycoonState, world: WorldMap, r: Rival, gig: Gig):
   const year = dateOfDay(s, gig.day).getUTCFullYear();
   let cost = 0;
   let crossHires = 0;
+  const limit = gig.fee * RIVAL_FIX_LIMIT * styleOf(r, year).fix;
   // The rider: a desk with the inputs, the show-file family, an approved PA — or cross-hire them.
   const spec = gig.techSpec;
   if (spec) {
@@ -118,12 +120,12 @@ export function rivalQuote(s: TycoonState, world: WorldMap, r: Rival, gig: Gig):
       crossHires += 1;
     }
   }
-  if (cost > gig.fee * RIVAL_FIX_LIMIT) return { ok: false, reason: 'rider', cost, crossHires, fixes: 0 };
+  if (cost > limit) return { ok: false, reason: 'rider', cost, crossHires, fixes: 0 };
   // The room: the rig they'd bring, in the truck they'd send.
   const truck = gig.tier >= 4 ? 'artic-40' : gig.tier === 3 ? 'rigid-7t' : 'luton-box';
   const problems = productionProblems(world, gig, typicalKit(gig, year), [{ modelId: truck }]);
   const fixCost = problems.reduce((n, p) => n + p.fixCost, 0);
-  if (cost + fixCost > gig.fee * RIVAL_FIX_LIMIT) return { ok: false, reason: 'room', cost: cost + fixCost, crossHires, fixes: problems.length };
+  if (cost + fixCost > limit) return { ok: false, reason: 'room', cost: cost + fixCost, crossHires, fixes: problems.length };
   return { ok: true, cost: cost + fixCost, crossHires, fixes: problems.length };
 }
 
@@ -233,10 +235,11 @@ export function monthlyRivalOps(s: TycoonState, r: Rival, rng: Rng): number {
   const profit = ops.month.income - ops.month.costs;
   ops.month = { income: 0, costs: 0 };
   // Reinvest when there's a cushion: in what turned work away most, else in keeping the kit current.
-  if (ops.cash > overhead * 3) {
+  const style = styleOf(r, year);
+  if (ops.cash > overhead * style.reinvest) {
     const reasons = Object.entries(ops.record.declined).sort((a, b) => b[1] - a[1]);
     const top = reasons[0]?.[0] as DeclineReason | undefined;
-    const target = expectedQuality(r.maxTier, year);
+    const target = expectedQuality(r.maxTier, year) + style.quality;
     let spend = 0;
     if (ops.quality < target - 1) {
       spend = DEPTS.reduce((n, d) => n + ops.kit[d], 0) * 900;

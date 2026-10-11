@@ -316,7 +316,7 @@ export function runBot(run: BotRun): BotReport {
     const today = dayOf(s.hour);
     lowestCash = Math.min(lowestCash, s.company.cash);
     for (const sh of shocks) if (sh.day === day) shockLog.push({ kind: sh.kind, day, what: applyShock(s, sh.kind) });
-    if (day % 30 === 0) series.push({ day, year: yearOf(s, s.hour), cash: Math.round(s.company.cash), value: companyValue(s), reputation: Math.round(s.company.reputation * 10) / 10, shows: s.stats.showsPlayed, income: Math.round(Object.values(s.ledger).reduce((n: number, y: S) => n + (y.shows ?? 0), 0)) });
+    if (day % 30 === 0) series.push({ day, year: yearOf(s, s.hour), cash: Math.round(s.company.cash), value: companyValue(s), reputation: Math.round(s.company.reputation * 10) / 10, shows: s.stats.showsPlayed, income: Math.round(Object.values(s.ledger).reduce<number>((n, y: S) => n + Number(y.shows ?? 0), 0)) });
     if (day % 30 === 0) conditions.push(averageCondition(s, ownedStock(s)));
     if (day % 30 === 0) stretches.push(officeStretch(s));
     if (day % 30 === 0) s.vehicles.forEach((x: S) => x.owner === 'player' && reliabilities.push(x.reliability));

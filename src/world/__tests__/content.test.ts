@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ARTISTS, artistTierIn, artistsTouringAt, findArtist } from '../content/artists';
 import { GEAR_PRODUCTS, expectedQuality, getProduct } from '../content/gear';
-import { rivalsFor } from '../content/companies';
+import { entryYear, rivalsFor } from '../content/companies';
 import { baseShowQuality, evaluateGear, pickGear } from '../loading';
 import { createTycoonGame } from '../state';
 import { advanceHours, updateRivals } from '../sim';
@@ -127,7 +127,7 @@ describe('gear', () => {
 describe('rival companies', () => {
   it('starts with the real firms already trading in 1990', () => {
     const s = newGame();
-    const expected = rivalsFor('GB').filter(r => r.enters <= 1990 && !(r.exits && r.exits.year <= 1990)).map(r => r.id).sort();
+    const expected = rivalsFor('GB').filter(r => entryYear(r, 'GB') <= 1990 && !(r.exits && r.exits.year <= 1990)).map(r => r.id).sort();
     expect(s.rivals.map(r => r.id).sort()).toEqual(expected);
     expect(new Set(s.rivals.map(r => `${r.hqCityId}:${r.lot}`)).size).toBe(s.rivals.length);
   });
@@ -137,10 +137,15 @@ describe('rival companies', () => {
     const world = getWorld(s.mapSeed);
     updateRivals(s, world, 2006);
     expect(s.rivals.find(r => r.id === 'lsd')!.name).toBe('PRG');
-    expect(s.rivals.some(r => r.id === 'solotech')).toBe(true);
     expect(s.rivals.some(r => r.id === 'xlvideo')).toBe(true);
+    // The Americans only open a British base later — Clair through Concert Sound, Solotech through SSE.
+    expect(s.rivals.some(r => r.id === 'clair')).toBe(false);
     updateRivals(s, world, 2011);
     expect(s.rivals.find(r => r.id === 'clair')!.name).toBe('Clair Global');
+    expect(s.rivals.some(r => r.id === 'solotech')).toBe(false);
+    updateRivals(s, world, 2019);
     expect(s.rivals.some(r => r.id === 'xlvideo')).toBe(false);
+    expect(s.rivals.some(r => r.id === 'sse')).toBe(false);
+    expect(s.rivals.some(r => r.id === 'solotech')).toBe(true);
   });
 });
