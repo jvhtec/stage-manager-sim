@@ -307,15 +307,23 @@ describe('strategies', () => {
       ops.quality = 99;
       ops.short = {};
       ops.record.declined = { trucks: 9 };
-      ops.cash = rivalOverhead(ops) * 4.5;
+      const overhead = rivalOverhead(ops);
+      const truckCost = getModel(r.maxTier >= 3 ? 'artic-40' : 'rigid-7t').price;
+      const postOverheadCash = truckCost + 1;
+      const reserve = overhead * styleOf(r, 2000).reinvest;
+      ops.cash = overhead + postOverheadCash;
       const trucks = ops.trucks;
       monthlyRivalOps(s, r, createRng(1));
-      return ops.trucks - trucks;
+      return { bought: ops.trucks - trucks, postOverheadCash, reserve };
     };
     expect(styleOf({ id: 'negearth' }, 2000).label).toBe('Prudent');
     expect(styleOf({ id: 'delta' }, 2000).label).toBe('Expansionist');
-    expect(spend('negearth')).toBe(0);
-    expect(spend('delta')).toBe(1);
+    const prudent = spend('negearth');
+    const expansionist = spend('delta');
+    expect(prudent.postOverheadCash).toBeLessThan(prudent.reserve);
+    expect(expansionist.postOverheadCash).toBeGreaterThan(expansionist.reserve);
+    expect(prudent.bought).toBe(0);
+    expect(expansionist.bought).toBe(1);
   });
 
   it('grudges stay in range and weighted picks follow the weights', () => {
