@@ -13,7 +13,8 @@ import { unlock } from './milestones';
 import { rentalProduct } from './hire';
 import { marketNow } from './market';
 import { worldOf } from './mapgen';
-import { pickWeighted, styleOf } from './leaders';
+import { pickWeighted, styleOf } from './strategies';
+import { deptsOf } from './supply';
 import { ownedStock, condition } from './wear';
 import { seedPeople, sideRng, syncCrew } from './people';
 import { DEPTS, type Rival, type TycoonState } from './types';
@@ -48,13 +49,48 @@ export function releaseRivalWork(s: TycoonState, rivalId: string, toId?: string)
   });
 }
 
+/**
+ * One firm folds into another and nothing is lost: its kit, crew, trucks, cash and money owed join
+ * the buyer's operation, its booked shows become the buyer's, and its patch (recent shows by town)
+ * counts as the buyer's. Used for historical acquisitions and for mergers the simulation produces.
+ */
+export function absorbInto(s: TycoonState, target: Rival, buyer: Rival) {
+  const from = opsOf(s, target);
+  const to = opsOf(s, buyer);
+  DEPTS.forEach(d => (to.kit[d] += from.kit[d]));
+  to.crew += from.crew;
+  to.trucks += from.trucks;
+  to.cash += from.cash;
+  to.inputs = Math.max(to.inputs, from.inputs);
+  to.pa = [...new Set([...to.pa, ...from.pa])].slice(-3);
+  if (!to.desk) to.desk = from.desk;
+  if (from.owed?.length) to.owed = [...(to.owed ?? []), ...from.owed];
+  releaseRivalWork(s, target.id, buyer.id);
+  Object.values(s.townShows ?? {}).forEach(town => {
+    if (!town[target.id]) return;
+    town[buyer.id] = (town[buyer.id] ?? 0) + town[target.id];
+    delete town[target.id];
+  });
+  s.gigs.forEach(g => g.supply?.forEach(x => x.from === target.id && (x.from = buyer.id)));
+  s.rivals = s.rivals.filter(r => r.id !== target.id);
+  s.vehicles = s.vehicles.filter(v => v.owner !== target.id);
+  s.goneRivals.push(target.id);
+  buyer.reputation = Math.min(RIVAL_REPUTATION_CAP, buyer.reputation + 2 + target.reputation * 0.05);
+  buyer.maxTier = Math.max(buyer.maxTier, target.maxTier);
+  buyer.minTier = Math.min(buyer.minTier, target.minTier);
+}
+
 /** Monthly: rivals' fortunes rise and fall; the weakest go under. */
 export function monthlyRivals(s: TycoonState, rng: Rng) {
   const { demand } = marketNow(s);
   const world = worldOf(s);
   [...s.rivals].forEach(r => {
-    const won = r.showsPlayed - (r.lastShows ?? r.showsPlayed);
+    // Work won: shows it ran, and shows it supplied for another firm (a lighting or staging house
+    // lives mostly on the latter, supply.ts).
+    const partnered = r.ops?.record.partnered ?? 0;
+    const won = r.showsPlayed - (r.lastShows ?? r.showsPlayed) + (partnered - (r.lastPartnered ?? partnered));
     r.lastShows = r.showsPlayed;
+    r.lastPartnered = partnered;
     const before = rivalHealth(r);
     // Its books (rivalOps.ts): a profitable month helps, a loss and an overdraft hurt.
     const margin = monthlyRivalOps(s, r, rng);
@@ -68,7 +104,6 @@ export function monthlyRivals(s: TycoonState, rng: Rng) {
     if (r.health <= 0) {
       s.rivals = s.rivals.filter(x => x.id !== r.id);
       s.vehicles = s.vehicles.filter(v => v.owner !== r.id);
-  releaseRivalWork(s, r.id);
       releaseRivalWork(s, r.id);
       s.goneRivals.push(r.id);
       pushNews(s, `${r.name} goes into administration — their ${city} lot is up for grabs.`, 'big', { cityId: r.hqCityId });
@@ -120,15 +155,10 @@ function rivalMergers(s: TycoonState, rng: Rng) {
   const buyer = pickWeighted(rng, buyers.filter(b => b.id !== target.id), b => styleOf(b, year).buyer);
   if (!buyer) return;
   const city = worldOf(s).cityById.get(target.hqCityId)?.name;
-  s.rivals = s.rivals.filter(r => r.id !== target.id);
-  s.vehicles = s.vehicles.filter(v => v.owner !== target.id);
-  releaseRivalWork(s, target.id, buyer.id);
-  s.goneRivals.push(target.id);
-  buyer.reputation = Math.min(RIVAL_REPUTATION_CAP, buyer.reputation + 2 + target.reputation * 0.05);
-  buyer.maxTier = Math.max(buyer.maxTier, target.maxTier);
-  buyer.minTier = Math.min(buyer.minTier, target.minTier);
+  // The kit, crew, clients and booked shows carry over; only the yard in town is let go.
+  absorbInto(s, target, buyer);
   buyer.health = Math.min(100, rivalHealth(buyer) + 5);
-  pushNews(s, `${buyer.name} absorbs struggling ${target.name}. Their ${city} base closes — the lot is up for grabs.`, 'big', { cityId: target.hqCityId });
+  pushNews(s, `${buyer.name} absorbs struggling ${target.name}, its crews, kit and bookings. The ${city} yard closes — the lot is up for grabs.`, 'big', { cityId: target.hqCityId });
 }
 
 /** Monthly, in a decent market: a new firm opens its doors in a town with room. */
@@ -148,7 +178,8 @@ function rivalStartups(s: TycoonState, rng: Rng) {
     id: newId(s, 'rival'),
     name,
     color: rng.pick(STARTUP_COLORS),
-    specialty: rng.pick(DEPTS),
+    // One line of business to start with, like the real ones (supply.ts).
+    specialty: rng.pick(['audio', 'audio', 'lighting', 'video', 'stage'] as const),
     minTier: 1,
     maxTier: 2,
     hqCityId: town.id,
@@ -185,6 +216,9 @@ export function absorbRival(s: TycoonState, r: Rival) {
   s.stats.rivalsBought = (s.stats.rivalsBought ?? 0) + 1;
 
   let base = depotInCity(s, r.hqCityId);
+  // A firm without a yard of its own on the map: its yard if there's a lot free, else its kit goes to your head office.
+  const lot = r.lot >= 0 ? r.lot : freeLot(s, worldOf(s), r.hqCityId);
+  if (!base && lot < 0) base = s.depots[0];
   if (!base) {
     base = {
       id: newId(s, 'depot'),
@@ -192,17 +226,19 @@ export function absorbRival(s: TycoonState, r: Rival) {
       size: r.maxTier >= 4 ? 2 : 1,
       staff: { warehouse: 2, office: 1 },
       cityId: r.hqCityId,
-      lot: r.lot,
+      lot,
       gear: {},
       crew: 0,
       builtHour: s.hour,
     };
     s.depots.push(base);
   }
-  // Their racks: a show's worth of era-standard kit at their top tier, used.
+  // Their racks: a show's worth of era-standard kit at their top tier, used — in the departments they ran.
   const year = yearOf(s, s.hour);
   const needs = tierInfo(r.maxTier).needs;
+  const ran = deptsOf(r, year);
   DEPTS.forEach(d => {
+    if (!ran.includes(d)) return;
     const id = rentalProduct(d, r.maxTier, year);
     const n = needs[d];
     if (!id || !n) return;

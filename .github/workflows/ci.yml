@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     runs-on: ubuntu-latest
@@ -24,3 +28,30 @@ jobs:
       - run: npm run typecheck
       - run: npm run build
       - run: npm run budget:bundle
+
+  historical-balance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Verify historical benchmark is deterministic
+        run: |
+          HISTORY_RUNS='[["ES",1990]]' HISTORY_SEEDS='[3]' HISTORY_YEARS=2 HISTORY_OUT="$RUNNER_TEMP/history-smoke-a" npm run balance:history
+          HISTORY_RUNS='[["ES",1990]]' HISTORY_SEEDS='[3]' HISTORY_YEARS=2 HISTORY_OUT="$RUNNER_TEMP/history-smoke-b" npm run balance:history
+          cmp "$RUNNER_TEMP/history-smoke-a.md" "$RUNNER_TEMP/history-smoke-b.md"
+          cmp "$RUNNER_TEMP/history-smoke-a.json" "$RUNNER_TEMP/history-smoke-b.json"
+      - name: Generate full historical balance report
+        run: HISTORY_OUT="$RUNNER_TEMP/balance-history" npm run balance:history
+      - name: Upload historical balance report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: balance-history
+          path: |
+            ${{ runner.temp }}/balance-history.md
+            ${{ runner.temp }}/balance-history.json

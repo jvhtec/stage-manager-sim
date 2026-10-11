@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ARTISTS, artistTierIn, artistsTouringAt, findArtist } from '../content/artists';
 import { GEAR_PRODUCTS, expectedQuality, getProduct } from '../content/gear';
-import { entryYear, rivalsFor } from '../content/companies';
+import { selectRoster } from '../roster';
+import { actorById, endYear, presenceIn } from '../content/actors';
 import { baseShowQuality, evaluateGear, pickGear } from '../loading';
 import { createTycoonGame } from '../state';
 import { advanceHours, updateRivals } from '../sim';
@@ -127,9 +128,16 @@ describe('gear', () => {
 describe('rival companies', () => {
   it('starts with the real firms already trading in 1990', () => {
     const s = newGame();
-    const expected = rivalsFor('GB').filter(r => entryYear(r, 'GB') <= 1990 && !(r.exits && r.exits.year <= 1990)).map(r => r.id).sort();
+    const expected = selectRoster(s)
+      .filter(id => {
+        const a = actorById(id)!;
+        const end = endYear(a);
+        return presenceIn(a, 'GB', 1990) && !(end !== undefined && end <= 1990);
+      })
+      .sort();
     expect(s.rivals.map(r => r.id).sort()).toEqual(expected);
-    expect(new Set(s.rivals.map(r => `${r.hqCityId}:${r.lot}`)).size).toBe(s.rivals.length);
+    const yards = s.rivals.filter(r => r.lot >= 0).map(r => `${r.hqCityId}:${r.lot}`);
+    expect(new Set(yards).size).toBe(yards.length);
   });
 
   it('renames and adds companies as the years pass', () => {
@@ -138,14 +146,17 @@ describe('rival companies', () => {
     updateRivals(s, world, 2006);
     expect(s.rivals.find(r => r.id === 'lsd')!.name).toBe('PRG');
     expect(s.rivals.some(r => r.id === 'xlvideo')).toBe(true);
-    // The Americans only open a British base later — Clair through Concert Sound, Solotech through SSE.
+    // The Americans only open a British base later: Clair through Concert Sound in 2008.
     expect(s.rivals.some(r => r.id === 'clair')).toBe(false);
     updateRivals(s, world, 2011);
     expect(s.rivals.find(r => r.id === 'clair')!.name).toBe('Clair Global');
     expect(s.rivals.some(r => r.id === 'solotech')).toBe(false);
     updateRivals(s, world, 2019);
+    // XL Video is folded into PRG; SSE carries on under Solotech's ownership, then its name.
     expect(s.rivals.some(r => r.id === 'xlvideo')).toBe(false);
-    expect(s.rivals.some(r => r.id === 'sse')).toBe(false);
-    expect(s.rivals.some(r => r.id === 'solotech')).toBe(true);
+    expect(s.rivals.find(r => r.id === 'sse')!.name).toBe('SSE Audio');
+    updateRivals(s, world, 2020);
+    expect(s.rivals.find(r => r.id === 'sse')!.name).toBe('Solotech UK');
+    expect(s.rivals.some(r => r.id === 'solotech')).toBe(false);
   });
 });

@@ -3,7 +3,7 @@ import { createTycoonGame } from '../state';
 import { advanceHours } from '../sim';
 import { HOURS_PER_DAY, tierInfo } from '../catalog';
 import { monthlyRivals } from '../rivals';
-import { styleOf } from '../leaders';
+import { styleOf } from '../strategies';
 import type { TycoonState } from '../types';
 
 const game = (): TycoonState => createTycoonGame({ companyName: 'R', color: '#f00', seed: 19, country: 'GB', startYear: 1995 });
@@ -55,7 +55,9 @@ describe('rivals grow, merge and start up', () => {
     expect(fresh.maxTier).toBe(2);
     expect(fresh.reputation).toBeLessThan(30);
     expect(new Set(s.rivals.map(r => r.name)).size).toBe(s.rivals.length);
-    expect(new Set(s.rivals.map(r => `${r.hqCityId}:${r.lot}`)).size).toBe(s.rivals.length);
+    // No two firms share a yard (firms with no free lot in their town work from an office: lot -1).
+    const yards = s.rivals.filter(r => r.lot >= 0).map(r => `${r.hqCityId}:${r.lot}`);
+    expect(new Set(yards).size).toBe(yards.length);
   });
 
   it('the market stays populated over a decade', () => {

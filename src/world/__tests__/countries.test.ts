@@ -4,7 +4,6 @@ import { createTycoonGame } from '../state';
 import { getWorld, worldOf } from '../mapgen';
 import { COUNTRIES, cityNames } from '../content/countries';
 import { ARTISTS, findArtist } from '../content/artists';
-import { rivalsFor } from '../content/companies';
 import { generateOffer } from '../offers';
 import { generateWorldTour, tourGigs } from '../tours';
 import { formatMoney, formatMoneyShort } from '../core';
@@ -51,14 +50,11 @@ describe('countries', () => {
   it('puts local firms plus the international giants on the map', () => {
     const s = game('ES');
     const ids = s.rivals.map(r => r.id);
-    // 1990: the Spanish houses are trading; the foreign groups haven't arrived (EML 1998, PRG 2011)
-    // and Clair never set up in Spain.
-    ['twincam', 'milan', 'berenice', 'sorter', 'fluge', 'pronorte'].forEach(id => expect(ids).toContain(id));
-    ['clair', 'prg', 'solotech', 'eml', 'ct', 'tole'].forEach(id => expect(ids).not.toContain(id));
-    expect(ids).not.toContain('britrow');
-    expect(ids).not.toContain('tycobrahe');
+    // 1990: the Spanish houses are trading; no foreign group has a Spanish base yet (EML 2006)
+    // and Clair never set one up.
+    ['twincam', 'milan', 'berenice', 'sorter', 'fluge', 'pronorte', 'valladar', 'arcoiris'].forEach(id => expect(ids).toContain(id));
+    ['clair', 'prg', 'solotech', 'eml', 'ct', 'tole', 'britrow', 'tycobrahe'].forEach(id => expect(ids).not.toContain(id));
     expect(s.rivals.find(r => r.id === 'twincam')!.name).toBe('Twin Cam Audio');
-    rivalsFor('ES').forEach(t => expect(t.countries.includes('ES') || t.countries.includes('*')).toBe(true));
   });
 
   it('only books local acts in their home country', () => {
